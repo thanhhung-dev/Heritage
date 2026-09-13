@@ -97,7 +97,7 @@ Văn hóa là miền mà điều này thất bại nặng nhất, vì sở thíc
 
 Các hệ thống thông tin văn hóa hiện có trả lời "cái này là gì?" rồi dừng. Nhu cầu thật của người dùng thường ở bước tiếp theo và gần như không bao giờ được nói ra.
 
-Người nghiên cứu một cổ vật bảo tàng ngầm muốn biết bảo tàng nào đang giữ nó, ở đó còn gì cùng thời kỳ, và có món tương tự hay bản mô phỏng nào để xem hoặc mua. Người đọc về một lễ hội ngầm muốn biết năm nay diễn ra khi nào, đứng ở đâu để xem, hôm đó có mưa không, và gửi xe ở đâu. Mọi câu hỏi đó đều trả lời được từ dữ liệu. Không câu nào được một kho ngữ liệu văn hóa đơn thuần trả lời.
+Người nghiên cứu một cổ vật bảo tàng ngầm muốn biết bảo tàng nào đang giữ nó, ở đó còn gì cùng thời kỳ, và có món tương tự hay bản mô phỏng nào để xem hoặc mua. Người đọc về một lễ hội ngầm muốn biết năm nay diễn ra khi nào, đứng ở đâu để xem, hôm đó có mưa không. Mọi câu hỏi đó đều trả lời được từ dữ liệu. Không câu nào được một kho ngữ liệu văn hóa đơn thuần trả lời.
 
 ### 4.4. Vấn đề cốt lõi
 
@@ -122,14 +122,14 @@ UNESCO ghi nhận rằng công nghệ số có thể mở rộng khả năng ti�
 
 Nền tảng được xây thành bốn lớp hợp tác trên một nền tri thức kiểm chứng được:
 
-1. **Lớp trả lời có căn cứ** — truy hồi Hybrid RAG + GraphRAG, mô hình tiếng Việt tinh chỉnh theo miền, trích nguồn bắt buộc ở mức câu, và các cổng từ chối mang tính cấu trúc khiến hệ thống từ chối thay vì đoán.
+1. **Lớp trả lời có căn cứ** — truy hồi Hybrid RAG + GraphRAG, mô hình tiếng Việt , trích nguồn bắt buộc ở mức câu, và các cổng từ chối mang tính cấu trúc khiến hệ thống từ chối thay vì đoán.
 2. **Lớp cá nhân hóa** — hồ sơ sở thích được **suy ra từ chính hành vi tìm kiếm và duyệt xem của người dùng, không có bảng khai sở thích nào phải điền**, cùng một bộ gợi ý cho điểm ứng viên theo độ gần đồ thị với chủ đề đang xem, độ gần đồ thị với hồ sơ, và một phần thưởng tường minh cho ứng viên thuộc danh mục văn hóa *khác* nhưng vẫn được nối bởi một đường đi thật. Mỗi gợi ý trả về kèm đường đi đã sinh ra nó, và hồ sơ suy ra được nhìn thấy và sửa được thay vì bị che.
 3. **Lớp tư vấn chủ động** — nhận diện ý định của truy vấn, rồi một sổ đăng ký ánh xạ ý định sang các khối bối cảnh có kiểu: lịch, bản đồ địa điểm, thời tiết, danh mục cần chuẩn bị, điểm quan sát, chỗ gửi xe, cổ vật tương đương, nghề liên quan.
-4. **Lớp trải nghiệm đa phương tiện** — mô hình 3D (.glb) của địa điểm lưu trên Cloudflare R2, audio narration tiếng Việt và tiếng Anh lưu trên Azure Blob Storage, và một trình xem 3D nhúng trong trang chi tiết thực thể cho phép xoay, phóng to và nghe audio theo từng story. Lớp này tuân theo cùng yêu cầu về nguồn gốc như ba lớp trên: mỗi tài sản mang theo URL nguồn, người đóng góp, giấy phép và ngày tải lên.
+4. **Lớp trải nghiệm đa phương tiện** — mô hình 3D (.glb...) của địa điểm lưu trên Cloudflare R2, audio narration tiếng Việt và tiếng Anh lưu trên Azure Blob Storage Hoặc AWS, và một trình xem 3D nhúng trong trang chi tiết thực thể cho phép xoay, phóng to và nghe audio theo từng story. Lớp này tuân theo cùng yêu cầu về nguồn gốc như ba lớp trên: mỗi tài sản mang theo URL nguồn, người đóng góp, giấy phép và ngày tải lên.
 
 Hai nguyên tắc chi phối biên giới giữa phần được sinh ra và phần dữ kiện, và được tham chiếu suốt tài liệu này:
 
-> **Mô hình ngôn ngữ chỉ viết phần kể chuyện di sản. Mọi phát biểu thực tế hoặc có cấu trúc — ngày, tọa độ, thời tiết, chỗ gửi xe, thuộc tính cổ vật, gợi ý — được kết xuất từ một bản ghi có kiểu mang theo nguồn gốc của chính nó, và không bao giờ đi qua bước sinh văn bản.**
+> **Mô hình ngôn ngữ chỉ viết phần kể chuyện di sản. Mọi phát biểu thực tế hoặc có cấu trúc — ngày, tọa độ, thời tiết,  thuộc tính cổ vật, gợi ý — được kết xuất từ một bản ghi có kiểu mang theo nguồn gốc của chính nó, và không bao giờ đi qua bước sinh văn bản.**
 
 > **Audio narration chỉ phát phần kể chuyện di sản. Mọi phát biểu thực tế trong script — tên triều đại, năm xây dựng, tọa độ, niên đại — phải truy về được một câu nguồn trong kho ngữ liệu, và điều này được kiểm tra tự động trước khi script được đưa vào bước tổng hợp giọng nói.**
 

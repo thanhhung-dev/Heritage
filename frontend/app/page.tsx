@@ -1,5 +1,9 @@
-import { redirect } from "next/navigation";
+import { Button } from "antd";
 
-export default function Home() {
-  redirect("/chat");
-}
+export default function App() {
+  return (
+    <div className="app">
+      <Button type="primary">Button</Button>
+    </div>
+  );
+}

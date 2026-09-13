@@ -12,7 +12,11 @@
     "@ant-design/x": "^2.9.0",
     "@assistant-ui/react": "^0.15.18",
     "@assistant-ui/react-ai-sdk": "^1.4.9",
+    "antd": "^6.6.3",
+    "antd-style": "^4.1.0",
+    "es-toolkit": "^1.52.0",
     "next": "14.2.0",
+    "polished": "^4.3.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
   },
