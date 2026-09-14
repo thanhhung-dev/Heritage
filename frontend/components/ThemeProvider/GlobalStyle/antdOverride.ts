@@ -5,19 +5,37 @@ export default (token: Theme) => {
   const p = token.prefixCls; 
 
   return css`
+    @property --btn-grad-from {
+      syntax: '<color>';
+      inherits: false;
+      initial-value: #ff9b2d;
+    }
+
+    @property --btn-grad-to {
+      syntax: '<color>';
+      inherits: false;
+      initial-value: #f07847;
+    }
+
     .${p}-btn {
       box-shadow: none;
     }
 
     .${p}-btn-primary:not(:disabled) {
       color: #fff !important;
-      background: linear-gradient(135deg, #ff9b2d 0%, #f07847 100%);
+      background: linear-gradient(135deg, var(--btn-grad-from) 0%, var(--btn-grad-to) 100%) !important;
       box-shadow: 0 4px 16px ${rgba(token.colorPrimary, 0.4)};
       border: none;
+      transition:
+        --btn-grad-from 0.3s ease,
+        --btn-grad-to 0.3s ease,
+        box-shadow 0.3s ease,
+        transform 0.3s ease;
 
       &:hover {
-        background: linear-gradient(135deg, #ffab4d 0%, #f58857 100%) !important;
-        box-shadow: 0 6px 24px ${rgba(token.colorPrimary, 0.5)} !important;
+        --btn-grad-from: #ffab4d;
+        --btn-grad-to: #f58857;
+        box-shadow: 0 6px 24px ${rgba(token.colorPrimary, 0.5)};
         transform: translateY(-2px);
       }
 
