@@ -1,5 +1,6 @@
 """Health check endpoint."""
 import os
+from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -25,6 +26,19 @@ def health():
             model_ready = True
         except httpx.HTTPError:
             model_ready = False
+    elif inference_backend == "transformers_peft":
+        configured_path = Path(
+            os.environ.get(
+                "PEFT_ADAPTER_PATH",
+                "models/peft-adapter/checkpoint-125",
+            )
+        )
+        adapter_path = (
+            configured_path
+            if configured_path.is_absolute()
+            else PROJECT_ROOT / configured_path
+        )
+        model_ready = (adapter_path / "adapter_config.json").is_file()
     elif inference_backend == "llama_cpp":
         model_ready = GGUF_MODEL_PATH.is_file()
     else:

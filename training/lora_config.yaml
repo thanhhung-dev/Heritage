@@ -1,6 +1,6 @@
-# Hugging Face LoRA FP16/BF16, không lượng tử hóa base model khi train.
+# Hugging Face LoRA full precision bf16/fp16.
 # Đổi model_id để nâng model; trainer không phụ thuộc tên Qwen.
-model_id: Qwen/Qwen3-4B
+model_id: Qwen/Qwen2.5-3B-Instruct
 train_file: data/train.jsonl
 valid_file: data/valid.jsonl
 output_dir: models/peft-adapter
@@ -19,6 +19,9 @@ lora_alpha: 32
 lora_dropout: 0.05
 # PEFT tự tìm mọi linear layer, không hardcode q_proj/v_proj của một đời Qwen.
 target_modules: all-linear
+
+# Bỏ hoặc đặt "none" để train LoRA thường (không QLoRA).
+quantization: none
 
 compute_dtype: auto
 optimizer: adamw_torch

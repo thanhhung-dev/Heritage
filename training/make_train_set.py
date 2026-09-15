@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import shutil
 import sys
 from collections import Counter
@@ -39,6 +40,12 @@ DATA = ROOT / "data"
 # cao thì model dồn sức học JSON và nhả văn phong QA. 0.20 giữ NER đủ để F1 lên
 # khỏi mức base mà không lấn sang task chính.
 NER_RATIO = 0.20
+CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+TOURIST_ADVICE_RE = re.compile(
+    r"\bdu khách\b.*\btham quan\b.*\bcần (?:lưu ý|chú ý)\b",
+    re.IGNORECASE,
+)
+CITATION_RE = re.compile(r"\[Nguồn:\s*(.*?)\s*—\s*https?://[^\]]+\]", re.DOTALL)
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -60,6 +67,57 @@ def kind(row: dict) -> str:
     if answer.startswith("{"):
         return "ner"
     return "qa" if "[Nguồn:" in answer else "refusal"
+
+
+def source_of(row: dict) -> str:
+    head = row["messages"][1]["content"].split("\n\nCâu hỏi:", 1)[0]
+    return head.removeprefix("Nguồn: ")
+
+
+def question_of(row: dict) -> str:
+    content = row["messages"][1]["content"]
+    return content.split("\n\nCâu hỏi:", 1)[-1].strip()
+
+
+def quality_issue(row: dict) -> str | None:
+    """Return why a row is unsafe for grounded stage-one training."""
+    answer = row["messages"][-1]["content"]
+    if CJK_RE.search(answer):
+        return "assistant chứa chữ Trung"
+    if TOURIST_ADVICE_RE.search(question_of(row)):
+        return "câu hỏi tư vấn tham quan"
+    if "[Nguồn:" in answer:
+        citations = CITATION_RE.findall(answer)
+        source = source_of(row)
+        if not citations or any(citation.strip() not in source for citation in citations):
+            return "trích dẫn không có trong nguồn"
+    return None
+
+
+def filter_quality(rows: list[dict]) -> tuple[list[dict], Counter]:
+    kept: list[dict] = []
+    dropped: Counter = Counter()
+    for row in rows:
+        issue = quality_issue(row)
+        if issue:
+            dropped[issue] += 1
+        else:
+            kept.append(row)
+    return kept, dropped
+
+
+def drop_leaked_valid_rows(
+    train_rows: list[dict],
+    valid_rows: list[dict],
+) -> tuple[list[dict], int]:
+    """Keep validation sources disjoint from train, except no-source refusals."""
+    train_sources = {source_of(row) for row in train_rows}
+    kept = [
+        row
+        for row in valid_rows
+        if source_of(row) == "(không có)" or source_of(row) not in train_sources
+    ]
+    return kept, len(valid_rows) - len(kept)
 
 
 def compose(qa_rows: list[dict], ner_rows: list[dict], ratio: float,
@@ -121,8 +179,16 @@ def main() -> None:
     results: list[tuple[str, list[dict], Path]] = []
     for label, qa_path, ner_path, out_path in plan:
         rows, dropped = compose(read_jsonl(qa_path), read_jsonl(ner_path), args.ner_ratio, rng)
+        rows, quality_dropped = filter_quality(rows)
         report(label, rows, dropped)
+        for reason, count in quality_dropped.items():
+            print(f"         bỏ {count:>3} mẫu: {reason}")
         results.append((label, rows, out_path))
+
+    valid_rows, leaked = drop_leaked_valid_rows(results[0][1], results[1][1])
+    if leaked:
+        print(f"         bỏ {leaked:>3} valid: nguồn đã xuất hiện trong train")
+        results[1] = (results[1][0], valid_rows, results[1][2])
 
     if args.dry_run:
         print("\n--dry-run: không ghi file nào.")

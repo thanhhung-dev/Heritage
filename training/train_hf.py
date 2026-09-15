@@ -6,9 +6,13 @@ tokenization contracts can be tested without a CUDA environment.
 """
 from __future__ import annotations
 
+import os
+
+# Giảm fragmentation VRAM trên GPU; phải set trước khi import torch.
+os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
+
 import argparse
 import json
-import os
 import random
 from pathlib import Path
 from typing import Any
@@ -105,6 +109,22 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _build_quantization_config(config: dict[str, Any], compute_dtype: Any) -> Any:
+    """Tạo BitsAndBytesConfig nếu config yêu cầu lượng tử hóa 4-bit (QLoRA)."""
+    quant = str(config.get("quantization", "none")).lower()
+    if quant == "none":
+        return None
+    if quant != "4bit":
+        raise ValueError(f"quantization không hỗ trợ: {quant} (chỉ hỗ trợ '4bit' hoặc 'none')")
+    from transformers import BitsAndBytesConfig
+    return BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=compute_dtype,
+        bnb_4bit_use_double_quant=True,
+    )
+
+
 def _dtype(torch: Any, value: str) -> Any:
     if value == "auto":
         return torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
@@ -165,14 +185,25 @@ def train(config: dict[str, Any], fresh: bool) -> None:
     )
 
     compute_dtype = _dtype(torch, str(config.get("compute_dtype", "auto")))
+    quantization_config = _build_quantization_config(config, compute_dtype)
     local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
+    # Đa GPU đơn process (Kaggle T4 x2 notebook): spread model tự động.
+    # DDP (torchrun): LOCAL_RANK được set, gắn mỗi process 1 GPU.
+    num_gpus = torch.cuda.device_count()
+    is_distributed = "LOCAL_RANK" in os.environ
+    if num_gpus > 1 and not is_distributed:
+        device_map: Any = "auto"
+    else:
+        device_map = {"": local_rank}
+    model_kwargs: dict[str, Any] = dict(
         torch_dtype=compute_dtype,
-        device_map={"": local_rank},
+        device_map=device_map,
         low_cpu_mem_usage=True,
         trust_remote_code=trust_remote_code,
     )
+    if quantization_config is not None:
+        model_kwargs["quantization_config"] = quantization_config
+    model = AutoModelForCausalLM.from_pretrained(model_id, **model_kwargs)
     model.config.use_cache = False
     model = get_peft_model(
         model,

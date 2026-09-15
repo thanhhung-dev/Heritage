@@ -55,6 +55,21 @@ class HealthEndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["detail"]["model_ready"], False)
 
+    @patch.dict(
+        "os.environ",
+        {
+            "INFERENCE_BACKEND": "transformers_peft",
+            "PEFT_ADAPTER_PATH": "models/peft-adapter/checkpoint-125",
+        },
+        clear=False,
+    )
+    def test_health_is_ready_when_peft_adapter_exists(self) -> None:
+        response = self.client.get("/api/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["inference_backend"], "transformers_peft")
+        self.assertTrue(response.json()["model_ready"])
+
 
 if __name__ == "__main__":
     unittest.main()

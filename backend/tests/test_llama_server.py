@@ -58,6 +58,55 @@ class LlamaServerTests(unittest.TestCase):
             max_tokens=99,
         )
 
+    @patch.dict(
+        "os.environ",
+        {
+            "INFERENCE_BACKEND": "transformers_peft",
+            "HF_MODEL_ID": "Qwen/Qwen3-4B",
+            "PEFT_ADAPTER_PATH": "models/peft-adapter/checkpoint-125",
+        },
+        clear=False,
+    )
+    def test_transformers_peft_backend_loads_configured_adapter(self) -> None:
+        llm.get_model.cache_clear()
+
+        with patch(
+            "backend.core.llm._load_transformers_peft",
+            return_value=("model", "tokenizer"),
+            create=True,
+        ) as load:
+            result = llm.get_model()
+
+        self.assertEqual(result, ("model", "tokenizer", "transformers_peft"))
+        load.assert_called_once_with(
+            "Qwen/Qwen3-4B",
+            "models/peft-adapter/checkpoint-125",
+        )
+
+    def test_generate_response_uses_transformers_peft_backend(self) -> None:
+        messages = llm.chat_messages("Nguồn", "Câu hỏi")
+        with (
+            patch.object(
+                llm,
+                "get_model",
+                return_value=("model", "tokenizer", "transformers_peft"),
+            ),
+            patch(
+                "backend.core.llm._transformers_generate",
+                return_value="adapter",
+                create=True,
+            ) as generate,
+        ):
+            result = llm.generate_response("Câu hỏi", "Nguồn", max_tokens=99)
+
+        self.assertEqual(result, "adapter")
+        generate.assert_called_once_with(
+            "model",
+            "tokenizer",
+            messages,
+            max_tokens=99,
+        )
+
     def test_chat_messages_include_recent_conversation_before_current_source(self) -> None:
         history = [
             {"role": "user", "content": "Lăng Tự Đức ở đâu?"},

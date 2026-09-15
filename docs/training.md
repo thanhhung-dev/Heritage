@@ -73,8 +73,12 @@ Kaggle đã chạy notebook trong container của Kaggle, vì vậy không chạ
 !git clone https://github.com/thanhhung-dev/HeritageGraph.git
 %cd HeritageGraph
 !nvidia-smi
+!pip uninstall -y torchao
 !pip install -r training/requirements.txt
 ```
+
+Kaggle có thể cài sẵn `torchao==0.10.0`, không tương thích với PEFT mới. LoRA
+workflow này không dùng TorchAO nên phải gỡ package tùy chọn đó trước khi train.
 
 `data/` bị Git ignore. Upload `train.jsonl` và `valid.jsonl` thành một Kaggle
 Dataset riêng, attach nó vào notebook, rồi copy vào working directory:
