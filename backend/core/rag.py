@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from backend.core.retriever import get_retriever, is_admin_chunk, is_lead
 REQUIRE_GRAPH_ANCHOR = True
-MIN_COVERAGE = 0.25   # chốt phụ; câu trong phạm vi thấp nhất đo được là 0.36
+MIN_COVERAGE = 0.25  
 
 MIN_COVERAGE_OVER_HITS = True
 REQUIRE_EVIDENCE_FOR_NAMED = True
