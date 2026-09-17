@@ -17,7 +17,7 @@ Sửa so với bản cũ (những lỗi làm data dạy sai):
 
 Chạy:
   python training/bootstrap_deep_qa.py
-  python training/bootstrap_deep_qa.py --use-model    # dùng LLM local làm teacher
+  python training/bootstrap_deep_qa.py --use-model    # dùng llama.cpp server làm teacher
 """
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ VALID_EVERY = 5             # 1/5 địa điểm dành cho valid
 
 __all__ = ["chunk_document", "clean_wiki_text", "is_usable", "wiki_url"]  # tương thích import cũ
 
-DEFAULT_TEACHER = "mlx-community/Qwen2.5-3B-Instruct-4bit"
+DEFAULT_TEACHER = "http://localhost:8080"
 
 
 def score_text(text: str, keywords: list[str]) -> int:
@@ -483,16 +483,26 @@ NUM_RE = re.compile(r"\d+")
 REFUSAL_HINTS = ("không tìm thấy", "không có thông tin", "không đề cập",
                  "xin phép không", "ngoài phạm vi", "không được cung cấp")
 
-_LLM_CACHE: dict[str, tuple] = {}
+def teacher_generate(
+    base_url: str,
+    messages: list[dict[str, str]],
+    max_tokens: int,
+    temperature: float = 0.0,
+) -> str:
+    """Generate through an OpenAI-compatible llama.cpp server."""
+    import httpx
 
-
-def load_teacher(model_path: str):
-    """Load 1 lần rồi cache (bản cũ spawn lại process cho từng mẫu)."""
-    if model_path not in _LLM_CACHE:
-        from mlx_lm import load
-        print(f"  → load teacher model: {model_path}")
-        _LLM_CACHE[model_path] = load(model_path)
-    return _LLM_CACHE[model_path]
+    response = httpx.post(
+        f"{base_url.rstrip('/')}/v1/chat/completions",
+        json={
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        },
+        timeout=300.0,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"].strip()
 
 
 def faithful(answer: str, source: str, allow: tuple[str, ...] = ()) -> str:
@@ -524,20 +534,13 @@ def faithful(answer: str, source: str, allow: tuple[str, ...] = ()) -> str:
 def teacher_rewrite(model_path: str, name: str, question: str, sents: list[str],
                     stats: Counter, max_tokens: int = 420) -> str | None:
     """Nhờ teacher viết lại `sents` cho mượt. Không qua cổng trung thực thì trả None."""
-    from mlx_lm import generate
-    from mlx_lm.sample_utils import make_sampler
-
-    model, tokenizer = load_teacher(model_path)
     source = " ".join(sents)
-    prompt = tokenizer.apply_chat_template(
-        [{"role": "system", "content": TEACHER_SYSTEM},
-         {"role": "user", "content": f"Câu hỏi cần trả lời: {question}\n\nTư liệu:\n{source}"}],
-        add_generation_prompt=True,
-        tokenize=False,
-    )
+    messages = [
+        {"role": "system", "content": TEACHER_SYSTEM},
+        {"role": "user", "content": f"Câu hỏi cần trả lời: {question}\n\nTư liệu:\n{source}"},
+    ]
     try:
-        text = generate(model, tokenizer, prompt=prompt, max_tokens=max_tokens,
-                        sampler=make_sampler(temp=0.0), verbose=False)
+        text = teacher_generate(model_path, messages, max_tokens=max_tokens)
     except Exception as exc:  # noqa: BLE001
         print(f"    [WARN] teacher lỗi: {exc}")
         stats["lỗi"] += 1
@@ -717,7 +720,7 @@ def main() -> None:
     parser.add_argument("--use-model", action="store_true",
                         help="dùng LLM local sinh câu trả lời thay cho template")
     parser.add_argument("--model", default=DEFAULT_TEACHER,
-                        help=f"model teacher khi --use-model (mặc định: {DEFAULT_TEACHER})")
+                        help=f"URL llama.cpp teacher khi --use-model (mặc định: {DEFAULT_TEACHER})")
     args = parser.parse_args()
 
     if not INDEX_FILE.exists():

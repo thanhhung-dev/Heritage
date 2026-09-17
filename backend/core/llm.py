@@ -1,6 +1,5 @@
-"""Core LLM module - hỗ trợ cả MLX (macOS) và llama.cpp (Docker).
+"""Core LLM module using portable llama.cpp inference.
 
-INFERENCE_BACKEND=mlx  → dùng MLX (Apple Silicon only, nhanh hơn).
 INFERENCE_BACKEND=llama_server → gọi llama.cpp server trong Docker Compose.
 INFERENCE_BACKEND=llama_cpp → nhúng llama.cpp trực tiếp trong Python.
 
@@ -18,21 +17,8 @@ from backend.core.prompt import chat_messages
 MAX_TOKENS = 768
 
 
-def _mlx_generate(model, tokenizer, messages, max_tokens: int) -> str:
-    from mlx_lm import generate
-    from mlx_lm.sample_utils import make_sampler
-
-    prompt = tokenizer.apply_chat_template(
-        messages, add_generation_prompt=True, tokenize=False,
-    )
-    return generate(
-        model, tokenizer, prompt=prompt, max_tokens=max_tokens,
-        sampler=make_sampler(temp=0.0), verbose=False,
-    )
-
-
 def _llama_server_generate(messages: list[dict], max_tokens: int) -> str:
-    base_url = os.environ.get("LLAMA_SERVER_URL", "http://llm:8080").rstrip("/")
+    base_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8080").rstrip("/")
     timeout = float(os.environ.get("LLAMA_SERVER_TIMEOUT", "300"))
     response = httpx.post(
         f"{base_url}/v1/chat/completions",
@@ -60,21 +46,10 @@ def _llama_cpp_generate(model, messages: list[dict], max_tokens: int) -> str:
 
 @lru_cache(maxsize=1)
 def get_model():
-    backend = os.environ.get("INFERENCE_BACKEND", "mlx")
+    backend = os.environ.get("INFERENCE_BACKEND", "llama_server")
 
     if backend == "llama_server":
         return (None, None, "llama_server")
-
-    if backend == "mlx":
-        from backend.core.config import BASE_MODEL, LORA_SERVE_PATH
-        if not (LORA_SERVE_PATH / "adapters.safetensors").exists():
-            raise FileNotFoundError(
-                f"Chưa có adapter tại {LORA_SERVE_PATH}. Chạy:\n"
-                f"    bash training/select_adapter.sh 0000200"
-            )
-        from mlx_lm import load
-        model, tokenizer = load(BASE_MODEL, adapter_path=str(LORA_SERVE_PATH))
-        return (model, tokenizer, "mlx")
 
     if backend == "llama_cpp":
         from backend.core.config import GGUF_MODEL_PATH
@@ -101,6 +76,4 @@ def generate_response(question: str, context: str = "", max_tokens: int = MAX_TO
 
     if backend == "llama_server":
         return _llama_server_generate(messages, max_tokens=max_tokens)
-    if backend == "mlx":
-        return _mlx_generate(model, tokenizer, messages, max_tokens=max_tokens)
     return _llama_cpp_generate(model, messages, max_tokens=max_tokens)

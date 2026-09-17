@@ -5,6 +5,12 @@ from backend.core import llm
 
 
 class LlamaServerTests(unittest.TestCase):
+    @patch.dict("os.environ", {}, clear=True)
+    def test_llama_server_is_the_portable_default_backend(self) -> None:
+        llm.get_model.cache_clear()
+
+        self.assertEqual(llm.get_model(), (None, None, "llama_server"))
+
     @patch.dict(
         "os.environ",
         {

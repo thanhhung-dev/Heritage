@@ -126,7 +126,7 @@ with valid_path.open("w", encoding="utf-8") as f:
         f.write(json.dumps(samples[i], ensure_ascii=False) + "\n")
 
 print(f"wrote {len(samples)} train, 3 valid → {SMOKE}")
-print("Train thử bằng data này: thêm `--data ./data/smoke` vào lệnh mlx_lm.lora")
+print("Train thử bằng data này: trỏ train_file/valid_file trong một config YAML riêng.")
 print("\nĐặc điểm data:")
 print("  - Tất cả output là văn xuôi tự nhiên, KHÔNG có JSON")
 print("  - Mỗi mẫu có [Nguồn: ...] ở cuối")

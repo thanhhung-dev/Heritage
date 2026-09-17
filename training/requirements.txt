@@ -1,0 +1,7 @@
+# PyTorch đã có sẵn trong image training và Kaggle GPU.
+transformers>=4.51,<5
+accelerate>=1.5,<2
+peft>=0.15,<1
+datasets>=3.5,<5
+safetensors>=0.5,<1
+PyYAML>=6,<7

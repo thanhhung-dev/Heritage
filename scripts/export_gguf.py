@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Fuse LoRA without an intermediate requantization, then export Q8_0 GGUF.
+"""Merge a PEFT adapter into its Hugging Face base model and export GGUF.
 
-Run on the source Apple-Silicon Mac with the backend virtualenv:
-    backend/.venv/bin/python scripts/export_gguf.py
+Run in the training environment after LoRA finishes:
+    python scripts/export_gguf.py
 
 The script needs internet once to clone llama.cpp and install its converter
-requirements. Temporary FP16 weights and converter files are removed afterwards.
+requirements. Temporary merged weights and converter files are removed afterwards.
 """
 from __future__ import annotations
 
 import argparse
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -18,18 +17,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = ROOT / "models"
-ADAPTER_PATH = MODELS_DIR / "lora-serve"
+ADAPTER_PATH = MODELS_DIR / "peft-adapter"
 OUTPUT_PATH = MODELS_DIR / "qwen-fused.gguf"
-BASE_MODEL = "mlx-community/Qwen2.5-3B-Instruct-4bit"
-TOKENIZER_FILES = (
-    "added_tokens.json",
-    "chat_template.jinja",
-    "merges.txt",
-    "special_tokens_map.json",
-    "tokenizer.json",
-    "tokenizer_config.json",
-    "vocab.json",
-)
 
 
 def run(*args: str, cwd: Path = ROOT) -> None:
@@ -47,53 +36,57 @@ def converter_requirements(llama_cpp: Path) -> Path:
     raise FileNotFoundError("Không tìm thấy requirements cho convert_hf_to_gguf.py")
 
 
-def restore_huggingface_tokenizer(model_path: Path) -> None:
-    """MLX save simplifies tokenizer_config in a way HF converter rejects."""
-    from huggingface_hub import snapshot_download
+def resolve_adapter_path(adapter: Path, checkpoint: str | None) -> Path:
+    """Resolve the final PEFT adapter or one Trainer checkpoint."""
+    selected = adapter
+    if checkpoint:
+        step = checkpoint.removeprefix("checkpoint-")
+        selected = adapter / f"checkpoint-{step}"
+    config = selected / "adapter_config.json"
+    if not config.is_file():
+        raise FileNotFoundError(f"Thiếu {config}")
+    return selected
 
-    snapshot = Path(
-        snapshot_download(repo_id=BASE_MODEL, allow_patterns=list(TOKENIZER_FILES))
+
+def merge_peft_adapter(adapter: Path, output: Path) -> str:
+    """Merge an unquantized FP16 base model with the selected PEFT adapter."""
+    import torch
+    from peft import PeftConfig, PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    peft_config = PeftConfig.from_pretrained(adapter)
+    base_model = peft_config.base_model_name_or_path
+    print(f"Base model từ adapter_config: {base_model}")
+    model = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        torch_dtype=torch.float16,
+        device_map="cpu",
+        low_cpu_mem_usage=True,
     )
-    for name in TOKENIZER_FILES:
-        source = snapshot / name
-        if source.is_file():
-            shutil.copy2(source, model_path / name)
+    model = PeftModel.from_pretrained(model, adapter)
+    merged = model.merge_and_unload(safe_merge=True)
+    merged.save_pretrained(output, safe_serialization=True, max_shard_size="4GB")
+    tokenizer = AutoTokenizer.from_pretrained(adapter, use_fast=True)
+    tokenizer.save_pretrained(output)
+    return str(base_model)
 
 
-def export(output: Path, force: bool) -> None:
+def export(adapter: Path, output: Path, force: bool) -> None:
     if output.exists() and not force:
         print(f"Đã có {output}. Dùng --force nếu muốn tạo lại.")
         return
-    if not (ADAPTER_PATH / "adapters.safetensors").is_file():
-        raise FileNotFoundError(
-            f"Thiếu adapter {ADAPTER_PATH / 'adapters.safetensors'}"
-        )
-
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         output.unlink()
 
     with tempfile.TemporaryDirectory(prefix="heritagegraph-gguf-") as directory:
         workspace = Path(directory)
-        fp16_model = workspace / "qwen-fused-fp16"
+        fp16_model = workspace / "qwen-merged-fp16"
         llama_cpp = workspace / "llama.cpp"
         converter_venv = workspace / "converter-venv"
 
-        print("[1/4] Fuse base + LoRA và dequantize một lần sang FP16...")
-        run(
-            sys.executable,
-            "-m",
-            "mlx_lm",
-            "fuse",
-            "--model",
-            BASE_MODEL,
-            "--adapter-path",
-            str(ADAPTER_PATH),
-            "--save-path",
-            str(fp16_model),
-            "--dequantize",
-        )
-        restore_huggingface_tokenizer(fp16_model)
+        print("[1/4] Merge PEFT adapter vào base model FP16...")
+        merge_peft_adapter(adapter, fp16_model)
 
         print("[2/4] Tải llama.cpp converter...")
         run(
@@ -138,10 +131,13 @@ def export(output: Path, force: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--adapter", type=Path, default=ADAPTER_PATH)
+    parser.add_argument("--checkpoint", help="step, ví dụ 75 hoặc checkpoint-75")
     parser.add_argument("--output", type=Path, default=OUTPUT_PATH)
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-    export(args.output.resolve(), args.force)
+    adapter = resolve_adapter_path(args.adapter.resolve(), args.checkpoint)
+    export(adapter, args.output.resolve(), args.force)
 
 
 if __name__ == "__main__":

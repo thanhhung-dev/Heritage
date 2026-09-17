@@ -24,7 +24,6 @@ from training.bootstrap_deep_qa import (  # noqa: E402
     drop_leaked,
     faithful,
     intents_for,
-    load_teacher,
     make_ner_samples,
     make_no_source_samples,
     make_off_topic_samples,
@@ -34,6 +33,7 @@ from training.bootstrap_deep_qa import (  # noqa: E402
     pick_chunk,
     pick_sentences,
     split_docs,
+    teacher_generate,
     write_jsonl,
 )
 
@@ -154,24 +154,22 @@ def rewrite(model_path: str, name: str, question: str, sents: list[str],
 
     Không có nhánh fallback extractive: thà ít mẫu còn hơn dạy model copy.
     """
-    from mlx_lm import generate
-    from mlx_lm.sample_utils import make_sampler
-
-    model, tokenizer = load_teacher(model_path)
     given = " ".join(sents)
 
     for attempt in range(MAX_RETRY):
-        prompt = tokenizer.apply_chat_template(
-            [{"role": "system", "content": TEACHER_SYSTEM + (RETRY_NOTE if attempt else "")},
-             {"role": "user", "content": f"Câu hỏi cần trả lời: {question}\n\nTư liệu:\n{given}"}],
-            add_generation_prompt=True,
-            tokenize=False,
-        )
+        messages = [
+            {"role": "system", "content": TEACHER_SYSTEM + (RETRY_NOTE if attempt else "")},
+            {"role": "user", "content": f"Câu hỏi cần trả lời: {question}\n\nTư liệu:\n{given}"},
+        ]
         # temp tăng dần: ở temp=0 model bám sát cú pháp nguồn nên hay copy; cần
         # thêm tự do để nó thực sự viết lại, cổng trung thực vẫn giữ nó trong nguồn.
         try:
-            text = generate(model, tokenizer, prompt=prompt, max_tokens=MAX_TOKENS,
-                            sampler=make_sampler(temp=0.3 + 0.3 * attempt), verbose=False)
+            text = teacher_generate(
+                model_path,
+                messages,
+                max_tokens=MAX_TOKENS,
+                temperature=0.3 + 0.3 * attempt,
+            )
         except Exception as exc:  # noqa: BLE001
             print(f"    [WARN] teacher lỗi: {exc}")
             stats["bỏ: lỗi teacher"] += 1
@@ -332,11 +330,6 @@ def main() -> None:
 
     # Chặn tự distill: teacher là adapter đã học copy thì mọi mẫu mới sẽ copy
     # tiếp, mà cổng chống copy không phát hiện được vì nó chỉ so với nguồn.
-    if re.search(r"adapter|lora|fused", args.model, re.I):
-        print(f"ERROR: --model {args.model!r} trông như adapter/model đã fine-tune.\n"
-              "       Teacher phải là model GỐC, nếu không bạn đang distill lại lỗi copy.")
-        sys.exit(1)
-
     if not INDEX_FILE.exists():
         print(f"ERROR: chưa có {INDEX_FILE}. Chạy ingestion/crawl_by_location.py trước.")
         sys.exit(1)

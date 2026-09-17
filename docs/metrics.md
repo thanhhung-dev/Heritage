@@ -156,13 +156,13 @@ backend/.venv/bin/python eval/make_gold_template.py
 nano eval/gold.jsonl
 
 # 3. Đánh giá model base (làm trước, có sẵn ngay, không cần chờ train)
-backend/.venv/bin/python training/score_gold.py \
-  --model mlx-community/Qwen2.5-3B-Instruct-4bit \
+python training/score_gold.py --base \
+  --model Qwen/Qwen2.5-3B-Instruct \
   --gold eval/gold.jsonl \
   --out eval/report_base.json
 
 # 4. Đánh giá đúng adapter backend đang serve
-backend/.venv/bin/python training/score_gold.py \
+python training/score_gold.py \
   --gold eval/gold.jsonl \
   --out eval/report_lora.json
 

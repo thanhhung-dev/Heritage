@@ -204,8 +204,12 @@ Trong `.env.docker.example`, thêm:
 POSTGRES_DB=heritagegraph
 POSTGRES_USER=heritagegraph
 POSTGRES_PASSWORD=change-this-in-local-env
-DATABASE_URL=postgresql+psycopg://heritagegraph:change-this-in-local-env@db:5432/heritagegraph
 ```
+
+Compose tạo `DATABASE_URL` cho container backend/migration từ các biến
+`POSTGRES_*`, hostname service `db` và cổng nội bộ `5432`. Cách này tránh dùng
+nhầm URL chạy ngoài Docker như `localhost:5433` bên trong container. Nếu mật khẩu
+có ký tự dành riêng của URL, phải percent-encode giá trị dùng trong URL.
 
 Không commit file `.env` thật. Không cần expose `5432` ra host khi backend là consumer duy nhất. Nếu cần debug local, expose tạm thời qua biến môi trường và không dùng trong môi trường public.
 
@@ -284,6 +288,12 @@ Trước khi autogenerate, cấu hình `env.py` đọc `DATABASE_URL`, import mo
 alembic revision --autogenerate -m "create heritage knowledge tables"
 alembic upgrade head
 ```
+
+Trong Docker, service `migrate` chạy `python -m backend.db.migrate`. Wrapper này
+chạy Alembic bình thường với database mới. Với volume được tạo trước khi dự án
+dùng Alembic, wrapper chỉ stamp baseline khi tập bảng và view khớp đầy đủ schema
+legacy đã biết; schema thiếu hoặc có bảng lạ sẽ bị từ chối thay vì stamp mù. Sau
+đó revision repair tạo `place_location` nếu volume legacy chưa có bảng này.
 
 Review migration bằng tay trước khi chạy. Kiểm tra đặc biệt:
 
@@ -411,6 +421,28 @@ get_entity_evidence(entity_id: UUID) -> list[Evidence]
 
 Repository chỉ truy vấn dữ liệu. Quyết định confidence, intent và câu trả lời nằm ở service layer.
 
+#### 5.3.1. Entity resolution priorities
+
+`resolve_entities()` tìm entity theo 5 tầng ưu tiên, dừng khi có kết quả ở tầng cao hơn:
+
+```text
+Priority 1: exact normalized_name match (score 1.0)
+Priority 2: substring alias match — alias xuất hiện trong query (score = alias.confidence)
+Priority 3: substring entity name match — tên entity xuất hiện trong query (score 0.9)
+Priority 4: address-based match — keywords từ query match place_location.address/ward/district (score 0.35-0.80)
+Priority 5: fuzzy match — fallback trên toàn bộ tên + alias (score >= 0.68)
+```
+
+**Priority 4 — address-based resolution:**
+
+Khi user nhớ tên đường/phường thay vì tên chính thức (ví dụ: "nhà thờ trần phú đà nẵng" thay vì "Nhà thờ chính tòa Đà Nẵng"):
+
+1. Tách query thành core keywords: bỏ location type prefix (nhà thờ, chùa, lăng...), stopwords, question words, region names, và address classifiers (đường, phố, phường...).
+2. Tìm `place_location` có `address`/`ward`/`district` chứa core keywords (substring match, accent-stripped).
+3. Yêu cầu: ít nhất 2 keywords, 50% keywords match, ít nhất 1 keyword dài (>= 4 ký tự).
+4. Score = 0.70 * ratio; boost +0.10 nếu location đã verified (cap 0.90).
+5. Chỉ chạy khi Priority 1-3 đều rỗng — address match yếu hơn name/alias match.
+
 ### 5.4. Intent location
 
 Với câu hỏi `ở đâu`, ưu tiên template:
@@ -472,6 +504,11 @@ Bổ sung sau khi frontend sẵn sàng:
 Cung An Định ở đâu?
 cung an dinh o dau
 Lăng An Định ở đâu?
+nhà thờ con dê ở đâu?
+con gà ở đâu?
+nhà thờ chính toà ở đâu?
+nhà thờ trần phú đà nẵng ở đâu?
+bảo tàng chăm đường bạch đằng ở đâu?
 địa danh không tồn tại ở đâu?
 hai địa danh khác nhau cùng tên ở đâu?
 địa điểm có location pending ở đâu?
@@ -505,15 +542,22 @@ Không gộp migration, import dữ liệu và thay đổi prompt/LLM vào một
 ## 7. Checklist kết thúc
 
 - [ ] DBML đã chốt và không còn alias lưu ở hai nơi.
-- [ ] PostgreSQL có volume và healthcheck.
-- [ ] `DATABASE_URL` dùng secret qua environment.
-- [ ] Alembic migration chạy trên database trống.
+- [x] PostgreSQL có volume và healthcheck.
+- [x] `DATABASE_URL` dùng secret qua environment.
+- [x] Alembic migration chạy trên database trống và nhận diện volume legacy an toàn.
 - [ ] CHECK, FK, unique và index đã được test.
-- [ ] Import corpus idempotent.
-- [ ] Location có URL, câu nguồn và trạng thái xác minh.
-- [ ] Alias trùng giữa nhiều entity được xử lý bằng candidate list.
-- [ ] Chatbot resolve entity từ database.
-- [ ] Intent location dùng verified structured data trước LLM.
-- [ ] Câu trả lời không có bằng chứng bị từ chối hoặc nói rõ thiếu nguồn.
+- [x] Import corpus idempotent (45 document, 349 passage, 45 entity, 53 alias).
+- [x] Location Cung An Định có URL chính thức, câu nguồn và trạng thái xác minh.
+- [x] Alias trùng giữa nhiều entity được xử lý bằng candidate list.
+- [x] Chatbot resolve entity từ database.
+- [x] Resolver DB hỗ trợ tên sai chính tả, tên rút gọn và alias; chỉ tự chọn khi điểm đủ cao và tách biệt.
+- [x] Resolver DB hỗ trợ tìm entity theo địa chỉ (tên đường/phường) khi user không nhớ tên chính thức.
+- [x] Intent location dùng verified structured data trước LLM.
+- [x] Câu trả lời không có bằng chứng bị từ chối hoặc nói rõ thiếu nguồn.
 - [ ] Test hồi quy cũ vẫn pass.
 - [ ] Backup/restore đã được thử trước khi dùng dữ liệu thật.
+
+> Trạng thái dữ liệu local ngày 2026-09-11: migration ở revision
+> `d0f4a2c81e7b`; importer đã nạp 45 document, 349 passage, 45 entity, 53 alias
+> và một location đã xác minh. Nguồn chính thức của Trung tâm Bảo tồn Di tích Cố
+> đô Huế xác nhận Cung An Định tại 97 đường Phan Đình Phùng, Thành phố Huế.

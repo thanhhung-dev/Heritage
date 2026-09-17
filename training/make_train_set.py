@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Gộp các file _v3 thành data/train.jsonl + data/valid.jsonl để mlx_lm đọc được.
+"""Gộp các file _v3 thành data/train.jsonl + data/valid.jsonl để trainer đọc.
 
 VÌ SAO CẦN FILE NÀY
-  1. mlx_lm HARDCODE tên file dataset: mlx_lm/tuner/datasets.py có
-     `names = ("train", "valid", "test")` và chỉ tìm `<data>/train.jsonl`,
-     `<data>/valid.jsonl`. `train_v3.jsonl` sẽ bị BỎ QUA IM LẶNG - train xong
-     mà vẫn là tập cũ, không có cảnh báo nào. Phải đổi tên, không có cách khác
-     ngoài việc sửa `data:` thành một thư mục riêng.
+  1. Trainer đọc đúng `train_file` và `valid_file` trong lora_config.yaml. Các
+     file `_v3.jsonl` chỉ được dùng sau khi chủ động gộp hoặc trỏ config vào đó.
   2. bootstrap_v3.py ghi NER ra file RIÊNG (ner_train_v3.jsonl) để đo copy-rate
      cho sạch - phần thân bài QA không bị 48 mẫu JSON làm loãng số liệu. Nhưng
      tách file KHÔNG có nghĩa là loại khỏi training: backend/core/llm.py serve

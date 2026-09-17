@@ -6,12 +6,9 @@
   3. Refusal Accuracy: câu hỏi ngoài nguồn → model có từ chối đúng không
   4. Style Score: đánh giá tay 1-5 cho văn phong kể chuyện
 
-Sửa so với bản cũ (những lỗi làm con số đo ra vô nghĩa):
+Các nguyên tắc để số đo có nghĩa:
 - Prompt lấy từ backend/core/prompt.py và đi qua chat template của tokenizer.
-  Bản cũ tự viết SYSTEM riêng rồi nối chuỗi thô -> đo model bằng định dạng thứ ba,
-  khác cả train lẫn serve, nên so base vs LoRA không nói lên điều gì.
-- Load model MỘT lần bằng mlx_lm API. Bản cũ gọi CLI mlx_lm.generate cho từng mẫu,
-  mỗi lần nạp lại model 3B từ đĩa.
+- Load model MỘT lần bằng Transformers + PEFT, đúng adapter do trainer sinh ra.
 - NER dùng micro-F1 (gộp tp/fp/fn) thay vì trung bình F1 từng mẫu. Bản cũ tính
   1.0 cho mẫu mà cả pred và gold đều rỗng, nên loại entity nào hiếm trong corpus
   (ví dụ "sự kiện") được cộng điểm miễn phí và ĐẨY macro-F1 lên giả tạo.
@@ -23,16 +20,16 @@ Gold set format (JSONL):
 
 Usage:
   # Đo model đang SERVE (base + adapter, đúng thứ backend dùng)
-  backend/.venv/bin/python training/score_gold.py \
+  python training/score_gold.py \
     --gold ./eval/gold.jsonl --out ./eval/report_lora.json
 
   # Đo base để so sánh
-  backend/.venv/bin/python training/score_gold.py --base \
+  python training/score_gold.py --base \
     --gold ./eval/gold.jsonl --out ./eval/report_base.json
 
   # Đo một checkpoint cụ thể
-  backend/.venv/bin/python training/score_gold.py --adapter models/lora-adapter \
-    --checkpoint 0000300 --gold ./eval/gold.jsonl --out ./eval/report_ck300.json
+  python training/score_gold.py --adapter models/peft-adapter \
+    --checkpoint 75 --gold ./eval/gold.jsonl --out ./eval/report_ck75.json
 """
 
 from __future__ import annotations
@@ -50,9 +47,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from backend.core.config import BASE_MODEL, LORA_SERVE_PATH  # noqa: E402
 from backend.core.corpus import load_docs  # noqa: E402
 from backend.core.prompt import NER_QUESTION, NER_TYPES, SYSTEM, chat_messages  # noqa: E402
+from training.train_hf import load_config  # noqa: E402
+
+TRAIN_CONFIG = ROOT / "training" / "lora_config.yaml"
+DEFAULT_TRAINING_CONFIG = load_config(TRAIN_CONFIG)
+BASE_MODEL = str(DEFAULT_TRAINING_CONFIG["model_id"])
+DEFAULT_ADAPTER_PATH = Path(DEFAULT_TRAINING_CONFIG["output_dir"])
 
 
 def file_identity(path: Path) -> dict[str, str | int]:
@@ -80,14 +82,15 @@ def adapter_identity(
     if checkpoint is None and checkpoint_file.exists():
         checkpoint = checkpoint_file.read_text("utf-8").strip() or None
 
-    weights_path = (
-        adapter_path / f"{explicit_checkpoint}_adapters.safetensors"
-        if explicit_checkpoint
-        else adapter_path / "adapters.safetensors"
-    )
+    selected_path = adapter_path
+    if explicit_checkpoint:
+        checkpoint = explicit_checkpoint.removeprefix("checkpoint-")
+        checkpoint = f"checkpoint-{checkpoint}"
+        selected_path = adapter_path / checkpoint
+    weights_path = selected_path / "adapter_model.safetensors"
     return {
-        "path": _display_path(adapter_path),
-        "checkpoint": checkpoint or "final",
+        "path": _display_path(selected_path),
+        "checkpoint": checkpoint or "best",
         "weights": file_identity(weights_path),
     }
 
@@ -242,35 +245,42 @@ def is_refusal(text: str) -> bool:
 # ---------- Driver ----------
 
 def load_model(path: str, adapter: str | None = None):
-    """Load base (+ adapter). Cùng đường mà backend/core/llm.py dùng để serve.
+    """Load Hugging Face base model and optional PEFT adapter once."""
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    Bản cũ nhận một `--model` duy nhất và mặc định là ./models/qwen-fused. Đo trên
-    model fuse KHÔNG đại diện cho thứ backend serve: fuse vào base 4-bit phải
-    requantize nên câu trả lời đổi (xem BASE_MODEL trong backend/core/config.py).
-    """
-    from mlx_lm import load
-    return load(path, adapter_path=adapter) if adapter else load(path)
+    tokenizer = AutoTokenizer.from_pretrained(path, use_fast=True)
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    kwargs: dict[str, Any] = {"device_map": "auto"}
+    if torch.cuda.is_available():
+        dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        kwargs["torch_dtype"] = dtype
+    else:
+        kwargs["torch_dtype"] = torch.float32
+    model = AutoModelForCausalLM.from_pretrained(path, **kwargs)
+    if adapter:
+        model = PeftModel.from_pretrained(model, adapter)
+    model.eval()
+    return model, tokenizer
 
 
-def build_prompt(tokenizer, sample: dict[str, Any]) -> str:
-    """Đúng định dạng mà model được train: SYSTEM chung + chat template."""
+def build_messages(sample: dict[str, Any]) -> list[dict[str, str]]:
+    """Build the same messages used by serving and training."""
     if sample["task"] == "ner":
         source, question = "", NER_QUESTION.format(text=sample["input"])
     else:
         source, question = sample.get("source", ""), sample["input"]
-    return tokenizer.apply_chat_template(
-        chat_messages(source, question),
-        add_generation_prompt=True,
-        tokenize=False,
-    )
+    return chat_messages(source, question)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=BASE_MODEL,
                     help=f"base model hoặc thư mục model đã fuse (mặc định {BASE_MODEL})")
-    ap.add_argument("--adapter", default=str(LORA_SERVE_PATH),
-                    help="thư mục adapter; mặc định đúng adapter backend đang serve")
+    ap.add_argument("--adapter", default=str(DEFAULT_ADAPTER_PATH),
+                    help="thư mục PEFT adapter; mặc định lấy từ lora_config.yaml")
     ap.add_argument("--checkpoint", default=None,
                     help="iter cụ thể trong --adapter, ví dụ 0000300")
     ap.add_argument("--base", action="store_true",
@@ -284,29 +294,12 @@ def main() -> int:
     adapter_meta: dict[str, Any] | None = None
     if not args.base:
         adapter_meta = adapter_identity(Path(args.adapter), args.checkpoint)
-        adapter = args.adapter
-        if args.checkpoint:
-            # mlx_lm chỉ đọc adapters.safetensors trong thư mục; trỏ vào một
-            # checkpoint cụ thể phải dựng thư mục tạm.
-            import shutil
-            import tempfile
-            src = Path(args.adapter) / f"{args.checkpoint}_adapters.safetensors"
-            if not src.exists():
-                print(f"Không có {src}", file=sys.stderr)
-                return 1
-            tmp = Path(tempfile.mkdtemp())
-            shutil.copy(Path(args.adapter) / "adapter_config.json", tmp)
-            shutil.copy(src, tmp / "adapters.safetensors")
-            adapter = str(tmp)
+        adapter = str(ROOT / adapter_meta["path"])
     print(f"model: {args.model}  adapter: {adapter or '(không)'}", file=sys.stderr)
 
     samples = [json.loads(l) for l in args.gold.read_text("utf-8").splitlines() if l.strip()]
 
-    from mlx_lm import generate
-    from mlx_lm.sample_utils import make_sampler
-
     model, tokenizer = load_model(args.model, adapter)
-    sampler = make_sampler(temp=0.0)   # greedy: chạy lại cho ra đúng con số cũ
 
     conf: dict[str, list[int]] = {t: [0, 0, 0] for t in NER_TYPES}
     cite_scores: list[float] = []
@@ -318,12 +311,25 @@ def main() -> int:
     outputs: list[dict[str, Any]] = []
 
     for i, s in enumerate(samples, 1):
-        prompt = build_prompt(tokenizer, s)
+        messages = build_messages(s)
         print(f"[{i}/{len(samples)}] task={s['task']} id={s.get('id','')}", file=sys.stderr)
         # NER chỉ cần một object JSON ngắn; cắt bớt token để đỡ chờ.
         cap = 256 if s["task"] == "ner" else args.max_tokens
-        out = generate(model, tokenizer, prompt=prompt, max_tokens=cap,
-                       sampler=sampler, verbose=False).strip()
+        inputs = tokenizer.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_tensors="pt",
+            return_dict=True,
+        ).to(model.device)
+        generated = model.generate(
+            **inputs,
+            max_new_tokens=cap,
+            do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+        new_tokens = generated[0, inputs["input_ids"].shape[1]:]
+        out = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
         outputs.append({"id": s.get("id"), "task": s["task"], "output": out})
 
         if s["task"] == "ner":

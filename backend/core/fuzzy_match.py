@@ -96,6 +96,12 @@ def _fuzzy_score(a: str, b: str) -> float:
         and b_core != b_tokens
     ):
         return 0.96
+    if (
+        len(a_core) >= 2
+        and a_core == b_core
+        and (a_core != a_tokens or b_core != b_tokens)
+    ):
+        return 0.92
 
     # Một lỗi gõ trong đúng một từ ("Xơn" -> "Sơn") đủ an toàn để tự sửa khi
     # các từ còn lại trùng đúng vị trí. Tên mơ hồ, thiếu từ không được nâng điểm.
@@ -107,6 +113,49 @@ def _fuzzy_score(a: str, b: str) -> float:
     return score
 
 
+def rank_fuzzy_names(
+    query: str,
+    names: list[str],
+    cutoff: float = 0.5,
+) -> list[tuple[int, float]]:
+    """Xếp hạng name/alias trong database bằng các cụm từ của câu hỏi.
+
+    Index trong kết quả trỏ về phần tử của ``names``. Tên một từ chỉ được dùng
+    làm gợi ý mơ hồ, không đủ điểm để tự chọn một entity.
+    """
+    query_tokens = WORD_RE.findall(strip_accents(query))
+    if not query_tokens or not names:
+        return []
+
+    normalized_names = [" ".join(WORD_RE.findall(strip_accents(name))) for name in names]
+    max_name_words = max((len(name.split()) for name in normalized_names), default=0)
+    best_scores: dict[int, float] = {}
+
+    for size in range(1, min(max_name_words, len(query_tokens)) + 1):
+        for start in range(len(query_tokens) - size + 1):
+            gram_tokens = query_tokens[start:start + size]
+            if (
+                gram_tokens[0] in QUESTION_BOUNDARY_WORDS
+                or gram_tokens[-1] in QUESTION_BOUNDARY_WORDS
+            ):
+                continue
+            gram = " ".join(gram_tokens)
+            gram_words = set(gram_tokens)
+
+            for index, candidate in enumerate(normalized_names):
+                candidate_words = set(candidate.split())
+                if not gram_words & candidate_words:
+                    continue
+                if size == 1:
+                    score = 0.68 if gram in candidate_words and len(gram) >= 4 else 0.0
+                else:
+                    score = _fuzzy_score(gram, candidate)
+                if score >= cutoff and score > best_scores.get(index, 0.0):
+                    best_scores[index] = score
+
+    return sorted(best_scores.items(), key=lambda item: (-item[1], item[0]))
+
+
 def _find_ngram_in_query(query: str, gram_stripped: str) -> tuple[int, int] | None:
     """Tìm vị trí (start, end) của n-gram trong query gốc."""
     q_tokens_raw = WORD_RE.findall(nfc(query).lower())
@@ -114,7 +163,7 @@ def _find_ngram_in_query(query: str, gram_stripped: str) -> tuple[int, int] | No
     gram_tokens = gram_stripped.split()
     n = len(gram_tokens)
 
-    token_spans = [(m.start(), m.end()) for m in re.finditer(r'\S+', query)]
+    token_spans = [(m.start(), m.end()) for m in WORD_RE.finditer(nfc(query))]
     if len(token_spans) != len(q_tokens_raw):
         return None
 

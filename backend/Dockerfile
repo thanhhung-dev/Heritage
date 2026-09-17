@@ -10,6 +10,7 @@ WORKDIR /app
 COPY backend/requirements.docker.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
+COPY alembic.ini /app/alembic.ini
 COPY backend /app/backend
 COPY corpus /app/corpus
 

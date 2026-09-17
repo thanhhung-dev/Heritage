@@ -1,0 +1,19 @@
+[
+  {
+    "entity_name": "Cung An Định",
+    "address": "97 đường Phan Đình Phùng",
+    "province": "Thành phố Huế",
+    "source_url": "https://eticket.hueworldheritage.org.vn/diem-den/cung-an-dinh",
+    "source_title": "Cung An Định - Trung tâm Bảo tồn Di tích Cố đô Huế",
+    "source_sentence": "An Định là cung điện riêng của vua Khải Định, tọa lạc bên bờ sông An Cựu, xưa thuộc phường Đệ Bát - Thị xã Huế, nay mang số 97 đường Phan Đình Phùng, Thành phố Huế.",
+    "verification_status": "verified",
+    "verified_at": "2026-09-11T00:00:00+07:00",
+    "query_aliases": [
+      {
+        "alias": "Lăng An Định",
+        "alias_type": "typo",
+        "confidence": 0.8
+      }
+    ]
+  }
+]

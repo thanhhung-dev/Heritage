@@ -163,7 +163,7 @@ def query_intent(query: str) -> frozenset[str]:
 
 def is_lead(chunk: dict) -> bool:
     """Đoạn mở đầu bài. Ở corpus wiki nó gần như LUÔN chứa tỉnh/thành."""
-    return not chunk["heading"] or chunk["chunk_id"].endswith("#0")
+    return chunk["chunk_id"].endswith("#0")
 
 
 def is_admin_chunk(chunk: dict) -> bool:
@@ -459,8 +459,20 @@ class Retriever:
             scored.sort(key=lambda c: (c["doc_node"] != top_doc, -c["chunk_score"]))
             docs, margin = [], 0.0
 
+        hits = scored[:top_k]
+        if INJECT_LEAD and "general" in intent and hits and not any(is_lead(h) for h in hits):
+            lead = next(
+                (
+                    chunk for chunk in scored
+                    if chunk["doc_node"] == hits[0]["doc_node"] and is_lead(chunk)
+                ),
+                None,
+            )
+            if lead is not None:
+                hits[-1] = lead
+
         return {
-            "hits": scored[:top_k],
+            "hits": hits,
             "docs": docs[:5],
             "margin": round(margin, 4),
             "seeds": [self.graph.nodes[s]["label"] for s in seeds],

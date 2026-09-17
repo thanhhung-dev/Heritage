@@ -6,6 +6,18 @@ from backend.core.retriever import get_retriever
 
 
 class RetrieverRegressionTests(unittest.TestCase):
+    def test_general_place_question_includes_the_actual_article_lead(self):
+        context, sources, _ = retrieve_context("kể chi tiết về ngũ hành sơn!")
+
+        self.assertTrue(context.startswith("Ngũ Hành Sơn (chữ Hán: 五行山)"))
+        self.assertTrue(
+            any(
+                source["chunk_id"] == "Ngũ Hành Sơn#0"
+                and source["used_in_context"]
+                for source in sources
+            )
+        )
+
     def test_coastal_city_paraphrase_ranks_song_han_first(self):
         result = get_retriever().retrieve(
             "con sông chia đôi thành phố biển miền Trung",

@@ -31,10 +31,10 @@ Muốn tự đo lại: `bash scripts/run_indexing.sh` và `backend/.venv/bin/pyt
 └──────────────┬───────────┼───────────────────┼─────────┘
                │           ▼                   ▼
                │  ┌───────────────────────────────┐  ┌──────────────────┐
-               │  │  retriever.py + kg.py         │  │ Qwen+LoRA fused  │
+               │  │  retriever.py + kg.py         │  │ Qwen+LoRA GGUF   │
                │  │  - BM25 theo từ               │  │  models/         │
-               │  │  - BM25 theo n-gram (bỏ dấu)  │  │  qwen-fused/     │
-               │  │  - graph 510 node / 1135 edge │  │  (~2GB, 3B-4bit) │
+               │  │  - BM25 theo n-gram (bỏ dấu)  │  │ qwen-fused.gguf  │
+               │  │  - graph 510 node / 1135 edge │  │  (Q8_0 runtime)  │
                │  │  dựng trong RAM, 0.23s        │  └──────────────────┘
                │  └───────────────────────────────┘
                │
@@ -330,9 +330,8 @@ volumes:
   pgdata:
 ```
 
-Embedding model cho entity: `Qwen/Qwen2.5-Embedding` chạy local (đã có sẵn
-Qwen2.5-3B trong `models/qwen-fused/`, dùng chung toolchain `mlx` hoặc
-`sentence-transformers`). Dim = 1024, không tinh chỉnh trong v1.
+Embedding model cho entity: `Qwen/Qwen2.5-Embedding` chạy local bằng
+`sentence-transformers`. Dim = 1024, không tinh chỉnh trong v1.
 
 ### 3. Training (1 lần, offline)
 
@@ -340,10 +339,10 @@ Qwen2.5-3B trong `models/qwen-fused/`, dùng chung toolchain `mlx` hoặc
 45 bài (cùng chunker với serving)
        ↓ training/bootstrap_deep_qa.py
 data/train.jsonl + valid.jsonl        (sinh lại bằng script, số mẫu xem trong file)
-       ↓ mlx_lm.lora  (training/lora_config.yaml: r=16, 16 layer, mask_prompt, cosine_decay)
-models/lora-adapter/                  (checkpoint 0000200, chọn theo val loss 0.414)
-       ↓ mlx_lm.fuse (training/fuse.sh)
-models/qwen-fused/
+       ↓ Transformers + PEFT LoRA (FP16/BF16, r=16, assistant-only loss)
+models/peft-adapter/                  (Trainer checkpoint-N + best adapter)
+       ↓ PEFT merge + llama.cpp converter (training/fuse.sh)
+models/qwen-fused.gguf
 ```
 
 Valid tách theo ĐỊA ĐIỂM, và mẫu valid nào dùng chung đoạn nguồn với train thì bị
@@ -423,7 +422,7 @@ lo và phải đo riêng bằng gold set (`eval/`).
 | BM25 + n-gram thay vì embedding | Không phải tải model, chạy offline ngay, và n-gram bỏ dấu xử lý được truy vấn không dấu - chỗ mà embedding tiếng Việt cũng hay trượt |
 | RRF thay vì cộng điểm có trọng số | Hợp nhất theo THỨ HẠNG nên không phải chuẩn hoá thang điểm giữa hai nhánh |
 | LoRA thay vì RAG-only | RAG cấp kiến thức, LoRA dạy văn phong + định dạng trích dẫn + CÁCH TỪ CHỐI |
-| Qwen2.5-3B-4bit | Vừa RAM, train nhanh; kiến thức đến từ nguồn nên không cần model to |
+| Qwen2.5-3B + LoRA FP16/BF16 | Vừa VRAM Kaggle phổ biến; kiến thức đến từ nguồn nên không cần model lớn |
 
 ## Trade-offs đã chọn
 

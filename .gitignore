@@ -44,8 +44,14 @@ yarn-error.log*
 !.env.docker.example
 
 # ===== Model weights (base 14GB, fused ~15GB, LoRA adapter) =====
-# Tải lại bằng mlx-community/Qwen2.5-7B-Instruct-4bit, không commit vào git
-backend/models/
+# backend/models/*.py là SQLAlchemy models; chỉ bỏ qua thư mục/trọng số model AI.
+backend/models/*/
+backend/models/*.safetensors
+backend/models/*.gguf
+backend/models/*.pt
+backend/models/*.pth
+backend/models/*.npz
+backend/models/*.mlx
 *.safetensors
 *.gguf
 *.pt
@@ -66,6 +72,8 @@ corpus/*
 # TRỪ aliases.json: sinh lại cần MẠNG (redirect Wikipedia) nhưng runtime phải
 # offline được. File nhỏ, đọc được bằng mắt, sửa tay được -> giữ trong git.
 !corpus/aliases.json
+# Dữ liệu location đã được duyệt thủ công cùng URL/câu nguồn chính thức.
+!corpus/verified_locations.json
 
 # data/: train.jsonl, valid.jsonl do make_smoke_data.py / bootstrap sinh ra
 data/**

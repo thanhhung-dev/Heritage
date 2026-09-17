@@ -23,12 +23,12 @@ class ReproducibilityMetadataTests(unittest.TestCase):
     def test_adapter_identity_uses_served_checkpoint_and_weights(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             adapter = Path(directory)
-            (adapter / "CHECKPOINT").write_text("0000200\n", "utf-8")
-            (adapter / "adapters.safetensors").write_bytes(b"served")
+            (adapter / "CHECKPOINT").write_text("checkpoint-200\n", "utf-8")
+            (adapter / "adapter_model.safetensors").write_bytes(b"served")
 
             identity = adapter_identity(adapter, None)
 
-            self.assertEqual(identity["checkpoint"], "0000200")
+            self.assertEqual(identity["checkpoint"], "checkpoint-200")
             self.assertEqual(
                 identity["weights"]["sha256"],
                 hashlib.sha256(b"served").hexdigest(),
@@ -37,12 +37,13 @@ class ReproducibilityMetadataTests(unittest.TestCase):
     def test_explicit_checkpoint_selects_matching_weights(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             adapter = Path(directory)
-            (adapter / "CHECKPOINT").write_text("0000200\n", "utf-8")
-            (adapter / "0000300_adapters.safetensors").write_bytes(b"checkpoint")
+            checkpoint = adapter / "checkpoint-300"
+            checkpoint.mkdir()
+            (checkpoint / "adapter_model.safetensors").write_bytes(b"checkpoint")
 
-            identity = adapter_identity(adapter, "0000300")
+            identity = adapter_identity(adapter, "300")
 
-            self.assertEqual(identity["checkpoint"], "0000300")
+            self.assertEqual(identity["checkpoint"], "checkpoint-300")
             self.assertEqual(
                 identity["weights"]["sha256"],
                 hashlib.sha256(b"checkpoint").hexdigest(),

@@ -61,9 +61,9 @@ Mở terminal:
 backend/.venv/bin/python eval/make_gold_template.py
 
 # Đo base và đo LoRA bằng CÙNG một prompt (backend/core/prompt.py)
-backend/.venv/bin/python training/score_gold.py --model mlx-community/Qwen2.5-3B-Instruct-4bit \
+python training/score_gold.py --base --model Qwen/Qwen2.5-3B-Instruct \
   --gold eval/gold.jsonl --out eval/report_base.json
-backend/.venv/bin/python training/score_gold.py \
+python training/score_gold.py \
   --gold eval/gold.jsonl --out eval/report_lora.json
 ```
 
@@ -102,11 +102,11 @@ Câu hỏi thường gặp + cách trả lời:
 **"Sao không dùng Microsoft GraphRAG?"**
 > "Đã cân nhắc và bỏ. Nó cần LLM extract entity: 8-12 giờ index trên corpus này, prompt mặc định bằng tiếng Anh chạy trên văn bản tiếng Việt sai nhiều, và entity do LLM sinh ra có thể bịa. Graph ở đây xây deterministic bằng khớp tên thực thể + mẫu 'danh từ loại + tên riêng' của tiếng Việt: 510 node / 1135 edge, build hết 0.23 giây, và mọi node đều truy được về một chuỗi có thật trong văn bản."
 
-**"Tại sao 4-bit base?"**
-> "Để model 3B + LoRA vừa RAM và train nhanh trên M4 Pro. 4-bit quantization giảm RAM ~4× với loss chất lượng nhỏ cho downstream task. Kiến thức đến từ nguồn được truy xuất, nên không cần model to."
+**"Tại sao dùng LoRA?"**
+> "LoRA chỉ tối ưu các ma trận hạng thấp thay vì cập nhật toàn bộ model, nên giảm VRAM và kích thước artifact trong khi base model vẫn được train ở FP16/BF16. Kiến thức đến từ nguồn được truy xuất; LoRA chủ yếu dạy văn phong, trích nguồn và hành vi từ chối."
 
 **"Mất bao lâu để train?"**
-> "Sinh data vài giây. Train LoRA (r=16, 16 lớp cuối) 1000 iters trên M4 Pro: lần chạy rank-8 trước đo được ~2 giờ 05; cấu hình hiện tại giảm grad_accumulation 8→4 nên dự kiến ~1–1,5 giờ. Xây graph 0.23 giây, đo retrieval 1 giây — nên vòng lặp sửa retrieval rất nhanh, không phải index lại gì cả."
+> "Thời gian phụ thuộc GPU Kaggle, sequence length và số mẫu. Pipeline ghi checkpoint và tự resume; thời gian thực tế phải lấy từ log của run CUDA hiện tại, không dùng lại số đo MLX cũ."
 
 **"Chi phí toàn bộ dự án?"**
 > "Dưới $1 (chỉ tính điện). Toàn bộ stack local, không tốn API."

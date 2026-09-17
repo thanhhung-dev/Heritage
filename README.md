@@ -5,7 +5,7 @@ Chatbot hỏi đáp về di sản, ẩm thực và nghệ thuật **Đà Nẵng 
 - **Retrieval**: BM25 theo từ + BM25 theo n-gram (chịu được gõ không dấu) hợp nhất
   bằng RRF, mở rộng và xếp lại bằng **knowledge graph dựng deterministic** — không
   gọi LLM lúc index, không Ollama, không vector DB (`backend/core/kg.py`).
-- **LoRA fine-tune**: Qwen2.5-3B-Instruct-4bit trên Apple Silicon (MLX)
+- **LoRA fine-tune**: Hugging Face Transformers + PEFT FP16/BF16, chạy CUDA Docker/Kaggle
 - **Backend**: FastAPI · **Frontend**: Next.js
 - **Không cần API key, không cần internet** sau khi crawl xong corpus.
 
@@ -36,7 +36,7 @@ HeritageGraph/
 │       └── llm.py                # Qwen+LoRA inference
 ├── training/
 │   ├── bootstrap_deep_qa.py      # sinh training data (đang dùng)
-│   ├── lora_config.yaml, train.sh, fuse.sh
+│   ├── train_hf.py, lora_config.yaml, Dockerfile
 │   └── score_gold.py
 ├── eval/
 │   ├── eval_retrieval.py         # đo recall + tỉ lệ từ chối (không cần model)
@@ -47,7 +47,7 @@ HeritageGraph/
 │   └── start_dev.sh
 ├── frontend/                     # Next.js (chưa hoàn thiện)
 ├── data/                         # train.jsonl + valid.jsonl
-├── models/                       # lora-adapter/ + qwen-fused/
+├── models/                       # peft-adapter/ + qwen-fused.gguf
 └── docs/
 ```
 
@@ -90,13 +90,19 @@ Artifact ra `graphrag/output/`: `graph.gexf` (mở bằng Gephi), `graph.json`
 
 ```bash
 backend/.venv/bin/python training/bootstrap_deep_qa.py   # sinh data/train.jsonl + valid.jsonl
-bash training/train.sh                                   # thêm --fresh nếu adapter cũ khác rank
-bash training/fuse.sh                                    # → models/qwen-fused/
+docker compose --profile training run --rm trainer       # Linux có NVIDIA GPU
+docker compose --profile training run --rm trainer bash training/eval.sh
+docker compose --profile training run --rm trainer bash training/fuse.sh  # → GGUF
 ```
+
+Trên Kaggle chạy cùng `training/train_hf.py`, không chạy Docker lồng trong
+notebook. Xem hướng dẫn đầy đủ và cách nâng model 8B tại
+[`docs/training.md`](docs/training.md).
 
 ### Bước 4: Chạy app
 
 ```bash
+docker compose up -d llm          # llama.cpp tại localhost:8080
 backend/.venv/bin/uvicorn backend.app:app --port 8000
 cd frontend && npm run dev      # terminal khác → http://localhost:3000
 ```
@@ -115,9 +121,9 @@ curl 'localhost:8000/api/graph/subgraph?node=Huế'
 |---|---|---|
 | **Frontend** | Next.js 14, React 18, TypeScript | UI chat |
 | **Backend** | FastAPI, Pydantic, Uvicorn | API, orchestration |
-| **LLM** | Qwen2.5-3B-Instruct-4bit (MLX) | Sinh câu trả lời, có LoRA |
+| **LLM runtime** | llama.cpp + GGUF | Sinh câu trả lời portable |
 | **Retrieval** | BM25 tự viết + RRF + networkx | Lấy context, xếp lại theo graph |
-| **Fine-tune** | mlx-lm, LoRA rank 16, 16 layer | Văn phong + trích dẫn + cách từ chối |
+| **Fine-tune** | Transformers + PEFT LoRA FP16/BF16 | Văn phong + trích dẫn + cách từ chối |
 | **Corpus** | Wikipedia VN (Huế, Đà Nẵng) | 45 bài dùng được / 349 chunk |
 
 ## Đánh giá

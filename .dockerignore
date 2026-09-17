@@ -7,6 +7,7 @@
 **/.DS_Store
 backend/.venv
 backend/venv
+backend/models/*.safetensors
 frontend/.next
 frontend/node_modules
 data
@@ -15,6 +16,8 @@ eval
 graphrag
 ingestion
 models
+!backend/models
+!backend/models/*.py
+backend/models/qwen2.5-7b
 prompts
-training
 *.log

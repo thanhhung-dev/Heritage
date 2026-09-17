@@ -1,9 +1,30 @@
 name: heritagegraph
 
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-heritagegraph}
+      POSTGRES_USER: ${POSTGRES_USER:-heritagegraph}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - heritage-network
+
   llm:
     image: ghcr.io/ggml-org/llama.cpp:server
     restart: unless-stopped
+    ports:
+      - "${LLAMA_PORT:-8080}:8080"
     volumes:
       - ./models/qwen-fused.gguf:/models/qwen-fused.gguf:ro
     command:
@@ -20,6 +41,34 @@ services:
     networks:
       - heritage-network
 
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: "no"
+    environment:
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
+    command: ["python", "-m", "backend.db.migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - heritage-network
+
+  import-data:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: "no"
+    environment:
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
+    command: ["python", "-m", "backend.db.import_corpus"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - heritage-network
+
   backend:
     build:
       context: .
@@ -29,10 +78,14 @@ services:
       INFERENCE_BACKEND: llama_server
       LLAMA_SERVER_URL: http://llm:8080
       LLAMA_SERVER_TIMEOUT: ${LLAMA_SERVER_TIMEOUT:-300}
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
-      - llm
+      import-data:
+        condition: service_completed_successfully
+      llm:
+        condition: service_started
     healthcheck:
       test:
         - CMD
@@ -60,6 +113,34 @@ services:
         condition: service_healthy
     networks:
       - heritage-network
+
+  trainer:
+    profiles: ["training"]
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: training/Dockerfile
+    environment:
+      HF_HOME: /cache/huggingface
+    volumes:
+      - ./training:/workspace/training:ro
+      - ./data:/workspace/data:ro
+      - ./corpus:/workspace/corpus:ro
+      - ./eval:/workspace/eval
+      - ./scripts:/workspace/scripts:ro
+      - ./models:/workspace/models
+      - huggingface_cache:/cache/huggingface
+    shm_size: "2gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+volumes:
+  postgres_data:
+  huggingface_cache:
 
 networks:
   heritage-network:
