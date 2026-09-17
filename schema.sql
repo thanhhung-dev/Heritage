@@ -18,7 +18,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TYPE predicate_type AS ENUM (
   'THỜ',
   'XÂY_NĂM',
-  'THUỘC_LÀNG',
+  'THUỘC  _LÀNG',
   'THUỘC_VÙNG',
   'LÀ_LOẠI',
   'LIÊN_QUAN'

@@ -137,6 +137,7 @@ backend/.venv/bin/python training/score_gold.py \
 ## Tài liệu
 
 - [docs/architecture.md](docs/architecture.md) — kiến trúc, luồng dữ liệu, ba cổng từ chối
+- [docs/chatbot.md](docs/chatbot.md) — kiến trúc chatbot chốt theo Microsoft GraphRAG + KAG
 - [docs/metrics.md](docs/metrics.md) — 4 metric đánh giá
 - [docs/demo-guide.md](docs/demo-guide.md) — hướng dẫn demo
 

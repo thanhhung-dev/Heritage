@@ -96,7 +96,6 @@ tmp/
 *.bak
 heritagegraph-docker.tar.gz
 
-# ===== OS / Editor =====
 .DS_Store
 .DS_Store?
 ._*
@@ -109,3 +108,8 @@ Thumbs.db
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
+
+
+.agents
+.opencode
+_bmad/
