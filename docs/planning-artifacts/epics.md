@@ -3,231 +3,198 @@ stepsCompleted:
   - step-01-validate-prerequisites
   - step-02-design-epics
 inputDocuments:
-  - prds/prd-HeritageGraph-2026-09-08/prd.md
-  - prds/prd-HeritageGraph-2026-09-08/addendum.md
-  - ../../docs/architecture.md
-  - ../../docs/specs/spec-heritagegraph-v2/SPEC.md
-  - ../../docs/specs/spec-heritagegraph-v2/companions (features.md, fr-catalog.md, metrics-targets.md, architecture-principles.md, schedule.md)
+  - ARCHITECH-TECHNOLOGY.png
+  - schema.sql
+  - docs/chatbot.md
+  - docs/planning-artifacts/prds/prd-HeritageGraph-2026-09-08/prd.md
+  - docs/planning-artifacts/architecture/architecture-HeritageGraph-2026-09-15/ARCHITECTURE-SPINE.md
+  - docs/planning-artifacts/ux-designs/ux-HeritageGraph-2026-09-15/DESIGN.md
+  - docs/planning-artifacts/ux-designs/ux-HeritageGraph-2026-09-15/EXPERIENCE.md
+  - docs/specs/spec-heritagegraph-v2/SPEC.md
+  - docs/specs/spec-heritagegraph-v2/features.md
 ---
 
 # HeritageGraph - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for HeritageGraph, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
-
-> **Ghi chú phạm vi:** PRD `prd-HeritageGraph-2026-09-08` là SRS chính thức (chuyển thể từ proposal-vi v2.0 + upgrade-plan, giữ nguyên mã FR/NFR để truy vết). Nó **mở rộng** so với spec `spec-heritagegraph-v2` (chuyển thể từ đề cương): thêm kênh vector pgvector (FR12), trang chi tiết nội dung (PRD gọi là "Tapestry") + 3D + audio (FR23, FR28–FR30), hạ tầng Antd. Khi xung đột, PRD thắng.
->
-> **Quy ước triển khai (theo chỉ thị của PO):** Xây **mới toanh từ đầu** — không dựa vào hiện trạng repo, không giả định mã nguồn đã có. Mọi thành phần (retriever, kg, rag, llm, corpus, frontend) đều là công việc cần làm mới. Thiết kế mục tiêu trong `docs/architecture.md` được dùng như đặc tả xây dựng.
+Tài liệu này phân rã toàn bộ yêu cầu HeritageGraph thành epic và story có thể triển khai. `ARCHITECH-TECHNOLOGY.png` sau khi được review và hiệu chỉnh là baseline công nghệ mới nhất. `docs/chatbot.md`, `schema.sql` và workflow Admin Knowledge Studio → draft corpus → Airflow validation/indexing → human review → publish là baseline hành vi. PRD cũ chỉ cung cấp mục tiêu sản phẩm và các yêu cầu không xung đột; quyết định công nghệ cũ không còn binding.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
-- FR01: Đăng ký, xác thực, quản lý tài khoản — mật khẩu chỉ lưu băm argon2id; phiên qua cookie HttpOnly (JWT, SameSite=Lax); endpoint được bảo vệ từ chối yêu cầu chưa xác thực; máy chủ demo bind 127.0.0.1
-- FR02: CRUD tài liệu kho ngữ liệu — chuẩn hóa, tách đoạn kèm định vị nguồn; đồ thị dựng lại với đỉnh mới liên kết về nguồn
-- FR03: CRUD bản ghi có cấu trúc — venue (tọa độ), event (loại lịch, phần lễ/hội), artifact (niên đại, chất liệu, bảo tàng, phòng), media_asset (giấy phép, người đóng góp, URL gốc); thiếu `source_url`/`source_sentence` bị từ chối **ở mức DB** kèm lỗi mức trường
-- FR04: Trích xuất thực thể/quan hệ/hành chính/năm — tất định, khớp lược đồ 4 loại, mọi tên là chuỗi con nguyên văn của nguồn
-- FR05: Dựng + cập nhật đồ thị — đỉnh/cạnh tạo, gán kiểu, gán trọng số, liên kết về nguồn; không quan hệ nào tạo mà thiếu chuỗi nguồn
-- FR06: Rà soát kết quả trích xuất — thay đổi ghi audit_log kèm giá trị trước/sau
-- FR07: Suy ra hồ sơ sở thích mà không yêu cầu khai — nền tảng dùng đầy đủ trước khi có hồ sơ; sau vài tìm/xem đầu tiên hồ sơ đã có sở thích có trọng số
-- FR08: Ghi tương tác ngầm định, xem/sửa được — view/dwell/click/save/dismiss kèm mốc thời gian + đỉnh đích; trọng số suy giảm theo thời gian; người dùng thấy từng sở thích kèm hành vi sinh ra nó
-- FR09: Gợi ý kèm đường đi đồ thị — mỗi mục kèm `reason_path`; `GET /api/recommend?seed=<node>&k=5` → `[{node, label, category, score, reason_path}]`
-- FR10: Gợi ý xuyên danh mục — ≥1 trong 5 gợi ý đầu thuộc danh mục khác; gate Sprint 2: mọi danh mục ≥8 tài liệu
-- FR11: Đa dạng — 5 mục đầu ≤3 mục cùng danh mục, trừ khi số danh mục tiếp cận được ít hơn
-- FR12: Truy hồi đúng đoạn bất kể biến thể ngôn ngữ — 3 kênh (BM25 từ, BM25 n-gram không dấu, vector pgvector dim 1024) hợp nhất RRF; recall@1 ≥95%; bảng tách kênh; endpoint truy vết phơi hạt giống, hạng từng kênh, các cổng
-- FR13: Xếp hạng lại theo hồ sơ — hai người dùng hồ sơ khác nhau nhận thứ tự khác nhau; khác biệt truy nguyên về trọng số hồ sơ
-- FR14: Chat chỉ văn bản, trả lời chỉ từ bối cảnh đã truy hồi
-- FR15: Trích nguồn hoặc phát biểu thiếu bằng chứng — mỗi câu khẳng định kèm `[Nguồn: <câu nguyên văn> — <url>]`; url phải hiển thị ở frontend
-- FR16: Đính chính giả định sai — giả định trái nguồn → đính chính ngay câu đầu (≥90%)
-- FR17: Phân loại ý định — 6 lớp (research/attend_event/plan_trip/learn/compare/verify); regex + từ vựng, không fine-tune; macro-F1 ≥85% trên ≥100 câu gán nhãn tay
-- FR18: Thẻ khớp sổ đăng ký — mọi trường thẻ = đúng trường bản ghi nguồn hoặc phản hồi API, không trường nào do sinh ra; assert tự động 100%; thẻ mang provenance + fetched_at
-- FR19: Lịch sự kiện — tên, loại lịch, ngày (âm lịch quy đổi soạn tay, không thư viện), địa điểm kèm tọa độ, đơn vị tổ chức, phần lễ + phần hội
-- FR20: Thời tiết + danh mục chuẩn bị — Open-Meteo theo tọa độ; checklist sinh bằng ~15 luật tường minh trong `prep_rules.yaml`; lễ xa hơn 16 ngày → khí hậu trung bình cùng kỳ, thẻ ghi rõ "khí hậu, không phải dự báo"
-- FR21: POI gần địa điểm — bãi xe, điểm quan sát, cửa hàng nghề/quà; Overpass + cache vào bảng poi; kiểm độ phủ OSM đầu Tuần 8; thưa → fallback POI soạn tay
-- FR22: Địa điểm & lịch mở cửa — tên, địa chỉ, giờ mở, giá vé từ bản ghi F03; cổ vật thêm bảo tàng + phòng trưng bày
-- FR23: Trang chi tiết nội dung (PRD gọi là "Tapestry") — ảnh lớn trái, danh sách story phải; kể chuyện, audio, chip liên kết, dòng thời gian, thực thể liên quan, dải nội dung liên quan
-- FR24: Endpoint truy vết — phơi hạt giống, hạng từng kênh, độ gần đồ thị, thành phần cho điểm, kết quả từng cổng từ chối
-- FR25: Hồ sơ + dữ liệu cá nhân trong trang tài khoản — hồ sơ kèm hành vi sinh ra từng sở thích, bỏ/tắt được; xuất tệp máy đọc được; xóa vĩnh viễn cả hồ sơ lẫn interaction_event. Không thể bị cắt
-- FR26: Dashboard sức khỏe — số tài liệu/danh mục, thống kê đồ thị, trường thiếu nguồn, hàng chờ rà soát, chỉ số mới nhất
-- FR27: Toàn bộ bộ đánh giá chạy được — mọi chỉ số tính và xuất báo cáo ghi: mô hình, checkpoint bộ điều hợp, phiên bản prompt, phiên bản kho ngữ liệu, cấu hình
-- FR28: 3D + audio — .glb từ R2 qua Three.js; xoay, phóng, chuyển story, chuyển ngữ; mỗi audio có transcript đầy đủ
-- FR29: Nguồn gốc tài sản — media_asset lưu khóa kho, người đóng góp, ngày, giấy phép, URL nguồn gốc; thiếu → từ chối tại biên endpoint
-- FR30: Script audio có bằng chứng — mỗi câu khẳng định transcript truy về được câu nguồn hoặc đánh dấu lời dẫn dắt biên tập; kiểm tra tự động chặn tổng hợp giọng nói nếu không đạt
+- FR01: Quản trị viên đăng nhập an toàn và mọi thao tác quản trị được xác thực, phân quyền và ghi audit.
+- FR02: Người dùng có thể hỏi đáp tiếng Việt bằng văn bản về di sản Huế–Đà Nẵng.
+- FR03: Chatbot chỉ trả lời từ evidence thuộc một corpus release đã publish; thiếu bằng chứng thì clarify hoặc abstain.
+- FR04: Mọi khẳng định thực tế trong câu trả lời có citation hợp lệ tới passage và document nguồn.
+- FR05: Chatbot đính chính tiền đề sai ngay phần mở đầu khi evidence chứng minh tiền đề không đúng.
+- FR06: Hệ thống chuẩn hóa câu hỏi, sửa gần đúng và resolve canonical entity/alias; trường hợp mơ hồ phải hỏi lại.
+- FR07: Intent router phân loại overview, field, timeline, relationship, section, comparison, open_text hoặc out_of_scope.
+- FR08: Query planner chọn exact claim, timeline, graph 1–2 hop, narrative section, text retrieval hoặc multi-operator plan theo intent.
+- FR09: Text retrieval kết hợp tìm từ, tìm không dấu/lỗi gõ, vector khi được eval chứng minh có lợi, rồi hợp nhất thứ hạng.
+- FR10: Entity Dossier/Evidence Context Builder hợp nhất, loại trùng, giữ xung đột nguồn và cấp citation label cho evidence.
+- FR11: Pre-generation gate kiểm tra entity scope, trạng thái publish, độ mới, corpus version và ngưỡng evidence.
+- FR12: Post-generation gate kiểm tra citation, số, ngày, factual claims, mức chắc chắn và xung đột nguồn trước khi trả lời.
+- FR13: Qwen3-4B + LoRA chỉ tổng hợp evidence và định dạng câu trả lời; không tự truy vấn DB hoặc bổ sung tri thức ngoài evidence.
+- FR14: Graph Service cho phép truy vấn entity, predicate, relation và traversal giới hạn 1–2 hop trên published corpus.
+- FR15: Recommendation Service hỗ trợ cold start và hồ sơ sở thích ẩn danh được frontend suy ra từ view, click, dwell, save và dismiss có consent rồi lưu trong `localStorage`.
+- FR16: Candidate Generator kết hợp graph projection, pgvector và metadata; Rank & Diversify tránh kết quả quá giống hoặc đã xem.
+- FR17: Mỗi gợi ý có score và reason path giải thích được; frontend cập nhật hồ sơ cục bộ từ tương tác mới theo quy tắc xác định và có thể tái lập.
+- FR18: Tại Preferences, người dùng xem trạng thái consent, tắt cá nhân hóa, xuất hoặc đặt lại hồ sơ cùng interaction history lưu trên thiết bị.
+- FR19: Nội dung chi tiết hỗ trợ story, timeline, entity liên quan, bản đồ, mô hình 3D, audio và transcript.
+- FR20: Media asset lưu provenance, license, contributor và URL gốc; script audio phải qua kiểm tra evidence trước khi tổng hợp.
+- FR21: Khi S3 hoặc media delivery lỗi, trang vẫn phục vụ text, transcript và tri thức; media hiển thị trạng thái không khả dụng.
+- FR22: Admin Knowledge Studio cung cấp CRUD có hướng dẫn cho document và metadata nguồn.
+- FR23: Admin có thể tạo hoặc điều chỉnh passage từ raw text, xem char span, content hash và corpus version.
+- FR24: Admin có thể tạo, tìm và rà trùng entity; quản lý alias, place profile, primary evidence và supporting evidence.
+- FR25: Admin có thể nhập typed claim từ claim_field, timeline event cùng participant role, và relation từ predicate đóng.
+- FR26: Admin có thể biên soạn narrative section bằng Markdown và gắn nhiều supporting passages.
+- FR27: Mọi knowledge record mới được lưu ở trạng thái draft và không xuất hiện trong online serving trước khi publish.
+- FR28: Admin có thể chọn evidence trực tiếp từ passage; UI không yêu cầu nhập UUID hoặc foreign key thủ công.
+- FR29: FastAPI kiểm tra tức thời required fields, type, foreign key, exact duplicate và business constraint khi lưu draft.
+- FR30: Admin submit một document package hoặc corpus revision để chạy deep validation bất đồng bộ, không chạy DAG nặng sau mỗi lần save.
+- FR31: Airflow điều phối RAG data pipeline: validate, deduplicate, provenance/version checks, semantic chunking, content hash, embedding, index build và manifest.
+- FR32: Mỗi submission tạo hoặc tái sử dụng một validation run idempotent và xuất validation issues phân loại error/warning.
+- FR33: Admin xem trạng thái DAG, quality report, lỗi theo record/evidence và sửa draft rồi resubmit.
+- FR34: Corpus chỉ được publish khi validation pass và human reviewer phê duyệt; publish là chuyển đổi atomic và có audit.
+- FR35: Online QA và Recommendation pin một published corpus version xuyên suốt request, retrieval, evidence persistence và response.
+- FR36: Dashboard quản trị hiển thị sức khỏe corpus/KG, validation queue, provenance gaps, index status, model/prompt version và eval metrics.
+- FR37: Public Heritage Portal dùng visual language kể chuyện di sản thống nhất xuyên suốt Home, Explore, search/filter theo khu vực và loại, Entity Detail, Chat, Recommendation và Preferences; có đầy đủ loading/empty/error/not-found/clarify/abstained/responsive states trên published content.
 
 ### NonFunctional Requirements
 
-- NFR01: p95 đầu-cuối ≤8 giây (câu hỏi tiêu chuẩn, môi trường demo), đo liên tục từ Sprint 1
-- NFR02: Gợi ý + thẻ trong 2 giây (không tính sinh mô hình); API ngoài chạy song song
-- NFR03: Trang chi tiết ≤3 giây (đệm đồ thị, ảnh thu nhỏ)
-- NFR04: recall@1 ≥95% kể cả không dấu/tên khác/diễn giải; recall riêng tập diễn giải báo cáo tách
-- NFR05: Trung thực trích nguồn ≥85%; độ phủ trích nguồn ≥90%
-- NFR06: 0 trường bịa trong thẻ tư vấn — assert tự động
-- NFR07: Từ chối ≥90%; trả lời bịa ngoài phạm vi = lỗi; báo cáo cùng NFR04
-- NFR08: Mọi gợi ý phơi đường đi qua tooltip; mọi truy hồi kiểm tra qua endpoint
-- NFR09: Lần đầu hỏi + nhận gợi ý ngay lập tức — không onboarding, không bảng khai
-- NFR10: WCAG 2.1 AA phần áp dụng được: alt-text, tương phản, bàn phím, transcript cho audio, mô tả 3D
-- NFR11: Xác thực mọi endpoint cá nhân; kiểm tra đầu vào; không đường ghi không xác thực; không mở mạng công khai
-- NFR12: Đồng ý trước khi ghi; chỉ lưu tối thiểu; xuất + xóa (không thể cắt)
-- NFR13: Mọi phát biểu truy về nguồn: câu kho ngữ liệu, trường bản ghi, hoặc API có tên + mốc thời gian
-- NFR14: Bản ghi thiếu nguồn không lưu được — ràng buộc mức DB, không phải app
-- NFR15: Nạp/graph/truy hồi/sinh/gợi ý/tư vấn/UI = mô-đun giao diện tách biệt
-- NFR16: Model, checkpoint adapter, phiên bản prompt, phiên bản kho, cấu hình ghi trong mọi report
-- NFR17: Thêm vùng/danh mục/bản ghi không sửa mã; thẻ mới chỉ cần đăng ký bộ sinh
-- NFR18: Một máy, không dịch vụ AI ngoài, không khóa API
-- NFR19: .glb tải ≤3 giây trên 4G, ≤30 MB (Draco/Meshopt); audio phát ≤1 giây; không tính thời gian tổng hợp (sinh trước)
-- NFR20: Mất R2/Azure → trang chi tiết vẫn đầy đủ văn bản/transcript/chip; 3D+audio hiện "tạm thời không khả dụng", không trang trắng
+- NFR01: PostgreSQL là system of record cho knowledge, release, audit, chat evidence và trạng thái vận hành có cấu trúc.
+- NFR02: Passage đã thuộc published release là bất biến; re-ingestion tạo revision mới thay vì sửa evidence đã trích dẫn.
+- NFR03: Mọi write path đi qua FastAPI/service transaction; Admin UI và Airflow không chỉnh production tables tùy ý.
+- NFR04: Database constraints bảo vệ type, range, foreign key, uniqueness và provenance bắt buộc; app validation không thay thế DB integrity.
+- NFR05: Import, submit và Airflow retry phải idempotent; cùng submission/revision không tạo knowledge hoặc job trùng.
+- NFR06: Publish không thể xảy ra khi validation pending/failed hoặc chưa có human review.
+- NFR07: Online serving không đọc draft, retired, withdrawn, out-of-scope hoặc evidence khác corpus version.
+- NFR08: Một request không được trộn graph, lexical index, vector index hoặc evidence từ các release khác nhau.
+- NFR09: Citation faithfulness ≥85%, citation coverage ≥90% và refusal accuracy ≥90%; báo cáo cùng nhau để tránh tối ưu lệch.
+- NFR10: Retrieval recall@1 ≥95% trên tên chuẩn, alias, không dấu và paraphrase trong tập đánh giá đã version hóa.
+- NFR11: Chat p95 ≤8 giây trong môi trường mục tiêu; recommendation không gồm generation ≤2 giây; trang chi tiết ≤3 giây.
+- NFR12: Dịch vụ ngoài hoặc media store lỗi phải degrade tường minh, không bịa dữ liệu và không gây trang trắng.
+- NFR13: Qwen inference chạy local; llama.cpp chỉ dùng GGUF/adapter tương thích, còn MLX base+adapter là runtime riêng.
+- NFR14: Model release manifest ghi base model, adapter, tokenizer, quantization/GGUF hash, prompt version, corpus version và rollout id.
+- NFR15: MLX adapter không được đưa trực tiếp vào llama.cpp; mọi conversion/fusion phải qua regression evaluation trước rollout.
+- NFR16: Airflow là orchestrator cho deep validation/indexing; immediate field validation vẫn thuộc FastAPI/PostgreSQL.
+- NFR17: RAG pipeline tạo manifest tái lập gồm chunk ids, content hashes, embedding contract, model và corpus revision.
+- NFR18: Candidate graph trong NetworkX là projection có version từ PostgreSQL published corpus, không phải source of truth song song.
+- NFR19: Hồ sơ và interaction history cục bộ chỉ được ghi khi có consent, dùng schema có version và giới hạn dung lượng; backend không lưu định danh/hồ sơ Public User và phải kiểm tra payload hồ sơ ẩn danh trong recommendation request.
+- NFR20: WCAG 2.1 AA áp dụng cho chat, Admin Studio, validation report, media controls và keyboard workflow.
+- NFR21: Prometheus thu metrics, Loki thu logs, Grafana hiển thị dashboard và Langfuse truy vết prompt/evidence/model trong giới hạn privacy.
+- NFR22: Không ghi raw password, token, IP hoặc nội dung nhạy cảm vào logs/traces; secret nằm ngoài source control.
+- NFR23: GitHub → Jenkins chạy unit, integration, contract và E2E tests trước build/publish/deploy component image.
+- NFR24: Terraform quản lý infrastructure; software deployment và model/prompt rollout là hai pipeline tách biệt có rollback.
+- NFR25: Rollout model/prompt 10% → 50% → 100% chỉ tiến bước khi quality, grounding, latency và error metrics đạt gate.
 
 ### Additional Requirements
 
-*Nguồn: docs/architecture.md (thiết kế mục tiêu) + addendum §1 (chi tiết kỹ thuật). Triển khai greenfield — mọi thứ xây mới.*
-
-- **Thiết kế mục tiêu làm đặc tả xây dựng:** toàn bộ lớp PostgreSQL (schema, docker-compose, seed_postgres, PostgresRepository, bảng 3D Story/Scene, app_user, audit_log, chat_session/chat_message/chat_feedback) là **việc cần xây mới**. Kiến trúc mục tiêu: graph dựng deterministic từ corpus + locations_index, retrieval trong RAM, PG persist cho `/api/graph`
-- **Mã nguồn cần xây mới (xây từ đầu):** `retriever.py` (BM25 từ + BM25 n-gram + RRF + graph rerank/pump), `kg.py` (dựng đồ thị deterministic, find_seeds, expand_docs), `rag.py` (3 cổng từ chối: neo graph, bằng chứng, coverage), `prompt.py` SYSTEM, `corpus.py` (chunker chung cho train + serve), `nerlabel.py`, `llm.py` (Qwen+LoRA generate), `config.py` (bind 127.0.0.1), `app.py` (auth + CORS), `api/chat.py` (schema v2 `{answer, sources, blocks, intent, recommendations}`), frontend Next.js + Antd X (`page.tsx` NEXT_PUBLIC_API_URL, type `Source` có doc/url/heading/chunk_id), `backend/tests/` (pytest + Playwright + CI)
-- **Infra Sprint 1:** Postgres 16 + pgvector 0.8.6 + Alembic + docker-compose (pgvector/pgvector:pg16); 15 bảng: app_user (argon2id), user_interest, interaction_event, recommendation_log, venue, event (calendar: lunar|solar), event_segment (phase: lễ|hội), artifact, poi (source: osm|manual), media_asset, story, passage_embedding (vector(1024), khóa chunk_id `<tên bài>#<i>`), audit_log; ràng buộc NOT NULL nguồn ở mức DB
-- **Quy ước DB:** id TEXT `<PREFIX>-<NNNNNN>` sequence cấp, không max+1; mọi CHECK ngữ nghĩa ở DB không phải app; TIMESTAMPTZ; PG password từ .env không commit
-- **Phân tách đường truy vấn:** /api/chat giữ index trong RAM (p95 <50ms, không RTT mạng); /api/graph đọc PG (persist giữa restart); mất PG → 503 với message hướng dẫn, không silent degradation
-- **Kênh vector Sprint 3 — thiết kế từ đầu cho 3 kênh:** BM25 từ + BM25 n-gram (4-gram trên text bỏ dấu) + vector pgvector dim 1024, hợp nhất RRF (k=60); điều kiện tham gia kênh vector: `coverage >= MIN_COVERAGE` **hoặc** `cosine >= θ` (không để coverage thuần IDF triệt tiêu kênh vector); θ hiệu chỉnh trên OUT_OF_DOMAIN, đánh đổi NFR04↔NFR07 báo cáo cùng bảng; nhúng bằng mlx-embeddings (không torch)
-- **Công thức gợi ý Sprint 4:** `score(d) = α·GraphAffinity + β·ProfileAffinity + γ·CrossDomainBonus − δ·Seen` → MMR; trọng số ngầm định: view +1, dwell>20s +2, click +2, save +3, dismiss −2, suy giảm nửa chu kỳ 14 ngày; β=0 khi chưa có hồ sơ
-- **Sổ ý định → thẻ Sprint 5:** research → Artifact/Museum/SamePeriod/RelatedCraft; attend_event → Schedule/VenueMap/Weather/PrepChecklist/Viewpoint/Parking; plan_trip → VenueMap/Nearby/Food/Weather; learn → NarrationBlock+Related; compare → ComparisonTable; verify → CorrectionBlock; 6 lớp ý định (research | attend_event | plan_trip | learn | compare | verify)
-- **API ngoài song song:** asyncio.gather chồng lên bước sinh để ẩn độ trễ; suy giảm tường minh khi API chết (ca kiểm thử)
-- **Embedding model:** Qwen/Qwen2.5-Embedding local, dim 1024, không tinh chỉnh v1
-- **Bảng đối chiếu Nam Bộ** (trả lời ghi chú mentor): cải lương ↔ Nhã nhạc/Hát tuồng; đàn ca tài tử ↔ tài liệu cùng danh mục; áo bà ba ↔ bản ghi làng nghề + cổ vật; Nhà cổ Huỳnh Thủy Lê ↔ di tích cùng phường qua in_ward — demo bằng Huế, cơ chế độc lập vùng
-- **Nguồn dữ liệu Sprint 2:** Wikidata P625 → Nominatim (1 req/s, User-Agent, cache) → kiểm mắt 50 điểm; sự kiện: Cục Di sản (dsvh.gov.vn), cổng TTĐT, Sở Du lịch; cổ vật: chammuseum.vn, baotangcovatcungdinh.vn, danh mục Bảo vật quốc gia
+- Sơ đồ đích chia bốn boundary: Offline Knowledge Lifecycle, Online Serving/Read-only QA, Storage và Cross-cutting Operations.
+- Apache Airflow trigger RAG Data Pipeline nhưng không tự publish knowledge; output của pipeline là validation report, prepared indexes và manifest cho draft revision.
+- FastAPI Backend là entry point; Chat Service, Graph Service và Recommendation Service có ownership riêng, không đặt SQL/planning/prompt trong endpoint.
+- Chat flow chuẩn: normalize → resolve entity → classify intent → query plan → operators → Entity Dossier/Evidence Builder → pre-generation gate → Qwen → post-generation gate → answered/clarify/abstained.
+- Evidence Builder dùng token budget cấu hình và chọn evidence theo intent; giới hạn `2 adjacent chunks / 2200 characters` trong ảnh chỉ là cấu hình Text operator cũ, không phải invariant toàn hệ thống.
+- PostgreSQL FTS/pg_trgm phải được gọi đúng tên; nếu yêu cầu BM25 thật, phải có custom implementation hoặc search component được sở hữu rõ ràng.
+- pgvector dùng embedding dimension theo model contract; thay model/dimension cần migration/reindex plan.
+- Amazon S3 là canonical object store cho MVP; upload path, canonical URL, access policy và reconciliation khi DB/object write thất bại phải được xác định theo asset class.
+- Recommendation branches `local profile available` và `cold start` cùng hội tụ vào Candidate Generator rồi Rank & Diversify; Recommendation Service không lưu hồ sơ Public User.
+- Inference deployment tách rõ MLX base+adapter và llama.cpp GGUF; không mô tả chúng như một runtime hỗn hợp.
+- GitHub/Jenkins/Terraform là delivery plane; Prometheus/Loki/Grafana/Langfuse là observability plane; cả hai cắt ngang offline và online.
+- Prompt/template configuration phải được version hóa, phân quyền, audit và rollback; developer không chỉnh production table trực tiếp.
+- Tên sơ đồ cần đổi từ `ARCHITECH-TECHNOLOGY.png` thành `ARCHITECTURE-TECHNOLOGY.png`; chuẩn hóa các nhãn `Rank & Diversify`, `Graph Service`, `QA Solver`, `Chunk IDs`.
 
 ### UX Design Requirements
 
-Tài liệu UX spine riêng (DESIGN.md/EXPERIENCE.md) chưa tạo. Thay vào đó, **Epic 2 nhánh B là epic thiết kế chính thức**: design tokens, component specs, layout specs và cấu hình Antd X cho form user + chatbot được deliverable tại đó. Các yêu cầu UI/UX còn lại nằm trong FR23 (trang chi tiết), FR28 (3D + audio), NFR09 (không onboarding), NFR10 (WCAG 2.1 AA) — Epic 8 mở đầu bằng 1 story thiết kế riêng cho trang chi tiết, còn lại đưa vào stories như acceptance criteria.
-
-### NFR cắt ngang (cross-cutting)
-
-Các NFR sau áp dụng cho **mọi epic**, không thuộc về một epic nào — phải được tuân thủ khi viết story và kiểm tra ở Epic 10:
-
-- **NFR15 (Bảo trì — modularity):** nạp/graph/truy hồi/sinh/gợi ý/tư vấn/UI = mô-đun giao diện tách biệt. Mỗi epic phải giữ ranh giới mô-đun này.
-- **NFR17 (Mở rộng):** thêm vùng/danh mục/bản ghi **không sửa mã**; thẻ tư vấn mới chỉ cần đăng ký bộ sinh (sổ registry của Epic 7).
-- **NFR18 (Khả chuyển):** một máy, không dịch vụ AI ngoài, không khóa API. Mọi tích hợp ngoài (Open-Meteo, Overpass) phải có suy giảm tường minh.
+- UX-DR01: Admin dashboard cho biết draft release hiện tại, validation status, issue counts, review status và khả năng publish.
+- UX-DR02: Document wizard thu thập URL, title, region, source type, tier, observed date, license và raw text với lỗi theo field.
+- UX-DR03: Passage workspace hiển thị raw text và passage song song, làm nổi char span và cho phép chọn evidence trực tiếp.
+- UX-DR04: Entity editor có canonical/normalized name, type/subtype, aliases, scope/status và cảnh báo duplicate/fuzzy candidate.
+- UX-DR05: Claim form sinh control theo `claim_field.value_type`, tự đề xuất default unit và hiển thị validity/confidence/canonical state.
+- UX-DR06: Timeline editor hỗ trợ year/range/precision, event type, participant roles, actor, artifact và evidence.
+- UX-DR07: Relation builder hiển thị `subject ─ predicate → object`, chỉ cho chọn predicate đã đăng ký và cảnh báo triple trùng.
+- UX-DR08: Narrative editor hỗ trợ Markdown, section ordering, primary/supporting evidence và preview nội dung.
+- UX-DR09: Validation center hiển thị trạng thái Airflow, tiến độ theo stage, lỗi/warning có link về đúng record và retry/resubmit an toàn.
+- UX-DR10: Review workspace hiển thị diff, provenance, conflicting sources, reviewer decision và audit history trước publish.
+- UX-DR11: Publish action yêu cầu xác nhận release/version, tóm tắt gate đã pass và thông báo rõ rollback/retire path.
+- UX-DR12: Toàn bộ Public Portal — Home, Explore, Entity Detail, Chat, Recommendation, Preferences và Multimedia — dùng chung heritage storytelling design system: editorial composition giàu hình ảnh, card bất đối xứng có hierarchy, narrative flow giữa các thực thể và responsive states nhất quán. Admin Studio vẫn dùng dashboard/form/table nghiệp vụ, không áp dụng bố cục kể chuyện của Public Portal.
 
 ### FR Coverage Map
 
-- FR01: Epic 2 nhánh B (thiết kế form UI) + Epic 3 (xây logic auth argon2id, JWT cookie, endpoint bảo vệ)
-- FR02: Epic 1 (thu thập dataset ban đầu) + Epic 4 (hệ thống CRUD bền vững)
-- FR03: Epic 1 (thu thập venue/event/artifact) + Epic 4 (ràng buộc nguồn mức DB)
-- FR04: Epic 1 (trích xuất + đồ thị lần đầu) + Epic 4 (pipeline trích xuất khi nạp mới)
-- FR05: Epic 1 (dựng đồ thị) + Epic 4 (cập nhật đồ thị khi CRUD)
-- FR06: Epic 4 (rà soát trích xuất, audit_log trước/sau)
-- FR07: Epic 6 (suy ra hồ sơ, không yêu cầu khai)
-- FR08: Epic 6 (tương tác ngầm định, suy giảm, xem/sửa)
-- FR09: Epic 6 (gợi ý kèm reason_path, /api/recommend)
-- FR10: Epic 6 (xuyên danh mục ≥1/5, gate Epic 1 xong)
-- FR11: Epic 6 (đa dạng ≤3 cùng danh mục)
-- FR12: Epic 5 (query planner + operators, recall@1 ≥95%; vector có điều kiện theo spike)
-- FR13: Epic 6 (xếp hạng lại theo hồ sơ)
-- FR14: Epic 2 nhánh A (model) + Epic 2 nhánh B (thiết kế chat UI) + Epic 5 (chat chỉ văn bản, trả lời từ context)
-- FR15: Epic 5 (trích nguồn `[Nguồn: ... — url]`, frontend hiển thị url)
-- FR16: Epic 5 (đính chính giả định sai câu đầu)
-- FR17: Epic 7 (phân loại ý định 6 lớp, macro-F1 ≥85%)
-- FR18: Epic 7 (thẻ khớp sổ đăng ký, assert 0 bịa, provenance)
-- FR19: Epic 7 (thẻ Lịch sự kiện, âm lịch soạn tay)
-- FR20: Epic 7 (Open-Meteo + prep_rules.yaml ~15 luật)
-- FR21: Epic 7 (POI Overpass + cache, fallback soạn tay)
-- FR22: Epic 7 (địa điểm, giờ mở, giá vé, bảo tàng + phòng)
-- FR23: Epic 8 (trang chi tiết: ảnh, story, timeline, map)
-- FR24: Epic 5 (endpoint truy vết: hạt giống, hạng kênh, cổng)
-- FR25: Epic 2 nhánh B (thiết kế trang tài khoản) + Epic 3 (xuất/xóa dữ liệu, không thể cắt)
-- FR26: Epic 9 (dashboard sức khỏe — việc mới)
-- FR27: Epic 9 (bộ đánh giá + report NFR16 — phần lớn [ADOPTED], đo liên tục từ Epic 4)
-- FR28: Epic 8 (3D .glb + audio 2 ngôn ngữ)
-- FR29: Epic 8 (media_asset: giấy phép, đóng góp, URL gốc)
-- FR30: Epic 8 (script audio có bằng chứng, chặn tổng hợp)
+- FR01: Epic 1 — Admin truy cập Knowledge Studio an toàn; thao tác quản trị được phân quyền và audit.
+- FR02: Epic 4 — Người dùng hỏi đáp tiếng Việt bằng văn bản.
+- FR03: Epic 4 — Chỉ published evidence được dùng; thiếu evidence thì clarify/abstain.
+- FR04: Epic 4 — Câu trả lời factual có citation tới passage/document.
+- FR05: Epic 4 — Đính chính tiền đề sai bằng evidence.
+- FR06: Epic 4 — Chuẩn hóa, fuzzy correction và entity resolution.
+- FR07: Epic 4 — Intent router tám lớp.
+- FR08: Epic 4 — Query planner và retrieval operators.
+- FR09: Epic 4 — Hybrid text/vector retrieval có đánh giá.
+- FR10: Epic 4 — Entity Dossier và Evidence Context Builder.
+- FR11: Epic 4 — Pre-generation gate.
+- FR12: Epic 4 — Post-generation citation/grounding gate.
+- FR13: Epic 4 — Qwen3-4B chỉ tổng hợp evidence.
+- FR14: Epic 4 — Graph Service và traversal giới hạn.
+- FR15: Epic 5 — Cold start và hồ sơ sở thích ẩn danh cục bộ có consent.
+- FR16: Epic 5 — Candidate generation và rank/diversify.
+- FR17: Epic 5 — Recommendation có score/reason path và cập nhật local profile.
+- FR18: Epic 5 — Quản lý consent, xuất và đặt lại dữ liệu cục bộ.
+- FR19: Epic 6 — Story, timeline, map, 3D, audio và transcript.
+- FR20: Epic 6 — Media provenance và evidence gate cho audio.
+- FR21: Epic 6 — Media failure degradation.
+- FR22: Epic 1 — Document source CRUD trong Admin Knowledge Studio.
+- FR23: Epic 1 — Passage editor và corpus metadata.
+- FR24: Epic 1 — Entity/alias/place profile và evidence management.
+- FR25: Epic 1 — Typed claim, timeline và relation editors.
+- FR26: Epic 1 — Narrative editor và supporting evidence.
+- FR27: Epic 1 — Knowledge mới luôn ở trạng thái draft.
+- FR28: Epic 1 — Evidence selection không yêu cầu UUID/FK thủ công.
+- FR29: Epic 1 — FastAPI/PostgreSQL validation tức thời.
+- FR30: Epic 2 — Submit revision để deep validation bất đồng bộ.
+- FR31: Epic 2 — Airflow RAG data pipeline.
+- FR32: Epic 2 — Idempotent validation run và issues.
+- FR33: Epic 2 — Validation Center và resubmit workflow.
+- FR34: Epic 2 — Human review và atomic publish.
+- FR35: Epic 2 — Published corpus version contract cho online consumers.
+- FR36: Epic 2 — Corpus/KG/validation/index/eval dashboard.
+- FR37: Epic 3 — Home, Explore, Search/Filter và Entity Detail trên published content.
 
 ## Epic List
 
-### Epic 1: Khởi động — Thu thập dữ liệu
+### Epic 1: Admin Knowledge Studio
 
-Epic khởi động dành cho team 5 người. Thu thập toàn bộ dữ liệu nền (không bao gồm thiết kế — thiết kế chuyển sang Epic 2):
+Quản trị viên đăng nhập và biên soạn trọn một knowledge package — document, passage, entity/alias/place profile, claim, timeline, relation, narrative và evidence — ở trạng thái draft mà không cần thao tác SQL, UUID hoặc foreign key thủ công.
 
-- **Crawl 45 bài Wikipedia Huế/Đà Nẵng** + ~35 tài liệu mới (Nghệ thuật +6, Lễ hội +8, Làng nghề +8, Ẩm thực +6)
-- **Thu thập bản ghi:** 50 venue (Wikidata P625 → Nominatim → kiểm mắt), 20 event + phần lễ/hội, 35 artifact
-- **Dựng đồ thị deterministic** (entity/year/doc/category/region + venue/event/artifact), tách đoạn + sinh tập train/valid
-- **Giao dataset dạng file** (corpus text, records JSON/CSV, graph artifacts) — **chưa nạp DB; Epic 4 mới nạp vào PostgreSQL**
+**FRs covered:** FR01, FR22–FR29
 
-**FRs covered:** FR02, FR03, FR04, FR05 | **NFRs:** NFR14
-**Deliverable:** dataset corpus + records data (JSON/CSV) + graph artifacts + train/valid data — **chưa phải DB rows**.
+### Epic 2: Kiểm định và phát hành corpus đáng tin cậy
 
-### Epic 2: Huấn luyện model & Thiết kế giao diện
+Biên tập viên submit draft để Airflow kiểm tra sâu, tạo embedding/index/manifest, xử lý issues, review và publish một corpus release atomically; dashboard cho biết sức khỏe và khả năng phục vụ của từng release.
 
-Epic song song 2 nhánh, bố trí theo thế mạnh team — **chỉ PO (hungheo) train model**, các thành viên khác làm giao diện + test:
+**FRs covered:** FR30–FR36
 
-- **Nhánh A — Huấn luyện model (PO, solo):** migrate sang **Qwen3-4B + LoRA** (`models/peft-adapter/` có sẵn, eval_loss 0.3495) — **LoRA chỉ dạy cách trả lời** (văn phong, citation, refusal), không tham gia retrieval; sinh dữ liệu train (bootstrap), huấn luyện, đánh giá gold set (NER micro-F1, citation faithful, refusal), chốt checkpoint.
-- **Nhánh B — Thiết kế giao diện & cấu hình component (4 thành viên):** design tokens (màu, typography, spacing), form đăng ký/đăng nhập, trang tài khoản, khung chat Antd X (Bubble/Sources/Suggestion/Chips), TopBar, Landing, trạng thái loading/error/empty/refusal, tooltip reason_path, chuẩn WCAG 2.1 AA; thành viên thực hiện test giao diện.
+### Epic 3: Cổng khám phá và kể chuyện di sản
 
-**FRs covered (nhánh A — model):** FR14 (phần model) | **(nhánh B — UI):** FR01, FR14, FR25
-**NFRs:** NFR09, NFR10
-**Phụ thuộc:** Epic 1 (train data + corpus). Train có thể bắt đầu trên corpus v1 trong khi dữ liệu v2 vẫn crawl.
-**Deliverable nhánh A:** model LoRA ở `models/lora-serve/` + báo cáo eval gold set. **Deliverable nhánh B:** design tokens, component specs, layout specs, cấu hình Antd X sẵn dùng.
+Người dùng khám phá published heritage content qua một giao diện kể chuyện thống nhất xuyên suốt Home, Explore và Entity Detail: bố cục editorial giàu hình ảnh, card có hierarchy, narrative flow giữa các thực thể và liên kết liền mạch tới Chat, Recommendation, Preferences và Multimedia; đầy đủ trạng thái responsive, loading, empty, error, not-found, clarify và abstained.
 
-### Epic 3: Tài khoản & Quyền riêng tư
+**FRs covered:** FR37
 
-Người dùng đăng ký/đăng nhập an toàn (argon2id, JWT cookie HttpOnly, bind 127.0.0.1), đồng ý có thông báo trước khi ghi tương tác; trang tài khoản hiển thị hồ sơ sở thích kèm hành vi sinh ra nó, xuất tệp máy đọc được (`POST /api/me/export`) và xóa vĩnh viễn (`DELETE /api/me/data`). Xây form theo design Epic 2.
+### Epic 4: Trợ lý hỏi đáp có căn cứ
 
-**FRs covered:** FR01, FR25 | **NFRs:** NFR11, NFR12
-**Phụ thuộc:** Epic 2 nhánh B (design form/trang tài khoản).
-**Song song:** Epic 3 và **Epic 4 độc lập với nhau** (3 phụ thuộc 2B, 4 phụ thuộc 1) — **chạy song song sau Epic 1/2** để giảm áp lực bottleneck Epic 4.
-**Ranh giới với Epic 6:** Epic 3 xây **trang tài khoản + xuất/xóa dữ liệu** (FR25); hồ sơ sở thích được **tính toán bởi Epic 6** (FR07/FR08) qua API — Epic 3 chỉ hiển thị + bật/tắt/đóng góp ý, không tự triển khai công thức suy luận.
+Người dùng hỏi bằng tiếng Việt từ portal hoặc trang chat; hệ thống resolve entity, lập query plan, lấy evidence đúng published corpus, dùng Qwen3-4B tổng hợp và chỉ trả answered, clarify hoặc abstained sau grounding validation.
 
-### Epic 4: Hệ thống CRUD & Rà soát quản trị
+**FRs covered:** FR02–FR14
 
-Xây hệ thống CRUD bền vững (endpoint + DB) quản lý kho ngữ liệu và bản ghi đã thu thập ở Epic 1: thêm/sửa/xóa tài liệu tự động dựng lại đồ thị; bản ghi thiếu `source_url`/`source_sentence` bị từ chối **ở mức DB** kèm lỗi mức trường; trích xuất chạy lại khi nạp tài liệu mới; rà soát đỉnh/cạnh mới ghi audit_log kèm giá trị trước/sau.
+### Epic 5: Khám phá cá nhân hóa có thể giải thích
 
-**FRs covered (phần hệ thống):** FR02, FR03, FR04, FR05, FR06 | **NFRs:** NFR14
-**Phụ thuộc:** Epic 1 (dataset + graph artifacts để nạp vào DB).
-**Bottleneck:** 5 epic phụ thuộc Epic 4 (5, 6, 7, 8, 9) — **chạy song song với Epic 3** (hai epic độc lập) để giảm áp lực lịch trình.
+Người dùng mới nhận cold-start recommendations; người dùng có consent nhận kết quả dựa trên hồ sơ ẩn danh lưu trong `localStorage`, xem reason path, đồng thời có thể xuất, đặt lại hoặc tắt cá nhân hóa mà không cần đăng nhập. Hệ thống không hỗ trợ đồng bộ hồ sơ giữa các thiết bị.
 
-### Epic 5: Query planner & Trả lời có căn cứ
+**FRs covered:** FR15–FR18
 
-Theo kiến trúc chatbot (`docs/chatbot.md`): intent router **8 lớp** (overview/field/timeline/relationship/section/comparison/open_text/out_of_scope) → **query planner chọn operator** (exact claim / timeline / graph 1–2 hop / section narrative / text hybrid) → **Evidence Context Builder** chọn 3–8 evidence + cấp citation ID → Qwen3-4B sinh → **grounding gate** (pre-gen + post-gen). Response đúng 1 trạng thái: `answered` / `clarify` / `abstained`. Endpoint truy vết phơi plan, operator chạy, hạng Text operator.
+### Epic 6: Trải nghiệm di sản 3D và đa phương tiện
 
-**FRs covered:** FR12, FR14, FR15, FR16, FR24 | **NFRs:** NFR04, NFR05, NFR07
-**Phụ thuộc:** Epic 1 (corpus + đồ thị) + Epic 2 nhánh A (Qwen3-4B + LoRA) + Epic 2 nhánh B (chat UI design).
-**Story riêng — "Spike kênh dense vector":** chatbot.md đặt vector **có điều kiện** ("chỉ nếu eval chứng minh có lợi"). Spike đo dense top-3 ≥70% trên PARAPHRASE — đạt mới xây kênh + hiệu chỉnh θ; không đạt thì giữ 2 kênh BM25 (bảng tách kênh SM-10 vẫn xuất cho 2 kênh).
+Người dùng trải nghiệm story, timeline, map, mô hình 3D, audio và transcript có provenance trên Entity Detail; khi media storage hoặc delivery lỗi, nội dung tri thức vẫn hoạt động và trạng thái suy giảm được hiển thị rõ.
 
-### Epic 6: Cá nhân hóa & Gợi ý biện minh
-
-Hồ sơ sở thích suy ra từ tương tác (view +1, dwell>20s +2, click +2, save +3, dismiss −2, suy giảm nửa chu kỳ 14 ngày); gợi ý `α·GraphAffinity + β·ProfileAffinity + γ·CrossDomainBonus − δ·Seen` + MMR; API `GET /api/recommend?seed=<node>&k=5` trả reason_path; ≥1/5 gợi ý xuyên danh mục; không onboarding.
-
-**FRs covered:** FR07, FR08, FR09, FR10, FR11, FR13 | **NFRs:** NFR08, NFR09
-**Phụ thuộc:** Epic 1 (gate: mọi danh mục ≥8 tài liệu) **+ Epic 3** (bảng interaction_event + consent middleware đã ghi sự kiện). Cả hai phải xong trước khi Epic 6 bắt đầu.
-**Ranh giới với Epic 3:** Epic 6 triển khai **công thức suy luận + API hồ sơ**; Epic 3 là consumer (trang tài khoản hiển thị, bật/tắt).
-
-### Epic 7: Tư vấn chủ động theo ý định
-
-Phân loại ý định 6 lớp (regex + từ vựng); sổ đăng ký intent → card; thẻ Lịch (âm lịch soạn tay), Bản đồ, Thời tiết (Open-Meteo) + Chuẩn bị (~15 luật prep_rules.yaml), Điểm quan sát + Chỗ gửi xe (Overpass + cache), Địa điểm/Artifact; API ngoài chạy song song asyncio.gather; **0 trường bịa — assert tự động 100%**.
-
-**FRs covered:** FR17, FR18, FR19, FR20, FR21, FR22 | **NFRs:** NFR06, NFR13
-**Phụ thuộc:** Epic 4 (bản ghi venue/event/artifact từ DB) + Epic 5 (retrieval/định tuyến ý định).
-
-### Epic 8: Trang chi tiết nội dung & 3D/Audio
-
-Trang chi tiết `/explore/[node]` — nơi đọc/nghe/xem/xoay 3D một chủ đề văn hóa, mọi dữ kiện truy về nguồn: ảnh lớn + danh sách story, chip liên kết, dòng thời gian, bản đồ Leaflet, thực thể liên quan; 3D .glb (Three.js, Draco/Meshopt ≤30 MB) + audio VI/EN kèm transcript; media_asset có giấy phép/đóng góp/URL gốc; script audio qua kiểm tra bằng chứng trước khi tổng hợp giọng nói; fallback ngoại tuyến không trang trắng (NFR20: mất R2/Azure → vẫn đầy đủ text/transcript, 3D+audio chỉ báo "tạm thời không khả dụng").
-
-**FRs covered:** FR23, FR28, FR29, FR30 | **NFRs:** NFR10, NFR19, NFR20
-**Phụ thuộc:** Epic 4 (bản ghi media_asset/artifact/venue từ DB).
-**Ghi chú:** Epic 2 nhánh B chỉ thiết kế form + chatbot — **story đầu của Epic 8 phải là story thiết kế** (layout trang chi tiết: ảnh lớn + story panel, timeline, map, 3D viewer, audio) trước khi build.
-
-### Epic 9: Quản trị & Đánh giá đo lường (admin)
-
-Dashboard sức khỏe: số tài liệu/danh mục, thống kê đồ thị, trường thiếu nguồn, hàng chờ rà soát, chỉ số mới nhất; toàn bộ bộ đánh giá chạy được và xuất report ghi mô hình, checkpoint adapter, phiên bản prompt, phiên bản kho ngữ liệu, cấu hình. **Đẩy xuống sát cuối theo thứ tự cắt phạm vi PRD** (cut #4: giao diện quản trị → CLI + trang thống kê chỉ đọc).
-
-**FRs covered:** FR26, FR27 | **NFRs:** NFR16
-**Phụ thuộc:** Epic 4 (DB có dữ liệu + hàng chờ rà soát) + Epic 5 (retrieval đo được).
-**Phân chia công việc trong epic:**
-- **FR27 (bộ đánh giá + report NFR16) — phần lớn [ADOPTED]:** code eval/ đã tồn tại (`eval_retrieval.py` 215 cases, `eval_attribution.py`, `score_gold.py` metadata SHA-256). Việc của epic này = wrap + đảm bảo report có đủ trường NFR16. **Phải được dùng đo liên tục từ Epic 4 trở đi** (đo p95 ngay từ Sprint 1 — NFR01), không chờ đến Epic 9 mới chạy.
-- **FR26 (dashboard sức khỏe) — việc mới:** UI dashboard đọc DB + eval artifacts.
-**Ghi chú:** Nếu trượt tiến độ, nội dung admin bị cắt đầu tiên — downgrade thành CLI + trang thống kê chỉ đọc; FR27 (bộ đánh giá) vẫn giữ vì nó là mandatory cut.
-
-### Epic 10: Kiểm thử, đo lường cuối & Đóng gói
-
-unittest (backend, có sẵn) + Playwright (E2E) + CI; assert NFR06 + FR30 tự động; đo toàn bộ SM-1…SM-12 (recall@1, trích nguồn, từ chối, precision@5 + Cohen's κ, macro-F1, p95, SUS 6–8 người); báo cáo cuối + video hướng dẫn.
-
-**NFRs covered:** NFR01, NFR02, NFR03 + toàn bộ SM
-**Phụ thuộc:** Tất cả epic trước phải xong (đo lường trên sản phẩm cuối). Kiểm tra cả NFR cắt ngang (NFR15, NFR17, NFR18).
+**FRs covered:** FR19–FR21
