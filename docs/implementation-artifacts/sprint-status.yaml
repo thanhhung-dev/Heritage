@@ -1,0 +1,114 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 09-20-2026 21:03
+last_updated: 09-20-2026 21:03
+project: HeritageGraph
+project_key: NOKEY
+tracking_system: file-system
+story_location: docs/implementation-artifacts
+primary_ownership:
+  DES: ['0.8', '0.9']
+  FE: ['0.6', '2.4', '2.7', '3.1', '3.2', '3.3', '3.4', '4.6', '5.3', '5.5', '5.6', '6.1', '6.3', '6.6', '6.7']
+  BE: ['0.7', '1.1', '1.2', '1.3', '1.4', '1.5', '1.6', '1.7', '1.8', '2.1', '2.5', '2.6', '4.1', '5.1', '5.2', '6.2']
+  AI: ['4.2', '4.3', '4.4', '4.5', '4.7', '4.8', '5.4', '6.4', '6.5', '6.8']
+  DATA: ['0.2', '2.2', '2.3']
+  DEVOPS: ['0.1', '0.3', '0.4', '0.5']
+development_status:
+  epic-0: backlog
+  0-1-chuẩn-hóa-repository-môi-trường-và-cấu-hình-secrets: backlog
+  0-2-thiết-lập-postgresql-extensions-và-alembic-baseline: backlog
+  0-3-provision-aws-staging-storage-và-container-foundation: backlog
+  0-4-tự-động-hóa-jenkins-ci-cd-và-terraform-delivery: backlog
+  0-5-thiết-lập-observability-baseline: backlog
+  0-6-thiết-lập-design-foundations-application-shells-và-api-mocks: backlog
+  0-7-thiết-lập-test-harness-fixtures-và-documentation-templates: backlog
+  0-8-thiết-lập-figma-foundations-và-component-library: backlog
+  0-9-thiết-kế-figma-admin-console: backlog
+  epic-0-retrospective: optional
+
+  epic-1: backlog
+  1-1-xác-thực-phân-quyền-và-audit-cho-admin: backlog
+  1-2-tạo-và-quản-lý-source-document-ở-trạng-thái-draft: backlog
+  1-3-tạo-passage-và-chọn-evidence-trực-tiếp-từ-nguồn: backlog
+  1-4-quản-lý-entity-alias-và-place-profile: backlog
+  1-5-biên-soạn-typed-claims-có-evidence: backlog
+  1-6-biên-soạn-timeline-events-và-participants: backlog
+  1-7-xây-dựng-typed-entity-relations: backlog
+  1-8-biên-soạn-narrative-sections-có-evidence: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-submit-draft-revision-và-tạo-validation-run-idempotent: backlog
+  2-2-chạy-airflow-deep-validation-và-ghi-validation-issues: backlog
+  2-3-tạo-embeddings-indexes-và-reproducible-manifest: backlog
+  2-4-theo-dõi-validation-center-sửa-lỗi-và-resubmit: backlog
+  2-5-human-review-và-atomic-corpus-publish: backlog
+  2-6-bảo-đảm-published-corpus-version-isolation: backlog
+  2-7-hiển-thị-corpus-health-và-publish-readiness-dashboard: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-khám-phá-các-trải-nghiệm-di-sản-nổi-bật: backlog
+  3-2-tìm-kiếm-và-lọc-kho-nội-dung-di-sản: backlog
+  3-3-khám-phá-địa-điểm-trên-bản-đồ-2d-huế-đà-nẵng: backlog
+  3-4-xem-content-landing-trước-khi-bắt-đầu-trải-nghiệm-scene: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-hiểu-câu-hỏi-và-xác-định-đúng-thực-thể: backlog
+  4-2-xác-định-ý-định-và-lập-kế-hoạch-tìm-bằng-chứng: backlog
+  4-3-tìm-evidence-từ-facts-timeline-graph-narrative-và-text: backlog
+  4-4-xây-dựng-evidence-package-và-chặn-câu-hỏi-thiếu-bằng-chứng: backlog
+  4-5-sinh-và-kiểm-tra-câu-trả-lời-có-citation: backlog
+  4-6-sử-dụng-chat-độc-lập-và-bên-cạnh-content: backlog
+  4-7-gợi-ý-câu-hỏi-đào-sâu-từ-graphrag: backlog
+  4-8-đánh-giá-chất-lượng-và-hiệu-năng-trợ-lý-trước-phát-hành: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-biên-soạn-guided-story-gồm-1-6-narrative-scenes: backlog
+  5-2-quản-lý-ảnh-panorama-và-model-3d-có-provenance: backlog
+  5-3-cấu-hình-góc-camera-vị-trí-3d-và-hotspots-cho-từng-scene: backlog
+  5-4-kiểm-tra-narration-tạo-audio-và-transcript: backlog
+  5-5-trải-nghiệm-guided-story-bằng-scene-player: backlog
+  5-6-tải-media-hiệu-quả-và-suy-giảm-an-toàn-khi-có-lỗi: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-quản-lý-consent-và-hồ-sơ-ẩn-danh-trên-thiết-bị: backlog
+  6-2-gợi-ý-cold-start-cho-người-dùng-mới: backlog
+  6-3-cập-nhật-sở-thích-từ-tương-tác-có-consent: backlog
+  6-4-tạo-và-xếp-hạng-recommendations-cá-nhân-hóa: backlog
+  6-5-giải-thích-và-đa-dạng-hóa-recommendations: backlog
+  6-6-hiển-thị-và-tương-tác-với-recommendations: backlog
+  6-7-xem-xuất-reset-hoặc-tắt-cá-nhân-hóa: backlog
+  6-8-đánh-giá-độ-chính-xác-đa-dạng-riêng-tư-và-tốc-độ: backlog
+  epic-6-retrospective: optional

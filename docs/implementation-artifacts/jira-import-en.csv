@@ -1,0 +1,1986 @@
+﻿Work item ID,Work type,Summary,Description,Parent,Priority,Labels
+1,Epic,Epic 0: Engineering Foundation,"The development team has a reproducible deployment platform for local, testing, and AWS staging that includes environment configuration, PostgreSQL/Alembic, S3/ECR/IAM/networking, Jenkins/Terraform, observability, application shells, API mocks, and test harnesses before feature development.",,Highest,"heritagegraph,epic-0"
+2,Story,"0.1 Standardize repository, environment and secrets configuration","As a developer,
+I want a documented and reproducible configuration for local, test and staging environments,
+So that I can run and verify HeritageGraph without relying on undocumented machine-specific settings or committing secrets.
+
+**Acceptance Criteria:**
+
+**Given** a new clone of the repository
+**When** developers follow the setup instructions
+**Then** the backend and frontend can install dependencies using the specified runtime/package manager versions
+**And** basic run, test and health checks are documented.
+
+**Given** backend, frontend, data pipeline and observability components need configuration
+**When** developers view sample environment files
+**Then** every required variable is listed with a safe development description and value
+**And** the sample file does not contain real credentials or secrets
+**And** secret/runtime artifacts are removed from source control.
+
+**Given** the application starts in local, test or staging
+**When** required configuration is missing or malformed
+**Then** the application stops prematurely with a message indicating an invalid configuration name
+**And** does not write the secret value to the log.
+
+**Given** the repository already has previous code and configuration
+**When** this story is deployed
+**Then** existing structures are reused or standardized instead of creating a new configuration system in parallel
+**And** the changes do not remove the ability to run existing tests.",1,Highest,"heritagegraph,epic-0,role-devops"
+3,Story,"0.2 Set up PostgreSQL, extensions and Alembic baseline","As a backend developer,
+I want a reproducible PostgreSQL 16 database baseline for local, test and AWS staging,
+So that schema changes can be developed, verified and deployed consistently.
+
+**Acceptance Criteria:**
+
+**Given** developer has completed environment configuration in Story 0.1
+**When** start the local database according to the instructions
+**Then** PostgreSQL 16 is ready via health check
+**And** data is stored in managed volume
+**And** database does not use credential production.
+
+**Given** an empty database
+**When** run Alembic upgrade to the latest revision
+**Then** the existing schema baseline was successfully created
+**And** the necessary `pgvector` and `pg_trgm` extensions are enabled
+**And** rerun the migration without causing errors or creating duplicate objects.
+
+**Given** migration changes the database
+**When** CI or developer tests migration
+**Then** upgrade is run on a clean database
+**And** downgrade/rollback is checked when migration supports rollback
+**And** migration errors cause checks to fail instead of being ignored.
+
+**Given** backend connection to local, test or RDS staging
+**When** the application starts
+**Then** connection URL, pool and SSL behavior are obtained from environment configuration
+**And** health endpoint differentiates API live state from database ready state
+**And** credential/connection string does not appear in logs.
+
+**Given** repository already has `schema.sql` and Alembic migrations
+**When** sets baseline
+**Then** the existing migration history is inventoried and used as the deployment source
+**And** does not create a parallel schema or pre-create a table that only serves future stories.",1,Highest,"heritagegraph,epic-0,role-data"
+4,Story,"0.3 Provision AWS staging, storage and container foundation","As a platform developer,
+I want a minimal, reproducible AWS staging environment,
+So that HeritageGraph components can be deployed and integrated before feature development begins.
+
+**Acceptance Criteria:**
+
+**Given** AWS compute options are still open
+**When** story begins
+**Then** an ADR comparing the existing alternative, ECS/Fargate and EC2-based containers by cost, complexity, deployment time, inference and rollback
+**And** ADR chooses the smallest option that meets staging/demo
+**And** EKS or MWAA should not be selected without demonstrated need.
+
+**Given** Valid AWS account and staging configuration
+**When** apply infrastructure definition
+**Then** staging has ECR container registry, S3 canonical bucket, necessary networking and IAM roles separated by responsibility
+**And** infrastructure can be created or updated repeatedly without generating uncontrolled resources
+**And** state and secrets are not committed to the repository.
+
+**Given** RDS PostgreSQL staging is connected to the backend
+**When** checks network access
+**Then** RDS is not directly public
+**And** only authorized workloads/roles can connect
+**And** migration baseline from Story 0.2 runs successfully on staging.
+
+**Given** backend image posted to ECR
+**When** deploy to the selected compute target
+**Then** public ingress only exposes the necessary endpoint over HTTPS
+**And** the backend accesses RDS and S3 with appropriate IAM/configuration
+**And** the frontend or smoke client can call the FastAPI health endpoint.
+
+**Given** a raw document, manifest or test asset
+**When** the workload is granted S3 write/read permissions
+**Then** the object is saved under the specified prefix/policy
+**And** the workload cannot perform actions beyond its minimum permissions
+**And** S3 is still the canonical MVP object store, without critical-path dual-write to R2/Azure.
+
+**Given** staging deployment error or needs to be removed
+**When** operator follows the runbook
+**Then** have a documented rollback/cleanup process
+**And** resource ownership and expected costs can be checked.",1,High,"heritagegraph,epic-0,role-devops"
+5,Story,0.4 Automate Jenkins CI/CD and Terraform delivery,"As a developer,
+I want an automated delivery pipeline with enforceable quality gates,
+So that changes reach AWS staging consistently and unsafe builds are rejected before deployment.
+
+**Acceptance Criteria:**
+
+**Given** a pull request to change the backend, frontend, migration or infrastructure
+**When** Jenkins pipeline runs
+**Then** pipeline only runs relevant component checks but always applies lint/type checks and required tests
+**And** failure at any required gate blocking build/deploy
+**And** the results of each gate are clearly displayed.
+
+**Given** changes include database migration
+**When** pipeline checks migration
+**Then** migration is run on a clean test database
+**And** upgrade or rollback check errors cause the pipeline to fail
+**And** staging cannot be migrated if the build has not passed previous gates.
+
+**Given** changes to Terraform
+**When** CI runs infrastructure checks
+**Then** formatting, validation and planning are performed
+**And** plans can be reviewed before applying
+**And** The Jenkins deploy role is separate from the runtime roles and has only the necessary permissions.
+
+**Given** branch/revision is allowed to deploy and has passed all gates
+**When** pipeline builds and releases components
+**Then** the container image is assigned an immutable revision tag and pushed to the ECR
+**And** staging deploy to the correct image revision
+**And** health/smoke checks run after deploy.
+
+**Given** smoke check after failed deployment
+**When** pipeline handles deployment failure
+**Then** release is marked as failed
+**And** the system rolls back to the last good revision or provides a documented rollback operation
+**And** pipeline does not report false successes.
+
+**Given** new model or prompt requires rollout
+**When** delivery is configured
+**Then** model/prompt rollout is a separate pipeline from software deployment
+**And** does not automatically promote 10% → 50% → 100% if quality, grounding, latency or error gate have not been reached.
+
+**Given** credential is used by Jenkins
+**When** the pipeline logs or exports artifacts
+**Then** secrets are obtained from the appropriate credential store
+**And** token, password and connection string do not appear in log/artifact.",1,High,"heritagegraph,epic-0,role-devops"
+6,Story,0.5 Set observability baseline,"As an operator,
+I want correlated metrics, logs and traces across HeritageGraph,
+So that I can detect failures and diagnose requests without exposing sensitive data.
+
+**Acceptance Criteria:**
+
+**Given** a request goes through the frontend and FastAPI
+**When** the request was processed successfully or failed
+**Then** the system assigns or transmits correlation/trace ID
+**And** structured logs have service, environment, severity, timestamp and correlation ID
+**And** response/log does not reveal passwords, tokens, raw IP or sensitive personal data.
+
+**Given** API and dependencies work
+**When** Prometheus collects metrics
+**Then** has a minimum request count, error count, duration histogram and dependency health
+**And** metric labels do not contain unbounded values such as raw URLs, user input, or arbitrary entity IDs
+**And** p50/p95/p99 can be calculated from the data obtained.
+
+**Given** a request to call a database or internal service
+**When** OpenTelemetry tracing is enabled
+**Then** trace shows the path through the API and the appropriate dependency adapter
+**And** error span retains enough metadata for diagnosis without containing secret or raw sensitive content
+**And** the trace is sent to the configured Tempo/X-Ray target.
+
+**Given** the application or pipeline writes structured logs
+**When** Loki collects logs
+**Then** operator can filter by service, environment, severity and correlation ID
+**And** retention/configuration consistent with a documented demo environment.
+
+**Given** a call to Qwen or grounded QA in the following stories
+**When** Langfuse integration is used
+**Then** trace contract supports model, prompt, corpus version, evidence IDs, token usage, latency and grounding result
+**And** raw prompt/evidence is only saved according to the configured privacy policy
+**And** observability failure does not cause the business request to fail.
+
+**Given** telemetry baseline is running
+**When** operator opens Grafana
+**Then** dashboard displays service health, request/error rate and latency
+**And** there is a baseline alert for service unavailable, error-rate spike and latency threshold
+**And** dashboard/alert definitions are versioned.
+
+**Given** a smoke request on AWS staging
+**When** request completed
+**Then** operator traces requests from health/API signal through logs and service trace
+**And** smoke test confirms telemetry endpoint is not public beyond policy permission.",1,Medium,"heritagegraph,epic-0,role-devops"
+7,Story,"0.6 Set up design foundations, application shells and API mocks","As a frontend developer,
+I want approved design foundations and runnable public/admin application shells backed by API mocks,
+So that UI stories can be developed consistently before all backend features are available.
+
+**Acceptance Criteria:**
+
+**Given** Current UX contract
+**When** Figma foundations and frontend theme are set up
+**Then** color, typography, spacing, radius, elevation and motion tokens have unified semantic names
+**And** the mapping between Figma tokens and code tokens is documented
+**And** basic contrast meets WCAG 2.1 AA.
+
+**Given** the user opens the Public Portal shell
+**When** navigate between `/`, `/explore`, `/map`, `/chat` and `/preferences`
+**Then** the routes have shared heritage-storytelling navigation/layout and appropriate placeholder state
+**And** desktop/mobile keep the same hierarchy
+**And** the shell doesn't pretend to provide a feature that hasn't been implemented yet.
+
+**Given** admin has entered the `/admin/*` shell
+**When** navigates between placeholder admin areas
+**Then** the interface uses Ant Design dashboard/form/table conventions instead of Tapestry composition
+**And** public and admin themes do not leak styles or layouts to each other
+**And** route structure is ready for auth guard in Story 1.1.
+
+**Given** OpenAPI contract or response schema is defined
+**When** the frontend calls the mock API
+**Then** mock returns the correct schema response for representative success, empty and error cases
+**And** the frontend uses generated/shared types instead of declaring duplicate payloads
+**And** contract drift can be detected by automated checks.
+
+**Given** a page is loading, has no data or has an error
+**When** the shell renders the corresponding state
+**Then** has reusable loading, empty and error primitives
+**And** focus, keyboard navigation, landmark and accessible name basically work
+**And** states are not only distinguished by color.
+
+**Given** frontend shell can be run locally or on staging
+**When** perform smoke test in representative desktop and mobile viewports
+**Then** navigation and route rendering work without unintended horizontal overflow
+**And** the frontend can switch between mock base URL and FastAPI base URL using environment configuration
+**And** there is no need to edit the source code to change the environment.",1,Highest,"heritagegraph,epic-0,role-fe"
+8,Story,"0.7 Set up test harness, fixtures and documentation templates","As a developer,
+I want reusable automated test infrastructure and documentation templates,
+So that every later story can prove its behavior and leave consistent implementation evidence.
+
+**Acceptance Criteria:**
+
+**Given** backend code needs unit, database or integration testing
+**When** developer runs test suite according to documented command
+**Then** pytest discovery, markers and test configuration work consistently locally/CI
+**And** test database is isolated and reset between appropriate tests
+**And** test does not depend on credential or shared staging data.
+
+**Given** story needs representative knowledge data
+**When** test uses fixture/factory
+**Then** fixture has a minimum document, passage, entity and provenance with a defined ID
+**And** can be extended to draft/published/version-isolation cases
+**And** expected result is determined independently of the implementation under test.
+
+**Given** frontend and API contract need testing
+**When** contract test runs
+**Then** representative success, validation error and service error payload are tested against the current schema
+**And** mismatch between generated frontend types/mock and OpenAPI causes the test to fail.
+
+**Given** Public/Admin shell runs with mock or test backend
+**When** Playwright smoke suite runs
+**Then** the suite tests the main route, navigation and a representative desktop/mobile viewport
+**And** save screenshot/trace on failure
+**And** selector prioritizes role/accessible names instead of fragile CSS structure dependencies.
+
+**Given** AI/retrieval behavior is added in later epics
+**When** developers add regression cases
+**Then** harness supports fixed query, versioned evidence and deterministic expected gate/result
+**And** report has room to record model, prompt, corpus and evaluation dataset version
+**And** a test is not considered a pass just because the request did not crash.
+
+**Given** a story that changes the API, database, operations or architecture
+**When** story is completed
+**Then** there are suitable templates for API/data docs, migration/rollback notes, ADR or runbooks
+**And** test evidence and demo evidence have consistent location/link conventions
+**And** the documentation does not require copying the same source of truth into multiple places.
+
+**Given** Jenkins pipeline from Story 0.4
+**When** test harness is integrated
+**Then** unit, integration, contract and Playwright smoke checks run at the appropriate stage
+**And** failure artifact is kept for diagnostics
+**And** required test failure blocks deployment.",1,High,"heritagegraph,epic-0,role-be"
+9,Epic,Epic 1: Admin Knowledge Studio,"Administrators log in and compile an entire knowledge package — document, passage, entity/alias/place profile, claim, timeline, relation, narrative and evidence — in draft state without manual SQL, UUID or foreign key manipulation.",,Highest,"heritagegraph,epic-1"
+10,Story,"1.1 Authenticate, authorize and audit for Admin","As an administrator,
+I want to sign in securely and have administrative actions authorized and audited,
+So that only permitted users can modify cultural knowledge and every change is accountable.
+
+**Acceptance Criteria:**
+
+**Given** a properly provisioned Admin account
+**When** Admin logs in with correct information
+**Then** the password is checked using Argon2id
+**And** sessions are issued via cookies `HttpOnly`, `Secure` on staging/production and `SameSite` accordingly
+**And** the raw password or session token does not appear in the response body, log or trace.
+
+**Given** Incorrect credential or account not allowed to log in
+**When** sends login request
+**Then** the system refuses with a message not revealing which email/account exists
+**And** does not create an authenticated session
+**And** failure events are logged sufficiently for investigation but do not contain passwords, tokens, or raw IPs.
+
+**Given** request to `/admin/*` or Admin API
+**When** request does not have a valid session or does not have the necessary permissions
+**Then** The UI moves to login or displays access-denied accordingly
+**And** API returns `401` for unauthenticated or `403` for unauthorized
+**And** does not perform partial write.
+
+**Given** Admin has logged in
+**When** session expires or Admin logs out
+**Then** cookie/session is no longer available
+**And** protected API denies further requests
+**And** logging out multiple times does not cause unexpected errors.
+
+**Given** an authenticated Admin to create, update, submit, review or publish action
+**When** service transaction processes the action
+**Then** audit record stores actor, action, target kind/ID, timestamp and correlation ID
+**And** audit records cannot be edited/deleted via regular Admin CRUD
+**And** failed transaction does not leave a false business success status.
+
+**Given** login and authorization foundation tested
+**When** run unit/integration/contract tests
+**Then** test distinguishes success, invalid credentials, expired session, `401` and `403`
+**And** test proves that unauthenticated write does not change the database
+**And** audit output does not contain secrets or prohibited sensitive data.",9,Highest,"heritagegraph,epic-1,role-be"
+11,Story,1.2 Create and manage source documents in draft state,"As a knowledge manager,
+I want to create and manage source documents with complete provenance metadata,
+So that cultural knowledge starts from a traceable source without direct database operations.
+
+**Acceptance Criteria:**
+
+**Given** Admin opens the Document wizard
+**When** creates source document
+**Then** form collects source URL, title, region, source type, source tier, observed date, license and raw text/file according to contract
+**And** required fields, URL/date/type constraints are displayed in the correct fields
+**And** The UI does not require manual UUID or foreign key entry.
+
+**Given** valid payload
+**When** Admin saves the document
+**Then** FastAPI/service transaction creates the document in the current draft corpus revision
+**And** the default document has status `draft`, not `published`
+**And** document does not appear in online serving query
+**And** audit record is recorded for the create operation.
+
+**Given** URL/content hash or metadata matches existing document
+**When** Admin saves the draft
+**Then** exact duplicate is blocked according to business constraints
+**And** response specifies the duplicate field/candidate so that the Admin can edit or open the existing record
+**And** does not create a second document or a garbage object.
+
+**Given** raw document/file is stored on S3
+**When** database write or object write fails
+**Then** the system does not report successful saving
+**And** does not leave a database row pointing to a non-existent object
+**And** the orphan object is rolled back or marked for reconciliation according to the documented policy.
+
+**Given** Admin finds or opens the draft document
+**When** see list/details
+**Then** can filter/search by title, region, source type and status
+**And** metadata, raw-content availability and provenance are displayed
+**And** loading, empty and error states have accessible behavior.
+
+**Given** the document is still in draft revision and has not been submitted/published
+**When** Admin updates or deletes document
+**Then** change validation and execute atomically
+**And** dependent-record conflicts are reported instead of being orphaned
+**And** audit saves necessary before/after metadata.
+
+**Given** document is in published release
+**When** Admin tries to edit or delete published evidence
+**Then** the system rejects direct mutations
+**And** instructs Admin to create new revision/draft instead of changing historical evidence.",9,Highest,"heritagegraph,epic-1,role-be"
+12,Story,1.3 Create a passage and select evidence directly from the source,"As a knowledge manager,
+I want to create passages from a draft document and select them as evidence visually,
+So that downstream knowledge records can cite exact source text without manual IDs.
+
+**Acceptance Criteria:**
+
+**Given** a draft source document with raw text
+**When** Admin opens the Passage workspace
+**Then** raw text and passage list/preview are displayed in parallel
+**And** passage is being highlighted correctly on raw text
+**And** workspace supports keyboard navigation and does not just use color to indicate selection.
+
+**Given** Admin selects a raw text or enters a valid char span
+**When** creates passage
+**Then** `char_start` and `char_end` are within the document
+**And** passage content exactly matches the referenced substring according to the specified convention
+**And** the system automatically generates the content hash and attaches the draft corpus revision
+**And** Admin does not have to enter document UUID manually.
+
+**Given** char span is empty, inverted, out of bounds, or content does not match raw text
+**When** Admin saves passage
+**Then** FastAPI rejects with error attaching correct field/span
+**And** does not create partial passage or evidence record.
+
+**Given** the passage has the same document, span or content hash that already exists in the revision
+**When** Admin saves
+**Then** exact duplicate is blocked
+**And** UI leads to existing passage or allows adjustment of selection
+**And** does not create duplicate records.
+
+**Given** passage draft is valid
+**When** Admin edits or deletes passage
+**Then** the content hash/span is recalculated and validation runs within the transaction
+**And** the system blocks deletion if the passage is being referenced by the knowledge record, and also lists dependencies
+**And** audit record records the operation.
+
+**Given** a form knowledge record that needs evidence in future stories
+**When** Admin opens Evidence Picker
+**Then** you can search for passages by document/title/text and select directly from the preview
+**And** component returns a valid reference but does not require the user to enter a UUID/FK
+**And** selected evidence displays the source title and excerpt for inspection.
+
+**Given** passage is in published release
+**When** Admin tries to edit content/span
+**Then** the system rejects direct mutations
+**And** requires creating a new revision so that the historical citation remains unchanged.",9,Highest,"heritagegraph,epic-1,role-be"
+13,Story,"1.4 Manage entities, aliases and place profiles","As a knowledge manager,
+I want to create and manage entities, aliases and place profiles with evidence,
+So that cultural concepts are canonical, searchable and traceable before publication.
+
+**Acceptance Criteria:**
+
+**Given** Admin opens Entity editor
+**When** creates entity
+**Then** form collects canonical name, normalized name, type, subtype, scope and status according to registry
+**And** entities are attached to draft corpus revision and are not served online by default
+**And** Admin does not have to manually enter corpus/entity UUID.
+
+**Given** canonical/normalized name is the same or close to existing entity/alias
+**When** Admin imports or saves entities
+**Then** exact duplicate is blocked
+**And** fuzzy candidates are displayed with name, type and region/context sufficient for comparison
+**And** Admin can open candidate instead of accidentally creating duplicate entities.
+
+**Given** entity draft already exists
+**When** Admin adds, edits or deletes aliases
+**Then** the alias is normalized consistently with the entity resolution contract
+**And** Empty aliases, duplicates in the same entity, or invalid conflicts are explicitly rejected
+**And** mutations are audited and executed atomically.
+
+**Given** entity has type location
+**When** Admin creates place profile
+**Then** coordinates and geographical/administrative fields can be entered according to the schema
+**And** latitude/longitude is tested for range and value pairs
+**And** non-place entities cannot receive place profiles that are left of the constraint.
+
+**Given** entities need provenance
+**When** Admin uses Evidence Picker from Story 1.3
+**Then** can choose primary evidence and one or more supporting passages
+**And** evidence must be in a valid revision/context
+**And** UI displays source title and excerpt, no passage ID required.
+
+**Given** Admin finds entities to edit or link later
+**When** searches by canonical name, alias, type or region
+**Then** the result distinguishes canonical name from alias match
+**And** draft/published status is clearly displayed
+**And** loading, empty, duplicate-warning and error states support keyboard/screen reader.
+
+**Given** entity draft is being referenced by another knowledge record
+**When** Admin tries to delete entity
+**Then** the system blocks orphan references and lists dependencies
+**And** does not perform partial delete.
+
+**Given** entity/alias/place profile is a published release
+**When** Admin tries to edit directly
+**Then** the system rejects mutation history
+**And** directs Admin to create a new draft revision.",9,Highest,"heritagegraph,epic-1,role-be"
+14,Story,1.5 Compile typed claims with evidence,"As a knowledge manager,
+I want to author typed claims for an entity using a governing field registry,
+So that factual attributes are validated, versioned and traceable to source passages.
+
+**Acceptance Criteria:**
+
+**Given** Admin selects an entity draft and `claim_field`
+**When** Claim form is displayed
+**Then** control is generated according to `value_type`: `text`, `number`, `boolean`, `date`, `year`, `money` or `json`
+**And** form displays `label_vi`, default unit and time-sensitive guidance
+**And** Admin does not enter entity ID or field code manually.
+
+**Given** Admin enters claim value
+**When** value does not match the type of `claim_field`
+**Then** UI/FastAPI reports an error in the field before or when saving
+**And** database constraint/trigger still rejects invalid payloads if application validation is bypassed
+**And** does not create partial claims.
+
+**Given** a valid claim
+**When** Admin does not enter units and fields with `default_unit`
+**Then** default units are applied consistently
+**And** units are displayed in the preview before saving.
+
+**Given** Admin enters `observed_at`, `valid_from`, `valid_until`, confidence and canonical state
+**When** save claim
+**Then** confidence only accepts between 0 and 1
+**And** `valid_until` cannot be before `valid_from`
+**And** time-sensitive claim requires contract time metadata
+**And** claim is saved in state `draft`.
+
+**Given** claim requires provenance
+**When** Admin selects evidence
+**Then** must have a primary passage and can have multiple supporting passages
+**And** claim, entities and passages belong to the same valid draft corpus version
+**And** source title/excerpt is displayed instead of UUID.
+
+**Given** a claim with the same entity, field and value already exists in revision
+**When** Admin saves
+**Then** exact duplicate is blocked or redirected to an existing record
+**And** canonical-state conflict is clearly warned
+**And** do not create unintentional duplicate claims.
+
+**Given** claim draft already exists
+**When** Admin edits or deletes claim
+**Then** type, validity, confidence and evidence are validated again in the transaction
+**And** the operation is audited
+**And** published claim cannot be edited directly but must create a new revision.",9,High,"heritagegraph,epic-1,role-be"
+15,Story,1.6 Compile timeline events and participants,"As a knowledge manager,
+I want to author evidence-backed timeline events with typed participant roles,
+So that an entity's history can be presented and queried consistently.
+
+**Acceptance Criteria:**
+
+**Given** Admin opens the Timeline editor for an entity
+**When** creates event
+**Then** form collects title, `year_start`, optional `year_end`, precision, event type, summary, actor and artifact according to the schema
+**And** precision only accepts `year`, `decade`, `century`, `range` or `circa`
+**And** event type is selected from the registry, no free code is entered.
+
+**Given** Admin enters the timeline
+**When** `year_end` is less than `year_start` or precision/range is invalid
+**Then** UI and FastAPI report errors in the relevant field
+**And** the database constraint still protects the year range
+**And** does not create partial events.
+
+**Given** event has participating individuals, organizations, locations or artifacts
+**When** Admin adds participant
+**Then** entities are searched/selected by canonical name or alias
+**And** role is selected from `participant_role` registry
+**And** and the same entity/role cannot be added to the same event
+**And** Admin does not enter entity ID or role code manually.
+
+**Given** Admin selects actor or artifact
+**When** saves the event
+**Then** reference must point to a valid entity in the corpus context
+**And** type mismatch is clearly warned or rejected according to business rules
+**And** deleted/invalid reference does not create an orphan relation.
+
+**Given** timeline event needs provenance
+**When** Admin selects evidence
+**Then** must have a primary passage and can have supporting passages
+**And** event and evidence belong to the same draft corpus version
+**And** source title/excerpt is displayed in the editor.
+
+**Given** equivalent event already exists for the same entity, time range, type and title
+**When** Admin saves
+**Then** exact duplicate is blocked or results in an existing event
+**And** event at the same time but other content is allowed to exist and presented separately.
+
+**Given** valid event and participant list
+**When** Admin saves or updates
+**Then** events, participants and evidence are atomically recorded in state `draft`
+**And** the operation is audited
+**And** failure in any part rolls back all changes.
+
+**Given** timeline event is a published release
+**When** Admin tries to edit or delete directly
+**Then** the system rejects mutation history
+**And** requires creating a new draft revision.",9,High,"heritagegraph,epic-1,role-be"
+16,Story,1.7 Build typed entity relations,"As a knowledge manager,
+I want to connect two entities with a governing predicate and supporting evidence,
+So that graph relationships remain valid, explainable and queryable.
+
+**Acceptance Criteria:**
+
+**Given** Admin opens the Relation builder
+**When** select subject, predicate and object
+**Then** The UI displays the structure `subject ─ predicate → object`
+**And** subject/object is searched by canonical name or alias
+**And** predicate is selected from the closed registry, no code or UUID entered manually.
+
+**Given** predicate has `is_symmetric` or `inverse_of`
+**When** Admin selects predicate
+**Then** builder displays appropriate semantics/inverse for Admin to check relationship direction
+**And** do not create inverse relations outside the specified contract.
+
+**Given** subject and object are the same
+**When** Admin saves the relation
+**Then** UI, FastAPI and database refuse self-loop
+**And** does not create partial relation/evidence.
+
+**Given** the same subject, predicate, object and corpus version already exists
+**When** Admin saves
+**Then** exact triple duplicate is suppressed and the existing record is displayed
+**And** does not silently merge different evidence or confidence.
+
+**Given** Admin enters confidence and evidence
+**When** saves relation
+**Then** confidence only accepts from 0 to 1
+**And** primary passage is required, supporting passages are optional
+**And** relation, entities and passages belong to the same draft corpus context.
+
+**Given** relation is valid
+**When** Admin creates, updates or deletes
+**Then** relation and evidence are atomically written in state `draft`
+**And** the operation is audited
+**And** published relation cannot be edited directly but must create a new revision.",9,High,"heritagegraph,epic-1,role-be"
+17,Story,1.8 Compile narrative sections with evidence,"As a knowledge manager,
+I want to compose ordered Markdown narrative sections for an entity with source evidence,
+So that published heritage content can tell a coherent story without losing provenance.
+
+**Acceptance Criteria:**
+
+**Given** Admin opens the Narrative editor for an entity
+**When** create section
+**Then** section code is selected from the allowed registry, including overview, name, origin, historical role, architecture, artifacts, characters, modern changes or tours
+**And** form collects title, Markdown body and order index
+**And** Admin does not enter entity ID or section code freely.
+
+**Given** the same entity, section code and corpus version already have sections
+**When** Admin creates more
+**Then** exact section duplicates are blocked and the existing section is opened for editing
+**And** other sections of code are still allowed to exist.
+
+**Given** Admin composes Markdown
+**When** opens preview
+**Then** headings, lists, links and emphasis are rendered consistent with the public content contract
+**And** unsafe HTML/script is sanitized
+**And** editor/preview is keyboard-enabled and has accessible labels.
+
+**Given** narrative section needs provenance
+**When** Admin selects evidence
+**Then** a primary passage is required and supporting passages can be multiple
+**And** selected sources shows title/excerpt instead of UUID
+**And** section and evidence belong to the same draft corpus version.
+
+**Given** Admin changes order index or content
+**When** save narrative package
+**Then** ordering, Markdown and evidence are validated and recorded atomically
+**And** section defaults to state `draft`
+**And** the operation is audited.
+
+**Given** the narrative section is a published release
+**When** Admin tries to edit or delete directly
+**Then** the system rejects mutation history
+**And** requires creating a new revision draft.",9,High,"heritagegraph,epic-1,role-be"
+18,Epic,Epic 2: Reliable Corpus Validation and Publishing,"Editors submit drafts to Airflow for deep validation, generate embeddings, indexes, and manifests, resolve issues, conduct reviews, and publish corpus releases atomically. A dashboard shows the health and publication readiness of each release.",,Highest,"heritagegraph,epic-2"
+19,Story,2.1 Submit draft revision and create validation run idempotent,"As a knowledge manager,
+I want to submit a draft corpus revision for asynchronous validation,
+So that deep validation runs once per logical submission without blocking normal authoring saves.
+
+**Acceptance Criteria:**
+
+**Given** an authenticated Admin with draft revision
+**When** Admin selects Submit for Validation
+**Then** FastAPI performs minimal preflight checks on revision, ownership/status and required package records
+**And** saving normally does not automatically trigger Airflow
+**And** submission does not make the draft published.
+
+**Given** valid submission with new idempotency key
+**When** service processes the request
+**Then** the validation run is created atomically with revision ID, requester, timestamps and initial state
+**And** run ID is immediately returned to the UI for asynchronous tracking
+**And** the operation is audited.
+
+**Given** the same revision and idempotency key are sent back
+**When** request retry due to timeout or network failure
+**Then** service returns an existing validation run
+**And** does not create a second run or DAG execution.
+
+**Given** idempotency key is already used for another revision/payload
+**When** the client reuses the key
+**Then** The API returns an explicit conflict
+**And** does not change the existing run.
+
+**Given** multiple requests submitted at the same time with the same revision
+**When** service handles concurrency
+**Then** database uniqueness/transaction ensures that only one logical run is created
+**And** the remaining requests receive the same run or conflict.
+
+**Given** validation run has been committed
+**When** Airflow trigger is successful
+**Then** run saves the external DAG/run reference and enters the appropriate queued/running state
+**And** correlation ID connects API submission to Airflow execution.
+
+**Given** Airflow trigger failed after run was created
+**When** service logs an error
+**Then** run has an explicit retryable/trigger-failed status
+**And** retry reuses the same logical run instead of creating a new run
+**And** The UI does not indicate that validation is running if the DAG has not been triggered.
+
+**Given** revision changes after a submission
+**When** Admin wants to review new content
+**Then** must create a new submission/version identity
+**And** the old run's report still properly references the audited snapshot/revision.",18,Highest,"heritagegraph,epic-2,role-be"
+20,Story,2.2 Run Airflow deep validation and record validation issues,"As a knowledge manager,
+I want the knowledge submitted package to be checked deeply with actionable issues,
+So that I can correct invalid or incomplete records before indexes or a release is prepared.
+
+**Acceptance Criteria:**
+
+**Given** revision validation run has been triggered for a snapshot
+**When** Airflow starts deep validation
+**Then** pipeline only reads data belonging to the submitted snapshot/revision
+**And** the current status and start/end time of each stage are recorded
+**And** changing the draft later does not change the results of the currently running run.
+
+**Given** package contains document, passage, entity, claim, timeline, relation and narrative
+**When** validation stages run
+**Then** the system checks required fields, type/range, foreign key, exact duplicate, provenance and corpus-version consistency
+**And** business constraints of each record type are checked
+**And** the quality blocking error is classified as `error`, the issue needing review is classified as `warning`.
+
+**Given** a validation rule that detects the problem
+**When** issue is recorded
+**Then** issue contains run, stage, severity, rule/code, record kind/ID, field/path and actionable messages
+**And** The UI has enough references to open the correct record that needs editing
+**And** issue does not require Admin to read Airflow log to identify error objects.
+
+**Given** the same run/stage is retried
+The **When** pipeline logs the results
+**Then** issues are upsert/reconcile to a stable identity
+**And** does not create duplicate issues just because of a retry
+**And** issues that are no longer valid after the retest are marked resolved or replaced according to policy.
+
+**Given** a stage validation failed due to an operator error
+**When** run stops
+**Then** run is not marked as passable
+**And** stage errors, safety messages and recorded results are retained for diagnostics
+**And** retry continues safely without creating a new logical run.
+
+**Given** validation has any unresolved `error`
+**When** the pipeline is about to move to embedding/indexing or publishing
+**Then** the following step is blocked
+**And** warnings are displayed for review but do not automatically turn into pass/fail outside of the specified policy.
+
+**Given** validation completed
+**When** Admin views summary
+**Then** the total number of errors/warnings and results by stage match the issue records
+**And** metrics/logs/traces are linked by validation run/correlation ID
+**And** Airflow does not have the right to publish the corpus itself.",18,Highest,"heritagegraph,epic-2,role-data"
+21,Story,"2.3 Create embeddings, indexes and reproducible manifest","As a knowledge manager,
+I want every validated revision prepared as one reproducible serving package,
+So that search, graph and chatbot components can use consistent artifacts after publication.
+
+**Acceptance Criteria:**
+
+**Given** validation run completed and there are no more blocking errors
+**When** the preparation pipeline starts
+**Then** passages are divided into semantic chunks according to the versioned chunking contract
+**And** each chunk has a stable ID, source passage reference and content hash
+**And** together with input/configuration recreates the same chunk identities.
+
+**Given** chunks need vector embedding
+**When** the embedding stage runs
+**Then** model, model version and vector dimension match the embedding contract
+**And** vectors with wrong dimensions are rejected instead of being written to the index
+**And** constant chunks can reuse artifacts according to content hash and contract version.
+
+**Given** validated records and chunks are ready
+**When** indexing stages run
+**Then** lexical, accent-insensitive/trigram, vector and graph projection artifacts are all attached to the corpus revision
+**And** artifacts are recorded in the staging namespace, not yet used by online consumers
+**And** partial artifacts are not marked ready.
+
+**Given** all preparation stages are successful
+**When** pipeline creates manifest
+**Then** manifest records corpus revision, chunk IDs/hashes, embedding contract, index versions, graph projection version, record counts and artifact checksums/locations
+**And** manifest is saved with version on S3
+**And** secrets or private infrastructure credentials do not appear in the manifest.
+
+**Given** the same revision/configuration is retried
+**When** pipeline records chunks, embeddings, indexes or manifest
+**Then** writes is idempotent or reconciled according to deterministic artifact identity
+**And** does not generate duplicate serving packages
+**And** stale/partial artifacts are replaced or cleaned up according to documented policy.
+
+**Given** any preparation stage or manifest verification fails
+**When** run ends
+**Then** release is not marked publish-ready
+**And** active published artifacts are currently unchanged
+**And** stage/error is recorded for retry and observation.",18,High,"heritagegraph,epic-2,role-data"
+22,Story,"2.4 Monitor Validation Center, fix errors and resubmit","As a knowledge manager,
+I want to see validation progress and navigate directly to records that need correction,
+So that I can repair a failed package and submit a clean revision without reading infrastructure logs.
+
+**Acceptance Criteria:**
+
+**Given** Admin opens Validation Center
+**When** has validation runs
+**Then** the list displays revision, run status, current stage, time, error count and warning count
+**And** queued, running, failed, passed and retryable states are distinguished by text/icon, not just color
+**And** loading, empty, stale and service-error states are clearly displayed.
+
+**Given** a run has issues
+**When** Admin opens quality report
+**Then** can filter by severity, stage, record type and rule
+**And** each issue displays the message, field/path, available source context, and current status
+**And** shows the total number of matches for run's issue records.
+
+**Given** issue references a knowledge record
+**When** Admin selects Fix/Open
+**Then** UI opens the correct editor and record to be edited
+**And** keeps the context of run/issue so Admin can return to report
+**And** Admin does not have to copy UUID or look up the database.
+
+**Given** run failed because of an operation error and the snapshot remained unchanged
+**When** Admin selects Retry
+**Then** system retry with safe logical run/snapshot
+**And** do not create duplicate issues/artifacts
+**And** action and results are audited.
+
+**Given** Admin has edited the knowledge content
+**When** select Resubmit
+**Then** the system creates a new submission/run for the new snapshot revision
+**And** the old report remains unchanged for comparison
+**And** UI shows which issues have been resolved, still exist, or have just appeared according to rule/record identity.
+
+**Given** Admin does not have validation/retry/resubmit rights
+**When** tries to perform action
+**Then** API/UI refuses to match
+**And** does not trigger Airflow or run changes.",18,High,"heritagegraph,epic-2,role-fe"
+23,Story,2.5 Human review and atomic corpus publication,"As a human reviewer,
+I want to inspect a validated release and explicitly approve or reject it before atomic publication,
+So that unreviewed or partially activated knowledge never reaches users.
+
+**Acceptance Criteria:**
+
+**Given** release candidate has validation pass and serving package ready
+**When** Reviewer opens the Review workspace
+**Then** workspace displays revision diff, provenance summary, warnings, conflicting sources, manifest/index status and validation history
+**And** Reviewer can go to the related record/evidence
+**And** draft data is not displayed as published.
+
+**Given** candidate still has blocking error, preparation not ready or manifest is invalid
+**When** Reviewer tries to approve/publish
+**Then** action is blocked with failed gate list
+**And** Airflow password is fake or the warning is changed to an out-of-policy password that cannot bypass the gate.
+
+**Given** Reviewer decided to reject
+**When** enter the reason and confirm
+**Then** candidate keeps the unpublished status
+**And** decision, reviewer, timestamp and note are audited
+**And** the current active release remains unchanged.
+
+**Given** Reviewer approves a qualified candidate
+**When** open Publish confirmation
+**Then** The UI displays the release/version to be activated, the gates passed, the manifest artifact and the rollback/retire path
+**And** publish only continues after explicit confirmation
+**And** Airflow does not directly call publish.
+
+**Given** publication confirmed
+**When** Publishing Service activate release
+**Then** database transaction ensures the new release becomes active and the previous release is changed status according to the policy as a consistent operation
+**And** online release/artifact pointer only switches to verified serving package
+**And** publish event, reviewer and manifest identity are audited.
+
+**Given** transaction, artifact activation or concurrent publish encountered an error
+**When** publish was not fully completed
+**Then** online consumers continue to use the most recent good release
+**And** there is no new database state but the old index is considered the same release
+**And** errors/conflicts are clearly reported for retry or review.",18,Highest,"heritagegraph,epic-2,role-be"
+24,Story,2.6 Ensure published corpus version isolation,"As an end user,
+I want each request to use one complete published corpus version,
+So that pages, recommendations and chatbot answers never mix old and new knowledge.
+
+**Acceptance Criteria:**
+
+**Given** an online request started
+**When** service resolve active release
+**Then** release ID is retained for the entire request lifecycle
+**And** database, lexical/vector indexes, graph projection and evidence queries all use that release
+**And** response/trace records the appropriate release ID.
+
+**Given** the new release is published while the old request is running
+**When** the old request continues retrieval or persistence
+**Then** request still completes on the pinned release
+**And** new requests can use new releases
+**And** do not mix artifacts of two releases.
+
+**Given** records have the status of draft, retired, withdrawn or belong to another release
+**When** online consumers query
+**Then** record does not appear in the serving results of active release
+**And** the repository/service boundary applies the filter instead of depending on the endpoint to remember the filter itself.
+
+**Given** a required artifact of the pinned release is missing or the checksum/version does not match
+**When** request needs that artifact
+**Then** the service returns the appropriate unavailable/degraded status instead of silently falling back to another release
+**And** does not generate answers, citations or recommendations from mixed versions
+**And** failures are measured and traced.
+
+**Given** response fact is saved or returned
+**When** the system records evidence/citation
+**Then** corpus release ID is saved with response/evidence
+**And** the cited passage of the published release remains unchanged to trace history.
+
+**Given** version isolation tested
+**When** run concurrent publish and online-request integration tests
+**Then** tests demonstrate no draft leakage or cross-version reads
+**And** expected values checks for the correct record/version, not just checks that the request does not crash.",18,Highest,"heritagegraph,epic-2,role-be"
+25,Story,2.7 Display corpus health and publish readiness dashboard,"As a knowledge manager,
+I want one dashboard showing corpus, validation, index and evaluation health,
+So that I can know whether the current draft and published releases are safe and ready to serve.
+
+**Acceptance Criteria:**
+
+**Given** Admin opens the dashboard
+**When** operating data is available
+**Then** the dashboard displays current draft release, active published release, validation queue, issue counts, review status and publish eligibility
+**And** each state has timestamp/freshness
+**And** stale or unavailable data is not presented as healthy.
+
+**Given** corpus health data available
+**When** dashboard renders
+**Then** displays record counts by type/status, provenance gaps, duplicate/quality summary and graph coverage as appropriate
+**And** metrics link to actionable reports or filtered records
+**And** dashboards do not auto-correct data.
+
+**Given** serving artifacts have been prepared or published
+**When** see index/model health
+**Then** dashboard displays manifest identity, lexical/vector/graph status, embedding/model contract, prompt/related model version and last successful build
+**And** artifact/release mismatch is clearly marked blocking or degraded.
+
+**Given** evaluation reports exist
+**When** dashboard displays quality metrics
+**Then** citation faithfulness, citation coverage, abstention accuracy, retrieval recall and latency are tied to model, prompt, corpus and dataset versions
+**And** missing metrics are not displayed as reaching target.
+
+**Given** a validation, pipeline, index or publish gate error
+**When** operator views dashboard or alert
+**Then** has a link to the relevant run/release/correlation ID
+**And** Prometheus/Grafana/Langfuse signals support diagnostics instead of replacing source-of-truth status
+**And** sensitive content, password, token and raw IP do not appear.
+
+**Given** the user does not have administrative rights
+**When** access API/UI dashboard
+**Then** access is denied accordingly
+**And** corpus operational details are not exposed to the public surface.
+
+**Given** the component library and Admin Console handoff from Stories 0.8–0.9 plus the Admin shell from Story 0.6
+**When** FE implements `/admin`
+**Then** layout, typography, spacing, components and responsive behavior follow the approved Figma design
+**And** FE uses shared/generated API types instead of hard-coding production metrics
+**And** visual deviations are approved by DES or recorded.
+
+**Given** the dashboard is loading, has no data, partially fails or fails completely
+**When** the UI renders the corresponding state
+**Then** loading skeletons, empty guidance, partial-data warnings and retryable error states appear at the correct scope
+**And** one failed widget does not cause a blank dashboard
+**And** status is not communicated by color alone.
+
+**Given** desktop, tablet and minimum supported viewports
+**When** component and Playwright tests plus design QA run
+**Then** the dashboard has no unintended horizontal overflow
+**And** keyboard navigation, landmarks and focus order work
+**And** DES compares representative rendered states with Figma before the story is marked done.",18,Medium,"heritagegraph,epic-2,admin-dashboard,role-fe"
+26,Epic,Epic 3: Heritage Discovery and Storytelling Portal,"Users find and select published heritage content through Home, Explore/Library, the 2D Hue–Da Nang map, and Content Landing. From there, they can continue to scene experiences, Chat, Recommendations, or related content when those capabilities are available.",,High,"heritagegraph,epic-3"
+27,Story,3.1 Explore featured heritage experiences,"As a visitor,
+I want to featured browse heritage experiences from the public home page,
+So that I can quickly choose a place or story to explore without knowing what to search for first.
+
+**Acceptance Criteria:**
+
+**Given** the user opens the Home page
+**When** active published corpus has featured content
+**Then** page displays featured content groups according to editorial configuration
+**And** all cards belong to the same published corpus release pin
+**And** drafts, withdrawn or content belonging to another release do not appear.
+
+**Given** an experience card is displayed
+**When** the user views the card
+**Then** cards prioritize images and experience names, not stuffing timelines, sources or long descriptions
+**And** there are two obvious actions to continue exploring and open Content Landing
+**And** button/link has a clear accessible name and keyboard focus.
+
+**Given** the user chooses the discovery action
+**When** navigates to Explore
+**Then** appropriate context such as region, topic, or content type is passed through the shareable URL/state
+**And** back navigation takes the user to the correct location on Home.
+
+**Given** the user chooses to open the content
+**When** Content Landing exists in the current release
+**Then** navigate to the correct content slug/ID
+**And** do not use mocks or data from other releases.
+
+**Given** card image not loaded, error or out of viewport
+**When** Home renders
+**Then** images use responsive sizes, placeholders/fallbacks, and appropriate lazy loading
+**And** image errors do not cause the card or navigation to become unavailable
+**And** layout does not jump abnormally when the image is complete.
+
+**Given** Home has no featured content or API errors
+**When** the page loads
+**Then** displays the empty/error state with a clear path forward
+**And** does not display blank pages or draft data as fallback.",26,High,"heritagegraph,epic-3,role-fe"
+28,Story,3.2 Search and filter the heritage content library,"As a visitor,
+I want to search and filter the published heritage library,
+So that I can find experiences relevant to a name, region or cultural category.
+
+**Acceptance Criteria:**
+
+**Given** the user opens Explore/Library
+**When** has not entered the condition
+**Then** the page displays published experiences with specified pagination or incremental loading
+**And** card uses the same visual/action contract as Home
+**And** do not load the entire media or the entire corpus at once.
+
+**Given** the user enters a keyword
+**When** perform a search
+**Then** the system searches published content by standard name and appropriate alias
+**And** the query is normalized according to the search contract
+**And** the results do not call Qwen just to rank the Explore list.
+
+**Given** the user selects region or category filters
+**When** apply individually or in combination
+**Then** the result contains only records that satisfy all active filters
+**And** supports at least Hue, Da Nang and content groups within the project scope
+**And** filter state is shown in the URL to reload/share without losing options.
+
+**Given** query/filter returned no results
+**When** search completed
+**Then** the page displays the empty state, the conditions being applied, and how to delete/edit the conditions
+**And** does not replace itself with unrelated results or draft content.
+
+**Given** request is slow, error or out of page
+**When** Explore updates results
+**Then** loading, retry, end-of-results and stale-result states are clearly distinguished
+**And** keyboard/screen reader receives result change notification
+**And** the old card is not mistakenly attached to the new query.",26,High,"heritagegraph,epic-3,role-fe"
+29,Story,3.3 Explore locations on the 2D Hue–Da Nang map,"As a visitor,
+I want to discover published heritage experiences on a two-dimensional map,
+So that I can understand where places are located and begin a geographically grounded experience.
+
+**Acceptance Criteria:**
+
+**Given** user opens `/map`
+**When** the overview map loads
+**Then** shows 2D Vietnam map, not globe or 3D earth
+**And** Hue and Da Nang are represented by two highlighted points/areas
+**And** animation respects reduced-motion preference.
+
+**Given** users choose Hue or Da Nang
+**When** the map switches to regional view
+**Then** displays published places markers with valid coordinates in that area
+**And** marker belongs to the same pinned corpus release
+**And** content that is missing or has wrong coordinates cannot be placed at fake locations.
+
+**Given** the user selects the marker
+**When** place preview opens
+**Then** preview displays the image, name, and actions to explore/open the Content Landing under the same contract as the card
+**And** indicates an active preview that is explicitly linked to the currently selected marker
+**And** closes the preview and returns focus to the marker.
+
+**Given** the user cannot or does not want to manipulate the map directly
+**When** use keyboard, screen reader or select list view
+**Then** has a list of locations that are equivalent in content and action
+**And** select in the list to synchronize with the corresponding marker
+**And** map is not the only way to access content.
+
+**Given** viewport mobile
+**When** the user selects an area or marker
+**Then** the preview/list displayed using the layout or bottom sheet does not obscure the entire context
+**And** close, scroll and focus operations work clearly.
+
+**Given** map tiles/data error
+**When** map fails to render
+**Then** the Hue–Da Nang location list is still active
+**And** does not display a blank page or block the path to Content Landing.",26,Medium,"heritagegraph,epic-3,role-fe"
+30,Story,3.4 View Content Landing before starting a scene experience,"As a visitor,
+I want to review the identity and context of a heritage experience before starting it,
+So that I understand what I am about to explore and can choose my next action.
+
+**Acceptance Criteria:**
+
+**Given** the user opens a valid Content Landing
+**When** content belongs to active published release
+**Then** the page displays the appropriate profile picture, name, subtitle/short description, region, content type and provenance/partner information
+**And** response and trace attached to pinned corpus release
+**And** does not display draft or mixed-version data.
+
+**Given** content with scene experience published and available
+**When** the landing page renders
+**Then** the `Start Experience` action is displayed according to the published scene capability/route contract
+**And** the landing does not automatically load the 3D model, audio, or entire scene assets before the user starts it.
+
+**Given** scene experience is not available yet
+**When** the landing page renders
+**Then** the page still provides introductory information, sources, and related content
+**And** does not show dead links or pretend that the experience is ready
+**And** availability status is clearly expressed.
+
+**Given** content has related published experiences
+**When** the user views the relevant section
+**Then** can continue to another Content Landing or Explore appropriate context
+**And** related links do not point to draft/withdrawn records
+**And** back navigation retains the previous journey.
+
+**Given** hero image or media preview error
+**When** the page renders
+**Then** fallback image/state is displayed but title, description, provenance and navigation still work
+**And** not loading 3D/audio causes automatic fallback.
+
+**Given** content does not exist in pinned release
+**When** route is opened
+**Then** displays the not-found state with a path back to Home, Explore or Map
+**And** does not fallback to the same ID in another draft or release.
+
+**Given** Content Landing is measured in the target environment
+**When** representative published content is downloaded
+**Then** meets the detailed page load budget of ≤3 seconds under recorded measurement conditions
+**And** desktop/mobile maintains hierarchy, focus order and no unwanted horizontal overflow.",26,High,"heritagegraph,epic-3,role-fe"
+31,Epic,Epic 4: Grounded Q&A Assistant,"Users ask questions in Vietnamese from the Chat page or the panel beside Content. The system identifies the correct entity and intent, retrieves evidence from a published corpus release, uses Qwen3-4B to formulate the response, and returns only `answered`, `clarify`, or `abstained` after validating citations and grounding.",,Highest,"heritagegraph,epic-4"
+32,Story,4.1 Understand the question and identify the correct entity,"As a user,
+I want the assistant to understand Vietnamese names, aliases and typing variations,
+So that my question is connected to the correct heritage entity or I am asked to clarify.
+
+**Acceptance Criteria:**
+
+**Given** user sent a question in Vietnamese
+**When** query understanding begins
+**Then** the system keeps the raw query intact and creates a normalized query according to the contract
+**And** consistently handles uppercase/lowercase letters, Vietnamese accents, spaces, and character variations
+**And** normalization does not cause loss of raw text that needs to be displayed or audited.
+
+**Given** the question contains the canonical name or reviewed alias
+**When** entity resolution runs
+**Then** canonical name exact, normalized alias exact and accent-insensitive match are prioritized in the specified order
+**And** typo/fuzzy matching is only used within calibrated thresholds
+**And** only entities belonging to pinned published release and `in_scope` will be selected to reply.
+
+**Given** has exactly one candidate who exceeds the confidence threshold
+**When** resolver completes
+**Then** returns entity ID/canonical name along with traceable match reason
+**And** context hints from Content Landing are checked and do not automatically override the question content.
+
+**Given** has many reasonable candidates or the names are not distinctive enough
+**When** resolver cannot be safely selected
+**Then** terminal result is `clarify`
+**And** response provides brief options with distinguishing information such as type or region
+**And** the system does not randomly select an entity.
+
+**Given** the question does not need a specific entity or no entity was found
+**When** resolver completes
+**Then** the contract clearly states `entity_ids`, `needs_clarification` and scope status
+**And** valid generic queries can proceed
+**And** entities outside the scope cannot be assumed to be entities in the corpus.
+
+**Given** resolver is tested
+**When** it runs cases with canonical names, aliases, unaccented text, typing errors, duplicate names, and out-of-scope entities
+**Then** expected entity/clarify outcome is specifically verified
+**And** test is not just checking that the request does not crash.",31,Highest,"heritagegraph,epic-4,role-be"
+33,Story,4.2 Determine intent and plan to find evidence,"As a user,
+I want the assistant to recognize what kind of answer I need,
+So that it looks in the right knowledge structures instead of applying one generic search to every question.
+
+**Acceptance Criteria:**
+
+**Given** query has normalized and entity resolution is complete or no entity is needed
+**When** the intent router runs
+**Then** sort into one of `overview`, `field`, `timeline`, `relationship`, `section`, `comparison`, `open_text` or `out_of_scope`
+**And** output records confidence/reason suitable for tracing
+**And** cases below the threshold are clarified or handled according to the specified fallback.
+
+**Given** query contains an identifiable field, time period, or relation request
+**When** router creates structured query contract
+**Then** contract fill in `field_code`, `time_range` or `requested_relations` as appropriate
+**And** does not invent fields/predicates outside of the registry.
+
+**Given** intent identified
+**When** Query Planner plans
+**Then** the planner selects a small, predefined list of operators that match the intent
+**And** plan records input, limit/budget and the order in which operators need to run
+**And** planner does not generate free SQL or act as an autonomous agent.
+
+**Given** comparative questions or need many types of evidence
+**When** planner creates multi-operator plan
+**Then** the necessary branches of evidence are clearly stated and pinned together in a corpus release
+**And** duplicate operators are not run merely because the same data appears in multiple branches.
+
+**Given** intent is `out_of_scope`
+**When** planning is complete
+**Then** the system does not run unnecessarily expensive retrieval/generation
+**And** returns the appropriate status, don't make up an out-of-scope answer.
+
+**Given** router/planner tested
+**When** runs representative questions for eight intents
+**Then** expected intent, fields and operator plan are compared to the gold set
+**And** change the prompt/rule to deviate the plan detected by regression tests.",31,Highest,"heritagegraph,epic-4,role-ai"
+34,Story,"4.3 Find evidence from facts, timeline, graph, narrative and text","As a user,
+I want the assistant to retrieve evidence that matches my question,
+So that answers are based on the most appropriate published knowledge rather than model memory.
+
+**Acceptance Criteria:**
+
+**Given** plan requires exact facts
+**When** Exact operator runs
+**Then** get the claim/canonical value appropriate to the entity, field, validity and pinned release
+**And** returns supporting passage references
+**And** stale/time-sensitive value is not represented as current outside the validity contract.
+
+**Given** plan requires events or chronology
+**When** Timeline operator runs
+**Then** filter timeline events by appropriate entity, event type and time range
+**And** keeps actor/participant/artifact with evidence
+**And** sorts according to specified time semantics.
+
+**Given** plan requires relationship
+**When** Graph operator runs
+**Then** traversal limits 1–2 hops through the predicate allowlist that matches the intent
+**And** every node/edge belongs to the same pinned published release
+**And** path and supporting passages are returned to explain the results.
+
+**Given** plan requires topical content
+**When** Section operator runs
+**Then** get the narrative sections with the correct entity/section intent and associated evidence
+**And** do not replace the reviewed narrative with an unsourced model-generated summary.
+
+**Given** plan requires searching in text or paraphrase
+**When** Text operator runs
+**Then** combines PostgreSQL FTS, pg_trgm/accent-insensitive search and vector channel according to contract
+**And** the results are consolidated according to the published ranking method
+**And** vector dimension/model must match the pinned release manifest.
+
+**Given** an operator with insufficient results or a dependency error
+**When** retrieval ends
+**Then** trace records operator, candidate counts, ranks and failure/degradation
+**And** does not fallback to another draft or corpus release
+**And** downstream receives clearly empty/missing evidence instead of fabricated data.",31,Highest,"heritagegraph,epic-4,role-ai"
+35,Story,4.4 Build evidence package and block questions lacking evidence,"As a user,
+I want the assistant to answer only when it has enough relevant evidence,
+So that confident wording is not produced from weak, mismatched or conflicting sources.
+
+**Acceptance Criteria:**
+
+**Given** retrieval operators return candidates
+**When** Entity Dossier/Evidence Context Builder runs
+**Then** merge claims, events, relations, narratives and passages that match the intent
+**And** type duplicate evidence according to stable identity/content
+**And** retains conflicting sources instead of silently choosing one.
+
+**Given** evidence exceeds context budget
+**When** builder selects evidence
+**Then** applies the configuration budget according to intent and prioritizes provenance/relevance
+**And** does not limit the old Text operator as invariant to the entire system
+**And** selection order and reason can be traced.
+
+**Given** evidence is included in package
+**When** package is complete
+**Then** each item has a stable citation ID in the request, source/passage reference and corpus release ID
+**And** model only sees citation IDs belonging to package
+**And** evidence text is considered data, not instructions that have the power to change system behavior.
+
+**Given** pre-generation gate runs
+**When** entity/scope, publish status, freshness, release consistency or evidence threshold are not met
+**Then** Qwen is not called
+**And** the result is `clarify` if the user can clarify, or `abstained` if the evidence is insufficient
+**And** the gate reason is saved for trace/evaluation.
+
+**Given** evidence is sufficient and consistent according to policy
+**When** pre-generation gate pass
+**Then** package only contains evidence of a pinned release
+**And** generation request receives bounded package with prompt/model version
+**And** package can be saved/reproduced for regression investigation.",31,Highest,"heritagegraph,epic-4,role-ai"
+36,Story,4.5 Generate and check answers with citations,"As a user,
+I want a clear Vietnamese answer whose factual claims are supported by visible citations,
+So that I can trust the response or understand when the system cannot answer.
+
+**Acceptance Criteria:**
+
+**Given** pre-generation gate has passed
+**When** Qwen3-4B receives generation request
+**Then** model only accepts query, structured context and bounded evidence package
+**And** does not have permission to query the database, create entities/relation/sources, or add facts from model memory
+**And** output follows the response schema and citation IDs provided.
+
+**Given** evidence proves that the question premise is wrong
+**When** model generates response
+**Then** the answer corrects the premise right at the beginning
+**And** correction with supporting citation
+**And** does not repeat a false premise as a fact.
+
+**Given** generation completed
+**When** post-generation gate runs
+**Then** check the citation IDs belonging to the package, factual claims have support, number/date matches evidence, certainty matches and conflict is presented
+**And** citation does not exist or claim is not supported causing gate failure
+**And** output is not returned as `answered` just because it is in a valid format.
+
+**Given** grounding fails but the error can be fixed with a regeneration
+**When** retry policy allows
+**Then** the system retries at most once with fail-safe feedback
+**And** if it still fails, returns `abstained`
+**And** does not loop infinitely or bypass gates.
+
+**Given** model timeout or unavailable
+**When** request could not be completed
+**Then** returns a friendly error/abstained status, not a fabricated fallback answer
+**And** the current evidence/release has not been changed
+**And** failures are measured and traced.
+
+**Given** response completed
+**When** saves and returns results
+**Then** terminal status is just `answered`, `clarify` or `abstained`
+**And** save query, pinned release, evidence references, model/prompt version, grounding result and latency according to privacy policy
+**And** `answered` always has valid citations for factual content.",31,Highest,"heritagegraph,epic-4,role-ai"
+37,Story,4.6 Use Chat independently and alongside Content,"As a user,
+I want to ask questions either from a dedicated Chat page or aside the content I am viewing,
+So that I can get grounded help without losing my exploration context.
+
+**Acceptance Criteria:**
+
+**Given** user opens `/chat`
+**When** starts conversation
+**Then** can submit questions in Vietnamese without logging in
+**And** UI clearly displays sending, answered, clarified, abstained and service error status
+**And** conversation does not assume an entity context if the user has not selected it.
+
+**Given** the user opens Chat from Content Landing
+**When** the contextual panel appears
+**Then** The UI displays the chip/label for the entity in question
+**And** sends the entity ID as a context hint to be verified by the backend on the pinned release
+**And** users can remove or change explicit context, there is no hidden context.
+
+**Given** desktop viewport is wide enough
+**When** Chat panel opens next to Content
+**Then** Content and Chat are displayed side by side without covering the main controls/content
+**And** the panel can be collapsed/reopened
+**And** loading or Chat errors do not stop Content Landing from working.
+
+**Given** mobile or narrow viewport
+**When** the user selects `Ask AI`
+**Then** Chat opens with drawer/bottom sheet or full-screen panel with clear close/back
+**And** closes the Chat and returns the user to the correct Content location
+**And** focus is managed and background interaction is limited accordingly.
+
+**Given** the assistant returns `answered`
+**When** response rendered
+**Then** citations are controls that have an accessible label and open source/excerpt accordingly
+**And** number/date/source formatting is easy to read
+**And** citation clicking does not cause unwanted conversation loss.
+
+**Given** the assistant returns `clarify` or `abstained`
+**When** response rendered
+**Then** The UI explains what the user needs to clarify or why the evidence is not enough
+**And** provides the appropriate next action without presenting it as a general technical error
+**And** does not display answer text that does not pass through the gate.
+
+**Given** contextual Chat component is composed in a representative host using a public integration contract
+**When** host transmits scene/entity context
+**Then** component reuses the same Chat implementation, does not require a second chatbot
+**And** context is displayed transparently before submitting the question
+**And** the contract has an automated component/contract test so hosts like Scene Player can integrate without modifying the core Chat flow.",31,High,"heritagegraph,epic-4,role-fe"
+38,Story,4.7 Suggest follow-up questions from GraphRAG,"As a user,
+I want relevant follow-up questions after an answer,
+So that I can continue exploring connected people, places, events and cultural themes without knowing what to ask next.
+
+**Acceptance Criteria:**
+
+**Given** assistant returns a grounded response `answered` to entity/topic
+**When** the system creates follow-up suggestions
+**Then** suggest 2 to 4 questions based on evidence, timeline or graph paths 1–2 hops belonging to the same pinned release
+**And** each suggestion has a traceable target entity/intent/path basis
+**And** don't propose a question just because it sounds interesting but the corpus isn't capable of supporting it.
+
+**Given** graphs have many valid exploration paths
+**When** select suggestions
+**Then** prioritizes different directions such as relationships, events, comparisons or thematic content
+**And** avoid repeating questions that have just been answered or suggestions that are almost the same
+**And** does not result in a draft, withdrawn or out-of-scope entity.
+
+**Given** suggestion is inferred by model or template
+**When** suggestion is about to return to the UI
+**Then** the backend verifies referenced entities/relations/evidence exist in the pinned release
+**And** invalid/unverifiable suggestion was rejected
+**And** suggestion text is not presented as an answered factual claim.
+
+**Given** the user selects a suggested question
+**When** new questions are posted
+**Then** it goes through the full resolver, planner, retrieval, evidence and grounding gates like a normal question
+**And** do not reuse old answers or bypass evidence gates
+**And** conversation keeps the context clearly visible.
+
+**Given** response is `clarify` or `abstained`
+**When** UI needs next actions
+**Then** only displays clarification/rephrase options or directions for which there is safe evidence
+**And** do not use deep-dive suggestions to hide the system's lack of evidence.
+
+**Given** Chat UI render suggestions
+**When** the user uses a mouse, keyboard or screen reader
+**Then** suggestions are controls with an accessible name and focus state
+**And** selecting suggestion clearly indicates that a new question will be submitted
+**And** loading/error of suggestions does not remove current answers/citations.",31,Medium,"heritagegraph,epic-4,role-ai"
+39,Story,4.8 Evaluate assistant quality and performance before release,"As a product owner,
+I want reproducible evidence that the assistant retrieves, cites and denies correctly,
+So that model, prompt or corpus changes cannot silently reduce answer quality.
+
+**Acceptance Criteria:**
+
+**Given** versioned evaluation dataset
+**When** run retrieval evaluation
+**Then** the dataset covers canonical names, aliases, unaccented text, typing errors, paraphrases, ambiguous queries, and out-of-scope queries
+**And** expected entity, intent, operator and evidence are defined independently of the implementation
+**And** retrieval recall@1 achieved the target of ≥95% on the published set.
+
+**Given** fixed evidence packages and representative questions
+**When** run generation/grounding evaluation
+**Then** measures citation faithfulness ≥85%, citation coverage ≥90% and abstention accuracy ≥90%
+**And** the three metrics are reported together to avoid skewed optimization
+**And** false-premise, conflicting-source, unsupported-number/date cases are checked separately.
+
+**Given** assistant runs in the target demo environment
+**When** loads the recorded profile
+**Then** chat end-to-end p95 ≤8 seconds or report clearly indicating the gate has not been passed
+**And** latency is separated by resolver, retrieval, evidence, inference and post-gate
+**And** timeout/error rate is reported at the same quality.
+
+**Given** evaluation completed
+**When** report is saved
+**Then** report records model/base/adapter or GGUF hash, tokenizer/quantization, prompt version, corpus release, retrieval configuration and dataset version
+**And** results can be rerun from the same inputs/configuration
+**And** missing metadata makes the report ineligible for release.
+
+**Given** model, prompt, retrieval config or corpus changes
+**When** CI/release gate runs regression suite
+**Then** the change exceeds the specified degradation threshold to block promotion
+**And** answers are not hard-coded merely to make the tests pass
+**And** failure cases have a trace/evidence package to investigate without exposing sensitive data.",31,Highest,"heritagegraph,epic-4,role-ai"
+40,Epic,"Epic 5: Scene-Based, 3D, and Multimedia Heritage Experiences","Users start from Content Landing and progress through a guided story of 1–6 ordered narrative scenes. Each scene combines evidence-backed content with images, panoramas, or 3D viewpoints, hotspots, audio, and transcripts. If a media asset fails, the scene falls back gracefully and the rest of the experience remains functional.",,Medium,"heritagegraph,epic-5"
+41,Story,5.1 Compile a guided story consisting of 1–6 narrative scenes,"As a knowledge manager,
+I want to compose an ordered guided story from evidence-backed narrative scenes,
+So that visitors can follow a purposeful experience instead of viewing an unstructured 3D model.
+
+**Acceptance Criteria:**
+
+**Given** Admin creates a guided story for Content Landing/site
+**When** save story draft
+**Then** the story has appropriate title, description, owning entity/site, language and draft corpus context
+**And** default stories do not appear to public users
+**And** Admin does not have to manually enter entity/site UUID.
+
+**Given** Admin added narrative scenes
+**When** configure story
+**Then** story accepts from 1 to 6 narrative scenes in MVP
+**And** each scene has a sequence number, title, body/summary and primary evidence
+**And** supporting evidence can be selected via Evidence Picker.
+
+**Given** the database already has physical `scene` representing the 3D area/model
+**When** save narrative scene
+**Then** the narrative scene/chapter has its own identity, not identified with the physical 3D scene
+**And** can refer to optional physical scene/camera/media configuration
+**And** stories are still valid with image/panorama fallback without a 3D model.
+
+**Given** Admin rearranged narrative scenes
+**When** saves the new order
+**Then** sequence 1..N is continuous, does not overlap and does not exceed limit 6
+**And** reorder is written atomically
+**And** preview reflects the correct Previous/Next order.
+
+**Given** narrative scene is missing title/body/evidence or a record reference other than corpus context
+**When** Admin saves or submits validation
+**Then** the error is attached to the correct scene/field
+**And** do not publish partial stories
+**And** public users' current stories are not changed.
+
+**Given** story is in published release
+**When** Admin wants to edit scene or order
+**Then** must create a new draft revision
+**And** the old published story remains immutable for citation/audit
+**And** review/publish continues to use the Epic 2 workflow.",40,Medium,"heritagegraph,epic-5,role-be"
+42,Story,"5.2 Manage photos, panoramas and 3D models with provenance","As a knowledge manager,
+I want to upload and govern media assets used by scenes,
+So that every public image, panorama or 3D model is attributed, deliverable and safe to publish.
+
+**Acceptance Criteria:**
+
+**Given** Admin adds media assets
+**When** import metadata
+**Then** select asset kind, owning scene/site, license, contributor, origin URL and acquisition/upload date
+**And** required lack of provenance makes the asset ineligible for publication
+**And** The UI does not require manual entry of storage keys or foreign keys.
+
+**Given** Admin uploads photos, panoramas or 3D models
+**When** upload completed
+**Then** object is saved at S3 canonical path with checksum, content type and file size metadata
+**And** database record is only successful when the object/reference is reconciled
+**And** failure does not leave a row pointing to a non-existing object or an untracked orphan.
+
+**Given** asset is a 3D model
+**When** validation runs
+**Then** format/compression/LOD metadata follows support contracts such as GLB and Draco/Meshopt when applicable
+**And** each production-ready model cannot exceed the asset budget of 30 MB
+**And** invalid/corrupt model is not marked ready.
+
+**Given** a physical scene with multiple levels of detail
+**When** Admin manages LOD/proxy assets
+**Then** each LOD identity is unique within the scene
+**And** proxy/preview is distinguished from full asset
+**And** public API has enough metadata to select appropriate assets without loading them all at once.
+
+**Given** asset is already part of the published story
+**When** files need replacing
+**Then** creates new immutable asset revision/object instead of silently overwriting
+**And** the old story/release still references the old checksum correctly
+**And** upload/replace/retire operations are audited.
+
+**Given** browser requests media
+**When** API returns object URL or signed URL
+**Then** read permission according to asset policy and access period
+**And** S3 is still the canonical store, no critical-path dual-write to R2/Azure
+**And** storage credentials are not exposed to the client.",40,Medium,"heritagegraph,epic-5,role-be"
+43,Story,"5.3 Configure camera angles, 3D positions and hotspots for each scene","As a knowledge manager,
+I want each narrative scene to open at the intended visual viewpoint with meaningful hotspots,
+So that visitors see the part of the heritage site that supports the story being told.
+
+**Acceptance Criteria:**
+
+**Given** narrative scene references physical 3D scene
+**When** Admin configures the viewpoint
+**Then** save camera position/orientation, target and scene transform according to contract
+**And** reference points to a valid model/physical scene
+**And** invalid or non-finite coordinates are rejected.
+
+**Given** scene requires camera movement
+**When** Admin configures camera path/keyframes
+**Then** keyframes have a valid scene/model reference and order
+**And** preview can replay the path before publishing
+**And** reduced-motion fallback can remove motion and still bring the user to the main viewpoint.
+
+**Given** Admin added hotspot
+**When** select position on preview/model
+**Then** hotspot stores local coordinates, labels and linked published/draft entities that match the corpus context
+**And** hotspots outside the bounds or pointing to invalid entities are warned/denied
+**And** Admin does not enter coordinates/entity UUID manually when UI can select directly.
+
+**Given** narrative scene does not have or cannot be loaded in 3D
+**When** configure fallback
+**Then** you can select image/panorama and corresponding focal information
+**And** the content/evidence of the scene does not depend on the camera path to be read
+**And** fallback is previewed before publication.
+
+**Given** Admin changes viewpoint, path or hotspots
+**When** save scene draft
+**Then** configuration is validated and written atomically
+**And** changes audit
+**And** published revision scene is not edited directly outside the workflow.",40,Medium,"heritagegraph,epic-5,role-fe"
+44,Story,"5.4 Check narration, create audio and transcript","As a knowledge manager,
+I want narration to be evidence-checked before audio is generated,
+So that visitors never hear unsupported factual claims and can always read an equivalent transcript.
+
+**Acceptance Criteria:**
+
+**Given** Admin composes narration script for story/scene
+**When** submit script for testing
+**Then** each factual statement must link to passage evidence or be clearly marked as an editorial transition
+**And** unsupported statement creates blocking issue
+**And** AI suggestions are not automatically accepted or published.
+
+**Given** the narration script still has a blocking issue or has not been human reviewed
+**When** requests to create audio
+**Then** synthesis is blocked
+**And** do not create public audio from unapproved scripts
+**And** reason displays the correct statement/evidence that needs to be corrected.
+
+**Given** script evidence-checked and approved
+**When** offline TTS/audio production runs
+**Then** audio is created before publishing, not synthesized in the end user's request
+**And** Vietnamese audio is mandatory for pilot; Additional languages are optional after mandatory gates
+**And** audio asset stores provenance, voice/language/version and appropriate S3 checksum.
+
+**Given** created audio
+**When** transcript segments are saved
+**Then** text, sequence, start/end time are valid and within the audio duration
+**And** the full transcript can be read without playing audio
+**And** transcript/citation references belong to the same story/release.
+
+**Given** narration or audio needs editing after publishing
+**When** Admin creates a new version
+**Then** script, audio and transcript are versioned together
+**And** the old published experience still references the old set
+**And** regeneration must pass through the evidence and review gates again.",40,Medium,"heritagegraph,epic-5,role-ai"
+45,Story,5.5 Experience guided stories using Scene Player,"As a visitor,
+I want to move through a guided story scene by scene,
+So that I can understand a heritage place through an intentional visual and narrative sequence.
+
+**Acceptance Criteria:**
+
+**Given** the user selects `Start Experience` from Content Landing
+**When** Scene Player opens
+**Then** pin the correct published story/release and open Scene 1
+**And** displays progress `Scene X of N`, title and appropriate scene content
+**And** does not load drafts or other story revisions.
+
+**Given** story has many scenes
+**When** the user selects Previous or Next
+**Then** moves the correct scene according to the published sequence
+**And** first/last scene has clear control state
+**And** navigation does not lose story/release context.
+
+**Given** the user selects Replay
+**When** scene has camera motion or narration
+**Then** the scene returns to the starting state and playback of the portion is allowed
+**And** replays do not load unnecessary duplicate assets
+**And** reduced-motion preference is respected.
+
+**Given** scene has 3D, panorama or image fallback
+**When** visual canvas renders
+**Then** use 3D when asset/configuration is ready, otherwise use published fallback
+**And** scene text, transcript and source/resources are still accessible
+**And** the current visual type is clearly shown, not pretending the fallback image is 3D.
+
+**Given** scene has hotspots
+**When** the user selects hotspot
+**Then** displays the relevant label/information and appropriate action
+**And** keyboard/focus alternative exists
+**And** hotspot does not navigate to draft/withdrawn content.
+
+**Given** The chat panel from Epic 4 opens next to the player
+**When** users submit questions
+**Then** UI displays the entity/scene context in use
+**And** reuse the same Chat component and grounded backend, do not create a second chatbot
+**And** Chat error does not stop Scene Player and scene change does not silently change undisplayed context.",40,Medium,"heritagegraph,epic-5,role-fe"
+46,Story,5.6 Efficient media loading and error-safe degradation,"As a visitor,
+I want the scene experience to remain usable on ordinary devices and unreliable connections,
+So that a media failure never removes the story, transcript or ability to continue.
+
+**Acceptance Criteria:**
+
+**Given** the user has not yet started the experience or has not yet reached the scene
+**When** Content Landing/Scene Player loads
+**Then** full 3D/audio assets do not preload outside the preload budget
+**And** next-scene prefetch has a limit, can be canceled and does not load the entire story at once
+**And** the appropriate image/proxy/LOD takes precedence over the full asset.
+
+**Given** representative production 3D assets on recorded 4G conditions
+**When** the user opens the scene
+**Then** target model loads and renders in ≤3 seconds or goes to explicit fallback
+**And** each model does not exceed 30 MB
+**And** performance results are measured on published device/network profiles.
+
+**Given** the audio is ready and the user chooses to play
+**When** playback starts
+**Then** target audio starts in ≤1 second according to recorded measurement conditions
+**And** controls have appropriate play/pause/progress/mute
+**And** transcripts always open independently of audio.
+
+**Given** model, image, audio or media request returns 404/timeout/error
+**When** Scene Player handles failure
+**Then** only the corresponding asset moves to unavailable/fallback state
+**And** text, transcript, citations, Chat and Previous/Next still work
+**And** does not retry indefinitely or create blank pages.
+
+**Given** users use keyboard, screen reader or reduced motion
+**When** interactive Scene Player
+**Then** controls have a semantic name, focus order, and reported status
+**And** camera animation/auto motion can be reduced or removed
+**And** information is only available in images/audio with appropriate alternative text.
+
+**Given** media loading, fallback or error
+**When** telemetry is recorded
+**Then** signal contains story/scene/asset version, duration, outcome and appropriate correlation ID
+**And** does not contain signed URL secrets or sensitive data
+**And** dashboard differentiates content success from media degradation.",40,High,"heritagegraph,epic-5,role-fe"
+47,Epic,Epic 6: Explainable Personalized Discovery,"New users receive cold-start recommendations without signing in. When users voluntarily enable personalization, the frontend infers an anonymous preference profile from their interactions and stores it on the device. The backend uses only valid payloads to calculate recommendations with reason paths and does not persist Public User profiles.",,Medium,"heritagegraph,epic-6"
+48,Story,6.1 Manage consent and anonymous profiles on the device,"As a public user,
+I want control over whether HeritageGraph may use my on-device interactions for personalization,
+So that recommendations never require hidden tracking or an account.
+
+**Acceptance Criteria:**
+
+**Given** the user has not given consent
+**When** use Home, Explore, Map, Content, Chat or Scene Player
+**Then** the frontend does not create/update interest profile or interaction history for personalization
+**And** do not send anonymous profiles to the Recommendation API
+**And** recommendation can still use cold-start mode.
+
+**Given** UI suggests turning on personalization
+**When** the user sees the prompt/settings
+**Then** explains the type of signal used, data residing on the device, and account sync
+**And** the enable and decline options have equal prominence
+**And** refuses to block public content.
+
+**Given** the user agrees
+**When** consent is saved
+**Then** local consent/profile record has clear schema version, timestamp and status
+**And** does not contain name, email, account ID, raw IP or device fingerprint
+**And** only post-consent interactions are recorded unless the user-approved policy explicitly states otherwise.
+
+**Given** old local profile schema or corrupted/corrected localStorage data
+**When** frontend reads profile
+**Then** validate/migrate according to the versioned contract or return to a safe empty profile
+**And** does not crash the page
+**And** do not send unvalidated payload to the backend.
+
+**Given** profile/history has reached its capacity or data age limit
+**When** records a new interaction
+**Then** apply the specified retention/compaction policy
+**And** does not increase localStorage indefinitely
+**And** consent state is not mistakenly deleted when compacting profile.",47,High,"heritagegraph,epic-6,role-fe"
+49,Story,6.2 Cold start suggestions for new users,"As a new or non-consenting user,
+I want useful recommendations without a personal profile,
+So that I can discover heritage content immediately and privately.
+
+**Acceptance Criteria:**
+
+**Given** request does not have a consented local profile
+**When** Recommendation Service receives a valid context
+**Then** use cold-start strategy based on published featured/popular metadata, current region/category/content context as appropriate
+**And** does not require an account or synthetic personal profile
+**And** only returns candidates with pinned published releases.
+
+**Given** cold-start candidates are ranked
+**When** creates result list
+**Then** apply diversity policy to avoid any results being too similar as the candidate pool allows
+**And** each result has a reason for not being personalized such as being featured, in the same area or related to the content being viewed
+**And** makes no claims “based on your preferences”.
+
+**Given** does not have enough candidates in the narrow context
+**When** service expands the result
+**Then** use fallbacks specified in the published corpus such as removing filters or using featured content
+**And** the reason matches the actual fallback
+**And** does not create a non-existing entity/reason.
+
+**Given** the user does not consent
+**When** view/click/dismiss cold-start recommendations
+**Then** action serves current navigation but is not saved to personalization profile/history
+**And** the backend does not persist Public User behavior.",47,Medium,"heritagegraph,epic-6,role-be"
+50,Story,6.3 Update preferences from interactions with consent,"As a consenting user,
+I want my recommendations to adapt to my interactions,
+So that future suggestions become more relevant without creating a server-side identity.
+
+**Acceptance Criteria:**
+
+**Given** personalization consent is on
+**When** users view, click, dwell, save or dismiss published content
+**Then** the frontend creates minimal interaction records according to the versioned schema
+**And** signal type, target entity/category/region and valid timestamp recorded locally
+**And** do not record raw content, free-text chat or unnecessary sensitive fields.
+
+**Given** a valid interaction
+**When** local profile is updated
+**Then** use deterministic weights/config for each signal
+**And** save/positive engagement and dismiss have different effects according to policy
+**And** the same interaction sequence and configuration produce the same profile result.
+
+**Given** profile has signals over time
+**When** calculates current preferences
+**Then** applies the specified decay/retention period so that older signals have less influence
+**And** repeated events are deduplicated/cap so that an action doesn't gain weight indefinitely
+**And** profile kept within size limit.
+
+**Given** consent is disabled while the UI is open
+**When** the next interaction occurs
+**Then** the frontend stops updating profile/history and stops sending profiles
+**And** the public action still works
+**And** the state does not require a page reload to take effect.",47,Medium,"heritagegraph,epic-6,role-fe"
+51,Story,6.4 Generate and rank personalized recommendations,"As a consenting user,
+I want recommendations that combine my interests with cultural relationships,
+So that I can discover relevant content beyond simple popularity lists.
+
+**Acceptance Criteria:**
+
+**Given** Recommendation API receives anonymous profiles
+**When** validate request
+**Then** check schema version, allowed fields, value ranges and payload size
+**And** reject/remove invalid profile according to contract and then return to cold start safely
+**And** does not accept user identity, raw interaction content or executable fields.
+
+**Given** valid profile and current context
+**When** Candidate Generator runs
+**Then** get candidates from versioned graph projection, vector similarity and published metadata
+**And** all candidates belong to the same pinned release
+**And** candidate sources converge into a normalized candidate contract.
+
+**Given** candidate pool created
+**When** Rank & Diversify calculates points
+**Then** score combines relevance/context, graph affinity, profile affinity and diversity components according to versioned configuration
+**And** dismissed content is eliminated/reduced according to policy, viewed content does not dominate the list
+**And** tie-breaking specified to the same input/config for reproducible results.
+
+**Given** the backend completes the request
+**When** recommendations are returned
+**Then** does not persist anonymous profile or interaction history
+**And** do not write the entire profile to logs/traces
+**And** Qwen is not called just for recommendation ranking.
+
+**Given** graph, vector or metadata source error
+**When** candidate generation declines
+**Then** use a valid source or cold-start fallback according to policy
+**And** do not mix corpus versions
+**And** response/telemetry represents degraded strategy.",47,Medium,"heritagegraph,epic-6,role-ai"
+52,Story,6.5 Explain and diversify recommendations,"As a user,
+I want to know why an item was recommended and receive a varied set of results,
+So that suggestions feel understood rather than repetitive or opaque.
+
+**Acceptance Criteria:**
+
+**Given** recommendation result is selected
+**When** creates explanation
+**Then** response has entity/content, score and verifiable reason path or reason code
+**And** graph reason path only uses nodes/edges that belong to pinned releases
+**And** does not create a reason from a relation that does not exist.
+
+**Given** reason is based on local profile
+**When** is visible to the user
+**Then** expressed at an appropriate topic/context level such as ""because you are interested in royal architecture""
+**And** do not disclose or infer sensitive traits
+**And** does not claim to know the user's identity.
+
+**Given** candidate pool is wide enough
+**When** Rank & Diversify selects top results
+**Then** avoid too many items with the same entity/category/path that are almost identical
+**And** allows cross-category discovery according to policy
+**And** does not sacrifice any relevance just to achieve formal diversity.
+
+**Given** candidate pool is not enough to reach diversity target
+**When** creates response
+**Then** returns a smaller or less diverse set transparently
+**And** do not fabricate candidates/paths to get enough numbers
+**And** telemetry records candidate shortage.
+
+**Given** with profile, context, release and ranking config
+**When** request is rerun in deterministic condition
+**Then** score order and reason paths are reproducible
+**And** report has ranking/config version to investigate changes.",47,Medium,"heritagegraph,epic-6,role-ai"
+53,Story,6.6 Display and interact with recommendations,"As a user,
+I want recommendations integrated into my exploration journey,
+So that I can continue to relevant content and influence future suggestions when I choose.
+
+**Acceptance Criteria:**
+
+**Given** Home, Explore or Content Landing have recommendation placement
+**When** results load successfully
+**Then** card used with public card/content navigation contract
+**And** displays a short reason or control that opens an explanation
+**And** personalized/cold-start mode is properly worded and not misleading.
+
+**Given** the user chooses recommendation
+**When** opens content
+**Then** navigate to published Content Landing/experience in the correct release context
+**And** click/view signal only updates local profile when consent is on
+**And** back navigation maintains list position.
+
+**Given** the user selects Save or Not interested
+**When** action is performed
+**Then** The UI explicitly updates the action state
+**And** local profile/history is updated deterministically when consent is on
+**And** when not consenting, the UI explains the need to turn on personalization or just perform unsaved actions according to product decision.
+
+**Given** the Recommendation Service is slow or unavailable
+**When** page renders
+**Then** the main content Home/Explore/Content still works
+**And** recommendation section shows loading/unavailable or cold-start fallback as appropriate
+**And** does not create blank pages or keep skeletons indefinitely.
+
+**Given** users use keyboard/screen readers
+**When** interact with cards, reasons, Save or Dismiss
+**Then** controls have accessible name/state and reasonable focus order
+**And** dynamic updates are announced without taking unwanted focus.",47,Medium,"heritagegraph,epic-6,role-fe"
+54,Story,"6.7 View, export, reset or turn off personalization","As a public user,
+I want to inspect and control personalization data stored on my device,
+So that I can understand, export or remove it without needing an account.
+
+**Acceptance Criteria:**
+
+**Given** the user opens Preferences
+**When** personalization state is read
+**Then** shows whether consent is on/off, profile schema/version, informed topics/context and interaction history summary can be understood
+**And** does not represent that the server has an account/profile when it actually does not
+**And** corrupted local data shows a safe recovery/reset option.
+
+**Given** the user selects Export
+**When** export is created
+**Then** the machine-readable JSON file containing consent/profile/history is now saved with the schema version and export timestamp
+**And** does not add device fingerprints, raw IPs or data that does not exist in the local store
+**And** export does not send data to the backend just to create a file.
+
+**Given** the user selects Reset and confirms
+**When** reset is complete
+**Then** local interest profile and interaction history are deleted
+**And** recommendation returns to cold-start behavior
+**And** The UI reflects the new state immediately, no need to reload.
+
+**Given** the user turns off personalization
+**When** settings are saved
+**Then** frontend stops reading/updating/sending profile for recommendation
+**And** clearly shows whether existing local data is kept or deleted according to selection/policy
+**And** provides a separate Reset action if data has not been deleted.
+
+**Given** the user uses another device/browser
+**When** open HeritageGraph
+**Then** does not automatically sync profile/history from the old device
+**And** does not require login to recover
+**And** behavior starts from the consent/cold-start state of the new device.",47,Medium,"heritagegraph,epic-6,role-fe"
+55,Story,"6.8 Evaluate accuracy, diversity, privacy, and speed","As a product owner,
+I want reproducible evidence that recommendations are useful, diverse, private and fast,
+So that personalization can be released without hidden tracking or misleading quality claims.
+
+**Acceptance Criteria:**
+
+**Given** versioned recommendation evaluation sample
+**When** evaluate cold-start and personalized scenarios
+**Then** measure precision@5 with reviewer-grounded relevance labels and reach target ≥70% or report gate failure
+**And** sample/config/release/profile inputs are versioned
+**And** expected relevance is not taken directly from the score implementation.
+
+**Given** result lists from representative contexts
+**When** evaluates diversity and duplication
+**Then** report category/path diversity, repeated/seen/dismissed rates and candidate coverage
+**And** quality is reported with precision to avoid optimizing diversity and losing relevance
+**And** candidate shortage is separated from ranking defect.
+
+**Given** reason paths/explanations
+**When** validation runs
+**Then** any referenced entity/relation/path exists in the pinned release and matches the reason text
+**And** fabricated or cross-version reasons make the test fail
+**And** sensitive-trait inference is banned/checked.
+
+**Given** Recommendation Service runs in the target environment
+**When** the request does not include LLM generation
+**Then** p95 ≤2 seconds or report gate failure
+**And** latency is separated by candidate sources and ranking
+**And** degraded/cold-start fallbacks are measured separately.
+
+**Given** privacy/contract tests
+**When** submits a valid profile, is too large, malformed or contains identity fields
+**Then** backend validate/reject/fallback correct contract
+**And** there is no server-side Public User profile/history persistence
+**And** logs/traces do not save entire profiles or forbidden identifiers.
+
+**Given** with release, profile, context and ranking config
+**When** runs deterministic replay
+**Then** candidate scores/order/reasons are reproducible within the specified tolerance
+**And** report records graph/vector/metadata and ranking config versions
+**And** regression exceeds the threshold blocking release/promotion.",47,High,"heritagegraph,epic-6,role-ai"
+56,Story,0.8 Establish Figma foundations and component library,"As a product designer,
+I want reusable Figma foundations and a shared component library,
+So that product screens can be designed and implemented with an accessible and consistent visual system.
+
+**Acceptance Criteria:**
+
+**Given** the current UX requirements and heritage visual direction
+**When** the designer establishes the Figma foundations
+**Then** color, typography, spacing, grid, radius, elevation, icon and motion tokens use semantic names
+**And** default states and contrast meet WCAG 2.1 AA
+**And** token names map clearly to the frontend theme.
+
+**Given** shared Public Portal and Admin Studio interaction patterns
+**When** the designer creates the Figma component library
+**Then** buttons, inputs, selects, date fields, uploads, tables, pagination, tabs, modals, drawers, toasts, status badges, navigation and data-display components include the required variants and states
+**And** components define auto layout, responsive constraints and interactive states
+**And** public storytelling components remain separate from admin dashboard, form and table components.
+
+**Given** the component library is ready for handoff
+**When** DES reviews it with FE
+**Then** the Figma library, token definitions, component anatomy, variants and usage guidance are named and versioned clearly
+**And** applicable component states include default, hover, focus, active, disabled, loading, success and error
+**And** FE confirms component feasibility before the story is marked done.",1,Highest,"heritagegraph,epic-0,figma,design-system,role-des"
+57,Story,0.9 Design the Admin Console in Figma,"As a product designer,
+I want a complete Admin Console, including its Dashboard and Admin Knowledge Studio screens, built from the approved Figma component library,
+So that frontend implementation can follow reviewed workflows, UI states and responsive behavior without guessing requirements.
+
+**Acceptance Criteria:**
+
+**Given** the Figma foundations and component library from Story 0.8
+**When** the designer starts designing the Admin Console
+**Then** the Dashboard and Admin screens use only approved tokens and components or explicitly identify a new component requirement
+**And** admin dashboard, form and table patterns remain separate from Public Portal storytelling patterns
+**And** deviations from the component library are reviewed before handoff.
+
+**Given** the scope of Epics 1 and 2
+**When** the designer completes the Admin Dashboard and connected screens
+**Then** designs cover Login and Admin Dashboard, Document wizard/list/detail, Passage workspace, Entity/Alias/Place editor, Claim/Timeline/Relation/Narrative editor, Validation Center, Review and Publish flows
+**And** each flow covers appropriate loading, empty, error, success, permission-denied and confirmation states
+**And** evidence selection never requires users to enter UUIDs or foreign keys manually.
+
+**Given** Admin users work at multiple screen sizes
+**When** responsive behavior is specified
+**Then** desktop, tablet and minimum supported viewport layouts have clear hierarchy
+**And** keyboard flow, focus order, accessible names and screen-reader notes are documented for complex interactions
+**And** cards, tables, editors and workspaces have an intentional overflow or alternative layout strategy.
+
+**Given** an end-to-end Admin workflow
+**When** a reviewer runs the Figma prototype
+**Then** the prototype represents navigation, create/edit, validation, submit, review and publish transitions with clear start and end points
+**And** destructive, blocked, retry and recovery paths are represented
+**And** the prototype does not assume data, metrics or API behavior that BE/DATA have not confirmed.
+
+**Given** the Admin Console design is ready for handoff
+**When** DES reviews it with FE, BE and DATA
+**Then** Figma pages, prototype links, annotations and the acceptance-state inventory are named and versioned clearly
+**And** API/data assumptions and unresolved questions are recorded instead of left for FE to infer
+**And** FE confirms implementation feasibility before the story is marked done.",1,High,"heritagegraph,epic-0,figma,admin-console,role-des"

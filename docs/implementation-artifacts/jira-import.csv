@@ -1,0 +1,1986 @@
+﻿Work item ID,Work type,Summary,Description,Parent,Priority,Labels
+1,Epic,Epic 0: Nền tảng kỹ thuật,"Nhóm phát triển có một nền tảng triển khai tái lập cho local, test và AWS staging gồm cấu hình môi trường, PostgreSQL/Alembic, S3/ECR/IAM/networking, Jenkins/Terraform, observability, application shells, API mocks và test harness trước khi phát triển tính năng.",,Highest,"heritagegraph,epic-0"
+2,Story,"0.1 Chuẩn hóa repository, môi trường và cấu hình secrets","Là một lập trình viên,
+Tôi muốn có cấu hình được tài liệu hóa và có thể tái lập cho các môi trường local, test và staging,
+Để tôi có thể chạy và kiểm tra HeritageGraph mà không phụ thuộc vào thiết lập riêng của từng máy chưa được tài liệu hóa hoặc đưa secrets vào source control.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** một bản clone mới của repository
+**Khi** developer làm theo hướng dẫn thiết lập
+**Thì** backend và frontend cài được dependency bằng các phiên bản runtime/package manager đã quy định
+**Và** các lệnh chạy, test và kiểm tra health cơ bản được tài liệu hóa.
+
+**Cho trước** các thành phần backend, frontend, data pipeline và observability cần configuration
+**Khi** developer xem các file environment mẫu
+**Thì** mọi biến bắt buộc được liệt kê với mô tả và giá trị phát triển an toàn
+**Và** file mẫu không chứa credential hoặc secret thật
+**Và** secret/runtime artifacts được loại khỏi source control.
+
+**Cho trước** ứng dụng khởi động trong local, test hoặc staging
+**Khi** configuration bắt buộc bị thiếu hoặc sai định dạng
+**Thì** ứng dụng dừng sớm với thông báo chỉ rõ tên configuration không hợp lệ
+**Và** không ghi giá trị secret vào log.
+
+**Cho trước** repository đã có code và configuration trước đó
+**Khi** story này được triển khai
+**Thì** cấu trúc hiện hữu được tái sử dụng hoặc chuẩn hóa thay vì tạo song song một hệ configuration mới
+**Và** các thay đổi không làm mất khả năng chạy những test hiện có.",1,Highest,"heritagegraph,epic-0,role-devops"
+3,Story,"0.2 Thiết lập PostgreSQL, extensions và Alembic baseline","Là một lập trình viên backend,
+Tôi muốn có PostgreSQL 16 baseline có thể tái lập cho local, test và AWS staging,
+Để các thay đổi schema có thể được phát triển, kiểm tra và triển khai nhất quán.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** developer đã hoàn tất cấu hình môi trường ở Story 0.1
+**Khi** khởi động database local theo hướng dẫn
+**Thì** PostgreSQL 16 sẵn sàng qua health check
+**Và** dữ liệu được lưu trong managed volume
+**Và** database không dùng credential production.
+
+**Cho trước** một database trống
+**Khi** chạy Alembic upgrade tới revision mới nhất
+**Thì** schema baseline hiện có được tạo thành công
+**Và** các extension `pgvector` và `pg_trgm` cần thiết được bật
+**Và** chạy lại migration không gây lỗi hoặc tạo object trùng.
+
+**Cho trước** migration thay đổi database
+**Khi** CI hoặc developer kiểm tra migration
+**Thì** upgrade được chạy trên database sạch
+**Và** downgrade/rollback được kiểm tra khi migration hỗ trợ rollback
+**Và** lỗi migration làm check thất bại thay vì bị bỏ qua.
+
+**Cho trước** backend kết nối local, test hoặc RDS staging
+**Khi** ứng dụng khởi động
+**Thì** connection URL, pool và SSL behavior được lấy từ environment configuration
+**Và** health endpoint phân biệt được trạng thái API sống với trạng thái database sẵn sàng
+**Và** credential/connection string không xuất hiện trong logs.
+
+**Cho trước** repository đã có `schema.sql` và Alembic migrations
+**Khi** thiết lập baseline
+**Thì** migration history hiện có được kiểm kê và dùng làm nguồn triển khai
+**Và** không tạo một schema song song hoặc tạo trước bảng chỉ phục vụ các story tương lai.",1,Highest,"heritagegraph,epic-0,role-data"
+4,Story,"0.3 Provision AWS staging, storage và container foundation","Là một lập trình viên nền tảng,
+Tôi muốn có một môi trường AWS staging tối thiểu và có thể tái lập,
+Để các thành phần HeritageGraph có thể được triển khai và tích hợp trước khi bắt đầu phát triển tính năng.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** lựa chọn AWS compute vẫn đang mở
+**Khi** story bắt đầu
+**Thì** một ADR so sánh phương án hiện có, ECS/Fargate và EC2-based containers theo chi phí, độ phức tạp, thời gian triển khai, inference và rollback
+**Và** ADR chọn phương án nhỏ nhất đáp ứng staging/demo
+**Và** EKS hoặc MWAA không được chọn nếu chưa có nhu cầu được chứng minh.
+
+**Cho trước** AWS account và staging configuration hợp lệ
+**Khi** áp dụng infrastructure definition
+**Thì** staging có container registry ECR, S3 canonical bucket, networking cần thiết và các IAM roles tách theo trách nhiệm
+**Và** infrastructure có thể được tạo hoặc cập nhật lặp lại mà không sinh resource ngoài kiểm soát
+**Và** state và secrets không được commit vào repository.
+
+**Cho trước** RDS PostgreSQL staging được kết nối với backend
+**Khi** kiểm tra network access
+**Thì** RDS không public trực tiếp
+**Và** chỉ workload/role được cấp quyền mới kết nối được
+**Và** migration baseline từ Story 0.2 chạy thành công trên staging.
+
+**Cho trước** backend image được đưa lên ECR
+**Khi** triển khai lên compute target đã chọn
+**Thì** public ingress chỉ expose endpoint cần thiết qua HTTPS
+**Và** backend truy cập được RDS và S3 bằng IAM/configuration phù hợp
+**Và** frontend hoặc smoke client gọi được FastAPI health endpoint.
+
+**Cho trước** một raw document, manifest hoặc test asset
+**Khi** workload được cấp quyền ghi/đọc S3
+**Thì** object được lưu dưới prefix/policy đã quy định
+**Và** workload không thể thực hiện hành động ngoài quyền tối thiểu của nó
+**Và** S3 vẫn là canonical MVP object store, không có critical-path dual-write sang R2/Azure.
+
+**Cho trước** staging deployment lỗi hoặc cần loại bỏ
+**Khi** operator làm theo runbook
+**Thì** có quy trình rollback/cleanup được tài liệu hóa
+**Và** resource ownership và chi phí dự kiến có thể kiểm tra được.",1,High,"heritagegraph,epic-0,role-devops"
+5,Story,0.4 Tự động hóa Jenkins CI/CD và Terraform delivery,"Là một lập trình viên,
+Tôi muốn có delivery pipeline tự động với các quality gate bắt buộc,
+Để các thay đổi được đưa lên AWS staging nhất quán và các bản build không an toàn bị từ chối trước khi triển khai.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** một pull request thay đổi backend, frontend, migration hoặc infrastructure
+**Khi** Jenkins pipeline chạy
+**Thì** pipeline chỉ chạy các component checks liên quan nhưng luôn áp dụng lint/type checks và tests bắt buộc
+**Và** failure ở bất kỳ required gate nào chặn build/deploy
+**Và** kết quả từng gate được hiển thị rõ.
+
+**Cho trước** thay đổi có database migration
+**Khi** pipeline kiểm tra migration
+**Thì** migration được chạy trên database kiểm thử sạch
+**Và** lỗi upgrade hoặc rollback check làm pipeline thất bại
+**Và** staging không được migrate nếu build chưa vượt qua các gate trước đó.
+
+**Cho trước** thay đổi có Terraform
+**Khi** CI chạy infrastructure checks
+**Thì** formatting, validation và plan được thực hiện
+**Và** plan có thể review trước apply
+**Và** Jenkins deploy role tách biệt với runtime roles và chỉ có quyền cần thiết.
+
+**Cho trước** branch/revision được phép deploy đã vượt qua mọi gate
+**Khi** pipeline build và phát hành component
+**Thì** container image được gắn immutable revision tag và push lên ECR
+**Và** staging deploy đúng image revision đó
+**Và** health/smoke checks chạy sau deploy.
+
+**Cho trước** smoke check sau deploy thất bại
+**Khi** pipeline xử lý deployment failure
+**Thì** release được đánh dấu thất bại
+**Và** hệ thống rollback về revision tốt gần nhất hoặc cung cấp thao tác rollback được tài liệu hóa
+**Và** pipeline không báo thành công giả.
+
+**Cho trước** model hoặc prompt mới cần rollout
+**Khi** delivery được cấu hình
+**Thì** model/prompt rollout là pipeline riêng với software deployment
+**Và** không tự động promote 10% → 50% → 100% nếu quality, grounding, latency hoặc error gate chưa đạt.
+
+**Cho trước** credential được Jenkins sử dụng
+**Khi** pipeline ghi log hoặc xuất artifact
+**Thì** secrets được lấy từ credential store phù hợp
+**Và** token, password và connection string không xuất hiện trong log/artifact.",1,High,"heritagegraph,epic-0,role-devops"
+6,Story,0.5 Thiết lập observability baseline,"Là một người vận hành,
+Tôi muốn metrics, logs và traces có tương quan xuyên suốt HeritageGraph,
+Để tôi có thể phát hiện lỗi và chẩn đoán request mà không làm lộ dữ liệu nhạy cảm.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** một request đi qua frontend và FastAPI
+**Khi** request được xử lý thành công hoặc thất bại
+**Thì** hệ thống gán hoặc truyền correlation/trace ID
+**Và** structured logs có service, environment, severity, timestamp và correlation ID
+**Và** response/log không làm lộ password, token, raw IP hoặc dữ liệu cá nhân nhạy cảm.
+
+**Cho trước** API và dependency hoạt động
+**Khi** Prometheus thu metrics
+**Thì** có tối thiểu request count, error count, duration histogram và dependency health
+**Và** metric labels không chứa giá trị unbounded như raw URL, user input hoặc entity ID tùy ý
+**Và** p50/p95/p99 có thể tính từ dữ liệu thu được.
+
+**Cho trước** một request gọi database hoặc service nội bộ
+**Khi** OpenTelemetry tracing được bật
+**Thì** trace thể hiện đường đi qua API và dependency adapter phù hợp
+**Và** span lỗi giữ đủ metadata để chẩn đoán mà không chứa secret hoặc raw sensitive content
+**Và** trace được gửi tới Tempo/X-Ray target đã cấu hình.
+
+**Cho trước** ứng dụng hoặc pipeline ghi structured logs
+**Khi** Loki thu thập log
+**Thì** operator có thể lọc theo service, environment, severity và correlation ID
+**Và** retention/configuration phù hợp môi trường demo được tài liệu hóa.
+
+**Cho trước** một lượt gọi Qwen hoặc grounded QA trong các story sau
+**Khi** Langfuse integration được sử dụng
+**Thì** trace contract hỗ trợ model, prompt, corpus version, evidence IDs, token usage, latency và grounding result
+**Và** raw prompt/evidence chỉ được lưu theo privacy policy đã cấu hình
+**Và** observability failure không làm request nghiệp vụ thất bại.
+
+**Cho trước** telemetry baseline đang chạy
+**Khi** operator mở Grafana
+**Thì** dashboard hiển thị service health, request/error rate và latency
+**Và** có alert baseline cho service unavailable, error-rate spike và latency threshold
+**Và** dashboard/alert definitions được version hóa.
+
+**Cho trước** một smoke request trên AWS staging
+**Khi** request hoàn tất
+**Thì** operator truy vết được request từ health/API signal qua logs và service trace
+**Và** smoke test xác nhận telemetry endpoint không public ngoài policy cho phép.",1,Medium,"heritagegraph,epic-0,role-devops"
+7,Story,"0.6 Thiết lập design foundations, application shells và API mocks","Là một lập trình viên frontend,
+Tôi muốn có design foundations đã được phê duyệt cùng các application shell public/admin chạy được với API mocks,
+Để các story UI có thể được phát triển nhất quán trước khi toàn bộ tính năng backend sẵn sàng.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** UX contract hiện hành
+**Khi** Figma foundations và frontend theme được thiết lập
+**Thì** color, typography, spacing, radius, elevation và motion tokens có tên semantic thống nhất
+**Và** mapping giữa Figma tokens và code tokens được tài liệu hóa
+**Và** contrast cơ bản đáp ứng WCAG 2.1 AA.
+
+**Cho trước** người dùng mở Public Portal shell
+**Khi** điều hướng giữa `/`, `/explore`, `/map`, `/chat` và `/preferences`
+**Thì** các route có shared heritage-storytelling navigation/layout và placeholder state phù hợp
+**Và** desktop/mobile giữ cùng hierarchy
+**Và** shell không giả vờ cung cấp feature chưa được triển khai.
+
+**Cho trước** admin đã vào `/admin/*` shell
+**Khi** điều hướng giữa các khu vực quản trị placeholder
+**Thì** giao diện dùng Ant Design dashboard/form/table conventions thay vì Tapestry composition
+**Và** public và admin theme không làm rò style hoặc layout sang nhau
+**Và** route structure sẵn sàng cho auth guard ở Story 1.1.
+
+**Cho trước** OpenAPI contract hoặc response schema được xác định
+**Khi** frontend gọi API mock
+**Thì** mock trả response đúng schema cho representative success, empty và error cases
+**Và** frontend dùng generated/shared types thay vì khai báo payload trùng lặp
+**Và** contract drift có thể được phát hiện bởi automated check.
+
+**Cho trước** một page đang loading, không có dữ liệu hoặc gặp lỗi
+**Khi** shell render state tương ứng
+**Thì** có reusable loading, empty và error primitives
+**Và** focus, keyboard navigation, landmark và accessible name cơ bản hoạt động
+**Và** trạng thái không chỉ được phân biệt bằng màu sắc.
+
+**Cho trước** frontend shell được chạy local hoặc staging
+**Khi** thực hiện smoke test ở viewport desktop và mobile đại diện
+**Thì** navigation và route rendering hoạt động không có horizontal overflow ngoài ý muốn
+**Và** frontend có thể chuyển giữa mock base URL và FastAPI base URL bằng environment configuration
+**Và** không cần chỉnh source code để đổi môi trường.",1,Highest,"heritagegraph,epic-0,role-fe"
+8,Story,"0.7 Thiết lập test harness, fixtures và documentation templates","Là một lập trình viên,
+Tôi muốn có hạ tầng test tự động và các mẫu tài liệu có thể tái sử dụng,
+Để mọi story sau này đều có thể chứng minh hành vi và để lại bằng chứng triển khai nhất quán.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** backend code cần unit, database hoặc integration test
+**Khi** developer chạy test suite theo documented command
+**Thì** pytest discovery, markers và test configuration hoạt động nhất quán local/CI
+**Và** test database được cô lập và reset giữa các test phù hợp
+**Và** test không phụ thuộc credential hoặc shared staging data.
+
+**Cho trước** story cần representative knowledge data
+**Khi** test sử dụng fixture/factory
+**Thì** fixture có document, passage, entity và provenance tối thiểu với ID xác định
+**Và** có thể mở rộng cho draft/published/version-isolation cases
+**Và** expected result được xác định độc lập với implementation đang test.
+
+**Cho trước** frontend và API contract cần kiểm tra
+**Khi** contract test chạy
+**Thì** representative success, validation error và service error payload được kiểm tra với schema hiện hành
+**Và** mismatch giữa generated frontend types/mock và OpenAPI làm test thất bại.
+
+**Cho trước** Public/Admin shell chạy với mock hoặc test backend
+**Khi** Playwright smoke suite chạy
+**Thì** suite kiểm tra route chính, navigation và một viewport desktop/mobile đại diện
+**Và** lưu screenshot/trace khi thất bại
+**Và** selector ưu tiên role/accessible name thay vì phụ thuộc CSS structure dễ vỡ.
+
+**Cho trước** AI/retrieval behavior được thêm trong các epic sau
+**Khi** developer thêm regression case
+**Thì** harness hỗ trợ fixed query, versioned evidence và deterministic expected gate/result
+**Và** report có chỗ ghi model, prompt, corpus và evaluation dataset version
+**Và** test không được coi là pass chỉ vì request không crash.
+
+**Cho trước** một story thay đổi API, database, operations hoặc architecture
+**Khi** story hoàn tất
+**Thì** có template phù hợp cho API/data docs, migration/rollback note, ADR hoặc runbook
+**Và** test evidence và demo evidence có vị trí/link convention thống nhất
+**Và** tài liệu không yêu cầu sao chép cùng một nguồn sự thật vào nhiều nơi.
+
+**Cho trước** Jenkins pipeline từ Story 0.4
+**Khi** test harness được tích hợp
+**Thì** unit, integration, contract và Playwright smoke checks chạy ở stage phù hợp
+**Và** failure artifact được giữ để chẩn đoán
+**Và** required test failure chặn deployment.",1,High,"heritagegraph,epic-0,role-be"
+9,Epic,Epic 1: Admin Knowledge Studio,"Quản trị viên đăng nhập và biên soạn trọn một knowledge package — document, passage, entity/alias/place profile, claim, timeline, relation, narrative và evidence — ở trạng thái draft mà không cần thao tác SQL, UUID hoặc foreign key thủ công.",,Highest,"heritagegraph,epic-1"
+10,Story,"1.1 Xác thực, phân quyền và audit cho Admin","Là một quản trị viên,
+Tôi muốn đăng nhập an toàn và mọi thao tác quản trị được phân quyền, ghi audit,
+Để chỉ người được phép mới có thể sửa đổi tri thức văn hóa và mọi thay đổi đều có người chịu trách nhiệm.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** một Admin account được provision hợp lệ
+**Khi** Admin đăng nhập bằng đúng thông tin
+**Thì** password được kiểm tra bằng Argon2id
+**Và** session được cấp qua cookie `HttpOnly`, `Secure` trên staging/production và `SameSite` phù hợp
+**Và** raw password hoặc session token không xuất hiện trong response body, log hoặc trace.
+
+**Cho trước** credential sai hoặc account không được phép đăng nhập
+**Khi** gửi login request
+**Thì** hệ thống từ chối bằng thông báo không tiết lộ email/account nào tồn tại
+**Và** không tạo authenticated session
+**Và** sự kiện thất bại được ghi ở mức đủ để điều tra nhưng không chứa password, token hoặc raw IP.
+
+**Cho trước** request tới `/admin/*` hoặc Admin API
+**Khi** request không có session hợp lệ hoặc không có quyền cần thiết
+**Thì** UI chuyển tới login hoặc hiển thị access-denied phù hợp
+**Và** API trả `401` cho unauthenticated hoặc `403` cho unauthorized
+**Và** không thực hiện partial write.
+
+**Cho trước** Admin đã đăng nhập
+**Khi** session hết hạn hoặc Admin logout
+**Thì** cookie/session không còn dùng được
+**Và** protected API từ chối các request tiếp theo
+**Và** logout nhiều lần không gây lỗi ngoài ý muốn.
+
+**Cho trước** một authenticated Admin thực hiện create, update, submit, review hoặc publish action
+**Khi** service transaction xử lý action
+**Thì** audit record lưu actor, action, target kind/ID, timestamp và correlation ID
+**Và** audit record không thể bị sửa/xóa qua Admin CRUD thông thường
+**Và** failed transaction không để lại trạng thái nghiệp vụ giả thành công.
+
+**Cho trước** login và authorization foundation được kiểm thử
+**Khi** chạy unit/integration/contract tests
+**Thì** test phân biệt success, invalid credentials, expired session, `401` và `403`
+**Và** test chứng minh unauthenticated write không thay đổi database
+**Và** audit output không chứa secret hoặc dữ liệu nhạy cảm bị cấm.",9,Highest,"heritagegraph,epic-1,role-be"
+11,Story,1.2 Tạo và quản lý source document ở trạng thái draft,"Là một quản lý tri thức,
+Tôi muốn tạo và quản lý source document với đầy đủ metadata về provenance,
+Để tri thức văn hóa bắt đầu từ nguồn có thể truy vết mà không cần thao tác trực tiếp với database.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin mở Document wizard
+**Khi** tạo source document
+**Thì** form thu thập URL nguồn, title, region, source type, source tier, observed date, license và raw text/file theo contract
+**Và** required fields, URL/date/type constraints được hiển thị tại đúng field
+**Và** UI không yêu cầu nhập UUID hoặc foreign key thủ công.
+
+**Cho trước** payload hợp lệ
+**Khi** Admin lưu document
+**Thì** FastAPI/service transaction tạo document trong draft corpus revision hiện hành
+**Và** document mặc định có trạng thái `draft`, không phải `published`
+**Và** document không xuất hiện trong online serving query
+**Và** audit record được ghi cho thao tác tạo.
+
+**Cho trước** URL/content hash hoặc metadata trùng với document hiện có
+**Khi** Admin lưu draft
+**Thì** exact duplicate bị chặn theo business constraint
+**Và** response chỉ rõ field/candidate gây trùng để Admin sửa hoặc mở record hiện có
+**Và** không tạo document thứ hai hay object rác.
+
+**Cho trước** raw document/file được lưu trên S3
+**Khi** database write hoặc object write thất bại
+**Thì** hệ thống không báo lưu thành công
+**Và** không để lại database row trỏ tới object không tồn tại
+**Và** orphan object được rollback hoặc đánh dấu cho reconciliation theo policy đã tài liệu hóa.
+
+**Cho trước** Admin tìm hoặc mở document draft
+**Khi** xem danh sách/chi tiết
+**Thì** có thể lọc/tìm theo title, region, source type và status
+**Và** metadata, raw-content availability và provenance được hiển thị
+**Và** loading, empty và error states có hành vi accessible.
+
+**Cho trước** document vẫn thuộc draft revision chưa submit/publish
+**Khi** Admin cập nhật hoặc xóa document
+**Thì** thay đổi được validation và thực hiện atomically
+**Và** dependent-record conflict được báo rõ thay vì xóa mồ côi
+**Và** audit lưu metadata trước/sau cần thiết.
+
+**Cho trước** document đã thuộc published release
+**Khi** Admin cố sửa hoặc xóa evidence đã publish
+**Thì** hệ thống từ chối mutation trực tiếp
+**Và** hướng Admin tạo revision/draft mới thay vì thay đổi historical evidence.",9,Highest,"heritagegraph,epic-1,role-be"
+12,Story,1.3 Tạo passage và chọn evidence trực tiếp từ nguồn,"Là một quản lý tri thức,
+Tôi muốn tạo passage từ draft document và chọn trực quan làm evidence,
+Để các knowledge record phía sau có thể trích dẫn chính xác source text mà không cần nhập ID thủ công.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** một source document draft có raw text
+**Khi** Admin mở Passage workspace
+**Thì** raw text và danh sách/preview passage hiển thị song song
+**Và** passage đang chọn được highlight đúng trên raw text
+**Và** workspace hỗ trợ keyboard navigation và không chỉ dùng màu để biểu thị selection.
+
+**Cho trước** Admin chọn một đoạn raw text hoặc nhập char span hợp lệ
+**Khi** tạo passage
+**Thì** `char_start` và `char_end` nằm trong giới hạn document
+**Và** passage content khớp chính xác substring được tham chiếu theo convention đã quy định
+**Và** system tự tạo content hash và gắn draft corpus revision
+**Và** Admin không phải nhập document UUID thủ công.
+
+**Cho trước** char span rỗng, đảo ngược, vượt giới hạn hoặc content không khớp raw text
+**Khi** Admin lưu passage
+**Thì** FastAPI từ chối với lỗi gắn đúng field/span
+**Và** không tạo partial passage hoặc evidence record.
+
+**Cho trước** passage có cùng document, span hoặc content hash đã tồn tại trong revision
+**Khi** Admin lưu
+**Thì** exact duplicate bị chặn
+**Và** UI dẫn tới passage hiện có hoặc cho phép điều chỉnh selection
+**Và** không tạo record trùng.
+
+**Cho trước** passage draft hợp lệ
+**Khi** Admin sửa hoặc xóa passage
+**Thì** content hash/span được tính lại và validation chạy trong transaction
+**Và** hệ thống chặn xóa nếu passage đang được knowledge record tham chiếu, đồng thời liệt kê dependency
+**Và** audit record ghi thao tác.
+
+**Cho trước** một form knowledge record cần evidence trong các story sau
+**Khi** Admin mở Evidence Picker
+**Thì** có thể tìm passage theo document/title/text và chọn trực tiếp từ preview
+**Và** component trả reference hợp lệ nhưng không yêu cầu người dùng nhập UUID/FK
+**Và** selected evidence hiển thị source title và excerpt để kiểm tra.
+
+**Cho trước** passage đã thuộc published release
+**Khi** Admin cố sửa nội dung/span
+**Thì** hệ thống từ chối mutation trực tiếp
+**Và** yêu cầu tạo passage revision mới để citation lịch sử vẫn bất biến.",9,Highest,"heritagegraph,epic-1,role-be"
+13,Story,"1.4 Quản lý entity, alias và place profile","Là một quản lý tri thức,
+Tôi muốn tạo và quản lý entity, alias và place profile có evidence,
+Để các khái niệm văn hóa được chuẩn hóa, có thể tìm kiếm và truy vết trước khi publish.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin mở Entity editor
+**Khi** tạo entity
+**Thì** form thu thập canonical name, normalized name, type, subtype, scope và status theo registry
+**Và** entity được gắn draft corpus revision và mặc định không phục vụ online
+**Và** Admin không phải nhập corpus/entity UUID thủ công.
+
+**Cho trước** canonical/normalized name giống hoặc gần với entity/alias hiện có
+**Khi** Admin nhập hoặc lưu entity
+**Thì** exact duplicate bị chặn
+**Và** fuzzy candidates được hiển thị với tên, type và region/context đủ để so sánh
+**Và** Admin có thể mở candidate thay vì vô tình tạo entity trùng.
+
+**Cho trước** entity draft đã tồn tại
+**Khi** Admin thêm, sửa hoặc xóa alias
+**Thì** alias được normalize nhất quán với entity resolution contract
+**Và** alias rỗng, trùng trong cùng entity hoặc xung đột không hợp lệ bị từ chối rõ ràng
+**Và** mutation được audit và thực hiện atomically.
+
+**Cho trước** entity có type địa điểm
+**Khi** Admin tạo place profile
+**Thì** có thể nhập tọa độ và các trường địa lý/hành chính theo schema
+**Và** latitude/longitude được kiểm tra range và cặp giá trị
+**Và** non-place entity không thể nhận place profile trái constraint.
+
+**Cho trước** entity cần provenance
+**Khi** Admin dùng Evidence Picker từ Story 1.3
+**Thì** có thể chọn primary evidence và một hoặc nhiều supporting passages
+**Và** evidence phải thuộc revision/context hợp lệ
+**Và** UI hiển thị source title và excerpt, không yêu cầu nhập passage ID.
+
+**Cho trước** Admin tìm entity để biên tập hoặc liên kết sau này
+**Khi** tìm theo canonical name, alias, type hoặc region
+**Thì** kết quả phân biệt canonical name với alias match
+**Và** draft/published status được hiển thị rõ
+**Và** loading, empty, duplicate-warning và error states hỗ trợ keyboard/screen reader.
+
+**Cho trước** entity draft đang được knowledge record khác tham chiếu
+**Khi** Admin cố xóa entity
+**Thì** hệ thống chặn orphan references và liệt kê dependency
+**Và** không thực hiện partial delete.
+
+**Cho trước** entity/alias/place profile đã thuộc published release
+**Khi** Admin cố sửa trực tiếp
+**Thì** hệ thống từ chối mutation lịch sử
+**Và** hướng Admin tạo revision draft mới.",9,Highest,"heritagegraph,epic-1,role-be"
+14,Story,1.5 Biên soạn typed claims có evidence,"Là một quản lý tri thức,
+Tôi muốn biên soạn typed claim cho entity bằng field registry được quản trị,
+Để các thuộc tính thực tế được kiểm tra, version hóa và truy vết tới source passage.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin chọn một entity draft và `claim_field`
+**Khi** Claim form được hiển thị
+**Thì** control được sinh theo `value_type`: `text`, `number`, `boolean`, `date`, `year`, `money` hoặc `json`
+**Và** form hiển thị `label_vi`, default unit và time-sensitive guidance
+**Và** Admin không nhập entity ID hoặc field code bằng tay.
+
+**Cho trước** Admin nhập claim value
+**Khi** value không khớp kiểu của `claim_field`
+**Thì** UI/FastAPI báo lỗi tại field trước hoặc khi lưu
+**Và** database constraint/trigger vẫn từ chối payload không hợp lệ nếu application validation bị bỏ qua
+**Và** không tạo partial claim.
+
+**Cho trước** một claim hợp lệ
+**Khi** Admin không nhập unit và field có `default_unit`
+**Thì** default unit được áp dụng nhất quán
+**Và** unit được hiển thị trong preview trước khi lưu.
+
+**Cho trước** Admin nhập `observed_at`, `valid_from`, `valid_until`, confidence và canonical state
+**Khi** lưu claim
+**Thì** confidence chỉ chấp nhận từ 0 đến 1
+**Và** `valid_until` không thể trước `valid_from`
+**Và** time-sensitive claim yêu cầu metadata thời gian theo contract
+**Và** claim được lưu ở trạng thái `draft`.
+
+**Cho trước** claim cần provenance
+**Khi** Admin chọn evidence
+**Thì** phải có một primary passage và có thể có nhiều supporting passages
+**Và** claim, entity và passages thuộc cùng draft corpus version hợp lệ
+**Và** source title/excerpt được hiển thị thay vì UUID.
+
+**Cho trước** một claim cùng entity, field và giá trị đã tồn tại trong revision
+**Khi** Admin lưu
+**Thì** exact duplicate bị chặn hoặc được dẫn tới record hiện có
+**Và** canonical-state conflict được cảnh báo rõ
+**Và** không tạo claim trùng ngoài ý muốn.
+
+**Cho trước** claim draft đã tồn tại
+**Khi** Admin sửa hoặc xóa claim
+**Thì** type, validity, confidence và evidence được validation lại trong transaction
+**Và** thao tác được audit
+**Và** published claim không thể bị sửa trực tiếp mà phải tạo revision mới.",9,High,"heritagegraph,epic-1,role-be"
+15,Story,1.6 Biên soạn timeline events và participants,"Là một quản lý tri thức,
+Tôi muốn biên soạn timeline event có evidence với participant role được định kiểu,
+Để lịch sử của entity có thể được trình bày và truy vấn nhất quán.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin mở Timeline editor cho một entity
+**Khi** tạo event
+**Thì** form thu thập title, `year_start`, optional `year_end`, precision, event type, summary, actor và artifact theo schema
+**Và** precision chỉ nhận `year`, `decade`, `century`, `range` hoặc `circa`
+**Và** event type được chọn từ registry, không nhập code tự do.
+
+**Cho trước** Admin nhập mốc thời gian
+**Khi** `year_end` nhỏ hơn `year_start` hoặc precision/range không hợp lệ
+**Thì** UI và FastAPI báo lỗi tại trường liên quan
+**Và** database constraint vẫn bảo vệ year range
+**Và** không tạo partial event.
+
+**Cho trước** event có các cá nhân, tổ chức, địa điểm hoặc hiện vật tham gia
+**Khi** Admin thêm participant
+**Thì** entity được tìm/chọn theo canonical name hoặc alias
+**Và** role được chọn từ `participant_role` registry
+**Và** cùng entity/role không bị thêm trùng vào một event
+**Và** Admin không nhập entity ID hoặc role code thủ công.
+
+**Cho trước** Admin chọn actor hoặc artifact
+**Khi** lưu event
+**Thì** reference phải trỏ tới entity hợp lệ trong corpus context
+**Và** type mismatch rõ ràng bị cảnh báo hoặc từ chối theo business rule
+**Và** deleted/invalid reference không tạo orphan relation.
+
+**Cho trước** timeline event cần provenance
+**Khi** Admin chọn evidence
+**Thì** phải có primary passage và có thể có supporting passages
+**Và** event và evidence thuộc cùng draft corpus version
+**Và** source title/excerpt được hiển thị trong editor.
+
+**Cho trước** event tương đương đã tồn tại cho cùng entity, time range, type và title
+**Khi** Admin lưu
+**Thì** exact duplicate bị chặn hoặc dẫn tới event hiện có
+**Và** event cùng thời gian nhưng nội dung khác được phép tồn tại và được trình bày riêng.
+
+**Cho trước** event và participant list hợp lệ
+**Khi** Admin lưu hoặc cập nhật
+**Thì** event, participants và evidence được ghi atomically ở trạng thái `draft`
+**Và** thao tác được audit
+**Và** failure ở bất kỳ phần nào rollback toàn bộ thay đổi.
+
+**Cho trước** timeline event đã thuộc published release
+**Khi** Admin cố sửa hoặc xóa trực tiếp
+**Thì** hệ thống từ chối mutation lịch sử
+**Và** yêu cầu tạo revision draft mới.",9,High,"heritagegraph,epic-1,role-be"
+16,Story,1.7 Xây dựng typed entity relations,"Là một quản lý tri thức,
+Tôi muốn kết nối hai entity bằng predicate được quản trị và supporting evidence,
+Để các quan hệ graph luôn hợp lệ, có thể giải thích và truy vấn.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin mở Relation builder
+**Khi** chọn subject, predicate và object
+**Thì** UI hiển thị cấu trúc `subject ─ predicate → object`
+**Và** subject/object được tìm theo canonical name hoặc alias
+**Và** predicate được chọn từ registry đóng, không nhập code hoặc UUID thủ công.
+
+**Cho trước** predicate có `is_symmetric` hoặc `inverse_of`
+**Khi** Admin chọn predicate
+**Thì** builder hiển thị semantics/inverse phù hợp để Admin kiểm tra hướng quan hệ
+**Và** không tự tạo inverse relation ngoài contract đã quy định.
+
+**Cho trước** subject và object giống nhau
+**Khi** Admin lưu relation
+**Thì** UI, FastAPI và database từ chối self-loop
+**Và** không tạo partial relation/evidence.
+
+**Cho trước** cùng subject, predicate, object và corpus version đã tồn tại
+**Khi** Admin lưu
+**Thì** exact triple duplicate bị chặn và record hiện có được hiển thị
+**Và** không hợp nhất âm thầm các evidence hoặc confidence khác nhau.
+
+**Cho trước** Admin nhập confidence và evidence
+**Khi** lưu relation
+**Thì** confidence chỉ chấp nhận từ 0 đến 1
+**Và** primary passage là bắt buộc, supporting passages là tùy chọn
+**Và** relation, entities và passages thuộc cùng draft corpus context.
+
+**Cho trước** relation hợp lệ
+**Khi** Admin tạo, cập nhật hoặc xóa
+**Thì** relation và evidence được ghi atomically ở trạng thái `draft`
+**Và** thao tác được audit
+**Và** published relation không thể bị sửa trực tiếp mà phải tạo revision mới.",9,High,"heritagegraph,epic-1,role-be"
+17,Story,1.8 Biên soạn narrative sections có evidence,"Là một quản lý tri thức,
+Tôi muốn biên soạn các narrative section Markdown có thứ tự cho entity cùng source evidence,
+Để nội dung di sản đã publish có thể kể một câu chuyện mạch lạc mà không mất provenance.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin mở Narrative editor cho một entity
+**Khi** tạo section
+**Thì** section code được chọn từ registry được phép, gồm tổng quan, tên gọi, khởi lập, vai trò lịch sử, kiến trúc, hiện vật, nhân vật, biến động hiện đại hoặc tham quan
+**Và** form thu thập title, Markdown body và order index
+**Và** Admin không nhập entity ID hoặc section code tự do.
+
+**Cho trước** cùng entity, section code và corpus version đã có section
+**Khi** Admin tạo thêm
+**Thì** exact section duplicate bị chặn và section hiện có được mở để chỉnh sửa
+**Và** section khác code vẫn được phép tồn tại.
+
+**Cho trước** Admin soạn Markdown
+**Khi** mở preview
+**Thì** headings, lists, links và emphasis được render nhất quán với public content contract
+**Và** unsafe HTML/script bị sanitize
+**Và** editor/preview dùng được bằng keyboard và có accessible labels.
+
+**Cho trước** narrative section cần provenance
+**Khi** Admin chọn evidence
+**Thì** một primary passage là bắt buộc và supporting passages có thể chọn nhiều
+**Và** selected sources hiển thị title/excerpt thay vì UUID
+**Và** section và evidence thuộc cùng draft corpus version.
+
+**Cho trước** Admin thay đổi order index hoặc nội dung
+**Khi** lưu narrative package
+**Thì** ordering, Markdown và evidence được validation và ghi atomically
+**Và** section mặc định ở trạng thái `draft`
+**Và** thao tác được audit.
+
+**Cho trước** narrative section đã thuộc published release
+**Khi** Admin cố sửa hoặc xóa trực tiếp
+**Thì** hệ thống từ chối mutation lịch sử
+**Và** yêu cầu tạo revision draft mới.",9,High,"heritagegraph,epic-1,role-be"
+18,Epic,Epic 2: Kiểm định và phát hành corpus đáng tin cậy,"Biên tập viên submit draft để Airflow kiểm tra sâu, tạo embedding/index/manifest, xử lý issues, review và publish một corpus release atomically; Dashboard cho biết sức khỏe và khả năng phục vụ của từng release.",,Highest,"heritagegraph,epic-2"
+19,Story,2.1 Submit draft revision và tạo validation run idempotent,"Là một quản lý tri thức,
+Tôi muốn submit một draft corpus revision để validation bất đồng bộ,
+Để deep validation chỉ chạy một lần cho mỗi submission logic mà không chặn các lần lưu biên soạn thông thường.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** một authenticated Admin có draft revision
+**Khi** Admin chọn Submit for Validation
+**Thì** FastAPI thực hiện preflight checks tối thiểu về revision, ownership/status và required package records
+**Và** save thông thường không tự trigger Airflow
+**Và** submission không làm draft trở thành published.
+
+**Cho trước** submission hợp lệ với idempotency key mới
+**Khi** service xử lý request
+**Thì** validation run được tạo atomically với revision ID, requester, timestamps và trạng thái ban đầu
+**Và** run ID được trả ngay để UI theo dõi bất đồng bộ
+**Và** thao tác được audit.
+
+**Cho trước** cùng revision và idempotency key được gửi lại
+**Khi** request retry do timeout hoặc network failure
+**Thì** service trả lại validation run đã tồn tại
+**Và** không tạo run hoặc DAG execution thứ hai.
+
+**Cho trước** idempotency key đã được dùng cho revision/payload khác
+**Khi** client tái sử dụng key
+**Thì** API trả conflict rõ ràng
+**Và** không thay đổi run hiện có.
+
+**Cho trước** nhiều request submit đồng thời cùng revision
+**Khi** service xử lý concurrency
+**Thì** database uniqueness/transaction bảo đảm chỉ một logical run được tạo
+**Và** các request còn lại nhận cùng run hoặc conflict xác định.
+
+**Cho trước** validation run đã commit
+**Khi** Airflow trigger thành công
+**Thì** run lưu external DAG/run reference và chuyển sang trạng thái queued/running phù hợp
+**Và** correlation ID nối được API submission với Airflow execution.
+
+**Cho trước** Airflow trigger thất bại sau khi run đã được tạo
+**Khi** service ghi nhận lỗi
+**Thì** run có trạng thái retryable/trigger-failed rõ ràng
+**Và** retry dùng lại cùng logical run thay vì tạo run mới
+**Và** UI không báo validation đang chạy nếu DAG chưa được trigger.
+
+**Cho trước** revision thay đổi sau một submission
+**Khi** Admin muốn kiểm định nội dung mới
+**Thì** phải tạo submission/version identity mới
+**Và** report của run cũ vẫn tham chiếu đúng snapshot/revision đã kiểm định.",18,Highest,"heritagegraph,epic-2,role-be"
+20,Story,2.2 Chạy Airflow deep validation và ghi validation issues,"Là một quản lý tri thức,
+Tôi muốn knowledge package đã submit được kiểm tra sâu với các issue có thể xử lý,
+Để tôi có thể sửa các record không hợp lệ hoặc chưa đầy đủ trước khi chuẩn bị index hoặc release.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** validation run đã được trigger cho một revision snapshot
+**Khi** Airflow bắt đầu deep validation
+**Thì** pipeline chỉ đọc dữ liệu thuộc đúng snapshot/revision đã submit
+**Và** trạng thái hiện tại cùng thời điểm bắt đầu/kết thúc của từng stage được ghi nhận
+**Và** thay đổi draft về sau không làm đổi kết quả của run đang thực hiện.
+
+**Cho trước** package chứa document, passage, entity, claim, timeline, relation và narrative
+**Khi** validation stages chạy
+**Thì** hệ thống kiểm required fields, type/range, foreign key, exact duplicate, provenance và corpus-version consistency
+**Và** business constraints của từng record type được kiểm tra
+**Và** lỗi chặn chất lượng được phân loại là `error`, vấn đề cần xem xét được phân loại là `warning`.
+
+**Cho trước** một validation rule phát hiện vấn đề
+**Khi** issue được ghi
+**Thì** issue chứa run, stage, severity, rule/code, record kind/ID, field/path và thông báo có thể hành động
+**Và** UI có đủ reference để mở đúng record cần sửa
+**Và** issue không yêu cầu Admin đọc Airflow log để xác định đối tượng lỗi.
+
+**Cho trước** cùng run/stage được retry
+**Khi** pipeline ghi lại kết quả
+**Thì** issues được upsert/reconcile theo identity ổn định
+**Và** không sinh issue trùng chỉ vì retry
+**Và** issue không còn đúng sau lần kiểm tra lại được đánh dấu giải quyết hoặc thay thế theo policy.
+
+**Cho trước** một stage validation thất bại do lỗi vận hành
+**Khi** run dừng
+**Thì** run không được đánh dấu pass
+**Và** stage lỗi, thông báo an toàn và kết quả đã ghi được giữ lại để chẩn đoán
+**Và** retry tiếp tục an toàn mà không tạo logical run mới.
+
+**Cho trước** validation có bất kỳ `error` chưa giải quyết
+**Khi** pipeline chuẩn bị chuyển sang embedding/indexing hoặc publish
+**Thì** bước sau bị chặn
+**Và** warnings được hiển thị để review nhưng không tự biến thành pass/fail ngoài policy đã định.
+
+**Cho trước** validation hoàn tất
+**Khi** Admin xem summary
+**Thì** tổng số error/warning và kết quả theo stage khớp với issue records
+**Và** metrics/logs/traces liên kết được bằng validation run/correlation ID
+**Và** Airflow không có quyền tự publish corpus.",18,Highest,"heritagegraph,epic-2,role-data"
+21,Story,"2.3 Tạo embeddings, indexes và reproducible manifest","Là một quản lý tri thức,
+Tôi muốn mỗi revision đã validation được chuẩn bị thành một serving package có thể tái lập,
+Để các thành phần search, graph và chatbot có thể dùng artifact nhất quán sau khi publish.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** validation run hoàn tất và không còn blocking error
+**Khi** preparation pipeline bắt đầu
+**Thì** passages được chia thành semantic chunks theo versioned chunking contract
+**Và** mỗi chunk có stable ID, source passage reference và content hash
+**Và** cùng input/configuration tạo lại cùng chunk identities.
+
+**Cho trước** chunks cần vector embedding
+**Khi** embedding stage chạy
+**Thì** model, model version và vector dimension khớp embedding contract
+**Và** vector có dimension sai bị từ chối thay vì ghi lẫn vào index
+**Và** chunk không đổi có thể tái sử dụng artifact theo content hash và contract version.
+
+**Cho trước** validated records và chunks đã sẵn sàng
+**Khi** indexing stages chạy
+**Thì** lexical, accent-insensitive/trigram, vector và graph projection artifacts đều gắn cùng corpus revision
+**Và** artifacts được ghi vào staging namespace, chưa được online consumers sử dụng
+**Và** partial artifacts không được đánh dấu ready.
+
+**Cho trước** mọi preparation stage thành công
+**Khi** pipeline tạo manifest
+**Thì** manifest ghi corpus revision, chunk IDs/hashes, embedding contract, index versions, graph projection version, record counts và artifact checksums/locations
+**Và** manifest được lưu có version trên S3
+**Và** secrets hoặc private infrastructure credentials không xuất hiện trong manifest.
+
+**Cho trước** cùng revision/configuration được retry
+**Khi** pipeline ghi chunks, embeddings, indexes hoặc manifest
+**Thì** writes là idempotent hoặc được reconcile theo deterministic artifact identity
+**Và** không sinh duplicate serving package
+**Và** artifact stale/partial được thay thế hoặc dọn theo policy đã tài liệu hóa.
+
+**Cho trước** bất kỳ preparation stage hoặc manifest verification thất bại
+**Khi** run kết thúc
+**Thì** release không được đánh dấu publish-ready
+**Và** active published artifacts hiện tại không bị thay đổi
+**Và** stage/error được ghi để retry và quan sát.",18,High,"heritagegraph,epic-2,role-data"
+22,Story,"2.4 Theo dõi Validation Center, sửa lỗi và resubmit","Là một quản lý tri thức,
+Tôi muốn xem tiến trình validation và đi thẳng tới các record cần sửa,
+Để tôi có thể khắc phục package thất bại và submit một revision sạch mà không cần đọc infrastructure logs.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin mở Validation Center
+**Khi** có validation runs
+**Thì** danh sách hiển thị revision, run status, current stage, thời gian, error count và warning count
+**Và** queued, running, failed, passed và retryable states được phân biệt bằng text/icon chứ không chỉ màu
+**Và** loading, empty, stale và service-error states được hiển thị rõ.
+
+**Cho trước** một run có issues
+**Khi** Admin mở quality report
+**Thì** có thể lọc theo severity, stage, record kind và rule
+**Và** mỗi issue hiển thị thông báo, field/path, source context khả dụng và trạng thái hiện tại
+**Và** tổng số hiển thị khớp issue records của run.
+
+**Cho trước** issue tham chiếu một knowledge record
+**Khi** Admin chọn Fix/Open
+**Thì** UI mở đúng editor và record cần sửa
+**Và** giữ context về run/issue để Admin quay lại report
+**Và** Admin không phải sao chép UUID hoặc tra database.
+
+**Cho trước** run thất bại vì lỗi vận hành và snapshot không đổi
+**Khi** Admin chọn Retry
+**Thì** hệ thống retry cùng logical run/snapshot an toàn
+**Và** không tạo issue/artifact trùng
+**Và** action và kết quả được audit.
+
+**Cho trước** Admin đã sửa knowledge content
+**Khi** chọn Resubmit
+**Thì** hệ thống tạo submission/run mới cho revision snapshot mới
+**Và** report cũ vẫn bất biến để đối chiếu
+**Và** UI cho biết issues nào đã giải quyết, còn tồn tại hoặc mới xuất hiện theo rule/record identity.
+
+**Cho trước** Admin không có quyền validation/retry/resubmit
+**Khi** cố thực hiện action
+**Thì** API/UI từ chối phù hợp
+**Và** không trigger Airflow hoặc thay đổi run.",18,High,"heritagegraph,epic-2,role-fe"
+23,Story,2.5 Human review và atomic corpus publish,"Là một người review,
+Tôi muốn kiểm tra một release đã validation và phê duyệt hoặc từ chối rõ ràng trước khi publish atomically,
+Để tri thức chưa được review hoặc chỉ kích hoạt một phần không bao giờ đến tay người dùng.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** release candidate đã validation pass và serving package ready
+**Khi** Reviewer mở Review workspace
+**Thì** workspace hiển thị revision diff, provenance summary, warnings, conflicting sources, manifest/index status và validation history
+**Và** Reviewer có thể đi tới record/evidence liên quan
+**Và** dữ liệu draft không được hiển thị như đã published.
+
+**Cho trước** candidate còn blocking error, preparation chưa ready hoặc manifest không hợp lệ
+**Khi** Reviewer cố approve/publish
+**Thì** action bị chặn với danh sách gate chưa đạt
+**Và** Airflow pass giả hoặc warning bị đổi thành pass ngoài policy không thể bỏ qua gate.
+
+**Cho trước** Reviewer quyết định reject
+**Khi** nhập lý do và xác nhận
+**Thì** candidate giữ trạng thái không published
+**Và** decision, reviewer, timestamp và note được audit
+**Và** active release hiện tại không thay đổi.
+
+**Cho trước** Reviewer approve một candidate đủ điều kiện
+**Khi** mở Publish confirmation
+**Thì** UI hiển thị release/version sẽ kích hoạt, gates đã pass, artifact manifest và rollback/retire path
+**Và** publish chỉ tiếp tục sau explicit confirmation
+**Và** Airflow không trực tiếp gọi publish.
+
+**Cho trước** publish được xác nhận
+**Khi** Publishing Service activate release
+**Thì** database transaction đảm bảo release mới trở thành active và release trước được chuyển trạng thái theo policy như một thao tác nhất quán
+**Và** online release/artifact pointer chỉ chuyển sang serving package đã verify
+**Và** publish event, reviewer và manifest identity được audit.
+
+**Cho trước** transaction, artifact activation hoặc concurrent publish gặp lỗi
+**Khi** publish không hoàn tất đầy đủ
+**Thì** online consumers tiếp tục dùng release tốt gần nhất
+**Và** không tồn tại trạng thái database mới nhưng index cũ được coi là cùng release
+**Và** lỗi/conflict được báo rõ để retry hoặc review lại.",18,Highest,"heritagegraph,epic-2,role-be"
+24,Story,2.6 Bảo đảm published corpus version isolation,"Là một người dùng cuối,
+Tôi muốn mỗi request chỉ dùng một phiên bản published corpus hoàn chỉnh,
+Để các trang, recommendation và câu trả lời chatbot không bao giờ trộn tri thức cũ và mới.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** một online request bắt đầu
+**Khi** service resolve active release
+**Thì** release ID được pin cho toàn bộ vòng đời request
+**Và** database, lexical/vector indexes, graph projection và evidence queries đều dùng release đó
+**Và** response/trace ghi release ID phù hợp.
+
+**Cho trước** release mới được publish trong khi request cũ đang chạy
+**Khi** request cũ tiếp tục retrieval hoặc persistence
+**Thì** request vẫn hoàn tất trên release đã pin
+**Và** request mới có thể dùng release mới
+**Và** không trộn artifacts của hai release.
+
+**Cho trước** record có trạng thái draft, retired, withdrawn hoặc thuộc release khác
+**Khi** online consumer truy vấn
+**Thì** record không xuất hiện trong kết quả serving của active release
+**Và** repository/service boundary áp dụng filter thay vì phụ thuộc endpoint tự nhớ lọc.
+
+**Cho trước** một required artifact của pinned release thiếu hoặc checksum/version không khớp
+**Khi** request cần artifact đó
+**Thì** service trả trạng thái unavailable/degraded phù hợp thay vì fallback âm thầm sang release khác
+**Và** không tạo answer, citation hoặc recommendation từ mixed versions
+**Và** failure được đo và trace.
+
+**Cho trước** response factual được lưu hoặc trả về
+**Khi** hệ thống ghi evidence/citation
+**Thì** corpus release ID được lưu cùng response/evidence
+**Và** cited passage của published release vẫn bất biến để truy vết lịch sử.
+
+**Cho trước** version isolation được kiểm thử
+**Khi** chạy concurrent publish và online-request integration tests
+**Thì** tests chứng minh không có draft leakage hoặc cross-version reads
+**Và** expected values kiểm tra đúng record/version, không chỉ kiểm tra request không crash.",18,Highest,"heritagegraph,epic-2,role-be"
+25,Story,2.7 Hiển thị corpus health và publish readiness dashboard,"Là một quản lý tri thức,
+Tôi muốn xem corpus health và publish readiness trên Dashboard quản trị,
+Để tôi có thể nhanh chóng hiểu release nào an toàn để phục vụ và vấn đề nào cần xử lý.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin mở dashboard
+**Khi** dữ liệu vận hành khả dụng
+**Thì** dashboard hiển thị current draft release, active published release, validation queue, issue counts, review status và publish eligibility
+**Và** mỗi trạng thái có timestamp/freshness
+**Và** stale hoặc unavailable data không được trình bày như healthy.
+
+**Cho trước** corpus health data khả dụng
+**Khi** dashboard render
+**Thì** hiển thị record counts theo loại/status, provenance gaps, duplicate/quality summary và graph coverage phù hợp
+**Và** số liệu liên kết tới report hoặc filtered records có thể hành động
+**Và** dashboard không tự sửa dữ liệu.
+
+**Cho trước** serving artifacts đã được chuẩn bị hoặc publish
+**Khi** xem index/model health
+**Thì** dashboard hiển thị manifest identity, lexical/vector/graph status, embedding/model contract, prompt/model version liên quan và last successful build
+**Và** artifact/release mismatch được đánh dấu blocking hoặc degraded rõ ràng.
+
+**Cho trước** evaluation reports tồn tại
+**Khi** dashboard hiển thị quality metrics
+**Thì** citation faithfulness, citation coverage, abstention accuracy, retrieval recall và latency được gắn với model, prompt, corpus và dataset versions
+**Và** thiếu metric không được hiển thị như đạt target.
+
+**Cho trước** một validation, pipeline, index hoặc publish gate lỗi
+**Khi** operator xem dashboard hoặc alert
+**Thì** có link tới run/release/correlation ID liên quan
+**Và** Prometheus/Grafana/Langfuse signals hỗ trợ chẩn đoán thay vì thay thế source-of-truth status
+**Và** sensitive content, password, token và raw IP không xuất hiện.
+
+**Cho trước** người dùng không có quyền quản trị
+**Khi** truy cập dashboard API/UI
+**Thì** access bị từ chối phù hợp
+**Và** corpus operational details không bị lộ ra public surface.
+
+**Cho trước** component library và Admin Console handoff từ Stories 0.8–0.9 cùng Admin shell từ Story 0.6
+**Khi** FE triển khai `/admin`
+**Thì** layout, typography, spacing, components và responsive behavior bám approved Figma design
+**Và** FE dùng shared/generated API types thay vì hard-code production metrics
+**Và** visual deviations cần được DES chấp thuận hoặc ghi lại.
+
+**Cho trước** dashboard đang loading, không có dữ liệu, lỗi một phần hoặc thất bại hoàn toàn
+**Khi** UI render trạng thái tương ứng
+**Thì** có loading skeleton, empty guidance, partial-data warning và retryable error state đúng phạm vi
+**Và** một widget lỗi không gây blank page cho toàn dashboard
+**Và** status không chỉ được phân biệt bằng màu sắc.
+
+**Cho trước** viewport desktop, tablet và minimum supported width
+**Khi** chạy component/Playwright tests và design QA
+**Thì** dashboard không có horizontal overflow ngoài chủ đích
+**Và** keyboard navigation, landmarks và focus order hoạt động
+**Và** representative rendered states được DES đối chiếu với Figma trước khi story done.",18,Medium,"heritagegraph,epic-2,admin-dashboard,role-fe"
+26,Epic,Epic 3: Cổng khám phá và kể chuyện di sản,"Người dùng tìm và chọn published heritage content qua Home, Explore/Library, bản đồ 2D Huế–Đà Nẵng và Content Landing; từ đó tiếp tục sang trải nghiệm scene, Chat, Recommendation hoặc nội dung liên quan khi các capability tương ứng khả dụng.",,High,"heritagegraph,epic-3"
+27,Story,3.1 Khám phá các trải nghiệm di sản nổi bật,"Là một khách truy cập,
+Tôi muốn duyệt các trải nghiệm di sản nổi bật từ trang chủ public,
+Để tôi có thể nhanh chóng chọn một địa điểm hoặc câu chuyện để khám phá mà chưa cần biết phải tìm kiếm gì.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng mở trang Home
+**Khi** active published corpus có featured content
+**Thì** trang hiển thị các nhóm nội dung nổi bật theo cấu hình biên tập
+**Và** mọi card đều thuộc cùng published corpus release đã pin
+**Và** draft, withdrawn hoặc content thuộc release khác không xuất hiện.
+
+**Cho trước** một experience card được hiển thị
+**Khi** người dùng xem card
+**Thì** card ưu tiên hình ảnh và tên trải nghiệm, không nhồi timeline, nguồn hoặc mô tả dài
+**Và** có hai hành động rõ ràng để tiếp tục khám phá và mở Content Landing
+**Và** button/link có accessible name và keyboard focus rõ ràng.
+
+**Cho trước** người dùng chọn hành động khám phá
+**Khi** điều hướng sang Explore
+**Thì** context phù hợp như khu vực, chủ đề hoặc loại nội dung được truyền qua URL/state có thể chia sẻ
+**Và** back navigation đưa người dùng về đúng vị trí trên Home.
+
+**Cho trước** người dùng chọn mở nội dung
+**Khi** Content Landing tồn tại trong release hiện tại
+**Thì** điều hướng tới đúng content slug/ID
+**Và** không dùng mock hoặc dữ liệu từ release khác.
+
+**Cho trước** ảnh card chưa tải, lỗi hoặc nằm ngoài viewport
+**Khi** Home render
+**Thì** ảnh dùng kích thước responsive, placeholder/fallback và lazy loading phù hợp
+**Và** lỗi ảnh không làm card hoặc navigation mất khả dụng
+**Và** layout không nhảy bất thường khi ảnh hoàn tất.
+
+**Cho trước** Home không có featured content hoặc API lỗi
+**Khi** trang tải
+**Thì** hiển thị empty/error state có hướng đi tiếp rõ ràng
+**Và** không hiển thị trang trắng hoặc dữ liệu draft làm fallback.",26,High,"heritagegraph,epic-3,role-fe"
+28,Story,3.2 Tìm kiếm và lọc kho nội dung di sản,"Là một khách truy cập,
+Tôi muốn tìm kiếm và lọc kho di sản đã publish,
+Để tôi có thể tìm các trải nghiệm phù hợp với tên, khu vực hoặc nhóm văn hóa.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng mở Explore/Library
+**Khi** chưa nhập điều kiện
+**Thì** trang hiển thị published experiences có phân trang hoặc incremental loading xác định
+**Và** card dùng cùng visual/action contract với Home
+**Và** không tải toàn bộ media hoặc toàn bộ corpus cùng lúc.
+
+**Cho trước** người dùng nhập từ khóa
+**Khi** thực hiện tìm kiếm
+**Thì** hệ thống tìm trên published content theo tên chuẩn và alias phù hợp
+**Và** query được normalize theo search contract
+**Và** kết quả không gọi Qwen chỉ để xếp hạng danh sách Explore.
+
+**Cho trước** người dùng chọn region hoặc category filters
+**Khi** áp dụng riêng lẻ hoặc kết hợp
+**Thì** kết quả chỉ chứa records đáp ứng mọi filter đang hoạt động
+**Và** hỗ trợ ít nhất Huế, Đà Nẵng và các nhóm nội dung trong phạm vi dự án
+**Và** filter state được thể hiện trong URL để reload/share không mất lựa chọn.
+
+**Cho trước** query/filter không có kết quả
+**Khi** search hoàn tất
+**Thì** trang hiển thị empty state, điều kiện đang áp dụng và cách xóa/sửa điều kiện
+**Và** không tự thay bằng kết quả không liên quan hoặc draft content.
+
+**Cho trước** request chậm, lỗi hoặc hết trang
+**Khi** Explore cập nhật kết quả
+**Thì** loading, retry, end-of-results và stale-result states được phân biệt rõ
+**Và** keyboard/screen reader nhận được thông báo thay đổi kết quả
+**Và** card cũ không bị gắn nhầm với query mới.",26,High,"heritagegraph,epic-3,role-fe"
+29,Story,3.3 Khám phá địa điểm trên bản đồ 2D Huế–Đà Nẵng,"Là một khách truy cập,
+Tôi muốn khám phá các trải nghiệm di sản đã publish trên bản đồ hai chiều,
+Để tôi có thể hiểu vị trí của các địa điểm và bắt đầu trải nghiệm theo không gian địa lý.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng mở `/map`
+**Khi** bản đồ overview tải
+**Thì** hiển thị bản đồ 2D Việt Nam, không phải globe hoặc trái đất 3D
+**Và** Huế và Đà Nẵng được thể hiện bằng hai điểm/vùng nhấn sáng
+**Và** animation tôn trọng reduced-motion preference.
+
+**Cho trước** người dùng chọn Huế hoặc Đà Nẵng
+**Khi** bản đồ chuyển sang regional view
+**Thì** hiển thị các marker của published places có tọa độ hợp lệ trong khu vực đó
+**Và** marker thuộc cùng pinned corpus release
+**Và** content thiếu hoặc có tọa độ sai không được đặt tại vị trí giả.
+
+**Cho trước** người dùng chọn marker
+**Khi** place preview mở
+**Thì** preview hiển thị hình ảnh, tên và các hành động khám phá/mở Content Landing theo cùng contract với card
+**Và** chỉ một preview active được liên kết rõ với marker đang chọn
+**Và** đóng preview trả focus về marker.
+
+**Cho trước** người dùng không thể hoặc không muốn thao tác trực tiếp với map
+**Khi** dùng keyboard, screen reader hoặc chọn list view
+**Thì** có danh sách địa điểm tương đương về nội dung và hành động
+**Và** lựa chọn trong list đồng bộ với marker tương ứng
+**Và** map không phải con đường duy nhất để truy cập content.
+
+**Cho trước** viewport mobile
+**Khi** người dùng chọn khu vực hoặc marker
+**Thì** preview/list hiển thị bằng layout hoặc bottom sheet không che mất toàn bộ ngữ cảnh
+**Và** thao tác đóng, cuộn và focus hoạt động rõ ràng.
+
+**Cho trước** map tiles/data lỗi
+**Khi** map không render được
+**Thì** danh sách địa điểm Huế–Đà Nẵng vẫn hoạt động
+**Và** không hiển thị trang trắng hoặc chặn đường tới Content Landing.",26,Medium,"heritagegraph,epic-3,role-fe"
+30,Story,3.4 Xem Content Landing trước khi bắt đầu trải nghiệm scene,"Là một khách truy cập,
+Tôi muốn xem danh tính và bối cảnh của một trải nghiệm di sản trước khi bắt đầu,
+Để tôi hiểu nội dung sắp khám phá và có thể chọn hành động tiếp theo.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng mở một Content Landing hợp lệ
+**Khi** content thuộc active published release
+**Thì** trang hiển thị ảnh đại diện, tên, subtitle/mô tả ngắn, khu vực, loại nội dung và provenance/partner information phù hợp
+**Và** response và trace gắn cùng pinned corpus release
+**Và** không hiển thị draft hoặc mixed-version data.
+
+**Cho trước** content có scene experience đã publish và sẵn sàng
+**Khi** landing render
+**Thì** hiển thị hành động `Bắt đầu trải nghiệm` theo published scene capability/route contract
+**Và** landing không tự tải model 3D, audio hoặc toàn bộ scene assets trước khi người dùng bắt đầu.
+
+**Cho trước** scene experience chưa khả dụng
+**Khi** landing render
+**Thì** trang vẫn cung cấp thông tin giới thiệu, nguồn và nội dung liên quan
+**Và** không hiển thị dead link hoặc giả vờ rằng trải nghiệm đã sẵn sàng
+**Và** trạng thái khả dụng được diễn đạt rõ ràng.
+
+**Cho trước** content có related published experiences
+**Khi** người dùng xem phần liên quan
+**Thì** có thể tiếp tục tới Content Landing khác hoặc Explore context phù hợp
+**Và** related links không trỏ tới draft/withdrawn records
+**Và** back navigation giữ được hành trình trước đó.
+
+**Cho trước** hero image hoặc media preview lỗi
+**Khi** trang render
+**Thì** fallback image/state được hiển thị nhưng title, description, provenance và navigation vẫn hoạt động
+**Và** không tải 3D/audio làm fallback tự động.
+
+**Cho trước** content không tồn tại trong pinned release
+**Khi** route được mở
+**Thì** hiển thị not-found state với đường quay lại Home, Explore hoặc Map
+**Và** không fallback sang cùng ID ở draft hay release khác.
+
+**Cho trước** Content Landing được đo trong môi trường mục tiêu
+**Khi** tải representative published content
+**Thì** đáp ứng ngân sách tải trang chi tiết ≤3 giây theo điều kiện đo đã ghi nhận
+**Và** desktop/mobile duy trì hierarchy, focus order và không có horizontal overflow ngoài ý muốn.",26,High,"heritagegraph,epic-3,role-fe"
+31,Epic,Epic 4: Trợ lý hỏi đáp có căn cứ,"Người dùng hỏi bằng tiếng Việt từ portal hoặc trang Chat; hệ thống resolve entity, lập query plan, lấy evidence đúng published corpus, dùng Qwen3-4B tổng hợp và chỉ trả `answered`, `clarify` hoặc `abstained` sau grounding validation.",,Highest,"heritagegraph,epic-4"
+32,Story,4.1 Hiểu câu hỏi và xác định đúng thực thể,"Là một người dùng,
+Tôi muốn trợ lý hiểu tên tiếng Việt, alias và các biến thể gõ,
+Để câu hỏi của tôi được kết nối với đúng entity di sản hoặc tôi được yêu cầu làm rõ.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng gửi câu hỏi tiếng Việt
+**Khi** query understanding bắt đầu
+**Thì** hệ thống giữ nguyên raw query và tạo normalized query theo contract
+**Và** xử lý nhất quán chữ hoa/thường, dấu tiếng Việt, khoảng trắng và biến thể ký tự
+**Và** normalization không làm mất raw text cần hiển thị hoặc audit.
+
+**Cho trước** câu hỏi chứa canonical name hoặc alias đã review
+**Khi** entity resolution chạy
+**Thì** canonical name exact, normalized alias exact và accent-insensitive match được ưu tiên theo thứ tự xác định
+**Và** typo/fuzzy matching chỉ dùng trong ngưỡng đã hiệu chỉnh
+**Và** chỉ entity thuộc pinned published release và `in_scope` mới được chọn để trả lời.
+
+**Cho trước** có đúng một candidate vượt ngưỡng tin cậy
+**Khi** resolver hoàn tất
+**Thì** trả entity ID/canonical name cùng match reason có thể trace
+**Và** context hint từ Content Landing được kiểm tra chứ không tự động ghi đè nội dung câu hỏi.
+
+**Cho trước** có nhiều candidate hợp lý hoặc tên không đủ phân biệt
+**Khi** resolver không thể chọn an toàn
+**Thì** terminal result là `clarify`
+**Và** response đưa ra các lựa chọn ngắn gọn có thông tin phân biệt như loại hoặc khu vực
+**Và** hệ thống không chọn ngẫu nhiên một entity.
+
+**Cho trước** câu hỏi không cần entity cụ thể hoặc không tìm thấy entity
+**Khi** resolver hoàn tất
+**Thì** contract ghi rõ `entity_ids`, `needs_clarification` và trạng thái scope
+**Và** query generic hợp lệ có thể đi tiếp
+**Và** entity ngoài phạm vi không được giả thành entity trong corpus.
+
+**Cho trước** resolver được kiểm thử
+**Khi** chạy cases tên chuẩn, alias, không dấu, lỗi gõ, trùng tên và ngoài phạm vi
+**Thì** expected entity/clarify outcome được xác minh cụ thể
+**Và** test không chỉ kiểm tra request không crash.",31,Highest,"heritagegraph,epic-4,role-be"
+33,Story,4.2 Xác định ý định và lập kế hoạch tìm bằng chứng,"Là một người dùng,
+Tôi muốn trợ lý nhận biết loại câu trả lời tôi cần,
+Để trợ lý tìm trong đúng cấu trúc tri thức thay vì áp dụng một cách tìm kiếm chung cho mọi câu hỏi.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** query đã normalized và entity resolution đã hoàn tất hoặc không cần entity
+**Khi** intent router chạy
+**Thì** phân loại vào một trong `overview`, `field`, `timeline`, `relationship`, `section`, `comparison`, `open_text` hoặc `out_of_scope`
+**Và** output ghi confidence/reason phù hợp để trace
+**Và** trường hợp dưới ngưỡng được clarify hoặc xử lý theo fallback đã định.
+
+**Cho trước** query chứa field, khoảng thời gian hoặc relation request có thể nhận biết
+**Khi** router tạo structured query contract
+**Thì** contract điền `field_code`, `time_range` hoặc `requested_relations` khi phù hợp
+**Và** không tự phát minh field/predicate ngoài registry.
+
+**Cho trước** intent đã xác định
+**Khi** Query Planner lập kế hoạch
+**Thì** planner chọn danh sách operator nhỏ, xác định trước và phù hợp intent
+**Và** plan ghi input, limit/budget và thứ tự operator cần chạy
+**Và** planner không sinh SQL tự do hoặc hoạt động như autonomous agent.
+
+**Cho trước** câu hỏi so sánh hoặc cần nhiều loại evidence
+**Khi** planner tạo multi-operator plan
+**Thì** các nhánh evidence cần thiết được nêu rõ và cùng pin một corpus release
+**Và** duplicate operator không được chạy chỉ vì cùng dữ kiện xuất hiện trong nhiều nhánh.
+
+**Cho trước** intent là `out_of_scope`
+**Khi** planning hoàn tất
+**Thì** hệ thống không chạy retrieval/generation tốn kém không cần thiết
+**Và** trả trạng thái phù hợp, không bịa câu trả lời ngoài phạm vi.
+
+**Cho trước** router/planner được kiểm thử
+**Khi** chạy representative questions cho tám intent
+**Thì** expected intent, fields và operator plan được so sánh với gold set
+**Và** thay đổi prompt/rule làm lệch plan được phát hiện bởi regression tests.",31,Highest,"heritagegraph,epic-4,role-ai"
+34,Story,"4.3 Tìm evidence từ facts, timeline, graph, narrative và text","Là một người dùng,
+Tôi muốn trợ lý truy xuất evidence phù hợp với câu hỏi,
+Để câu trả lời dựa trên tri thức đã publish phù hợp nhất thay vì trí nhớ của model.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** plan yêu cầu exact fact
+**Khi** Exact operator chạy
+**Thì** lấy claim/canonical value phù hợp entity, field, validity và pinned release
+**Và** trả supporting passage references
+**Và** stale/time-sensitive value không được trình bày như hiện hành ngoài validity contract.
+
+**Cho trước** plan yêu cầu sự kiện hoặc chronology
+**Khi** Timeline operator chạy
+**Thì** lọc timeline events theo entity, event type và time range phù hợp
+**Và** giữ actor/participant/artifact cùng evidence
+**Và** sắp xếp theo time semantics đã định.
+
+**Cho trước** plan yêu cầu quan hệ
+**Khi** Graph operator chạy
+**Thì** traversal giới hạn 1–2 hop qua predicate allowlist phù hợp intent
+**Và** mọi node/edge thuộc cùng pinned published release
+**Và** path và supporting passages được trả để giải thích kết quả.
+
+**Cho trước** plan yêu cầu nội dung chuyên đề
+**Khi** Section operator chạy
+**Thì** lấy narrative sections đúng entity/section intent và evidence liên kết
+**Và** không thay narrative đã review bằng model-generated summary không nguồn.
+
+**Cho trước** plan yêu cầu tìm trong văn bản hoặc paraphrase
+**Khi** Text operator chạy
+**Thì** kết hợp PostgreSQL FTS, pg_trgm/accent-insensitive search và vector channel theo contract
+**Và** kết quả được hợp nhất theo ranking method đã công bố
+**Và** vector dimension/model phải khớp manifest của pinned release.
+
+**Cho trước** một operator không có đủ kết quả hoặc dependency lỗi
+**Khi** retrieval kết thúc
+**Thì** trace ghi operator, candidate counts, ranks và failure/degradation
+**Và** không fallback sang draft hoặc corpus release khác
+**Và** downstream nhận evidence rỗng/thiếu rõ ràng thay vì dữ liệu bịa.",31,Highest,"heritagegraph,epic-4,role-ai"
+35,Story,4.4 Xây dựng evidence package và chặn câu hỏi thiếu bằng chứng,"Là một người dùng,
+Tôi muốn trợ lý chỉ trả lời khi có đủ evidence liên quan,
+Để ngôn từ chắc chắn không được tạo ra từ nguồn yếu, không phù hợp hoặc xung đột.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** retrieval operators trả candidates
+**Khi** Entity Dossier/Evidence Context Builder chạy
+**Thì** hợp nhất claims, events, relations, narrative và passages phù hợp intent
+**Và** loại duplicate evidence theo stable identity/content
+**Và** giữ lại các nguồn mâu thuẫn thay vì âm thầm chọn một nguồn.
+
+**Cho trước** evidence vượt quá context budget
+**Khi** builder chọn evidence
+**Thì** áp dụng budget cấu hình theo intent và ưu tiên provenance/relevance
+**Và** không dùng giới hạn Text operator cũ như invariant cho toàn hệ thống
+**Và** selection order và lý do có thể trace.
+
+**Cho trước** evidence được đưa vào package
+**Khi** package hoàn tất
+**Thì** mỗi item có citation ID ổn định trong request, source/passage reference và corpus release ID
+**Và** model chỉ nhìn thấy citation IDs thuộc package
+**Và** evidence text được coi là dữ liệu, không phải instruction có quyền thay đổi system behavior.
+
+**Cho trước** pre-generation gate chạy
+**Khi** entity/scope, publish status, freshness, release consistency hoặc evidence threshold không đạt
+**Thì** Qwen không được gọi
+**Và** kết quả là `clarify` nếu người dùng có thể làm rõ, hoặc `abstained` nếu evidence không đủ
+**Và** lý do gate được lưu cho trace/evaluation.
+
+**Cho trước** evidence đủ và nhất quán theo policy
+**Khi** pre-generation gate pass
+**Thì** package chỉ chứa evidence của một pinned release
+**Và** generation request nhận bounded package cùng prompt/model version
+**Và** package có thể được lưu/tái hiện cho regression investigation.",31,Highest,"heritagegraph,epic-4,role-ai"
+36,Story,4.5 Sinh và kiểm tra câu trả lời có citation,"Là một người dùng,
+Tôi muốn câu trả lời tiếng Việt rõ ràng với các factual claim được hỗ trợ bằng citation hiển thị,
+Để tôi có thể tin tưởng câu trả lời hoặc hiểu khi hệ thống không thể trả lời.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** pre-generation gate đã pass
+**Khi** Qwen3-4B nhận generation request
+**Thì** model chỉ nhận query, structured context và bounded evidence package
+**Và** không có quyền truy vấn database, tạo entity/relation/source hoặc bổ sung facts từ model memory
+**Và** output tuân theo response schema và citation IDs đã cấp.
+
+**Cho trước** evidence chứng minh tiền đề câu hỏi sai
+**Khi** model tạo câu trả lời
+**Thì** câu trả lời đính chính tiền đề ngay phần mở đầu
+**Và** đính chính có citation hỗ trợ
+**Và** không lặp lại tiền đề sai như một sự thật.
+
+**Cho trước** generation hoàn tất
+**Khi** post-generation gate chạy
+**Thì** kiểm tra citation IDs thuộc package, factual claims có support, số/ngày khớp evidence, certainty phù hợp và conflict được trình bày
+**Và** citation không tồn tại hoặc claim không được hỗ trợ làm gate fail
+**Và** output không được trả như `answered` chỉ vì có định dạng hợp lệ.
+
+**Cho trước** grounding fail nhưng lỗi có thể sửa bằng một lần regeneration
+**Khi** retry policy cho phép
+**Thì** hệ thống retry tối đa một lần với failure feedback an toàn
+**Và** nếu vẫn fail thì trả `abstained`
+**Và** không lặp vô hạn hoặc bỏ qua gate.
+
+**Cho trước** model timeout hoặc unavailable
+**Khi** request không thể hoàn tất
+**Thì** trả trạng thái lỗi/abstained thân thiện, không bịa fallback answer
+**Và** evidence/release hiện tại không bị thay đổi
+**Và** failure được đo và trace.
+
+**Cho trước** response hoàn tất
+**Khi** lưu và trả kết quả
+**Thì** terminal status chỉ là `answered`, `clarify` hoặc `abstained`
+**Và** lưu query, pinned release, evidence references, model/prompt version, grounding result và latency theo privacy policy
+**Và** `answered` luôn có citations hợp lệ cho factual content.",31,Highest,"heritagegraph,epic-4,role-ai"
+37,Story,4.6 Sử dụng Chat độc lập và bên cạnh Content,"Là một người dùng,
+Tôi muốn đặt câu hỏi từ trang Chat riêng hoặc bên cạnh nội dung đang xem,
+Để tôi có thể nhận trợ giúp có căn cứ mà không mất bối cảnh khám phá.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng mở `/chat`
+**Khi** bắt đầu conversation
+**Thì** có thể gửi câu hỏi tiếng Việt mà không cần đăng nhập
+**Và** UI hiển thị rõ trạng thái sending, answered, clarify, abstained và service error
+**Và** conversation không giả định entity context nếu người dùng chưa chọn.
+
+**Cho trước** người dùng mở Chat từ Content Landing
+**Khi** contextual panel xuất hiện
+**Thì** UI hiển thị chip/label cho entity đang được hỏi
+**Và** gửi entity ID như context hint được backend xác minh trên pinned release
+**Và** người dùng có thể bỏ hoặc thay đổi context rõ ràng, không có context ẩn.
+
+**Cho trước** viewport desktop đủ rộng
+**Khi** Chat panel mở bên cạnh Content
+**Thì** Content và Chat hiển thị ngang hàng mà không che controls/nội dung chính
+**Và** panel có thể thu gọn/mở lại
+**Và** tải hoặc lỗi Chat không làm Content Landing ngừng hoạt động.
+
+**Cho trước** viewport mobile hoặc hẹp
+**Khi** người dùng chọn `Hỏi AI`
+**Thì** Chat mở bằng drawer/bottom sheet hoặc full-screen panel có close/back rõ ràng
+**Và** đóng Chat trả người dùng về đúng vị trí Content
+**Và** focus được quản lý và background interaction bị giới hạn phù hợp.
+
+**Cho trước** assistant trả `answered`
+**Khi** response render
+**Thì** citations là controls có accessible label và mở source/excerpt phù hợp
+**Và** number/date/source formatting dễ đọc
+**Và** citation click không làm mất conversation ngoài ý muốn.
+
+**Cho trước** assistant trả `clarify` hoặc `abstained`
+**Khi** response render
+**Thì** UI giải thích người dùng cần làm rõ gì hoặc vì sao evidence chưa đủ
+**Và** cung cấp next action phù hợp mà không trình bày đó như lỗi kỹ thuật chung
+**Và** không hiển thị answer text không qua gate.
+
+**Cho trước** contextual Chat component được compose trong một representative host bằng public integration contract
+**Khi** host truyền scene/entity context
+**Thì** component dùng lại cùng Chat implementation, không yêu cầu một chatbot thứ hai
+**Và** context được hiển thị minh bạch trước khi gửi câu hỏi
+**Và** contract có automated component/contract test để các host như Scene Player có thể tích hợp mà không sửa luồng Chat cốt lõi.",31,High,"heritagegraph,epic-4,role-fe"
+38,Story,4.7 Gợi ý câu hỏi đào sâu từ GraphRAG,"Là một người dùng,
+Tôi muốn nhận các câu hỏi đào sâu phù hợp sau một câu trả lời,
+Để tôi có thể tiếp tục khám phá người, địa điểm, sự kiện và chủ đề văn hóa liên quan mà không cần biết nên hỏi gì tiếp theo.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** assistant trả một grounded `answered` response cho entity/topic
+**Khi** hệ thống tạo follow-up suggestions
+**Thì** đề xuất từ 2 đến 4 câu hỏi dựa trên evidence, timeline hoặc graph paths 1–2 hop thuộc cùng pinned release
+**Và** mỗi suggestion có target entity/intent/path basis có thể trace
+**Và** không đề xuất câu hỏi chỉ vì nghe hấp dẫn nhưng corpus không có khả năng hỗ trợ.
+
+**Cho trước** graph có nhiều hướng khám phá hợp lệ
+**Khi** chọn suggestions
+**Thì** ưu tiên các hướng khác nhau như quan hệ, sự kiện, so sánh hoặc nội dung chuyên đề
+**Và** tránh lặp lại câu hỏi vừa trả lời hoặc các suggestion gần như giống nhau
+**Và** không dẫn tới draft, withdrawn hoặc out-of-scope entity.
+
+**Cho trước** suggestion được suy ra bởi model hoặc template
+**Khi** suggestion chuẩn bị trả về UI
+**Thì** backend xác minh referenced entities/relations/evidence tồn tại trong pinned release
+**Và** invalid/unverifiable suggestion bị loại
+**Và** suggestion text không được trình bày như một factual claim đã trả lời.
+
+**Cho trước** người dùng chọn một suggested question
+**Khi** câu hỏi mới được gửi
+**Thì** nó đi qua đầy đủ resolver, planner, retrieval, evidence và grounding gates như câu hỏi bình thường
+**Và** không tái sử dụng answer cũ hoặc bỏ qua evidence gate
+**Và** conversation giữ được context hiển thị rõ ràng.
+
+**Cho trước** response là `clarify` hoặc `abstained`
+**Khi** UI cần next actions
+**Thì** chỉ hiển thị lựa chọn làm rõ/rephrase hoặc các hướng có evidence an toàn
+**Và** không dùng deep-dive suggestions để che giấu việc hệ thống thiếu bằng chứng.
+
+**Cho trước** Chat UI render suggestions
+**Khi** người dùng dùng mouse, keyboard hoặc screen reader
+**Thì** suggestions là controls có accessible name và focus state
+**Và** chọn suggestion thể hiện rõ rằng một câu hỏi mới sẽ được gửi
+**Và** loading/error của suggestions không làm mất answer/citations hiện tại.",31,Medium,"heritagegraph,epic-4,role-ai"
+39,Story,4.8 Đánh giá chất lượng và hiệu năng trợ lý trước phát hành,"Là một product owner,
+Tôi muốn có bằng chứng tái lập rằng trợ lý truy xuất, trích dẫn và từ chối đúng,
+Để thay đổi model, prompt hoặc corpus không thể âm thầm làm giảm chất lượng câu trả lời.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** versioned evaluation dataset
+**Khi** chạy retrieval evaluation
+**Thì** dataset phủ tên chuẩn, alias, không dấu, lỗi gõ, paraphrase, ambiguous và out-of-scope queries
+**Và** expected entity, intent, operator và evidence được định nghĩa độc lập với implementation
+**Và** retrieval recall@1 đạt mục tiêu ≥95% trên tập đã công bố.
+
+**Cho trước** fixed evidence packages và representative questions
+**Khi** chạy generation/grounding evaluation
+**Thì** đo citation faithfulness ≥85%, citation coverage ≥90% và abstention accuracy ≥90%
+**Và** ba chỉ số được báo cáo cùng nhau để tránh tối ưu lệch
+**Và** false-premise, conflicting-source, unsupported-number/date cases được kiểm tra riêng.
+
+**Cho trước** assistant chạy trong môi trường demo mục tiêu
+**Khi** thực hiện load profile đã ghi nhận
+**Thì** chat end-to-end p95 ≤8 giây hoặc report chỉ rõ gate chưa đạt
+**Và** latency được tách theo resolver, retrieval, evidence, inference và post-gate
+**Và** timeout/error rate được báo cáo cùng chất lượng.
+
+**Cho trước** evaluation hoàn tất
+**Khi** report được lưu
+**Thì** report ghi model/base/adapter hoặc GGUF hash, tokenizer/quantization, prompt version, corpus release, retrieval configuration và dataset version
+**Và** kết quả có thể tái chạy từ cùng inputs/configuration
+**Và** thiếu metadata làm report không đủ điều kiện release.
+
+**Cho trước** model, prompt, retrieval config hoặc corpus thay đổi
+**Khi** CI/release gate chạy regression suite
+**Thì** thay đổi vượt ngưỡng suy giảm đã định chặn promotion
+**Và** không hard-code câu trả lời chỉ để làm tập test pass
+**Và** failure cases có trace/evidence package để điều tra mà không lộ dữ liệu nhạy cảm.",31,Highest,"heritagegraph,epic-4,role-ai"
+40,Epic,"Epic 5: Trải nghiệm di sản theo scene, 3D và đa phương tiện","Người dùng đi qua một guided story gồm 1–6 narrative scene có thứ tự, hình ảnh, panorama hoặc góc nhìn 3D, hotspot, audio và transcript. Khi media asset lỗi, scene fallback an toàn và phần còn lại của trải nghiệm vẫn hoạt động.",,Medium,"heritagegraph,epic-5"
+41,Story,5.1 Biên soạn guided story gồm 1–6 narrative scenes,"Là một quản lý tri thức,
+Tôi muốn biên soạn một guided story có thứ tự từ các narrative scene có evidence,
+Để khách truy cập có thể theo dõi trải nghiệm có chủ đích thay vì xem một model 3D không có cấu trúc.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin tạo một guided story cho Content Landing/site
+**Khi** lưu story draft
+**Thì** story có title, description, owning entity/site, language và draft corpus context phù hợp
+**Và** story mặc định không xuất hiện với public users
+**Và** Admin không phải nhập entity/site UUID thủ công.
+
+**Cho trước** Admin thêm narrative scenes
+**Khi** cấu hình story
+**Thì** story chấp nhận từ 1 đến 6 narrative scenes trong MVP
+**Và** mỗi scene có sequence number, title, body/summary và primary evidence
+**Và** supporting evidence có thể được chọn qua Evidence Picker.
+
+**Cho trước** database đã có physical `scene` biểu diễn khu vực/model 3D
+**Khi** lưu narrative scene
+**Thì** narrative scene/chapter có identity riêng, không bị đồng nhất với physical 3D scene
+**Và** có thể tham chiếu optional physical scene/camera/media configuration
+**Và** story vẫn hợp lệ với image/panorama fallback khi chưa có model 3D.
+
+**Cho trước** Admin sắp xếp lại narrative scenes
+**Khi** lưu thứ tự mới
+**Thì** sequence 1..N liên tục, không trùng và không vượt giới hạn 6
+**Và** reorder được ghi atomically
+**Và** preview phản ánh đúng thứ tự Previous/Next.
+
+**Cho trước** narrative scene thiếu title/body/evidence hoặc tham chiếu record khác corpus context
+**Khi** Admin lưu hoặc submit validation
+**Thì** lỗi được gắn đúng scene/field
+**Và** không publish partial story
+**Và** story hiện hành của public users không bị thay đổi.
+
+**Cho trước** story đã thuộc published release
+**Khi** Admin muốn sửa scene hoặc thứ tự
+**Thì** phải tạo draft revision mới
+**Và** published story cũ vẫn bất biến cho citation/audit
+**Và** review/publish tiếp tục dùng workflow của Epic 2.",40,Medium,"heritagegraph,epic-5,role-be"
+42,Story,"5.2 Quản lý ảnh, panorama và model 3D có provenance","Là một quản lý tri thức,
+Tôi muốn upload và quản trị các media asset dùng trong scene,
+Để mọi hình ảnh, panorama hoặc model 3D public đều có attribution, có thể phân phối và an toàn để publish.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin thêm media asset
+**Khi** nhập metadata
+**Thì** chọn asset kind, owning scene/site, license, contributor, origin URL và acquisition/upload date
+**Và** required provenance thiếu làm asset không đủ điều kiện publish
+**Và** UI không yêu cầu nhập storage key hoặc foreign key thủ công.
+
+**Cho trước** Admin upload ảnh, panorama hoặc 3D model
+**Khi** upload hoàn tất
+**Thì** object được lưu tại S3 canonical path với checksum, content type và file size metadata
+**Và** database record chỉ thành công khi object/reference được reconcile
+**Và** failure không để lại row trỏ tới object không tồn tại hoặc orphan không được theo dõi.
+
+**Cho trước** asset là 3D model
+**Khi** validation chạy
+**Thì** format/compression/LOD metadata tuân theo contract hỗ trợ như GLB và Draco/Meshopt khi áp dụng
+**Và** mỗi model production-ready không vượt asset budget 30 MB
+**Và** invalid/corrupt model không được đánh dấu ready.
+
+**Cho trước** một physical scene có nhiều mức chi tiết
+**Khi** Admin quản lý LOD/proxy assets
+**Thì** mỗi LOD identity là duy nhất trong scene
+**Và** proxy/preview được phân biệt với full asset
+**Và** public API có đủ metadata để chọn asset phù hợp mà không tải tất cả cùng lúc.
+
+**Cho trước** asset đã thuộc published story
+**Khi** file cần thay thế
+**Thì** tạo immutable asset revision/object mới thay vì overwrite âm thầm
+**Và** story/release cũ vẫn tham chiếu đúng checksum cũ
+**Và** thao tác upload/replace/retire được audit.
+
+**Cho trước** browser yêu cầu media
+**Khi** API trả object URL hoặc signed URL
+**Thì** quyền đọc phù hợp asset policy và thời hạn truy cập
+**Và** S3 vẫn là canonical store, không critical-path dual-write sang R2/Azure
+**Và** storage credentials không lộ cho client.",40,Medium,"heritagegraph,epic-5,role-be"
+43,Story,"5.3 Cấu hình góc camera, vị trí 3D và hotspots cho từng scene","Là một quản lý tri thức,
+Tôi muốn mỗi narrative scene mở tại góc nhìn trực quan dự kiến với các hotspot có ý nghĩa,
+Để khách truy cập thấy phần di tích hỗ trợ cho câu chuyện đang được kể.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** narrative scene tham chiếu physical 3D scene
+**Khi** Admin cấu hình viewpoint
+**Thì** lưu camera position/orientation, target và scene transform theo contract
+**Và** reference trỏ tới model/physical scene hợp lệ
+**Và** invalid hoặc non-finite coordinates bị từ chối.
+
+**Cho trước** scene cần chuyển động camera
+**Khi** Admin cấu hình camera path/keyframes
+**Thì** keyframes có thứ tự và tham chiếu scene/model hợp lệ
+**Và** preview có thể replay path trước khi publish
+**Và** reduced-motion fallback có thể bỏ chuyển động mà vẫn đưa người dùng tới viewpoint chính.
+
+**Cho trước** Admin thêm hotspot
+**Khi** chọn vị trí trên preview/model
+**Thì** hotspot lưu local coordinates, label và linked published/draft entity phù hợp corpus context
+**Và** hotspot ngoài bounds hoặc trỏ tới entity không hợp lệ bị cảnh báo/từ chối
+**Và** Admin không nhập tọa độ/entity UUID thủ công khi UI có thể chọn trực tiếp.
+
+**Cho trước** narrative scene không có hoặc không tải được 3D
+**Khi** cấu hình fallback
+**Thì** có thể chọn image/panorama và focal information tương ứng
+**Và** nội dung/evidence của scene không phụ thuộc vào camera path để đọc được
+**Và** fallback được preview trước publish.
+
+**Cho trước** Admin thay đổi viewpoint, path hoặc hotspots
+**Khi** lưu scene draft
+**Thì** configuration được validation và ghi atomically
+**Và** thay đổi được audit
+**Và** published scene không bị sửa trực tiếp ngoài revision workflow.",40,Medium,"heritagegraph,epic-5,role-fe"
+44,Story,"5.4 Kiểm tra narration, tạo audio và transcript","Là một quản lý tri thức,
+Tôi muốn narration được kiểm tra evidence trước khi tạo audio,
+Để khách truy cập không bao giờ nghe factual claim thiếu căn cứ và luôn có thể đọc transcript tương đương.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Admin soạn narration script cho story/scene
+**Khi** submit script để kiểm tra
+**Thì** mỗi factual statement phải liên kết tới passage evidence hoặc được đánh dấu rõ là editorial transition
+**Và** unsupported statement tạo blocking issue
+**Và** AI suggestion không tự động được chấp nhận hoặc publish.
+
+**Cho trước** narration script còn blocking issue hoặc chưa được human review
+**Khi** yêu cầu tạo audio
+**Thì** synthesis bị chặn
+**Và** không tạo public audio từ script chưa duyệt
+**Và** reason hiển thị đúng statement/evidence cần sửa.
+
+**Cho trước** script đã evidence-check và approve
+**Khi** offline TTS/audio production chạy
+**Thì** audio được tạo trước khi publish, không synthesize trong request của end user
+**Và** Vietnamese audio là mandatory cho pilot; ngôn ngữ bổ sung là optional sau mandatory gates
+**Và** audio asset lưu provenance, voice/language/version và S3 checksum phù hợp.
+
+**Cho trước** audio đã tạo
+**Khi** transcript segments được lưu
+**Thì** text, sequence, start/end time hợp lệ và nằm trong audio duration
+**Và** transcript đầy đủ có thể đọc mà không cần phát audio
+**Và** transcript/citation references thuộc cùng story/release.
+
+**Cho trước** narration hoặc audio cần sửa sau publish
+**Khi** Admin tạo bản mới
+**Thì** script, audio và transcript được version cùng nhau
+**Và** published experience cũ vẫn tham chiếu bộ cũ
+**Và** regeneration phải qua lại evidence/review gates.",40,Medium,"heritagegraph,epic-5,role-ai"
+45,Story,5.5 Trải nghiệm guided story bằng Scene Player,"Là một khách truy cập,
+Tôi muốn đi qua guided story theo từng scene,
+Để tôi có thể hiểu một địa điểm di sản qua trình tự trực quan và tự sự có chủ đích.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng chọn `Bắt đầu trải nghiệm` từ Content Landing
+**Khi** Scene Player mở
+**Thì** pin đúng published story/release và mở Scene 1
+**Và** hiển thị progress `Scene X of N`, title và scene content phù hợp
+**Và** không tải draft hoặc story revision khác.
+
+**Cho trước** story có nhiều scenes
+**Khi** người dùng chọn Previous hoặc Next
+**Thì** chuyển đúng scene theo sequence đã publish
+**Và** first/last scene có control state rõ ràng
+**Và** navigation không làm mất story/release context.
+
+**Cho trước** người dùng chọn Replay
+**Khi** scene có camera motion hoặc narration
+**Thì** scene trở về trạng thái bắt đầu và phát lại phần được phép
+**Và** replay không tải duplicate asset không cần thiết
+**Và** reduced-motion preference được tôn trọng.
+
+**Cho trước** scene có 3D, panorama hoặc image fallback
+**Khi** visual canvas render
+**Thì** dùng 3D khi asset/configuration sẵn sàng, nếu không dùng fallback đã publish
+**Và** scene text, transcript và source/resources vẫn truy cập được
+**Và** visual type hiện tại được thể hiện rõ, không giả fallback image là 3D.
+
+**Cho trước** scene có hotspots
+**Khi** người dùng chọn hotspot
+**Thì** hiển thị label/thông tin liên quan và action phù hợp
+**Và** keyboard/focus alternative tồn tại
+**Và** hotspot không điều hướng tới draft/withdrawn content.
+
+**Cho trước** Chat panel từ Epic 4 được mở bên cạnh player
+**Khi** người dùng gửi câu hỏi
+**Thì** UI hiển thị entity/scene context đang dùng
+**Và** dùng lại cùng Chat component và grounded backend, không tạo chatbot thứ hai
+**Và** Chat lỗi không dừng Scene Player và scene change không âm thầm đổi context chưa hiển thị.",40,Medium,"heritagegraph,epic-5,role-fe"
+46,Story,5.6 Tải media hiệu quả và suy giảm an toàn khi có lỗi,"Là một khách truy cập,
+Tôi muốn trải nghiệm scene vẫn sử dụng được trên thiết bị phổ thông và kết nối không ổn định,
+Để lỗi media không bao giờ làm mất câu chuyện, transcript hoặc khả năng tiếp tục.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng chưa bắt đầu experience hoặc chưa tới scene
+**Khi** Content Landing/Scene Player tải
+**Thì** full 3D/audio assets không tải trước ngoài preload budget đã định
+**Và** next-scene prefetch có giới hạn, có thể hủy và không tải toàn bộ story cùng lúc
+**Và** image/proxy/LOD phù hợp được ưu tiên trước full asset.
+
+**Cho trước** representative production 3D asset trên điều kiện 4G đã ghi nhận
+**Khi** người dùng mở scene
+**Thì** model mục tiêu tải và render trong ≤3 giây hoặc chuyển sang fallback rõ ràng
+**Và** mỗi model không vượt 30 MB
+**Và** performance result được đo trên device/network profile đã công bố.
+
+**Cho trước** audio đã sẵn sàng và người dùng chọn phát
+**Khi** playback bắt đầu
+**Thì** audio mục tiêu bắt đầu trong ≤1 giây theo điều kiện đo đã ghi nhận
+**Và** controls có play/pause/progress/mute phù hợp
+**Và** transcript luôn mở được độc lập với audio.
+
+**Cho trước** model, image, audio hoặc media request trả 404/timeout/error
+**Khi** Scene Player xử lý failure
+**Thì** chỉ phần asset tương ứng chuyển sang unavailable/fallback state
+**Và** text, transcript, citations, Chat và Previous/Next vẫn hoạt động
+**Và** không retry vô hạn hoặc tạo trang trắng.
+
+**Cho trước** người dùng dùng keyboard, screen reader hoặc reduced motion
+**Khi** tương tác Scene Player
+**Thì** controls có semantic name, focus order và trạng thái được thông báo
+**Và** camera animation/auto motion có thể giảm hoặc bỏ
+**Và** thông tin chỉ có trong hình/audio có text alternative phù hợp.
+
+**Cho trước** media tải, fallback hoặc lỗi
+**Khi** telemetry được ghi
+**Thì** signal chứa story/scene/asset version, duration, outcome và correlation ID phù hợp
+**Và** không chứa signed URL secret hoặc dữ liệu nhạy cảm
+**Và** dashboard phân biệt content success với media degradation.",40,High,"heritagegraph,epic-5,role-fe"
+47,Epic,Epic 6: Khám phá cá nhân hóa có thể giải thích,"Người dùng mới nhận cold-start recommendation mà không cần đăng nhập. Khi tự nguyện bật cá nhân hóa, frontend suy ra hồ sơ sở thích ẩn danh từ tương tác và lưu trên thiết bị. Backend chỉ dùng payload hợp lệ để tính recommendation có reason path và không lưu hồ sơ Public User.",,Medium,"heritagegraph,epic-6"
+48,Story,6.1 Quản lý consent và hồ sơ ẩn danh trên thiết bị,"Là một người dùng public,
+Tôi muốn kiểm soát việc HeritageGraph có thể dùng tương tác trên thiết bị của tôi để cá nhân hóa hay không,
+Để recommendation không bao giờ yêu cầu tracking ẩn hoặc tài khoản.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng chưa đưa ra consent
+**Khi** sử dụng Home, Explore, Map, Content, Chat hoặc Scene Player
+**Thì** frontend không tạo/cập nhật interest profile hoặc interaction history cho personalization
+**Và** không gửi anonymous profile tới Recommendation API
+**Và** recommendation vẫn có thể dùng cold-start mode.
+
+**Cho trước** UI đề nghị bật cá nhân hóa
+**Khi** người dùng xem prompt/settings
+**Thì** giải thích loại tín hiệu được dùng, dữ liệu nằm trên thiết bị và không đồng bộ tài khoản
+**Và** lựa chọn bật/từ chối có mức nổi bật công bằng
+**Và** từ chối không chặn nội dung công cộng.
+
+**Cho trước** người dùng đồng ý
+**Khi** consent được lưu
+**Thì** local consent/profile record có schema version, timestamp và trạng thái rõ ràng
+**Và** không chứa tên, email, account ID, raw IP hoặc device fingerprint
+**Và** chỉ các interaction sau consent được ghi trừ khi policy được người dùng chấp thuận rõ khác đi.
+
+**Cho trước** local profile schema cũ hoặc dữ liệu localStorage bị sửa/hỏng
+**Khi** frontend đọc profile
+**Thì** validate/migrate theo versioned contract hoặc quay về profile rỗng an toàn
+**Và** không crash trang
+**Và** không gửi payload chưa validation tới backend.
+
+**Cho trước** profile/history đạt giới hạn dung lượng hoặc tuổi dữ liệu
+**Khi** ghi tương tác mới
+**Thì** áp dụng retention/compaction policy xác định
+**Và** không tăng localStorage không giới hạn
+**Và** consent state không bị xóa nhầm khi compact profile.",47,High,"heritagegraph,epic-6,role-fe"
+49,Story,6.2 Gợi ý cold start cho người dùng mới,"Là một người dùng mới hoặc không consent,
+Tôi muốn nhận recommendation hữu ích mà không cần hồ sơ cá nhân,
+Để tôi có thể khám phá nội dung di sản ngay lập tức và riêng tư.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** request không có consented local profile
+**Khi** Recommendation Service nhận context hợp lệ
+**Thì** dùng cold-start strategy dựa trên published featured/popular metadata, current region/category/content context phù hợp
+**Và** không yêu cầu account hoặc synthetic personal profile
+**Và** chỉ trả candidates thuộc pinned published release.
+
+**Cho trước** cold-start candidates được xếp hạng
+**Khi** tạo result list
+**Thì** áp dụng diversity policy để tránh mọi kết quả quá giống nhau khi candidate pool cho phép
+**Và** mỗi result có lý do không cá nhân hóa như nổi bật, cùng khu vực hoặc liên quan nội dung đang xem
+**Và** không tuyên bố “dựa trên sở thích của bạn”.
+
+**Cho trước** không có đủ candidates trong context hẹp
+**Khi** service mở rộng kết quả
+**Thì** dùng fallback đã định trong published corpus như bỏ bớt filter hoặc dùng featured content
+**Và** lý do phù hợp với fallback thực tế
+**Và** không tạo entity/reason không tồn tại.
+
+**Cho trước** người dùng không consent
+**Khi** xem/click/dismiss cold-start recommendations
+**Thì** action phục vụ điều hướng hiện tại nhưng không được lưu vào personalization profile/history
+**Và** backend không persist hành vi Public User.",47,Medium,"heritagegraph,epic-6,role-be"
+50,Story,6.3 Cập nhật sở thích từ tương tác có consent,"Là một người dùng đã consent,
+Tôi muốn recommendation thích ứng với các tương tác của mình,
+Để các gợi ý sau này phù hợp hơn mà không tạo danh tính phía server.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** personalization consent đang bật
+**Khi** người dùng view, click, dwell, save hoặc dismiss published content
+**Thì** frontend tạo interaction record tối thiểu theo versioned schema
+**Và** signal type, target entity/category/region và timestamp hợp lệ được ghi local
+**Và** không ghi raw content, free-text chat hoặc sensitive fields không cần thiết.
+
+**Cho trước** một interaction hợp lệ
+**Khi** local profile được cập nhật
+**Thì** dùng deterministic weights/config cho từng signal
+**Và** save/positive engagement và dismiss có tác động khác nhau theo policy
+**Và** cùng sequence interactions/config tạo cùng profile result.
+
+**Cho trước** profile có signals theo thời gian
+**Khi** tính sở thích hiện tại
+**Thì** áp dụng time decay/retention xác định để tín hiệu cũ giảm ảnh hưởng
+**Và** repeated events được deduplicate/cap để một hành động không tăng trọng số vô hạn
+**Và** profile giữ trong size limit.
+
+**Cho trước** consent bị tắt trong khi UI đang mở
+**Khi** interaction tiếp theo xảy ra
+**Thì** frontend dừng cập nhật profile/history và dừng gửi profile
+**Và** action công cộng vẫn hoạt động
+**Và** trạng thái không dựa vào reload trang mới có hiệu lực.",47,Medium,"heritagegraph,epic-6,role-fe"
+51,Story,6.4 Tạo và xếp hạng recommendations cá nhân hóa,"Là một người dùng đã consent,
+Tôi muốn recommendation kết hợp sở thích của mình với các mối quan hệ văn hóa,
+Để tôi có thể khám phá nội dung phù hợp ngoài các danh sách phổ biến đơn giản.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Recommendation API nhận anonymous profile
+**Khi** validate request
+**Thì** kiểm schema version, allowed fields, value ranges và payload size
+**Và** từ chối/bỏ profile không hợp lệ theo contract rồi quay về cold start an toàn
+**Và** không chấp nhận user identity, raw interaction content hoặc executable fields.
+
+**Cho trước** profile và current context hợp lệ
+**Khi** Candidate Generator chạy
+**Thì** lấy candidates từ versioned graph projection, vector similarity và published metadata
+**Và** mọi candidate thuộc cùng pinned release
+**Và** candidate sources hội tụ vào một normalized candidate contract.
+
+**Cho trước** candidate pool đã tạo
+**Khi** Rank & Diversify tính điểm
+**Thì** score kết hợp relevance/context, graph affinity, profile affinity và diversity components theo cấu hình versioned
+**Và** dismissed content bị loại/giảm theo policy, content đã xem không lấn át danh sách
+**Và** tie-breaking xác định để cùng input/config cho kết quả tái lập.
+
+**Cho trước** backend hoàn tất request
+**Khi** trả recommendations
+**Thì** không persist anonymous profile hoặc interaction history
+**Và** không ghi toàn bộ profile vào logs/traces
+**Và** Qwen không được gọi chỉ để xếp hạng recommendation.
+
+**Cho trước** graph, vector hoặc metadata source lỗi
+**Khi** candidate generation suy giảm
+**Thì** dùng nguồn còn hợp lệ hoặc cold-start fallback theo policy
+**Và** không trộn corpus versions
+**Và** response/telemetry thể hiện degraded strategy.",47,Medium,"heritagegraph,epic-6,role-ai"
+52,Story,6.5 Giải thích và đa dạng hóa recommendations,"Là một người dùng,
+Tôi muốn biết vì sao một mục được gợi ý và nhận tập kết quả đa dạng,
+Để các gợi ý dễ hiểu thay vì lặp lại hoặc không minh bạch.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** recommendation result được chọn
+**Khi** tạo explanation
+**Thì** response có entity/content, score và reason path hoặc reason code có thể kiểm chứng
+**Và** graph reason path chỉ dùng node/edge thuộc pinned release
+**Và** không tạo lý do từ relation không tồn tại.
+
+**Cho trước** reason dựa trên local profile
+**Khi** hiển thị cho người dùng
+**Thì** diễn đạt ở mức chủ đề/context phù hợp như “vì bạn quan tâm kiến trúc cung đình”
+**Và** không tiết lộ hoặc suy diễn sensitive trait
+**Và** không tuyên bố biết danh tính người dùng.
+
+**Cho trước** candidate pool đủ rộng
+**Khi** Rank & Diversify chọn top results
+**Thì** tránh quá nhiều items cùng entity/category/path gần như trùng nhau
+**Và** cho phép cross-category discovery theo policy
+**Và** không hy sinh mọi relevance chỉ để đạt diversity hình thức.
+
+**Cho trước** candidate pool không đủ để đạt diversity target
+**Khi** tạo response
+**Thì** trả tập hợp nhỏ hơn hoặc ít đa dạng hơn một cách trung thực
+**Và** không bịa candidate/path để đủ số lượng
+**Và** telemetry ghi candidate shortage.
+
+**Cho trước** cùng profile, context, release và ranking config
+**Khi** request được chạy lại trong điều kiện deterministic
+**Thì** score order và reason paths tái lập được
+**Và** report có ranking/config version để điều tra thay đổi.",47,Medium,"heritagegraph,epic-6,role-ai"
+53,Story,6.6 Hiển thị và tương tác với recommendations,"Là một người dùng,
+Tôi muốn recommendation được tích hợp vào hành trình khám phá,
+Để tôi có thể tiếp tục tới nội dung phù hợp và tác động tới gợi ý tương lai khi muốn.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Home, Explore hoặc Content Landing có recommendation placement
+**Khi** results tải thành công
+**Thì** card dùng cùng public card/content navigation contract
+**Và** hiển thị reason ngắn hoặc control mở explanation
+**Và** personalized/cold-start mode được diễn đạt phù hợp, không gây hiểu nhầm.
+
+**Cho trước** người dùng chọn recommendation
+**Khi** mở content
+**Thì** điều hướng tới published Content Landing/experience đúng release context
+**Và** click/view signal chỉ cập nhật local profile khi consent đang bật
+**Và** back navigation giữ được vị trí danh sách.
+
+**Cho trước** người dùng chọn Save hoặc Không quan tâm
+**Khi** action được thực hiện
+**Thì** UI cập nhật rõ trạng thái action
+**Và** local profile/history được cập nhật deterministic khi consent bật
+**Và** khi không consent, UI giải thích cần bật cá nhân hóa hoặc chỉ thực hiện hành vi không lưu theo product decision.
+
+**Cho trước** Recommendation Service chậm hoặc lỗi
+**Khi** page render
+**Thì** nội dung chính Home/Explore/Content vẫn hoạt động
+**Và** recommendation section hiển thị loading/unavailable hoặc cold-start fallback phù hợp
+**Và** không tạo trang trắng hoặc giữ skeleton vô hạn.
+
+**Cho trước** người dùng dùng keyboard/screen reader
+**Khi** tương tác cards, reasons, Save hoặc Dismiss
+**Thì** controls có accessible name/state và focus order hợp lý
+**Và** dynamic updates được thông báo mà không chiếm focus ngoài ý muốn.",47,Medium,"heritagegraph,epic-6,role-fe"
+54,Story,"6.7 Xem, xuất, reset hoặc tắt cá nhân hóa","Là một người dùng public,
+Tôi muốn kiểm tra và kiểm soát dữ liệu cá nhân hóa lưu trên thiết bị,
+Để tôi có thể hiểu, xuất hoặc xóa dữ liệu mà không cần tài khoản.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** người dùng mở Preferences
+**Khi** personalization state được đọc
+**Thì** hiển thị consent đang bật/tắt, profile schema/version, inferred topics/context và interaction history summary có thể hiểu
+**Và** không trình bày server có tài khoản/profile khi thực tế không có
+**Và** corrupted local data hiển thị recovery/reset option an toàn.
+
+**Cho trước** người dùng chọn Export
+**Khi** export được tạo
+**Thì** file machine-readable JSON chứa consent/profile/history hiện lưu cùng schema version và export timestamp
+**Và** không thêm device fingerprint, raw IP hoặc dữ liệu không tồn tại trong local store
+**Và** export không gửi dữ liệu lên backend chỉ để tạo file.
+
+**Cho trước** người dùng chọn Reset và xác nhận
+**Khi** reset hoàn tất
+**Thì** local interest profile và interaction history bị xóa
+**Và** recommendation quay về cold-start behavior
+**Và** UI phản ánh trạng thái mới ngay, không cần reload.
+
+**Cho trước** người dùng tắt personalization
+**Khi** setting được lưu
+**Thì** frontend dừng đọc/cập nhật/gửi profile cho recommendation
+**Và** hiển thị rõ dữ liệu local hiện có được giữ hay xóa theo lựa chọn/policy
+**Và** cung cấp action Reset riêng nếu dữ liệu chưa bị xóa.
+
+**Cho trước** người dùng dùng thiết bị/browser khác
+**Khi** mở HeritageGraph
+**Thì** không tự đồng bộ profile/history từ thiết bị cũ
+**Và** không yêu cầu login để phục hồi
+**Và** behavior bắt đầu từ consent/cold-start state của thiết bị mới.",47,Medium,"heritagegraph,epic-6,role-fe"
+55,Story,"6.8 Đánh giá độ chính xác, đa dạng, riêng tư và tốc độ","Là một product owner,
+Tôi muốn có bằng chứng tái lập rằng recommendation hữu ích, đa dạng, riêng tư và nhanh,
+Để cá nhân hóa có thể được phát hành mà không có tracking ẩn hoặc tuyên bố chất lượng gây hiểu lầm.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** versioned recommendation evaluation sample
+**Khi** đánh giá cold-start và personalized scenarios
+**Thì** đo precision@5 với reviewer-grounded relevance labels và đạt mục tiêu ≥70% hoặc report gate fail
+**Và** sample/config/release/profile inputs được version hóa
+**Và** expected relevance không được lấy trực tiếp từ score implementation.
+
+**Cho trước** result lists từ representative contexts
+**Khi** đánh giá diversity và duplication
+**Thì** report category/path diversity, repeated/seen/dismissed rates và candidate coverage
+**Và** quality được báo cùng precision để tránh tối ưu diversity làm mất relevance
+**Và** candidate shortage được tách khỏi ranking defect.
+
+**Cho trước** reason paths/explanations
+**Khi** validation chạy
+**Thì** mọi referenced entity/relation/path tồn tại trong pinned release và khớp reason text
+**Và** fabricated hoặc cross-version reason làm test fail
+**Và** sensitive-trait inference bị cấm/kiểm tra.
+
+**Cho trước** Recommendation Service chạy trong môi trường mục tiêu
+**Khi** đo request không gồm LLM generation
+**Thì** p95 ≤2 giây hoặc report gate fail
+**Và** latency được tách theo candidate sources và ranking
+**Và** degraded/cold-start fallbacks được đo riêng.
+
+**Cho trước** privacy/contract tests
+**Khi** gửi profile hợp lệ, quá lớn, malformed hoặc chứa identity fields
+**Thì** backend validate/reject/fallback đúng contract
+**Và** không có server-side Public User profile/history persistence
+**Và** logs/traces không lưu toàn bộ profile hoặc forbidden identifiers.
+
+**Cho trước** cùng release, profile, context và ranking config
+**Khi** chạy deterministic replay
+**Thì** candidate scores/order/reasons tái lập được trong tolerance đã định
+**Và** report ghi graph/vector/metadata và ranking config versions
+**Và** regression vượt threshold chặn release/promotion.",47,High,"heritagegraph,epic-6,role-ai"
+56,Story,0.8 Thiết lập Figma foundations và component library,"Là một nhà thiết kế sản phẩm,
+Tôi muốn có Figma foundations và component library dùng chung,
+Để các màn hình sản phẩm có thể được thiết kế và triển khai bằng một hệ thống trực quan nhất quán, dễ tiếp cận.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** UX requirements và heritage visual direction hiện hành
+**Khi** designer thiết lập Figma foundations
+**Thì** color, typography, spacing, grid, radius, elevation, icon và motion tokens được định nghĩa bằng semantic names
+**Và** light/default states và contrast đáp ứng WCAG 2.1 AA
+**Và** token naming có mapping rõ sang frontend theme.
+
+**Cho trước** các interaction pattern dùng chung của Public Portal và Admin Studio
+**Khi** designer tạo Figma component library
+**Thì** button, input, select, date field, upload, table, pagination, tabs, modal, drawer, toast, status badge, navigation và data-display components có variants/states cần thiết
+**Và** component có auto layout, responsive constraints và interactive states
+**Và** public storytelling components được tách khỏi admin dashboard/form/table components.
+
+**Cho trước** component library sẵn sàng handoff
+**Khi** DES review cùng FE
+**Thì** Figma library, token definitions, component anatomy, variants và usage guidance được đặt tên/version rõ ràng
+**Và** component states gồm default, hover, focus, active, disabled, loading, success và error khi áp dụng
+**Và** FE xác nhận component feasibility trước khi story chuyển done.",1,Highest,"heritagegraph,epic-0,figma,design-system,role-des"
+57,Story,0.9 Thiết kế Figma Admin Console,"Là một nhà thiết kế sản phẩm,
+Tôi muốn có một Admin Console hoàn chỉnh, bao gồm Dashboard và các màn hình Admin Knowledge Studio, được xây dựng từ Figma component library đã phê duyệt,
+Để frontend có thể triển khai theo các workflow, trạng thái UI và hành vi responsive đã được review mà không phải suy đoán yêu cầu.
+
+**Tiêu chí chấp nhận:**
+
+**Cho trước** Figma foundations và component library từ Story 0.8
+**Khi** designer bắt đầu thiết kế Admin Console
+**Thì** Dashboard và các màn hình Admin chỉ dùng approved tokens/components hoặc ghi rõ component mới cần bổ sung
+**Và** admin dashboard/form/table patterns được tách khỏi Public Portal storytelling patterns
+**Và** mọi deviation khỏi component library được review trước handoff.
+
+**Cho trước** scope Epic 1 và Epic 2
+**Khi** designer hoàn thiện Admin Dashboard và các màn hình liên quan
+**Thì** có designs cho Login và Admin Dashboard, Document wizard/list/detail, Passage workspace, Entity/Alias/Place editor, Claim/Timeline/Relation/Narrative editor, Validation Center, Review và Publish flow
+**Và** mỗi flow có loading, empty, error, success, permission-denied và confirmation states phù hợp
+**Và** evidence selection không yêu cầu người dùng nhập UUID hoặc foreign key thủ công.
+
+**Cho trước** Admin cần làm việc ở nhiều kích thước màn hình
+**Khi** responsive behavior được đặc tả
+**Thì** desktop, tablet và minimum supported viewport có layout/hierarchy rõ ràng
+**Và** keyboard flow, focus order, accessible name và screen-reader notes được ghi cho các interaction phức tạp
+**Và** cards, tables, editors và workspaces có phương án overflow hoặc alternative layout có chủ đích.
+
+**Cho trước** một end-to-end Admin workflow
+**Khi** reviewer chạy Figma prototype
+**Thì** prototype thể hiện navigation, create/edit, validation, submit, review và publish transitions với điểm bắt đầu/kết thúc rõ ràng
+**Và** destructive, blocked, retry và recovery paths được thể hiện
+**Và** prototype không giả định data, metric hoặc API behavior chưa được BE/DATA xác nhận.
+
+**Cho trước** Admin Console design sẵn sàng handoff
+**Khi** DES review cùng FE, BE và DATA
+**Thì** Figma pages, prototype links, annotations và acceptance-state inventory được đặt tên/version rõ ràng
+**Và** API/data assumptions và unresolved questions được ghi thay vì để FE tự suy đoán
+**Và** FE xác nhận implementation feasibility trước khi story chuyển done.",1,High,"heritagegraph,epic-0,figma,admin-console,role-des"
