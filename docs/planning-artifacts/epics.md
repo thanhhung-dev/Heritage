@@ -606,6 +606,48 @@ So that frontend implementation can follow reviewed workflows, UI states and res
 **And** API/data assumptions và unresolved questions được ghi thay vì để FE tự suy đoán
 **And** FE xác nhận implementation feasibility trước khi story chuyển done.
 
+## Epic 0 Sprint Subtasks
+
+| Parent | Subtask | Primary owner | Priority | Definition of Done |
+|---|---|---|---|---|
+| 0.1 | 0.1.1 Pin runtime and package manager versions | DEVOPS | Highest | Phiên bản runtime/package manager được pin và lệnh kiểm tra phiên bản chạy đạt. |
+| 0.1 | 0.1.2 Create environment templates and secrets policy | DEVOPS | Highest | Template môi trường và chính sách secrets được lưu tài liệu, không chứa secret thật. |
+| 0.1 | 0.1.3 Implement startup configuration validation | BE | Highest | Khởi động thất bại rõ ràng khi thiếu/sai cấu hình và đạt với cấu hình hợp lệ. |
+| 0.1 | 0.1.4 Document local setup and health checks | DEVOPS | High | Hướng dẫn cài đặt cục bộ và health check được chạy lại thành công. |
+| 0.2 | 0.2.1 Provision local PostgreSQL 16 volume and health check | DATA | Highest | PostgreSQL 16 giữ dữ liệu qua restart và health check báo healthy. |
+| 0.2 | 0.2.2 Enable pgvector and pg_trgm through migrations | DATA | Highest | Migration bật pgvector/pg_trgm và kiểm tra extension đạt. |
+| 0.2 | 0.2.3 Reconcile schema.sql with the Alembic baseline and verify idempotency | DATA | Highest | schema.sql khớp baseline Alembic và chạy migration lặp không đổi schema. |
+| 0.2 | 0.2.4 Configure connection pool, SSL, readiness health and log redaction | BE | High | Pool, SSL, readiness và che dữ liệu nhạy cảm được cấu hình và kiểm tra. |
+| 0.3 | 0.3.1 Decide the staging compute approach in an ADR | DEVOPS | High | ADR staging compute được phê duyệt với quyết định và hệ quả rõ ràng. |
+| 0.3 | 0.3.2 Provision networking, IAM, ECR and S3 with Terraform | DEVOPS | High | Terraform provision thành công networking, IAM, ECR và S3 trên staging. |
+| 0.3 | 0.3.3 Define S3 canonical paths, access policies and reconciliation | DEVOPS | High | Path, policy và quy trình reconciliation S3 được định nghĩa và kiểm tra quyền. |
+| 0.3 | 0.3.4 Run staging deployment, smoke and repeatability checks | DEVOPS | High | Deploy staging lặp lại thành công và smoke checks đạt. |
+| 0.4 | 0.4.1 Build Jenkins pull-request validation stages | DEVOPS | High | Jenkins chạy các stage PR bắt buộc và chặn merge khi thất bại. |
+| 0.4 | 0.4.2 Build, scan and push component images to ECR | DEVOPS | High | Image được build, scan đạt policy và push ECR với tag truy vết được. |
+| 0.4 | 0.4.3 Add Terraform plan/apply environment gates | DEVOPS | High | Plan được lưu và apply chỉ chạy qua đúng environment gate. |
+| 0.4 | 0.4.4 Verify deployment health checks and rollback evidence | DEVOPS | High | Health checks đạt và rollback được thực hiện với evidence lưu lại. |
+| 0.5 | 0.5.1 Instrument service and infrastructure metrics with Prometheus | DEVOPS | Medium | Prometheus scrape được metrics dịch vụ/hạ tầng đã định nghĩa. |
+| 0.5 | 0.5.2 Centralize structured logs in Loki with redaction | DEVOPS | Medium | Loki truy vấn được structured logs và dữ liệu nhạy cảm được che. |
+| 0.5 | 0.5.3 Define Langfuse trace contracts and privacy controls | AI | Medium | Trace contract và privacy controls được tài liệu hóa và kiểm tra payload mẫu. |
+| 0.5 | 0.5.4 Create Grafana dashboards, alerts and staging telemetry smoke checks | DEVOPS | Medium | Dashboard/alert hoạt động và telemetry smoke checks staging đạt. |
+| 0.6 | 0.6.1 Configure frontend workspace, routes and environment API switching | FE | Highest | Workspace build đạt, routes hoạt động và API đổi đúng theo môi trường. |
+| 0.6 | 0.6.2 Build the responsive Public Portal shell and navigation | FE | Highest | Public Portal shell/navigation đạt kiểm tra desktop và mobile. |
+| 0.6 | 0.6.3 Build the Admin shell with isolated theme and layout | FE | Highest | Admin shell dùng theme/layout cô lập và routes chính render đúng. |
+| 0.6 | 0.6.4 Create OpenAPI-aligned mocks and reusable accessible UI states | FE | Highest | Mocks khớp OpenAPI và UI states dùng lại đạt kiểm tra accessibility. |
+| 0.7 | 0.7.1 Set up pytest unit, database and integration harnesses | BE | High | Các harness pytest chạy độc lập và đạt trên CI. |
+| 0.7 | 0.7.2 Create deterministic knowledge fixtures and factories | DATA | High | Fixtures/factories tạo dữ liệu tri thức xác định và tái lập được. |
+| 0.7 | 0.7.3 Set up frontend contract tests and Playwright smoke harness | FE | High | Contract tests và Playwright smoke suite chạy đạt, lưu artifact khi lỗi. |
+| 0.7 | 0.7.4 Set up AI regression harness, evidence templates and CI integration | AI | High | AI regression cases chạy trên CI với evidence template và kết quả xác định. |
+| 0.8 | 0.8.1 Define Figma foundations and semantic tokens | DES | Highest | Foundations/token ngữ nghĩa hoàn chỉnh và mapping FE được review. |
+| 0.8 | 0.8.2 Build core input, action and navigation components | DES | Highest | Component input/action/navigation có variants và states đã review. |
+| 0.8 | 0.8.3 Build data-display and feedback components with variants | DES | Highest | Component data-display/feedback có variants và states đã review. |
+| 0.8 | 0.8.4 Document accessibility, usage guidance and FE handoff | DES | High | Hướng dẫn accessibility/usage và gói handoff được FE xác nhận. |
+| 0.9 | 0.9.1 Define Admin Console information architecture and end-to-end flows | DES | High | IA và end-to-end flows được review cùng FE/BE/DATA. |
+| 0.9 | 0.9.2 Design Login and Admin Dashboard states | DES | High | Login/Admin Dashboard có đầy đủ states và được review. |
+| 0.9 | 0.9.3 Design Document, Passage and Knowledge editors | DES | High | Các editor Document, Passage, Knowledge có luồng/states được review. |
+| 0.9 | 0.9.4 Design Validation Center, Review and Publish flows | DES | High | Luồng Validation, Review, Publish và recovery states được review. |
+| 0.9 | 0.9.5 Complete responsive states, accessibility notes, prototype and handoff | DES | High | Responsive states, accessibility notes, prototype và handoff được xác nhận. |
+
 # Epic 1: Admin Knowledge Studio
 
 Quản trị viên đăng nhập và biên soạn trọn một knowledge package — document, passage, entity/alias/place profile, claim, timeline, relation, narrative và evidence — ở trạng thái draft mà không cần thao tác SQL, UUID hoặc foreign key thủ công.
