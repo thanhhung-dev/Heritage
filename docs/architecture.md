@@ -11,7 +11,7 @@ Số liệu trong tài liệu này là ĐO ĐƯỢC trên repo hiện tại (05/
 > As-built hôm nay: graph dựng trong RAM lúc khởi động, không persist, không
 > có người dùng, không có log.
 
-Muốn tự đo lại: `bash scripts/run_indexing.sh` và `backend/.venv/bin/python eval/eval_attribution.py`.
+Muốn tự đo lại: `bash pipelines/graph/run_indexing.sh` và `apps/backend/.venv/bin/python pipelines/evaluation/eval_attribution.py`.
 
 ## Sơ đồ tổng quan
 
@@ -55,14 +55,14 @@ Neo4j, không có PostgreSQL (xem ghi chú đầu tài liệu).
 ### 1. Ingestion (1 lần, offline)
 
 ```
-Wikipedia VN (49 địa điểm Huế + Đà Nẵng trong training/locations_hue_danang.py)
-       ↓ ingestion/crawl_by_location.py
+Wikipedia VN (49 địa điểm Huế + Đà Nẵng trong pipelines/training/locations_hue_danang.py)
+       ↓ pipelines/ingestion/crawl_by_location.py
 corpus/wiki_by_location/*.txt   (45 crawl được / 2 bị loại - xem corpus/locations_index.json)
-       ↓ backend/core/corpus.py: load_docs()
+       ↓ apps/backend/core/corpus.py: load_docs()
 45 bài dùng được / 349 chunk    (bỏ 1 bài trùng nội dung, 1 trang định hướng)
 ```
 
-`backend/core/corpus.py` là NGUỒN DUY NHẤT của việc chunk. Cả training và serving
+`apps/backend/core/corpus.py` là NGUỒN DUY NHẤT của việc chunk. Cả training và serving
 đều import từ đây, nên đoạn `Nguồn:` lúc train có đúng hình dạng đoạn `Nguồn:`
 lúc chạy thật.
 
@@ -70,7 +70,7 @@ lúc chạy thật.
 
 ```
 45 bài + corpus/locations_index.json
-        ↓ backend/core/kg.py: build_graph()   ← KHÔNG gọi LLM
+        ↓ apps/backend/core/kg.py: build_graph()   ← KHÔNG gọi LLM
 510 node: 235 entity, 222 year, 45 doc, 6 category, 2 region
 1135 edge: 443 year, 242 mentions, 92 in_region, 92 in_category, 123 related, 98 in_ward, 45 is_about
 1 thành phần liên thông, không có bài cô lập
@@ -87,7 +87,7 @@ Node entity đến từ hai nguồn deterministic:
 
 Vì vậy mọi node đều truy được về một chuỗi CÓ THẬT trong văn bản: graph không bao
 giờ thêm thông tin sai vào hệ. Xuất artifact xem bằng Gephi/D3:
-`bash scripts/run_indexing.sh` → `graphrag/output/{graph.gexf, graph.json, stats.json}`.
+`bash pipelines/graph/run_indexing.sh` → `graphrag/output/{graph.gexf, graph.json, stats.json}`.
 
 ## Lớp PostgreSQL — THIẾT KẾ MỤC TIÊU (chưa triển khai)
 
@@ -337,11 +337,11 @@ Embedding model cho entity: `Qwen/Qwen2.5-Embedding` chạy local bằng
 
 ```
 45 bài (cùng chunker với serving)
-       ↓ training/bootstrap_deep_qa.py
+       ↓ pipelines/training/bootstrap_deep_qa.py
 data/train.jsonl + valid.jsonl        (sinh lại bằng script, số mẫu xem trong file)
        ↓ Transformers + PEFT LoRA (FP16/BF16, r=16, assistant-only loss)
 models/peft-adapter/                  (Trainer checkpoint-N + best adapter)
-       ↓ PEFT merge + llama.cpp converter (training/fuse.sh)
+       ↓ PEFT merge + llama.cpp converter (pipelines/training/fuse.sh)
 models/qwen-fused.gguf
 ```
 
@@ -375,7 +375,7 @@ Context là MỘT đoạn văn liền mạch, không có dấu phân cách lạ,
 `Nguồn:` là nội dung của một chunk. Nối nhiều chunk bằng ký hiệu lạ là tạo ra định
 dạng model chưa từng thấy.
 
-## Ba cổng từ chối (`backend/core/rag.py`)
+## Ba cổng từ chối (`apps/backend/core/rag.py`)
 
 Chatbot miền đóng thì TỪ CHỐI ĐÚNG quan trọng ngang trả lời đúng.
 
@@ -395,7 +395,7 @@ này không.
 Khi cổng chặn, context rỗng → `llm.py` ghi `Nguồn: (không có)` → đúng dạng các mẫu
 refusal đã train, nên model từ chối lịch sự. Đây là hành vi mong muốn, không phải lỗi.
 
-## Kết quả đo (`eval/eval_attribution.py`, ngày 08/09/2026)
+## Kết quả đo (`pipelines/evaluation/eval_attribution.py`, ngày 08/09/2026)
 
 ```
 trong phạm vi = 68/70   paraphrase = 9/39   ngoài phạm vi = 31/38
@@ -403,14 +403,14 @@ bằng chứng = 34/34   phường/xã = 18/20
 ```
 
 41 lỗi còn lại được quy trách nhiệm: 18 `B_RANK`, 16 `C_GATE`, 7 `E_LEAK`.
-Nút thắt chính là paraphrase; xem `eval/baseline-summary.md`.
+Nút thắt chính là paraphrase; xem `pipelines/evaluation/baseline-summary.md`.
 
 Bao gồm cả truy vấn không dấu (`lang minh mang o dau`, `me xung lam tu gi`,
 `cao lau la mon gi`, `bao tang co vat cung dinh hue trung bay gi`).
 
 Con số này chỉ là NỬA TRÊN của độ chính xác:
 `P(đúng) = P(lấy đúng đoạn) × P(model trung thực với đoạn đó)`. Nửa dưới do LoRA
-lo và phải đo riêng bằng gold set (`eval/`).
+lo và phải đo riêng bằng gold set (`pipelines/evaluation/`).
 
 ## Tại sao thiết kế này?
 

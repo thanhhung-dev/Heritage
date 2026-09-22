@@ -44,11 +44,11 @@ services:
   migrate:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: apps/backend/Dockerfile
     restart: "no"
     environment:
       DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
-    command: ["python", "-m", "backend.db.migrate"]
+    command: ["python", "-m", "apps.backend.db.migrate"]
     depends_on:
       db:
         condition: service_healthy
@@ -58,11 +58,11 @@ services:
   import-data:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: apps/backend/Dockerfile
     restart: "no"
     environment:
       DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
-    command: ["python", "-m", "backend.db.import_corpus"]
+    command: ["python", "-m", "apps.backend.db.import_corpus"]
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -72,7 +72,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: apps/backend/Dockerfile
     restart: unless-stopped
     environment:
       INFERENCE_BACKEND: llama_server
@@ -101,7 +101,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./apps/frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
@@ -119,14 +119,14 @@ services:
     platform: linux/amd64
     build:
       context: .
-      dockerfile: training/Dockerfile
+      dockerfile: pipelines/training/Dockerfile
     environment:
       HF_HOME: /cache/huggingface
     volumes:
-      - ./training:/workspace/training:ro
+      - ./pipelines/training:/workspace/pipelines/training:ro
       - ./data:/workspace/data:ro
       - ./corpus:/workspace/corpus:ro
-      - ./eval:/workspace/eval
+      - ./pipelines/evaluation:/workspace/pipelines/evaluation
       - ./scripts:/workspace/scripts:ro
       - ./models:/workspace/models
       - huggingface_cache:/cache/huggingface

@@ -27,10 +27,10 @@ làm gì cả. Micro-F1 không cộng điểm cho mẫu rỗng.
 `report.json` in cả `ner_micro` (số chính) và `ner_by_type` (từng loại, kèm
 `n_gold` để biết loại nào ít mẫu tới mức không kết luận được).
 
-**Nhãn vàng ở đâu ra:** `backend/core/nerlabel.py` suy nhãn từ chính graph
+**Nhãn vàng ở đâu ra:** `apps/backend/core/nerlabel.py` suy nhãn từ chính graph
 deterministic (danh từ loại tiếng Việt -> loại NER + danh sách địa điểm curated +
 mốc năm), rồi con người soát tay. Nhãn nào chưa soát còn cờ `"_prefilled": true`
-trong `eval/gold.jsonl`. Phải nói rõ chỗ này trong báo cáo: phần chưa soát đo
+trong `pipelines/evaluation/gold.jsonl`. Phải nói rõ chỗ này trong báo cáo: phần chưa soát đo
 "model có học được bộ luật trích entity" chứ chưa phải "trích entity đúng".
 
 **Tại sao quan trọng:** Đây là metric chính cho mục tiêu 1 (NER domain). Trước/sau LoRA phải có sự khác biệt rõ rệt.
@@ -66,7 +66,7 @@ base (không trích dẫn lần nào trong 9 mẫu) đo ra 1.0, cao bằng model
 **Kết quả:**
 - Base: **0.0370** faithful và **0.0370** coverage trên 27 mẫu QA.
 - LoRA checkpoint 0000200: **0.7037** faithful và **0.7407** coverage trên cùng
-  27 mẫu QA / corpus 45 bài (`eval/report_lora.json`).
+  27 mẫu QA / corpus 45 bài (`pipelines/evaluation/report_lora.json`).
 
 ## 3. Refusal accuracy
 
@@ -86,7 +86,7 @@ accuracy = |đúng refusal| / |tổng câu hỏi|
 **Kết quả:**
 - Base: **0.3750** trên 24 mẫu.
 - LoRA checkpoint 0000200: **0.9167** trên cùng 24 mẫu / corpus 45 bài
-  (`eval/report_lora.json`).
+  (`pipelines/evaluation/report_lora.json`).
 
 Gold set phải có cả nhóm `refusal-ok-*` (nguồn ĐÚNG, không được từ chối). Không có
 nhóm đó thì một model từ chối mọi câu vẫn đạt 100%.
@@ -109,7 +109,7 @@ nhóm đó thì một model từ chối mọi câu vẫn đạt 100%.
 > **PHÉP SO SÁNH CÓ KIỂM SOÁT (08/09/2026):** base và LoRA được đo trên cùng
 > 76 mẫu, prompt, corpus 45 bài / 349 chunks và greedy decoding. Hai report ghi
 > đầy đủ checkpoint cùng SHA-256 của scorer, gold, prompt, corpus và adapter
-> trong trường `meta`. Xem bản tóm tắt tại `eval/baseline-summary.md`.
+> trong trường `meta`. Xem bản tóm tắt tại `pipelines/evaluation/baseline-summary.md`.
 
 | Metric | Base (76 mẫu) | LoRA checkpoint 0000200 (76 mẫu) |
 |---|---|---|
@@ -129,7 +129,7 @@ Bốn metric trên đo NỬA DƯỚI của độ chính xác (model có trung th
 không). Nửa trên - retrieval có lấy đúng đoạn không - đo riêng, không cần model:
 
 ```bash
-backend/.venv/bin/python eval/eval_attribution.py
+apps/backend/.venv/bin/python pipelines/evaluation/eval_attribution.py
 ```
 
 Kết quả hiện tại (08/09/2026), gồm cả truy vấn gõ không dấu và diễn giải:
@@ -150,22 +150,22 @@ script này luôn in cả hai con số và chỉ exit 0 khi cả hai đều đ�
 
 ```bash
 # 1. Sinh gold set (chỉ lấy từ các bài thuộc split VALID - không có trong train)
-backend/.venv/bin/python eval/make_gold_template.py
+apps/backend/.venv/bin/python pipelines/evaluation/make_gold_template.py
 
 # 2. Soát tay các mẫu ner-* (nhãn do nerlabel.py điền sẵn, còn cờ "_prefilled")
-nano eval/gold.jsonl
+nano pipelines/evaluation/gold.jsonl
 
 # 3. Đánh giá model base (làm trước, có sẵn ngay, không cần chờ train)
-python training/score_gold.py --base \
+python pipelines/training/score_gold.py --base \
   --model Qwen/Qwen2.5-3B-Instruct \
-  --gold eval/gold.jsonl \
-  --out eval/report_base.json
+  --gold pipelines/evaluation/gold.jsonl \
+  --out pipelines/evaluation/report_base.json
 
 # 4. Đánh giá đúng adapter backend đang serve
-python training/score_gold.py \
-  --gold eval/gold.jsonl \
-  --out eval/report_lora.json
+python pipelines/training/score_gold.py \
+  --gold pipelines/evaluation/gold.jsonl \
+  --out pipelines/evaluation/report_lora.json
 
 # 5. So sánh 2 file
-diff eval/report_base.json eval/report_lora.json
+diff pipelines/evaluation/report_base.json pipelines/evaluation/report_lora.json
 ```

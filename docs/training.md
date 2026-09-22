@@ -1,7 +1,7 @@
 # Training LoRA bằng Docker và Kaggle
 
 Pipeline training không còn phụ thuộc MLX. Nguồn chuẩn là
-`training/train_hf.py`; Docker và Kaggle chỉ là hai môi trường chạy cùng script.
+`pipelines/training/train_hf.py`; Docker và Kaggle chỉ là hai môi trường chạy cùng script.
 
 ## Luồng artifact
 
@@ -31,13 +31,13 @@ Trainer nhận JSONL dạng chat hiện tại:
 Sinh lại dữ liệu nếu cần:
 
 ```bash
-backend/.venv/bin/python training/bootstrap_deep_qa.py
+apps/backend/.venv/bin/python pipelines/training/bootstrap_deep_qa.py
 ```
 
 Nếu dùng teacher model, khởi động một llama.cpp server trước rồi chạy:
 
 ```bash
-backend/.venv/bin/python training/bootstrap_deep_qa.py \
+apps/backend/.venv/bin/python pipelines/training/bootstrap_deep_qa.py \
   --use-model --model http://localhost:8080
 ```
 
@@ -57,7 +57,7 @@ resume, nên đổi `output_dir` trong một config riêng, sau đó chạy:
 
 ```bash
 docker compose --profile training run --rm trainer \
-  python training/train_hf.py --config training/my_run.yaml --fresh
+  python pipelines/training/train_hf.py --config pipelines/training/my_run.yaml --fresh
 ```
 
 Không xóa hoặc dùng lại output của một base model khác. Optimizer state và LoRA
@@ -73,7 +73,7 @@ Kaggle đã chạy notebook trong container của Kaggle, vì vậy không chạ
 !git clone https://github.com/thanhhung-dev/HeritageGraph.git
 %cd HeritageGraph
 !nvidia-smi
-!pip install -r training/requirements.txt
+!pip install -r pipelines/training/requirements.txt
 ```
 
 `data/` bị Git ignore. Upload `train.jsonl` và `valid.jsonl` thành một Kaggle
@@ -83,7 +83,7 @@ Dataset riêng, attach nó vào notebook, rồi copy vào working directory:
 !mkdir -p data
 !cp /kaggle/input/heritagegraph-training-data/train.jsonl data/train.jsonl
 !cp /kaggle/input/heritagegraph-training-data/valid.jsonl data/valid.jsonl
-!python training/train_hf.py --config training/lora_config.yaml --fresh
+!python pipelines/training/train_hf.py --config pipelines/training/lora_config.yaml --fresh
 ```
 
 Output nằm ở `/kaggle/working/HeritageGraph/models/peft-adapter`. Sau khi train,
@@ -91,8 +91,8 @@ phải Save Version hoặc tải artifact về; `/kaggle/working` không phải 
 lâu dài giữa các session.
 
 ```python
-!python training/score_gold.py \
-  --gold eval/gold.jsonl --out eval/report_lora.json
+!python pipelines/training/score_gold.py \
+  --gold pipelines/evaluation/gold.jsonl --out pipelines/evaluation/report_lora.json
 !python scripts/export_gguf.py --force
 !tar -czf /kaggle/working/heritagegraph-lora-artifacts.tar.gz \
   -C models peft-adapter qwen-fused.gguf
@@ -125,7 +125,7 @@ llama-server --model models/qwen-fused.gguf --host 127.0.0.1 --port 8080 \
 Ở terminal khác, backend mặc định gọi `http://localhost:8080`:
 
 ```bash
-backend/.venv/bin/uvicorn backend.app:app --port 8000
+apps/backend/.venv/bin/uvicorn apps.backend.app:app --port 8000
 ```
 
 Cũng có thể chạy service llama.cpp bằng Docker, nhưng trên macOS container chỉ
@@ -139,7 +139,7 @@ Nếu Kaggle chỉ trả về adapter mà chưa có GGUF, export trên máy loca
 
 ```bash
 python3 -m venv .venv-export
-.venv-export/bin/pip install torch -r training/requirements.txt
+.venv-export/bin/pip install torch -r pipelines/training/requirements.txt
 .venv-export/bin/python scripts/export_gguf.py --force
 ```
 
@@ -164,7 +164,7 @@ cd HeritageGraph
 docker compose up -d
 ```
 
-Compose tự dựng frontend/backend, chạy PostgreSQL migration, import corpus và
+Compose tự dựng apps/frontend/backend, chạy PostgreSQL migration, import corpus và
 khởi động llama.cpp. Giao diện mở tại `http://localhost:3000`. Nếu máy khách hoàn
 toàn offline thì không thể chỉ dùng `compose up` từ source package; cần đóng gói
 thêm toàn bộ Docker image và chạy `docker load` trước.
@@ -174,10 +174,10 @@ thêm toàn bộ Docker image và chạy `docker load` trước.
 Chạy trên Linux/Kaggle đã cài training requirements, hoặc dùng chính container:
 
 ```bash
-docker compose --profile training run --rm trainer bash training/eval.sh
-docker compose --profile training run --rm trainer bash training/eval.sh 75
-docker compose --profile training run --rm trainer bash training/fuse.sh
-docker compose --profile training run --rm trainer bash training/fuse.sh 75
+docker compose --profile training run --rm trainer bash pipelines/training/eval.sh
+docker compose --profile training run --rm trainer bash pipelines/training/eval.sh 75
+docker compose --profile training run --rm trainer bash pipelines/training/fuse.sh
+docker compose --profile training run --rm trainer bash pipelines/training/fuse.sh 75
 ```
 
 Export đọc `base_model_name_or_path` từ `adapter_config.json`, do đó không thể vô
@@ -201,7 +201,7 @@ Transformers ổn định, có thinking/non-thinking và có hệ sinh thái GGU
 Tạo config mới thay vì sửa run 3B đang dùng:
 
 ```bash
-cp training/lora_config.yaml training/qwen3_8b.yaml
+cp pipelines/training/lora_config.yaml pipelines/training/qwen3_8b.yaml
 ```
 
 Sửa tối thiểu:
@@ -220,7 +220,7 @@ Nếu chỉ có T4 16 GB và vẫn muốn LoRA không lượng tử hóa, dùng
 đo riêng cho tiếng Việt là
 [`sail/Sailor2-8B-Chat`](https://huggingface.co/sail/Sailor2-8B-Chat), được tiếp
 tục pretrain từ Qwen2.5 cho các ngôn ngữ Đông Nam Á gồm tiếng Việt. Không chọn
-chỉ theo benchmark chung: chạy cùng gold set retrieval/citation/refusal và chọn
+chỉ theo benchmark chung: chạy cùng gold set retripipelines/evaluation/citation/refusal và chọn
 model thắng trên dữ liệu HeritageGraph.
 
 LoRA không lượng tử hóa base model: riêng trọng số 8B FP16/BF16 đã gần 16 GB,

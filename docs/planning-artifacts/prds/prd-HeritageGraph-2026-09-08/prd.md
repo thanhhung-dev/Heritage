@@ -323,7 +323,7 @@ Hai quy tắc: **việc rủi ro cao làm trước**; **không lớp nào xây t
 ## 9. Open Questions
 
 Đã giải quyết 08/09/2026: baseline base↔LoRA trên cùng 76 mẫu, PARAPHRASE
-baseline 9/39 và NER LoRA 0.7861. Xem `eval/baseline-summary.md`.
+baseline 9/39 và NER LoRA 0.7861. Xem `pipelines/evaluation/baseline-summary.md`.
 
 1. **[BLOCKER cho Sprint 4] Mô hình 3D giấy phép mở** — chốt đầu Tuần 6; nếu chỉ 2 → F12 hẹp lại
 2. **[BLOCKER cho Sprint 5] Độ phủ OSM** quanh Nam Ô + Bảo tàng Chăm — kiểm đầu Tuần 8; thưa → POI soạn tay

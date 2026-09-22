@@ -92,7 +92,7 @@ Cuối Sprint 13 (06/12/2026), một người dùng chưa từng khai báo gì h
 
 ## Open Questions
 
-- Baseline base↔LoRA trên cùng 76 mẫu và PARAPHRASE 9/39 đã chốt ngày 08/09/2026; xem `eval/baseline-summary.md`.
+- Baseline base↔LoRA trên cùng 76 mẫu và PARAPHRASE 9/39 đã chốt ngày 08/09/2026; xem `pipelines/evaluation/baseline-summary.md`.
 - Mô hình 3D giấy phép mở — chốt đầu Tuần 6; nếu chỉ 2 → F12 hẹp lại (BLOCKER Sprint 4).
 - Độ phủ OSM quanh Nam Ô + Bảo tàng Chăm — kiểm đầu Tuần 8; thưa → POI soạn tay (BLOCKER Sprint 5).
 - Người đánh giá thứ hai cho precision@5 + nhãn NER vàng (Cohen's κ) — chưa chốt ai (BLOCKER O11).

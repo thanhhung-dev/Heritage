@@ -206,7 +206,7 @@ POSTGRES_USER=heritagegraph
 POSTGRES_PASSWORD=change-this-in-local-env
 ```
 
-Compose tạo `DATABASE_URL` cho container backend/migration từ các biến
+Compose tạo `DATABASE_URL` cho container apps/backend/migration từ các biến
 `POSTGRES_*`, hostname service `db` và cổng nội bộ `5432`. Cách này tránh dùng
 nhầm URL chạy ngoài Docker như `localhost:5433` bên trong container. Nếu mật khẩu
 có ký tự dành riêng của URL, phải percent-encode giá trị dùng trong URL.
@@ -243,7 +243,7 @@ Không thêm package bằng tay vào container nếu dependency không được 
 ### 3.2. Cấu trúc thư mục đề xuất
 
 ```text
-backend/
+apps/backend/
   db/
     __init__.py
     base.py
@@ -258,7 +258,7 @@ backend/
     versions/
 ```
 
-Nếu dùng Alembic ở root thì giữ `alembic.ini` ở root và trỏ tới model metadata của backend.
+Nếu dùng Alembic ở root thì giữ `alembic.ini` ở root và trỏ tới model metadata của apps.backend.
 
 ### 3.3. Model tối thiểu
 
@@ -279,7 +279,7 @@ Không đưa logic fuzzy matching vào SQLAlchemy model. Logic resolver nằm tr
 Chạy từ root trong môi trường Python đã cài dependency. Chỉ chạy `init` một lần nếu chưa có thư mục migrations:
 
 ```bash
-alembic init backend/migrations
+alembic init apps/backend/migrations
 ```
 
 Trước khi autogenerate, cấu hình `env.py` đọc `DATABASE_URL`, import models và gán `target_metadata = Base.metadata`. Dùng URL truy cập được từ nơi chạy Alembic; hostname `db` chỉ hoạt động trong mạng Compose. Không hardcode mật khẩu vào `alembic.ini`.
@@ -289,7 +289,7 @@ alembic revision --autogenerate -m "create heritage knowledge tables"
 alembic upgrade head
 ```
 
-Trong Docker, service `migrate` chạy `python -m backend.db.migrate`. Wrapper này
+Trong Docker, service `migrate` chạy `python -m apps.backend.db.migrate`. Wrapper này
 chạy Alembic bình thường với database mới. Với volume được tạo trước khi dự án
 dùng Alembic, wrapper chỉ stamp baseline khi tập bảng và view khớp đầy đủ schema
 legacy đã biết; schema thiếu hoặc có bảng lạ sẽ bị từ chối thay vì stamp mù. Sau
@@ -388,7 +388,7 @@ BM25 + graph -> nếu cần mô tả hoặc database chưa có dữ kiện
 LLM -> chỉ diễn đạt evidence đã chọn
 ```
 
-Không xóa `backend/core/fuzzy_match.py` hoặc `backend/core/rag.py` khi database mới chỉ được triển khai.
+Không xóa `apps/backend/core/fuzzy_match.py` hoặc `apps/backend/core/rag.py` khi database mới chỉ được triển khai.
 
 ### 5.2. Luồng truy vấn mới
 
@@ -455,7 +455,7 @@ Nguồn: {source_title} - {source_url}
 
 Chỉ hiển thị các phần địa chỉ có giá trị. Không nối chuỗi `None`, không tự suy ra phường/quận từ tên địa điểm.
 
-### 5.5. Tích hợp với `backend/api/chat.py`
+### 5.5. Tích hợp với `apps/backend/api/chat.py`
 
 Thay vì chỉ nhận `corrections` từ fuzzy matcher, endpoint nên nhận một kết quả resolve có cấu trúc:
 

@@ -1,0 +1,345 @@
+:root {
+  --font-sans: "Inter", Inter Fallback, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  --tracking-tight: -0.025em;
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12.5px;
+  --radius-xl: 14px;
+
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --zinc-00: #fff;
+  --zinc-400: #a1a1a9;
+  --zinc-600: #4e4e55;
+  --zinc-700: #36363a;
+  --zinc-1000: #09090b;
+
+  --steel-800: #27272b;
+  --steel-900: #1a1a1e;
+  --steel-925: #17171b;
+  --steel-950: #101013;
+
+  --orange-500: #fa500f;
+  --orange-600: #de4408;
+
+  --tl-4: #ffffff0a;
+  --tl-6: #ffffff0f;
+  --tl-8: #ffffff14;
+  --tl-10: #ffffff1a;
+  --tl-15: #ffffff26;
+  --tl-25: #ffffff40;
+
+  --bg: #000000;
+  --bg-raised: #101013;
+  --bg-strong: #27272b;
+  --bg-hover: #36363a;
+
+  --text: #ffffff;
+  --text-secondary: #ccccd1;
+  --text-tertiary: #a1a1aa;
+
+  --border: var(--tl-10);
+  --border-subtle: var(--tl-8);
+
+  --accent: var(--orange-500);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== App Shell ===== */
+.app {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ===== Top Bar ===== */
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  z-index: 10;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.topbar-auth {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== Buttons ===== */
+.btn-icon {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition);
+}
+
+.btn-icon:hover {
+  background: var(--bg-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  height: 32px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background var(--transition);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+}
+
+.btn-primary {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  height: 32px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  transition: opacity var(--transition);
+}
+
+.btn-primary:hover {
+  opacity: 0.85;
+}
+
+/* ===== Landing ===== */
+.landing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 28px;
+  overflow-y: auto;
+}
+
+.landing-input {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* ===== Chat Messages (Ant X Bubble.List) ===== */
+.chat-messages {
+  flex: 1;
+  min-height: 0;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 80px 24px 24px;
+  /* clip the scroll box's extended right edge so its scrollbar sits off-screen */
+  overflow: hidden;
+}
+
+/* Push the scroll box's right edge past the visible column; the parent clips it,
+   so the scrollbar is hidden outside the screen. */
+.chat-messages .ant-bubble-list-scroll-box {
+  width: calc(100% + 40px);
+  padding-right: 40px;
+  scrollbar-width: none;
+}
+
+.chat-messages .ant-bubble-list-scroll-box::-webkit-scrollbar {
+  display: none;
+}
+
+.thinking-spin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.thinking-spin-ring {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.thingking-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thinking-spin-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 70%;
+  border: 5px solid var(--tl-15);
+  border-top-color: var(--accent);
+  animation: thinking-spin 1s linear infinite;
+}
+
+@keyframes thinking-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.thinking-spin-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.assistant-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* ===== Ant Design X Sender (input box) ===== */
+.ant-sender {
+  background: var(--bg-raised);
+}
+
+/* ===== Input Area (sticky bottom) ===== */
+.input-area {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 24px 24px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 20%);
+  z-index: 5;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.input-area-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.input-area-disclaimer {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ===== Help Button ===== */
+.help-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 16px;
+  z-index: 20;
+  transition: background var(--transition);
+}
+
+.help-btn:hover {
+  background: var(--bg-hover);
+}
+
+/* ===== Focus ===== */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--tl-15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--tl-25);
+}

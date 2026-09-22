@@ -17,7 +17,7 @@ sources:
   - docs/planning-artifacts/epics.md
   - docs/chatbot.md
   - docs/architecture.md
-  - codebase sweep (backend/, frontend/, corpus/, models/, schema.sql, docker-compose.yml)
+  - codebase sweep (apps/backend/, apps/frontend/, corpus/, models/, schema.sql, docker-compose.yml)
 companions: []
 ---
 
@@ -27,7 +27,7 @@ companions: []
 
 **Hexagonal (ports & adapters) over a layered core**, kết hợp **Domain GraphRAG / KAG-lite** cho phần chatbot (theo `docs/chatbot.md` — tài liệu chuẩn cho kiến trúc chatbot).
 
-Trung tâm là `backend/core/` — domain thuần, không import framework. **Phần chatbot chia 5 lớp deterministic + 1 lớp generation** (xem sơ đồ dưới): query understanding → query planner → retrieval operators → evidence context builder → grounding gate, rồi mới đến Qwen3-4B + LoRA.
+Trung tâm là `apps/backend/core/` — domain thuần, không import framework. **Phần chatbot chia 5 lớp deterministic + 1 lớp generation** (xem sơ đồ dưới): query understanding → query planner → retrieval operators → evidence context builder → grounding gate, rồi mới đến Qwen3-4B + LoRA.
 
 ```mermaid
 graph TB
@@ -97,7 +97,7 @@ graph TB
 
 - **Binds:** FR02, FR12, EP-1 / EP-4
 - **Prevents:** hai đường chunk khác nhau khiến đoạn `Nguồn:` lúc train khác hình dạng lúc serve
-- **Rule:** `backend/core/corpus.py` là chunker DUY NHẤT (MAX_CHUNK_CHARS=1200, MIN_CHUNK_CHARS=200, MIN_DOC_CHARS=800), dùng chung training + serving. Chunk id `<tên bài>#<i>`; `#0` là lead chunk. `ingestion/chunk_corpus_mt.py` (700/80) + `graphrag/input/` là legacy — **xóa, không tái sinh**.
+- **Rule:** `apps/backend/core/corpus.py` là chunker DUY NHẤT (MAX_CHUNK_CHARS=1200, MIN_CHUNK_CHARS=200, MIN_DOC_CHARS=800), dùng chung training + serving. Chunk id `<tên bài>#<i>`; `#0` là lead chunk. `pipelines/ingestion/chunk_corpus_mt.py` (700/80) + `graphrag/input/` là legacy — **xóa, không tái sinh**.
 
 ### AD-6 — Prompt & citation contract [ADOPTED]
 
@@ -109,7 +109,7 @@ graph TB
 
 - **Binds:** FR14, EP-2 nhánh A
 - **Prevents:** serve model fused — requantize 4-bit đảo 3/5 câu tiêu cực; hoặc dùng LoRA để tham gia retrieval (nhầm vai trò)
-- **Rule:** **Target:** `Qwen/Qwen3-4B` + LoRA adapter (`models/peft-adapter/`, eval_loss 0.3495, checkpoints 125/175/180). **LoRA chỉ dạy cách trả lời** — văn phong, định dạng citation, cách từ chối; **không bao giờ tham gia retrieval/vector**. **[ADOPTED] as-built:** đang serve `mlx-community/Qwen2.5-3B-Instruct-4bit` + `models/lora-serve/` (checkpoint `0000200`, val loss 0.414) — migration Qwen3-4B là việc của Epic 2 nhánh A. Serving dạng **base+adapter**, không fused (`models/qwen-fused/` chỉ cho training/bootstrap). Backend qua `INFERENCE_BACKEND` ∈ {`mlx`, `llama_server`, `llama_cpp`}; docker dùng `llama_server`.
+- **Rule:** **Target:** `Qwen/Qwen3-4B` + LoRA adapter (`models/peft-adapter/`, eval_loss 0.3495, checkpoints 125/175/180). **LoRA chỉ dạy cách trả lời** — văn phong, định dạng citation, cách từ chối; **không bao giờ tham gia retripipelines/evaluation/vector**. **[ADOPTED] as-built:** đang serve `mlx-community/Qwen2.5-3B-Instruct-4bit` + `models/lora-serve/` (checkpoint `0000200`, val loss 0.414) — migration Qwen3-4B là việc của Epic 2 nhánh A. Serving dạng **base+adapter**, không fused (`models/qwen-fused/` chỉ cho pipelines/training/bootstrap). Backend qua `INFERENCE_BACKEND` ∈ {`mlx`, `llama_server`, `llama_cpp`}; docker dùng `llama_server`.
 
 ### AD-8 — Phân tách hai đường truy vấn
 
@@ -160,7 +160,7 @@ graph TB
 
 - **Binds:** FR27, NFR16, EP-9 / EP-10
 - **Prevents:** report không tái lập được — mất truy vết mô hình/checkpoint/corpus
-- **Rule:** Backend unit test dùng **unittest** (stdlib) — reality, không đổi sang pytest. E2E mới dùng **Playwright**. Eval harness (`eval/`) chạy độc lập, mỗi report mang metadata SHA-256 (gold, prompt, corpus, adapter, scorer) — đây là cơ chế NFR16. Test regression-style, đặt tên theo hành vi.
+- **Rule:** Backend unit test dùng **unittest** (stdlib) — reality, không đổi sang pytest. E2E mới dùng **Playwright**. Eval harness (`pipelines/evaluation/`) chạy độc lập, mỗi report mang metadata SHA-256 (gold, prompt, corpus, adapter, scorer) — đây là cơ chế NFR16. Test regression-style, đặt tên theo hành vi.
 
 ### AD-16 — Degradation thay vì crash [ADOPTED]
 
@@ -185,7 +185,7 @@ graph TB
 | Data & formats | Response JSON envelope: endpoint dùng schema inline, chat dùng `ChatResponse`; source dict `{text, score, doc, heading, url, chunk_id, graph, graph_hits, used_in_context}`; ngày `TIMESTAMPTZ` |
 | State & mutation | `passage.text` **bất biến** (không UPDATE); mọi `CHECK` ngữ nghĩa ở DB; `publication_state` không default `published` |
 | Error | `HTTPException` detail tiếng Việt; 400/404/500/503 ngữ nghĩa; degrade không crash (AD-16) |
-| Config | `backend/core/config.py` path constants + `os.environ.get` có default tại use site + `training/lora_config.yaml`; flag retrieval qua `RT_*`; tuyệt đối không commit secret (PG password từ `.env`) |
+| Config | `apps/backend/core/config.py` path constants + `os.environ.get` có default tại use site + `pipelines/training/lora_config.yaml`; flag retrieval qua `RT_*`; tuyệt đối không commit secret (PG password từ `.env`) |
 | Logging | `log.exception` cho degradation; audit_log cho hành động admin (before/after payload) |
 | Git | Conventional Commits (`feat(scope):`, `fix:`, `test:`) |
 
@@ -193,7 +193,7 @@ graph TB
 
 | Name | Version |
 | --- | --- |
-| Python | 3.12 (backend/.venv) |
+| Python | 3.12 (apps/backend/.venv) |
 | FastAPI | >=0.110.0 |
 | uvicorn[standard] | >=0.27.0 |
 | pydantic | >=2.0 |
@@ -215,23 +215,23 @@ graph TB
 
 ```text
 HeritageGraph/
-  backend/
+  apps/backend/
     api/            # driving adapters: chat.py, graph.py, health.py (prefix /api) — chỉ validate/serialize
     core/           # domain thuần: textutil, retriever, rag, kg, llm, corpus, prompt, nerlabel, fuzzy_match, config
                     #   + intent router & query planner (mới — chatbot.md §14)
     db/             # MỚI: psycopg repository (chỉ /api/graph + CRUD), pgvector
     services/       # MỚI: entity resolution (kg resolver), card generators (registry intent→card), recommend, profile, chat orchestration
     tests/          # unittest regression
-  frontend/
+  apps/frontend/
     app/            # route: /chat (+ /explore/[node], /account, /dashboard sau này)
     components/     # ChatView, ChatInput, ChatActions, Suggestion, TopBar, Landing, Logo/
     types/chat.ts   # Source + Message (cần mở rộng cho blocks/intent/recommendations)
     lib/            # MỚI: api client (hiện rỗng)
   corpus/           # wiki_by_location/*.txt, locations_index.json (index duy nhất), aliases.json
   models/           # lora-serve/ (serve), lora-adapter/, qwen-fused/ (train only), CHECKPOINT
-  ingestion/        # crawl_wiki, crawl_by_location, fetch_aliases (xóa chunk_corpus_mt)
-  training/         # bootstrap_*, lora_config.yaml, train.sh, fuse.sh, select_adapter.sh
-  eval/             # eval_retrieval, eval_attribution, make_gold_template, gold.jsonl, report_*.json
+  pipelines/ingestion/        # crawl_wiki, crawl_by_location, fetch_aliases (xóa chunk_corpus_mt)
+  pipelines/training/         # bootstrap_*, lora_config.yaml, train.sh, fuse.sh, select_adapter.sh
+  pipelines/evaluation/             # eval_retrieval, eval_attribution, make_gold_template, gold.jsonl, report_*.json
   graphrag/output/  # graph.json/gexf/stats.json (artifact, build qua scripts/build_graph.py)
   scripts/          # build_graph, run_indexing, start_dev, export_gguf, package_docker
   schema.sql        # v2 — binding persistence spine (AD-9), mở rộng thêm bảng PRD
@@ -280,13 +280,13 @@ graph LR
 | Capability / Area | Lives in | Governed by |
 | --- | --- | --- |
 | FR01/FR25 tài khoản & riêng tư | `api/` (auth middleware) + `db/` + frontend `/account` | AD-9, AD-11, AD-12, AD-14 |
-| FR02–FR06 corpus & bản ghi | `ingestion/` + `core/corpus.py` + `db/` CRUD | AD-4, AD-5, AD-9, AD-10, AD-11 |
+| FR02–FR06 corpus & bản ghi | `pipelines/ingestion/` + `core/corpus.py` + `db/` CRUD | AD-4, AD-5, AD-9, AD-10, AD-11 |
 | FR12/FR24 truy hồi & planner | `core/retriever.py` (Text/Graph operator) + `core/` intent router/planner (mới) + `passage_embedding` pgvector | AD-2, AD-3, AD-8 |
 | FR14–FR16 trả lời có căn cứ | `core/rag.py` (Evidence Builder + gates) + `core/llm.py` + `core/prompt.py` | AD-3, AD-6, AD-7, AD-16 |
 | FR07–FR13 cá nhân hóa | `services/recommend.py` + `user_interest`/`interaction_event` | AD-12, công thức recommend (epics.md) |
 | FR17–FR22 thẻ tư vấn | `services/` card registry + external adapters | AD-11, AD-17 |
 | FR23/FR28–FR30 trang chi tiết & multimedia | frontend `/explore/[node]` + `media_asset` + R2/Azure | AD-11, AD-16 |
-| FR26/FR27 dashboard & đánh giá | `api/` admin routers + `eval/` | AD-13, AD-15 |
+| FR26/FR27 dashboard & đánh giá | `api/` admin routers + `pipelines/evaluation/` | AD-13, AD-15 |
 | NFR01–NFR03 hiệu năng | RAM index + asyncio.gather + đo liên tục | AD-2, AD-8, AD-17 |
 
 ## Deferred
@@ -297,4 +297,4 @@ graph LR
 - **Streaming cho `/api/chat`**: chỉ nếu p95 vượt 8s sau khi đo; mặc định không stream.
 - **Mở rộng vùng thứ ba (Nam Bộ)**: cơ chế độc lập vùng đã có (bảng đối chiếu), dữ liệu phải crawl lại + sinh lại eval — không trong phạm vi v1.
 - **Người đánh giá thứ hai** (precision@5 + Cohen's κ, NER gold): chưa chốt ai; là blocker cho SM-6/SM-9.
-- **Stale artifact cleanup** (AD-16 đang thực thi qua memlog): xóa `.bak`, `graphrag/prompts/` rỗng, `frontend/lib/` rỗng, `backend/models/qwen2.5-7b/` legacy, `backend/package-lock.json`, `metadata.ts` branding sai, trùng `report_base*.json`, thống nhất số địa điểm curated (49/47/45) về một index.
+- **Stale artifact cleanup** (AD-16 đang thực thi qua memlog): xóa `.bak`, `graphrag/prompts/` rỗng, `apps/frontend/lib/` rỗng, `apps/backend/models/qwen2.5-7b/` legacy, `apps/backend/package-lock.json`, `metadata.ts` branding sai, trùng `report_base*.json`, thống nhất số địa điểm curated (49/47/45) về một index.

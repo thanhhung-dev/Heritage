@@ -11,7 +11,7 @@ Nguồn phạm vi chính thức là PRD `docs/planning-artifacts/prds/prd-Herita
 Roadmap này chỉ làm rõ thứ tự triển khai và các cổng kiểm tra, không thêm phạm vi mới.
 
 > **Trạng thái 08/09/2026:** Giai đoạn 0 đã hoàn thành. Base và LoRA đã chạy lại
-> trên cùng 76 mẫu với fingerprint đầy đủ; xem `eval/baseline-summary.md`. Bước
+> trên cùng 76 mẫu với fingerprint đầy đủ; xem `pipelines/evaluation/baseline-summary.md`. Bước
 > đang chờ thực hiện là Giai đoạn 1 — spike embedding trên 349 chunks.
 
 ## 1. Hiện trạng
@@ -77,7 +77,7 @@ hạng sẽ thay đổi khi corpus thay đổi.
 ### Làm ngay
 
 - Chạy retrieval attribution và lưu report hiện tại.
-- Chạy base model và LoRA trên cùng một `eval/gold.jsonl` 76 mẫu.
+- Chạy base model và LoRA trên cùng một `pipelines/evaluation/gold.jsonl` 76 mẫu.
 - Mọi report phải ghi model, checkpoint adapter, prompt version, corpus version,
   cấu hình retrieval và Git revision.
 - Tách riêng các chỉ số:
@@ -232,8 +232,8 @@ Chỉ đánh giá việc train lại sau khi retrieval giai đoạn 3 đã ổn 
 phân trách nhiệm:
 
 ```text
-Sai bài hoặc thiếu chunk đúng       → sửa retrieval/data
-Context đúng nhưng câu trả lời sai  → sửa prompt/training/LLM
+Sai bài hoặc thiếu chunk đúng       → sửa retripipelines/evaluation/data
+Context đúng nhưng câu trả lời sai  → sửa prompt/pipelines/training/LLM
 Context đúng nhưng thiếu citation   → thêm mẫu LoRA về citation
 Context thiếu dữ kiện               → thêm dữ liệu, không train LoRA
 ```

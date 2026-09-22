@@ -554,18 +554,18 @@ riêng cho địa điểm pilot.
 
 | Trách nhiệm | Module sở hữu |
 |---|---|
-| Query normalization | `backend/core/textutil.py` |
-| Entity resolution | `backend/services/kg.py` |
-| Intent router/query planner | module riêng trong `backend/core/` |
-| BM25/ngram/RRF | `backend/core/retriever.py` |
-| Graph retrieval | `backend/core/kg.py` + PostgreSQL repository |
-| Local Context/Entity Dossier | service context riêng hoặc `backend/core/rag.py` |
-| Evidence Context Builder | `backend/core/rag.py` |
-| Prompt | `backend/core/prompt.py` |
-| Qwen inference | `backend/core/llm.py` |
+| Query normalization | `apps/backend/core/textutil.py` |
+| Entity resolution | `apps/backend/services/kg.py` |
+| Intent router/query planner | module riêng trong `apps/backend/core/` |
+| BM25/ngram/RRF | `apps/backend/core/retriever.py` |
+| Graph retrieval | `apps/backend/core/kg.py` + PostgreSQL repository |
+| Local Context/Entity Dossier | service context riêng hoặc `apps/backend/core/rag.py` |
+| Evidence Context Builder | `apps/backend/core/rag.py` |
+| Prompt | `apps/backend/core/prompt.py` |
+| Qwen inference | `apps/backend/core/llm.py` |
 | API orchestration | service chat, endpoint chỉ validate/serialize |
 | Provenance | PostgreSQL + SQLAlchemy models |
-| Evaluation | `eval/` + regression tests |
+| Evaluation | `pipelines/evaluation/` + regression tests |
 
 Không đặt SQL, retrieval, planning, prompt và citation validation cùng trong
 endpoint `/api/chat`.

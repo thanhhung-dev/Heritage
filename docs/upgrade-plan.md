@@ -22,7 +22,7 @@ Danh mục:  Di tích lịch sử 22, Ẩm thực 9, Danh thắng 6, Nghệ thu�
            mentions 242, year 443, related 123, in_ward 98, in_region 92, in_category 92, is_about 45
 Truy hồi:  trong phạm vi 68/70, paraphrase 9/39, bằng chứng 34/34, phường/xã 18/20
            ngoài phạm vi 31/38
-Sinh văn bản: citation_faithful 0.7037, refusal_accuracy 0.9167 (eval/report_lora.json, 76 mẫu)
+Sinh văn bản: citation_faithful 0.7037, refusal_accuracy 0.9167 (pipelines/evaluation/report_lora.json, 76 mẫu)
 ```
 
 ### 0.2. Việc phải làm trước khi code bất cứ thứ gì
@@ -31,7 +31,7 @@ Sinh văn bản: citation_faithful 0.7037, refusal_accuracy 0.9167 (eval/report_
 
 **Baseline đã được chốt.** `report_base.json` và `report_lora.json` cùng đo 76 mẫu / corpus 45 bài bằng cùng prompt và greedy decoding. NER micro-F1 0.1043 → 0.7861; citation faithful 0.0370 → 0.7037; coverage 0.0370 → 0.7407; refusal 0.3750 → 0.9167.
 
-**NFR16 đã được đáp ứng cho eval model.** Mỗi report ghi model, checkpoint, cấu hình sinh và SHA-256 của adapter, gold, prompt, corpus, scorer trong trường `meta`. Xem `eval/baseline-summary.md`.
+**NFR16 đã được đáp ứng cho eval model.** Mỗi report ghi model, checkpoint, cấu hình sinh và SHA-256 của adapter, gold, prompt, corpus, scorer trong trường `meta`. Xem `pipelines/evaluation/baseline-summary.md`.
 
 ### 0.3. Tài liệu đang mô tả sai hiện trạng
 
@@ -40,7 +40,7 @@ Sinh văn bản: citation_faithful 0.7037, refusal_accuracy 0.9167 (eval/report_
 | `architecture.md:36,95-115,300-321` | PostgreSQL 16 + pgvector, 15 bảng, `embedding vector(1024)`, docker-compose | **Không tồn tại**. Không tệp `.sql`, không `docker-compose*`, không driver DB trong venv |
 | `architecture.md:55,67-68` | 23 tài liệu / 215 đoạn / 331 đỉnh / 563 cạnh | 45 / 349 / 510 / 1135 |
 | `README.md` | 23 tài liệu / 215 đoạn | Như trên |
-| `frontend/app/page.tsx:48` | "Qwen2.5-7B" | Qwen2.5-**3B**-Instruct-4bit |
+| `apps/frontend/app/page.tsx:48` | "Qwen2.5-7B" | Qwen2.5-**3B**-Instruct-4bit |
 | `demo-guide.md:19` | recall@1 22/22 | 30/30 |
 
 Cả `architecture.md` và `README.md` đều tự tuyên bố là "số liệu đo được", nên sai số này là lỗi đáng bị hỏi. Sửa trong Tuần 2.
@@ -51,26 +51,26 @@ Cả `architecture.md` và `README.md` đều tự tuyên bố là "số liệu 
 
 | Thành phần | Vì sao giữ |
 | --- | --- |
-| `backend/core/retriever.py` — BM25 từ + BM25 n-gram + RRF + xếp hạng lại bằng đồ thị | recall@1 30/30 kể cả câu không dấu và tên gọi khác |
-| `backend/core/kg.py` — dựng đồ thị tất định, `expand_docs()`, `find_seeds()` | 0,23 giây; `expand_docs()` chính là hàm bộ gợi ý sẽ dùng lại |
-| `backend/core/rag.py:89-104` — các cổng từ chối | `refusal_accuracy 0.9167`. **Không bao giờ cắt** |
-| `backend/core/prompt.py` — SYSTEM | Nguồn duy nhất của văn phong + định dạng trích nguồn, dùng chung train/serve/eval |
-| `backend/core/corpus.py` — tách đoạn | Nguồn duy nhất, dùng chung train và serve |
-| `backend/core/nerlabel.py` | Có bộ chặn tên ghép, dòng họ, assertion lúc import |
+| `apps/backend/core/retriever.py` — BM25 từ + BM25 n-gram + RRF + xếp hạng lại bằng đồ thị | recall@1 30/30 kể cả câu không dấu và tên gọi khác |
+| `apps/backend/core/kg.py` — dựng đồ thị tất định, `expand_docs()`, `find_seeds()` | 0,23 giây; `expand_docs()` chính là hàm bộ gợi ý sẽ dùng lại |
+| `apps/backend/core/rag.py:89-104` — các cổng từ chối | `refusal_accuracy 0.9167`. **Không bao giờ cắt** |
+| `apps/backend/core/prompt.py` — SYSTEM | Nguồn duy nhất của văn phong + định dạng trích nguồn, dùng chung train/serve/eval |
+| `apps/backend/core/corpus.py` — tách đoạn | Nguồn duy nhất, dùng chung train và serve |
+| `apps/backend/core/nerlabel.py` | Có bộ chặn tên ghép, dòng họ, assertion lúc import |
 | `models/lora-serve/` checkpoint `0000200` | Đã chọn theo val loss 0.414 thay vì 0.473 ở bước 720 |
 
 ### 0.5. Mã hiện có — phải sửa
 
 | Chỗ | Vấn đề | Yêu cầu liên quan |
 | --- | --- | --- |
-| `backend/core/config.py:44` | `BACKEND_HOST = "0.0.0.0"` mở giao diện mạng công khai | NFR11 |
-| `backend/app.py` | `/api/chat` không xác thực, CORS mở | NFR11 |
-| `backend/core/rag.py:95` | Cổng `MIN_COVERAGE` chỉ đo từ vựng → sẽ triệt tiêu kênh vector | Mục 12.3 Bước 7 |
-| `backend/core/retriever.py:372` | `if not lexical and not named: return empty` → câu diễn giải lại chết trước khi kênh vector nói gì | NFR04 |
-| `backend/api/chat.py:20-22` | `ChatResponse` chỉ có `{answer, sources}` | FR18, FR09 |
-| `frontend/app/page.tsx:24` | Hardcode `http://localhost:8000` thay vì `NEXT_PUBLIC_API_URL` | — |
-| `frontend/app/page.tsx` type `Source` | Khai `{text, score?, entity?}` nhưng backend trả thêm `doc`, `url`, `heading`, `chunk_id` → `url` bị bỏ im lặng, tức trích nguồn không hiển thị được nguồn | FR15 |
-| `backend/tests/` | Rỗng. Không có framework kiểm thử, không CI | FR27, NFR06 |
+| `apps/backend/core/config.py:44` | `BACKEND_HOST = "0.0.0.0"` mở giao diện mạng công khai | NFR11 |
+| `apps/backend/app.py` | `/api/chat` không xác thực, CORS mở | NFR11 |
+| `apps/backend/core/rag.py:95` | Cổng `MIN_COVERAGE` chỉ đo từ vựng → sẽ triệt tiêu kênh vector | Mục 12.3 Bước 7 |
+| `apps/backend/core/retriever.py:372` | `if not lexical and not named: return empty` → câu diễn giải lại chết trước khi kênh vector nói gì | NFR04 |
+| `apps/backend/api/chat.py:20-22` | `ChatResponse` chỉ có `{answer, sources}` | FR18, FR09 |
+| `apps/frontend/app/page.tsx:24` | Hardcode `http://localhost:8000` thay vì `NEXT_PUBLIC_API_URL` | — |
+| `apps/frontend/app/page.tsx` type `Source` | Khai `{text, score?, entity?}` nhưng backend trả thêm `doc`, `url`, `heading`, `chunk_id` → `url` bị bỏ im lặng, tức trích nguồn không hiển thị được nguồn | FR15 |
+| `apps/backend/tests/` | Rỗng. Không có framework kiểm thử, không CI | FR27, NFR06 |
 
 ### 0.6. Đối chiếu mục tiêu — đã xong bao nhiêu
 
@@ -106,7 +106,7 @@ O1 đòi ≥8 tài liệu mỗi danh mục, tổng ~80. Ba danh mục đang dư�
 
 | Nguồn | Nội dung | Cách lấy |
 | --- | --- | --- |
-| vi.wikipedia.org | Nghệ thuật, làng nghề, lễ hội, món ăn | `ingestion/crawl_wiki.py` đã chạy 47/47 thành công, chỉ cần thêm tên vào danh sách địa điểm |
+| vi.wikipedia.org | Nghệ thuật, làng nghề, lễ hội, món ăn | `pipelines/ingestion/crawl_wiki.py` đã chạy 47/47 thành công, chỉ cần thêm tên vào danh sách địa điểm |
 | Cục Di sản văn hóa (dsvh.gov.vn) | Danh mục di sản phi vật thể quốc gia | Bộ lọc theo tỉnh → tên chính xác của lễ hội và nghề |
 | Cổng TTĐT TP Huế / TP Đà Nẵng | Danh mục lễ hội, làng nghề được công nhận | Trang danh mục → lấy tên → tra Wikipedia; không có bài thì soạn tay kèm nguồn |
 | Trung tâm Bảo tồn Di tích Cố đô Huế | Nhã nhạc, tuồng, lễ hội cung đình | Trang giới thiệu từng di tích |
@@ -194,9 +194,9 @@ Luật "mang gì" viết thành ~15 luật trong YAML, không dùng mô hình: `
 
 ### 1.7. Thiếu #7 — Người dùng, hồ sơ sở thích, lịch sử tương tác
 
-**Chặn:** O6, O10, FR01, FR07, FR08, FR25. **Hiện có:** **không có cơ sở dữ liệu nào.** Không Postgres, không SQLite, không vector DB. Không model user, không login, không session. Toàn bộ trạng thái là tệp trên đĩa + một `@lru_cache` (`backend/core/retriever.py:449`).
+**Chặn:** O6, O10, FR01, FR07, FR08, FR25. **Hiện có:** **không có cơ sở dữ liệu nào.** Không Postgres, không SQLite, không vector DB. Không model user, không login, không session. Toàn bộ trạng thái là tệp trên đĩa + một `@lru_cache` (`apps/backend/core/retriever.py:449`).
 
-**Kèm theo là lỗ bảo mật.** `backend/core/config.py:44` bind `0.0.0.0:8000`, `/api/chat` hoàn toàn không xác thực. Hiện tại vô hại vì chưa có dữ liệu cá nhân. Khi bắt đầu lưu hành vi người dùng thì thành vấn đề thật, và NFR11 đòi "không có đường ghi nào không xác thực". **Xác thực phải xong TRƯỚC khi lưu dữ liệu cá nhân đầu tiên**, không phải sau.
+**Kèm theo là lỗ bảo mật.** `apps/backend/core/config.py:44` bind `0.0.0.0:8000`, `/api/chat` hoàn toàn không xác thực. Hiện tại vô hại vì chưa có dữ liệu cá nhân. Khi bắt đầu lưu hành vi người dùng thì thành vấn đề thật, và NFR11 đòi "không có đường ghi nào không xác thực". **Xác thực phải xong TRƯỚC khi lưu dữ liệu cá nhân đầu tiên**, không phải sau.
 
 ### 1.8. Thiếu #8 — Tài sản đa phương tiện
 
@@ -244,7 +244,7 @@ Trước mọi chi tiết kỹ thuật, hai nguyên tắc của proposal Mục 4
 
 > **Audio narration chỉ phát phần kể chuyện. Mọi phát biểu thực tế trong script phải truy về được một câu nguồn trong kho ngữ liệu, kiểm tra tự động trước khi tổng hợp giọng nói.**
 
-Lý do không phải khẩu hiệu. Thành tựu duy nhất bảo vệ được của dự án hiện nay là `refusal_accuracy 0.9167` và `citation_faithful_rate 0.7037`. Nếu để mô hình 3B tự nói về thời tiết và bãi xe, bạn tái tạo hiện tượng bịa đặt đúng ở chỗ vừa diệt xong, và mất luôn luận điểm chính. Nguyên tắc này cũng nhất quán với `backend/core/kg.py:1-21` (không dùng mô hình lúc dựng đồ thị vì mô hình bịa thực thể) — sự nhất quán đó là điểm cộng khi bảo vệ.
+Lý do không phải khẩu hiệu. Thành tựu duy nhất bảo vệ được của dự án hiện nay là `refusal_accuracy 0.9167` và `citation_faithful_rate 0.7037`. Nếu để mô hình 3B tự nói về thời tiết và bãi xe, bạn tái tạo hiện tượng bịa đặt đúng ở chỗ vừa diệt xong, và mất luôn luận điểm chính. Nguyên tắc này cũng nhất quán với `apps/backend/core/kg.py:1-21` (không dùng mô hình lúc dựng đồ thị vì mô hình bịa thực thể) — sự nhất quán đó là điểm cộng khi bảo vệ.
 
 ### 2.2. Thêm mới — Cơ sở dữ liệu (Tuần 3)
 
@@ -287,10 +287,10 @@ Hai ràng buộc mức cơ sở dữ liệu, không dựa vào tầng ứng dụ
 
 ### 2.3. Thêm mới — Xác thực và riêng tư (Tuần 3, TRƯỚC dữ liệu cá nhân)
 
-- `backend/api/auth.py`: `POST /api/auth/register`, `/login`, `/logout`, `GET /api/auth/me`
+- `apps/backend/api/auth.py`: `POST /api/auth/register`, `/login`, `/logout`, `GET /api/auth/me`
 - argon2id [19] qua `argon2-cffi`; JWT trong cookie HttpOnly, SameSite=Lax
 - Dependency `current_user` cho mọi endpoint đọc hoặc ghi dữ liệu cá nhân
-- Sửa `backend/core/config.py:44`: `0.0.0.0` → `127.0.0.1` cho cấu hình demo (NFR11)
+- Sửa `apps/backend/core/config.py:44`: `0.0.0.0` → `127.0.0.1` cho cấu hình demo (NFR11)
 - `POST /api/me/export` và `DELETE /api/me/data` (FR25) — **làm luôn Tuần 3**, đừng để Tuần 14
 - Màn hình đồng ý trước khi ghi `interaction_event` đầu tiên (NFR12)
 
@@ -300,7 +300,7 @@ FR25 và NFR12 là nghĩa vụ về riêng tư, không phải tính năng — n�
 
 Đây là phần còn thiếu của O4, và là chỗ dễ làm sai nhất trong toàn bộ kế hoạch.
 
-**Bước 1 — Có bằng chứng trước khi viết mã.** `eval/eval_retrieval.py` hiện có 6 suite (`IN_DOMAIN`, `OUT_OF_DOMAIN`, `EVIDENCE`, `SUBJECT`, `SCOPE`, `WARD`) và **không có suite diễn giải lại**. Nhưng NFR04 đòi recall@1 ≥95% "kể cả truy vấn diễn giải lại". Nghĩa là yêu cầu khó nhất của NFR04 chưa từng được kiểm chứng.
+**Bước 1 — Có bằng chứng trước khi viết mã.** `pipelines/evaluation/eval_retrieval.py` hiện có 6 suite (`IN_DOMAIN`, `OUT_OF_DOMAIN`, `EVIDENCE`, `SUBJECT`, `SCOPE`, `WARD`) và **không có suite diễn giải lại**. Nhưng NFR04 đòi recall@1 ≥95% "kể cả truy vấn diễn giải lại". Nghĩa là yêu cầu khó nhất của NFR04 chưa từng được kiểm chứng.
 
 Thêm suite `PARAPHRASE`: câu hỏi không chia sẻ từ khoá nào với kho ngữ liệu — `"vua Khải Định được chôn ở chỗ nào"` thay vì `"lăng Khải Định ở đâu"`; `"món mì nào của Hội An"` thay vì `"Cao lầu"`. Chạy offline, không cần mô hình, ~1 giờ. **Đo baseline hai kênh trên suite này trước.** Con số đó là thứ biện minh cho toàn bộ Sprint 3 — và nếu nó cao bất ngờ thì bạn đã tiết kiệm được một sprint.
 
@@ -323,7 +323,7 @@ Thêm suite `PARAPHRASE`: câu hỏi không chia sẻ từ khoá nào với kho 
 
 ### 2.5. Thêm mới — Bộ gợi ý (Tuần 6–7)
 
-`backend/core/recommend.py`. Đây là đóng góp học thuật thứ hai.
+`apps/backend/core/recommend.py`. Đây là đóng góp học thuật thứ hai.
 
 ```python
 score(d) = α · GraphAffinity(seed, d)          # expand_docs() — đã có sẵn
@@ -345,7 +345,7 @@ API: `GET /api/recommend?seed=<node>&k=5` → `[{node, label, category, score, r
 
 ### 2.6. Thêm mới — Nhận diện ý định (Tuần 8)
 
-Mở rộng `query_intent()` (`backend/core/retriever.py:113`, hiện trả `{location, time, verify, ward}`) thành 6 lớp của Mục 12.3 Bước 2: `research | attend_event | plan_trip | learn | compare | verify`.
+Mở rộng `query_intent()` (`apps/backend/core/retriever.py:113`, hiện trả `{location, time, verify, ward}`) thành 6 lớp của Mục 12.3 Bước 2: `research | attend_event | plan_trip | learn | compare | verify`.
 
 **Dùng biểu thức chính quy và từ vựng, KHÔNG tinh chỉnh mô hình.** Sáu lớp, tiếng Việt, luật đạt >90% và kiểm toán được — quan trọng hơn là giải thích được ở hội đồng. Tinh chỉnh cho việc này là thêm một biến số không đo được vào một dự án đã đủ biến số. Mục 10 đã ghi lựa chọn này.
 
@@ -353,7 +353,7 @@ Mở rộng `query_intent()` (`backend/core/retriever.py:113`, hiện trả `{lo
 
 ### 2.7. Thêm mới — Lớp tư vấn (Tuần 8–9)
 
-`backend/core/advisor.py` — sổ đăng ký `intent → [card_generator]`:
+`apps/backend/core/advisor.py` — sổ đăng ký `intent → [card_generator]`:
 
 | Ý định | Thẻ kết xuất |
 | --- | --- |
@@ -364,7 +364,7 @@ Mở rộng `query_intent()` (`backend/core/retriever.py:113`, hiện trả `{lo
 | `compare` | `ComparisonTableCard` |
 | `verify` | `CorrectionBlock` (đã có sẵn qua tinh chỉnh) |
 
-Bộ điều hợp ngoài: `backend/adapters/weather.py` (Open-Meteo), `backend/adapters/osm.py` (Overpass + Nominatim, cache vào bảng `poi`), `backend/core/prep_rules.yaml` (~15 luật).
+Bộ điều hợp ngoài: `apps/backend/adapters/weather.py` (Open-Meteo), `apps/backend/adapters/osm.py` (Overpass + Nominatim, cache vào bảng `poi`), `apps/backend/core/prep_rules.yaml` (~15 luật).
 
 **Kỹ thuật ẩn độ trễ (NFR02).** `asyncio.gather` gọi API ngoài **song song** với `generate_response()`. Mô hình 3B sinh 768 token mất vài giây; API thời tiết mất ~300 ms. Chồng lên nhau thì độ trễ ngoài biến mất hoàn toàn khỏi p95.
 
@@ -374,13 +374,13 @@ Mỗi thẻ mang `provenance`: `corpus | db | graph | external:open-meteo | exte
 
 ### 2.8. Thêm mới — Biên tập và quản trị (Tuần 9)
 
-O9 hiện chưa có gì. Cần `backend/api/admin.py` với: CRUD tài liệu (F02) kích hoạt dựng lại đồ thị; CRUD bản ghi có cấu trúc và tài sản đa phương tiện (F03) với kiểm tra nguồn từ chối ở mức trường; giao diện rà soát kết quả trích xuất (F04) ghi `audit_log` kèm giá trị trước và sau; bảng điều khiển sức khỏe (F05, FR26) hiển thị số tài liệu theo danh mục, thống kê đồ thị, số trường thiếu nguồn, hàng chờ rà soát.
+O9 hiện chưa có gì. Cần `apps/backend/api/admin.py` với: CRUD tài liệu (F02) kích hoạt dựng lại đồ thị; CRUD bản ghi có cấu trúc và tài sản đa phương tiện (F03) với kiểm tra nguồn từ chối ở mức trường; giao diện rà soát kết quả trích xuất (F04) ghi `audit_log` kèm giá trị trước và sau; bảng điều khiển sức khỏe (F05, FR26) hiển thị số tài liệu theo danh mục, thống kê đồ thị, số trường thiếu nguồn, hàng chờ rà soát.
 
 Đây là mục dễ bị cắt nhất khi trượt tiến độ — xem §5.
 
 ### 2.9. Sửa — Response schema `/api/chat` (Tuần 3)
 
-`backend/api/chat.py:20-22` hiện là `{answer, sources}`. Thành:
+`apps/backend/api/chat.py:20-22` hiện là `{answer, sources}`. Thành:
 
 ```python
 class ChatResponse(BaseModel):
@@ -395,7 +395,7 @@ Cộng thêm chứ không thay thế → frontend hiện tại vẫn chạy tron
 
 ### 2.10. Frontend (Tuần 10)
 
-Hiện trạng: `frontend/app/page.tsx` **88 dòng là toàn bộ ứng dụng**. `components/`, `lib/`, `public/` rỗng hoàn toàn. Không state library, không HTTP client.
+Hiện trạng: `apps/frontend/app/page.tsx` **88 dòng là toàn bộ ứng dụng**. `components/`, `lib/`, `public/` rỗng hoàn toàn. Không state library, không HTTP client.
 
 Ba lỗi lệch phải sửa ngay Tuần 2:
 - `page.tsx:48` quảng cáo "Qwen2.5-7B" — thực tế là **3B**
@@ -406,7 +406,7 @@ Cần thêm: Antd (Mục 10 đã chốt); `components/blocks/` với sổ đăng
 
 ### 2.11. Thêm mới — Đa phương tiện (Tuần 10)
 
-`backend/core/media.py` + `backend/api/media.py`:
+`apps/backend/core/media.py` + `apps/backend/api/media.py`:
 
 - Nạp mô hình 3D: kiểm giấy phép và URL nguồn, nén Draco/Meshopt xuống <30 MB (NFR19), tải lên R2, ghi `media_asset`
 - **Kiểm tra bằng chứng cho script (FR30):** đối chiếu từng câu khẳng định của script với kho ngữ liệu; câu không truy được về nguồn và không được đánh dấu là lời dẫn dắt biên tập thì **chặn việc tổng hợp**. Đây là cơ chế biến nguyên tắc thứ hai ở §2.1 thành thứ kiểm chứng được.
@@ -415,7 +415,7 @@ Cần thêm: Antd (Mục 10 đã chốt); `components/blocks/` với sổ đăng
 
 ### 2.12. Kiểm thử (Tuần 12–13)
 
-Hiện tại: `backend/tests/` **rỗng**, không framework, không CI, không `.github/`. Cần pytest + Playwright + GitHub Actions.
+Hiện tại: `apps/backend/tests/` **rỗng**, không framework, không CI, không `.github/`. Cần pytest + Playwright + GitHub Actions.
 
 Hai ca kiểm thử quan trọng nhất của cả dự án:
 
@@ -450,12 +450,12 @@ Hai quy tắc trình tự của Mục 11.2 chi phối thứ tự dưới đây: 
 
 **Đây là bước quan trọng nhất. Đừng code tính năng mới trước bước này.**
 
-1. **Sửa lỗi rò rỉ.** `eval/eval_retrieval.py` exit 1: câu "Đàn Nam Giao thờ ai?" rò rỉ 1193 ký tự. Nguyên nhân: đồ thị giữ đỉnh entity cho tài liệu đã bị `corpus.py` loại. Sửa `kg.py` để bỏ đỉnh của tài liệu không dùng được.
-2. **Chạy lại mô hình gốc** trên cùng 76 mẫu `eval/gold.jsonl`, để phép so sánh base↔LoRA có kiểm soát.
-3. **Ghi checkpoint bộ điều hợp vào `report_*.json`** (`training/score_gold.py`) — NFR16.
-4. **Sửa số liệu lạc hậu**: `README.md`, `docs/architecture.md` (23/215 → 45/349; 331/563 → 510/1135), `docs/demo-guide.md:19` (22/22 → 30/30), `frontend/app/page.tsx:48` (7B → 3B).
+1. **Sửa lỗi rò rỉ.** `pipelines/evaluation/eval_retrieval.py` exit 1: câu "Đàn Nam Giao thờ ai?" rò rỉ 1193 ký tự. Nguyên nhân: đồ thị giữ đỉnh entity cho tài liệu đã bị `corpus.py` loại. Sửa `kg.py` để bỏ đỉnh của tài liệu không dùng được.
+2. **Chạy lại mô hình gốc** trên cùng 76 mẫu `pipelines/evaluation/gold.jsonl`, để phép so sánh base↔LoRA có kiểm soát.
+3. **Ghi checkpoint bộ điều hợp vào `report_*.json`** (`pipelines/training/score_gold.py`) — NFR16.
+4. **Sửa số liệu lạc hậu**: `README.md`, `docs/architecture.md` (23/215 → 45/349; 331/563 → 510/1135), `docs/demo-guide.md:19` (22/22 → 30/30), `apps/frontend/app/page.tsx:48` (7B → 3B).
 5. **Sửa `architecture.md`** cho khớp hiện trạng: đánh dấu rõ phần Postgres/pgvector là **thiết kế mục tiêu**, không phải as-built. Nếu hội đồng đọc rồi xin xem schema thì hiện không có gì để mở.
-6. **Thêm suite `PARAPHRASE`** vào `eval/eval_retrieval.py` và đo baseline. Đây là bằng chứng biện minh cho Sprint 3 (§2.4 Bước 1).
+6. **Thêm suite `PARAPHRASE`** vào `pipelines/evaluation/eval_retrieval.py` và đo baseline. Đây là bằng chứng biện minh cho Sprint 3 (§2.4 Bước 1).
 
 ### Tuần 3 — Sprint 1: Nền tảng
 
@@ -526,7 +526,7 @@ Giữ 4 chỉ số cũ (`docs/metrics.md`), thêm những chỉ số Mục 15.3 
 | Đo tách kênh | Từng kênh riêng và tổ hợp, có/không đồ thị | **Chưa có** — Tuần 5 |
 | Từ chối ngoài phạm vi | Suite `OUT_OF_DOMAIN` | **Đã đo** 31/38 |
 | Bằng chứng trong đoạn | Suite `EVIDENCE` | **Đã đo** 34/34 |
-| NER micro-F1 | `eval/gold.jsonl`, có rà soát người | **Đã đo** base 0.1043 / LoRA 0.7861 |
+| NER micro-F1 | `pipelines/evaluation/gold.jsonl`, có rà soát người | **Đã đo** base 0.1043 / LoRA 0.7861 |
 | Trích nguồn: trung thực và độ phủ | 76 mẫu | **Đã đo** 0.7037 / 0.7407 |
 | Độ chính xác từ chối | 24 mẫu từ chối | **Đã đo** 0.9167 |
 | Đính chính giả định sai | Tập câu trái tiền đề | **Chưa tách riêng** — Tuần 12 |

@@ -9,7 +9,7 @@ dist/
 *.egg-info/
 .eggs/
 
-# Virtualenv (README dùng ./.venv, hiện tại còn backend/.venv)
+# Virtualenv (môi trường local có thể nằm tại apps/backend/.venv)
 .venv/
 venv/
 env/
@@ -44,14 +44,14 @@ yarn-error.log*
 !.env.docker.example
 
 # ===== Model weights (base 14GB, fused ~15GB, LoRA adapter) =====
-# backend/models/*.py là SQLAlchemy models; chỉ bỏ qua thư mục/trọng số model AI.
-backend/models/*/
-backend/models/*.safetensors
-backend/models/*.gguf
-backend/models/*.pt
-backend/models/*.pth
-backend/models/*.npz
-backend/models/*.mlx
+# apps/backend/models/*.py là SQLAlchemy models; chỉ bỏ qua thư mục/trọng số model AI.
+apps/backend/models/*/
+apps/backend/models/*.safetensors
+apps/backend/models/*.gguf
+apps/backend/models/*.pt
+apps/backend/models/*.pth
+apps/backend/models/*.npz
+apps/backend/models/*.mlx
 *.safetensors
 *.gguf
 *.pt
@@ -64,7 +64,7 @@ models/**
 !models/**/
 !models/**/.gitkeep
 
-# ===== Corpus & training data (sinh ra từ ingestion/ + teacher model) =====
+# ===== Corpus & training data (sinh ra từ pipelines/ingestion + teacher model) =====
 # corpus/wiki: output của crawl_wiki_mientrung.py
 # corpus/* KHÔNG phải corpus/: git không đi vào thư mục đã bị ignore, nên mẫu
 # "corpus/" làm dòng !corpus/aliases.json dưới đây vô hiệu.
@@ -93,8 +93,8 @@ graphrag/*.log
 
 # ===== Eval =====
 # gold.jsonl gán nhãn tay -> vẫn commit; report.json do score_gold.py sinh ra
-eval/report.json
-eval/report*.json
+pipelines/evaluation/report.json
+pipelines/evaluation/report*.json
 
 # ===== Logs & temp =====
 *.log

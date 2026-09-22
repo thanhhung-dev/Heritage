@@ -432,7 +432,7 @@ Sơ đồ mô tả cả phần đang có và hướng hoàn thiện. Dù sơ đ�
 | Qwen + LoRA; MLX/llama.cpp backends | Langfuse runtime |
 | Next.js chat | Hạ tầng Vercel/R2/S3/EC2 hoàn chỉnh |
 | Docker Compose | Tự động promote DEV sang PROD |
-| Retrieval/model evaluation scripts |  |
+| Retripipelines/evaluation/model evaluation scripts |  |
 
 **Cách trả lời an toàn:**
 

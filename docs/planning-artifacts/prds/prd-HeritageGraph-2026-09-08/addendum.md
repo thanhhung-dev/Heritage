@@ -25,7 +25,7 @@ Trọng số ngầm định: view +1, dwell>20s +2, click thẻ +2, save +3, dis
 retriever.py (BM25×2 + RRF + graph), kg.py (0.23s, expand_docs, find_seeds), rag.py:89-104 (cổng), prompt.py SYSTEM, corpus.py, nerlabel.py, checkpoint LoRA 0000200 (val loss 0.414).
 
 ### 1.6. Mã phải sửa (§0.5)
-config.py:44 (0.0.0.0→127.0.0.1), app.py (auth + CORS), api/chat.py:20-22 (schema v2), page.tsx (NEXT_PUBLIC_API_URL — đã sửa Tuần 2 docs), type Source (thêm doc/url/heading/chunk_id), backend/tests/ (rỗng — cần pytest + Playwright + CI).
+config.py:44 (0.0.0.0→127.0.0.1), app.py (auth + CORS), api/chat.py:20-22 (schema v2), page.tsx (NEXT_PUBLIC_API_URL — đã sửa Tuần 2 docs), type Source (thêm doc/url/heading/chunk_id), apps/backend/tests/ (rỗng — cần pytest + Playwright + CI).
 
 ## 2. Chi tiết nguồn dữ liệu Sprint 2 (Tuần 4) — cho stories nhập liệu
 

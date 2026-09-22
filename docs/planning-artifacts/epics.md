@@ -83,7 +83,7 @@ This document provides the complete epic and story breakdown for HeritageGraph, 
 *Nguồn: docs/architecture.md (thiết kế mục tiêu) + addendum §1 (chi tiết kỹ thuật). Triển khai greenfield — mọi thứ xây mới.*
 
 - **Thiết kế mục tiêu làm đặc tả xây dựng:** toàn bộ lớp PostgreSQL (schema, docker-compose, seed_postgres, PostgresRepository, bảng 3D Story/Scene, app_user, audit_log, chat_session/chat_message/chat_feedback) là **việc cần xây mới**. Kiến trúc mục tiêu: graph dựng deterministic từ corpus + locations_index, retrieval trong RAM, PG persist cho `/api/graph`
-- **Mã nguồn cần xây mới (xây từ đầu):** `retriever.py` (BM25 từ + BM25 n-gram + RRF + graph rerank/pump), `kg.py` (dựng đồ thị deterministic, find_seeds, expand_docs), `rag.py` (3 cổng từ chối: neo graph, bằng chứng, coverage), `prompt.py` SYSTEM, `corpus.py` (chunker chung cho train + serve), `nerlabel.py`, `llm.py` (Qwen+LoRA generate), `config.py` (bind 127.0.0.1), `app.py` (auth + CORS), `api/chat.py` (schema v2 `{answer, sources, blocks, intent, recommendations}`), frontend Next.js + Antd X (`page.tsx` NEXT_PUBLIC_API_URL, type `Source` có doc/url/heading/chunk_id), `backend/tests/` (pytest + Playwright + CI)
+- **Mã nguồn cần xây mới (xây từ đầu):** `retriever.py` (BM25 từ + BM25 n-gram + RRF + graph rerank/pump), `kg.py` (dựng đồ thị deterministic, find_seeds, expand_docs), `rag.py` (3 cổng từ chối: neo graph, bằng chứng, coverage), `prompt.py` SYSTEM, `corpus.py` (chunker chung cho train + serve), `nerlabel.py`, `llm.py` (Qwen+LoRA generate), `config.py` (bind 127.0.0.1), `app.py` (auth + CORS), `api/chat.py` (schema v2 `{answer, sources, blocks, intent, recommendations}`), frontend Next.js + Antd X (`page.tsx` NEXT_PUBLIC_API_URL, type `Source` có doc/url/heading/chunk_id), `apps/backend/tests/` (pytest + Playwright + CI)
 - **Infra Sprint 1:** Postgres 16 + pgvector 0.8.6 + Alembic + docker-compose (pgvector/pgvector:pg16); 15 bảng: app_user (argon2id), user_interest, interaction_event, recommendation_log, venue, event (calendar: lunar|solar), event_segment (phase: lễ|hội), artifact, poi (source: osm|manual), media_asset, story, passage_embedding (vector(1024), khóa chunk_id `<tên bài>#<i>`), audit_log; ràng buộc NOT NULL nguồn ở mức DB
 - **Quy ước DB:** id TEXT `<PREFIX>-<NNNNNN>` sequence cấp, không max+1; mọi CHECK ngữ nghĩa ở DB không phải app; TIMESTAMPTZ; PG password từ .env không commit
 - **Phân tách đường truy vấn:** /api/chat giữ index trong RAM (p95 <50ms, không RTT mạng); /api/graph đọc PG (persist giữa restart); mất PG → 503 với message hướng dẫn, không silent degradation
@@ -204,7 +204,7 @@ Hồ sơ sở thích suy ra từ tương tác (view +1, dwell>20s +2, click +2, 
 Phân loại ý định 6 lớp (regex + từ vựng); sổ đăng ký intent → card; thẻ Lịch (âm lịch soạn tay), Bản đồ, Thời tiết (Open-Meteo) + Chuẩn bị (~15 luật prep_rules.yaml), Điểm quan sát + Chỗ gửi xe (Overpass + cache), Địa điểm/Artifact; API ngoài chạy song song asyncio.gather; **0 trường bịa — assert tự động 100%**.
 
 **FRs covered:** FR17, FR18, FR19, FR20, FR21, FR22 | **NFRs:** NFR06, NFR13
-**Phụ thuộc:** Epic 4 (bản ghi venue/event/artifact từ DB) + Epic 5 (retrieval/định tuyến ý định).
+**Phụ thuộc:** Epic 4 (bản ghi venue/event/artifact từ DB) + Epic 5 (retripipelines/evaluation/định tuyến ý định).
 
 ### Epic 8: Trang chi tiết nội dung & 3D/Audio
 
@@ -221,7 +221,7 @@ Dashboard sức khỏe: số tài liệu/danh mục, thống kê đồ thị, tr
 **FRs covered:** FR26, FR27 | **NFRs:** NFR16
 **Phụ thuộc:** Epic 4 (DB có dữ liệu + hàng chờ rà soát) + Epic 5 (retrieval đo được).
 **Phân chia công việc trong epic:**
-- **FR27 (bộ đánh giá + report NFR16) — phần lớn [ADOPTED]:** code eval/ đã tồn tại (`eval_retrieval.py` 215 cases, `eval_attribution.py`, `score_gold.py` metadata SHA-256). Việc của epic này = wrap + đảm bảo report có đủ trường NFR16. **Phải được dùng đo liên tục từ Epic 4 trở đi** (đo p95 ngay từ Sprint 1 — NFR01), không chờ đến Epic 9 mới chạy.
+- **FR27 (bộ đánh giá + report NFR16) — phần lớn [ADOPTED]:** code pipelines/evaluation/ đã tồn tại (`eval_retrieval.py` 215 cases, `eval_attribution.py`, `score_gold.py` metadata SHA-256). Việc của epic này = wrap + đảm bảo report có đủ trường NFR16. **Phải được dùng đo liên tục từ Epic 4 trở đi** (đo p95 ngay từ Sprint 1 — NFR01), không chờ đến Epic 9 mới chạy.
 - **FR26 (dashboard sức khỏe) — việc mới:** UI dashboard đọc DB + eval artifacts.
 **Ghi chú:** Nếu trượt tiến độ, nội dung admin bị cắt đầu tiên — downgrade thành CLI + trang thống kê chỉ đọc; FR27 (bộ đánh giá) vẫn giữ vì nó là mandatory cut.
 

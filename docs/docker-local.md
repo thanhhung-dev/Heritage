@@ -36,9 +36,9 @@ docker compose ps
 ```
 
 Không cần cài Python/Node, export model hay thêm `--build`. Compose tự build
-backend/frontend và tải image PostgreSQL/llama.cpp trong lần chạy đầu. Compose
+apps/backend/frontend và tải image PostgreSQL/llama.cpp trong lần chạy đầu. Compose
 tạo `DATABASE_URL` nội bộ từ các biến `POSTGRES_*`; không dùng hostname
-`localhost` hoặc cổng host cho kết nối từ backend.
+`localhost` hoặc cổng host cho kết nối từ apps.backend.
 
 Service `migrate` đợi PostgreSQL healthy, chạy migration bootstrap rồi mới cho
 backend khởi động. Database mới được upgrade bằng Alembic. Volume legacy chưa có
@@ -56,7 +56,7 @@ alias và location đã xác minh rồi mới cho backend chạy. Importer có U
 và chạy lặp lại không tạo bản ghi trùng. Có thể chạy lại thủ công bằng:
 
 ```bash
-docker compose run --rm backend python -m backend.db.import_corpus
+docker compose run --rm backend python -m apps.backend.db.import_corpus
 ```
 
 Lần đầu Docker tải image và llama.cpp nạp model nên health check có thể mất vài
