@@ -31,52 +31,226 @@ HeritageGraph/
 ├── corpus/
 │   ├── wiki_by_location/*.txt
 │   └── locations_index.json      # 25 crawl được / 24 chưa
-├── scripts/
-│   └── start_dev.sh               # tiện ích dùng xuyên dự án
 ├── data/                         # train.jsonl + valid.jsonl
 ├── models/                       # peft-adapter/ + qwen-fused.gguf
 └── docs/
 ```
 
-## Quick start
+## Chạy local và kiểm tra health
 
-### Bước 0: Setup
+Tất cả lệnh bên dưới chạy từ project root. Java không được sử dụng trong project.
+
+### 1. Yêu cầu
+
+| Công cụ | Phiên bản |
+|---|---|
+| Python | `3.12.11` |
+| Node.js | `20.19.3` |
+| npm | `10.8.2` |
+| Docker | Docker Engine/Desktop có Compose v2 |
+
+Kiểm tra môi trường trước khi cài:
+
+```bash
+python --version
+node --version
+npm --version
+docker compose version
+```
+
+### 2. Cài backend và frontend
+
+macOS/Linux:
+
+```bash
+python3.12 -m venv apps/backend/.venv
+source apps/backend/.venv/bin/activate
+python -m pip install -r apps/backend/requirements.txt
+
+cd apps/frontend
+npm ci
+cd ../..
+```
+
+Windows PowerShell:
+
+```powershell
+py -3.12 -m venv apps/backend/.venv
+.\apps\backend\.venv\Scripts\Activate.ps1
+python -m pip install -r apps/backend/requirements.txt
+
+Push-Location apps/frontend
+npm ci
+Pop-Location
+```
+
+### 3. Cấu hình môi trường
+
+macOS/Linux:
+
+```bash
+cp .env.example .env
+cp apps/frontend/.env.local.example apps/frontend/.env.local
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+Copy-Item apps/frontend/.env.local.example apps/frontend/.env.local
+```
+
+Mở `.env`, thay password mẫu và giữ `POSTGRES_PASSWORD` khớp với password
+trong `DATABASE_URL`. Cấu hình local tối thiểu:
+
+```dotenv
+POSTGRES_DB=heritagegraph
+POSTGRES_USER=heritagegraph
+POSTGRES_PASSWORD=replace-with-a-random-local-password
+DATABASE_URL=postgresql+psycopg://heritagegraph:replace-with-a-random-local-password@localhost:5433/heritagegraph
+INFERENCE_BACKEND=llama_server
+LLAMA_SERVER_URL=http://localhost:8080
+LLAMA_SERVER_TIMEOUT=300
+```
+
+Frontend đọc `NEXT_PUBLIC_API_URL=http://localhost:8000` từ
+`apps/frontend/.env.local`. Biến có tiền tố `NEXT_PUBLIC_` được gửi xuống trình
+duyệt, vì vậy không đặt password hoặc API key vào đó. Không commit `.env` hoặc
+`.env.local`.
+
+Nếu `DATABASE_URL` thiếu hoặc sai định dạng, backend sẽ dừng ngay khi startup và
+in ra biến cấu hình cần sửa; không mở cổng với cấu hình chưa hợp lệ.
+
+### 4. Chuẩn bị corpus, database và model
+
+Corpus không nằm trong Git. Crawl lần đầu bằng Python environment vừa tạo:
+
+```bash
+python pipelines/ingestion/crawl_by_location.py
+```
+
+Health check yêu cầu hai artifact sau tồn tại:
+
+- `corpus/locations_index.json` và thư mục `corpus/wiki_by_location/`;
+- `models/qwen-fused.gguf` khi dùng `llama_server` qua Docker Compose.
+
+Xem [hướng dẫn training](docs/training.md) để tạo GGUF. Sau khi có corpus và
+model, khởi tạo PostgreSQL, migration, dữ liệu và llama.cpp:
+
+```bash
+docker compose up -d db
+docker compose run --rm migrate
+docker compose run --rm import-data
+docker compose up -d llm
+```
+
+Không cần Ollama hoặc package `graphrag`; graph được dựng trực tiếp bằng
+`apps/backend/core/kg.py`.
+
+### 5. Chạy backend và frontend
+
+Terminal 1, từ project root và với Python virtual environment đã activate:
+
+```bash
+python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Terminal 2:
+
+```bash
+cd apps/frontend
+npm run dev
+```
+
+Các địa chỉ local:
+
+- Frontend: <http://localhost:3000>
+- Backend API docs: <http://localhost:8000/docs>
+- Backend health: <http://localhost:8000/api/health>
+
+### 6. Kiểm tra health
+
+macOS/Linux:
 
 ```bash
 cd ~/CAP/HeritageGraph
+cp .env.example .env
+cp apps/frontend/.env.local.example apps/frontend/.env.local
 python3 -m venv apps/backend/.venv
 apps/backend/.venv/bin/pip install -r apps/backend/requirements.txt
 
-cd apps/frontend && npm install && cd ../..
+```powershell
+curl.exe -i http://localhost:8000/api/health
 ```
 
-Không cần Ollama và không cần package `graphrag`: graph được xây bằng
-`apps/backend/core/kg.py`, hoàn toàn deterministic.
+Khi llama.cpp và corpus đều sẵn sàng, endpoint trả HTTP `200`:
 
-### Bước 1: Crawl corpus (~10 phút)
+```json
+{
+  "status": "ok",
+  "inference_backend": "llama_server",
+  "model_ready": true,
+  "corpus_ready": true
+}
+```
+
+HTTP `503` với `status: "starting"` nghĩa là backend đã nhận request nhưng model
+hoặc corpus chưa sẵn sàng. Kiểm tra lần lượt:
 
 ```bash
-apps/backend/.venv/bin/python pipelines/ingestion/crawl_by_location.py
+docker compose ps db llm
+docker compose logs llm
+```
+
+Health endpoint hiện kiểm tra model runtime và corpus. Trạng thái PostgreSQL xem
+bằng `docker compose ps db`.
+
+### 7. Chạy toàn bộ bằng Docker
+
+Nếu không chạy Python/Node trực tiếp, tạo `.env` từ template Docker, thay
+`POSTGRES_PASSWORD`, bảo đảm corpus và GGUF đã có rồi chạy:
+
+```bash
+cp .env.docker.example .env
+docker compose up --build -d
+docker compose ps
+curl -i http://localhost:8000/api/health
+```
+
+Trên PowerShell, thay lệnh đầu bằng:
+
+```powershell
+Copy-Item .env.docker.example .env
+```
+
+Hướng dẫn vận hành Docker chi tiết nằm tại [docs/docker-local.md](docs/docker-local.md).
+
+## Chuẩn bị dữ liệu và model
+
+### Crawl corpus (~10 phút)
+
+```bash
+python pipelines/ingestion/crawl_by_location.py
 ```
 
 Kết quả ghi vào `corpus/wiki_by_location/` + `corpus/locations_index.json`.
 
-### Bước 2: Xây + kiểm tra graph (~1 giây)
+### Xây và kiểm tra graph (~1 giây)
 
 ```bash
 bash pipelines/graph/run_indexing.sh                            # thống kê + xuất artifact
-apps/backend/.venv/bin/python pipelines/graph/build_graph.py --node "triều Nguyễn"
-apps/backend/.venv/bin/python pipelines/graph/build_graph.py --query "lăng Minh Mạng xây năm nào"
-apps/backend/.venv/bin/python pipelines/evaluation/eval_attribution.py              # retrieval + quy trách nhiệm lỗi
+python pipelines/graph/build_graph.py --node "triều Nguyễn"
+python pipelines/graph/build_graph.py --query "lăng Minh Mạng xây năm nào"
+python pipelines/evaluation/eval_attribution.py              # retrieval + quy trách nhiệm lỗi
 ```
 
 Artifact ra `graphrag/output/`: `graph.gexf` (mở bằng Gephi), `graph.json`
 (node-link cho frontend), `stats.json`.
 
-### Bước 3: Train LoRA
+### Train LoRA
 
 ```bash
-apps/backend/.venv/bin/python pipelines/training/bootstrap_deep_qa.py   # sinh data/train.jsonl + valid.jsonl
+python pipelines/training/bootstrap_deep_qa.py   # sinh data/train.jsonl + valid.jsonl
 docker compose --profile training run --rm trainer       # Linux có NVIDIA GPU
 docker compose --profile training run --rm trainer bash pipelines/training/eval.sh
 docker compose --profile training run --rm trainer bash pipelines/training/fuse.sh  # → GGUF
@@ -84,17 +258,7 @@ docker compose --profile training run --rm trainer bash pipelines/training/fuse.
 
 Trên Kaggle chạy cùng `pipelines/training/train_hf.py`, không chạy Docker lồng trong
 notebook. Xem hướng dẫn đầy đủ và cách nâng model 8B tại
-[`docs/training.md`](docs/training.md).
-
-### Bước 4: Chạy app
-
-```bash
-docker compose up -d llm          # llama.cpp tại localhost:8080
-apps/backend/.venv/bin/uvicorn apps.backend.app:app --port 8000
-cd apps/frontend && npm run dev # terminal khác → http://localhost:3000
-```
-
-Hoặc `bash scripts/start_dev.sh`. Xem graph qua API (không cần model đã fuse):
+[`docs/training.md`](docs/training.md). Xem graph qua API:
 
 ```bash
 curl localhost:8000/api/graph/stats
@@ -119,11 +283,11 @@ Hai nửa của độ chính xác `P(đúng) = P(lấy đúng đoạn) × P(mode
 
 ```bash
 # Nửa trên - retrieval (không cần model, chạy trong 1 giây)
-apps/backend/.venv/bin/python pipelines/evaluation/eval_attribution.py
+python pipelines/evaluation/eval_attribution.py
 
 # Nửa dưới - model (cần gold set gán nhãn tay)
-apps/backend/.venv/bin/python pipelines/evaluation/make_gold_template.py
-apps/backend/.venv/bin/python pipelines/training/score_gold.py \
+python pipelines/evaluation/make_gold_template.py
+python pipelines/training/score_gold.py \
   --gold pipelines/evaluation/gold.jsonl --out pipelines/evaluation/report_lora.json
 ```
 
@@ -133,6 +297,7 @@ apps/backend/.venv/bin/python pipelines/training/score_gold.py \
 - [docs/chatbot.md](docs/chatbot.md) — kiến trúc chatbot chốt theo Microsoft GraphRAG + KAG
 - [docs/metrics.md](docs/metrics.md) — 4 metric đánh giá
 - [docs/demo-guide.md](docs/demo-guide.md) — hướng dẫn demo
+- [docs/secrets-policy.md](docs/secrets-policy.md) — quy tắc `.env`, API key và secret cho local/Docker/Jenkins
 
 ## Chi phí
 

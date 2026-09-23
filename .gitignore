@@ -1,4 +1,3 @@
-# ===== Python =====
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,13 +8,11 @@ dist/
 *.egg-info/
 .eggs/
 
-# Virtualenv (môi trường local có thể nằm tại apps/backend/.venv)
 .venv/
 venv/
 env/
 ENV/
 
-# Test / lint / type cache
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -23,7 +20,6 @@ ENV/
 htmlcov/
 .ipynb_checkpoints/
 
-# ===== Node / Next.js (frontend) =====
 node_modules/
 .next/
 out/
@@ -36,15 +32,19 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# ===== Secrets / env =====
 .env
 .env.*
 !.env.example
 !.env.local.example
 !.env.docker.example
 
-# ===== Model weights (base 14GB, fused ~15GB, LoRA adapter) =====
-# apps/backend/models/*.py là SQLAlchemy models; chỉ bỏ qua thư mục/trọng số model AI.
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+
 apps/backend/models/*/
 apps/backend/models/*.safetensors
 apps/backend/models/*.gguf
@@ -64,24 +64,15 @@ models/**
 !models/**/
 !models/**/.gitkeep
 
-# ===== Corpus & training data (sinh ra từ pipelines/ingestion + teacher model) =====
-# corpus/wiki: output của crawl_wiki_mientrung.py
-# corpus/* KHÔNG phải corpus/: git không đi vào thư mục đã bị ignore, nên mẫu
-# "corpus/" làm dòng !corpus/aliases.json dưới đây vô hiệu.
+
 corpus/*
-# TRỪ aliases.json: sinh lại cần MẠNG (redirect Wikipedia) nhưng runtime phải
-# offline được. File nhỏ, đọc được bằng mắt, sửa tay được -> giữ trong git.
 !corpus/aliases.json
-# Dữ liệu location đã được duyệt thủ công cùng URL/câu nguồn chính thức.
 !corpus/verified_locations.json
 
-# data/: train.jsonl, valid.jsonl do make_smoke_data.py / bootstrap sinh ra
 data/**
 !data/**/
 !data/**/.gitkeep
 
-# ===== GraphRAG =====
-# input/: chunks từ chunk_corpus_mt.py; output/cache/logs: artifact khi index
 graphrag/input/**
 !graphrag/input/**/
 !graphrag/input/**/.gitkeep
@@ -89,14 +80,10 @@ graphrag/output/
 graphrag/cache/
 graphrag/logs/
 graphrag/*.log
-# Giữ lại: graphrag/settings.yaml, graphrag/prompts/ (config đã tune tay)
 
-# ===== Eval =====
-# gold.jsonl gán nhãn tay -> vẫn commit; report.json do score_gold.py sinh ra
 pipelines/evaluation/report.json
 pipelines/evaluation/report*.json
 
-# ===== Logs & temp =====
 *.log
 logs/
 tmp/
