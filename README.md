@@ -173,10 +173,11 @@ Các địa chỉ local:
 macOS/Linux:
 
 ```bash
-curl -i http://localhost:8000/api/health
-```
-
-Windows PowerShell:
+cd ~/CAP/HeritageGraph
+cp .env.example .env
+cp apps/frontend/.env.local.example apps/frontend/.env.local
+python3 -m venv apps/backend/.venv
+apps/backend/.venv/bin/pip install -r apps/backend/requirements.txt
 
 ```powershell
 curl.exe -i http://localhost:8000/api/health
@@ -296,6 +297,7 @@ python pipelines/training/score_gold.py \
 - [docs/chatbot.md](docs/chatbot.md) — kiến trúc chatbot chốt theo Microsoft GraphRAG + KAG
 - [docs/metrics.md](docs/metrics.md) — 4 metric đánh giá
 - [docs/demo-guide.md](docs/demo-guide.md) — hướng dẫn demo
+- [docs/secrets-policy.md](docs/secrets-policy.md) — quy tắc `.env`, API key và secret cho local/Docker/Jenkins
 
 ## Chi phí
 
