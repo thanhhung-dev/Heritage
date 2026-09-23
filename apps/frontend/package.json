@@ -1,6 +1,11 @@
 {
-  "name": "vanhoa-danang-hue-frontend",
+  "name": "Heritage-FE",
   "version": "0.1.0",
+  "engines": {
+    "node": "20.19.3",
+    "npm": "10.8.2"
+  },
+  "packageManager": "npm@10.8.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
