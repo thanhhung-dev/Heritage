@@ -1,14 +1,32 @@
 """FastAPI app chính cho chatbot văn hóa Đà Nẵng - Huế."""
+
+from contextlib import asynccontextmanager
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from apps.backend.api import chat, graph, health, tour
+from apps.backend.core.config import validate_startup_config
+from apps.backend.db.base import configure_database, dispose_database
 
 load_dotenv()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = validate_startup_config()
+    configure_database(settings.database_url)
+    app.state.settings = settings
+    try:
+        yield
+    finally:
+        await dispose_database()
+
 app = FastAPI(
     title="Heritage",
     description="Heritage desc",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
