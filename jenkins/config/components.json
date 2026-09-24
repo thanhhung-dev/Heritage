@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "ci_profiles": ["contracts", "backend", "frontend", "migration", "infrastructure", "data_pipeline", "model_contract"],
+  "ignored_paths": [
+    "docs/**",
+    "**/*.md",
+    "_bmad-output/**",
+    ".vscode/**",
+    "**/*.excalidraw"
+  ],
+  "components": {
+    "ci_config": {
+      "triggers": ["Jenkinsfile", "Jenkinsfile.model", "jenkins/**", ".gitignore"],
+      "ci_profiles": ["contracts"],
+      "images": [],
+      "deploy_units": []
+    },
+    "backend": {
+      "triggers": ["apps/backend/**", "apps/__init__.py", "corpus/**", ".python-version"],
+      "ci_profiles": ["backend"],
+      "images": ["backend"],
+      "deploy_units": ["backend"]
+    },
+    "frontend": {
+      "triggers": ["apps/frontend/**", ".node-version"],
+      "ci_profiles": ["frontend"],
+      "images": ["frontend"],
+      "deploy_units": ["frontend"]
+    },
+    "migration": {
+      "triggers": ["apps/backend/migrations/**", "apps/backend/db/**", "corpus/**", "alembic.ini", "schema.sql"],
+      "ci_profiles": ["backend", "migration"],
+      "images": ["backend"],
+      "deploy_units": ["migrate", "import-data", "backend"]
+    },
+    "runtime_stack": {
+      "triggers": ["docker-compose.yml", ".dockerignore", ".env.example", ".env.docker.example"],
+      "ci_profiles": ["contracts"],
+      "images": ["backend", "frontend"],
+      "deploy_units": ["backend", "frontend"]
+    },
+    "data_pipeline": {
+      "triggers": ["pipelines/__init__.py", "pipelines/ingestion/**", "pipelines/graph/**", "graphrag/**", "data/**"],
+      "ci_profiles": ["data_pipeline"],
+      "images": [],
+      "deploy_units": []
+    },
+    "model_prompt": {
+      "triggers": ["pipelines/training/**", "pipelines/evaluation/**", "b_rank_dump.txt"],
+      "ci_profiles": ["model_contract"],
+      "images": [],
+      "deploy_units": []
+    },
+    "infrastructure": {
+      "triggers": ["infra/**"],
+      "ci_profiles": ["infrastructure"],
+      "images": [],
+      "deploy_units": []
+    }
+  },
+  "images": {
+    "backend": {"repository_env": "ECR_BACKEND_REPOSITORY"},
+    "frontend": {"repository_env": "ECR_FRONTEND_REPOSITORY"}
+  },
+  "deploy_units": ["migrate", "import-data", "backend", "frontend"]
+}

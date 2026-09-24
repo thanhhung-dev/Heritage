@@ -1,15 +1,15 @@
 services:
   migrate:
-    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+    image: ${BACKEND_IMAGE:-heritage-backend-preserved}
     build: !reset null
   import-data:
-    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+    image: ${BACKEND_IMAGE:-heritage-backend-preserved}
     build: !reset null
   backend:
-    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required}
+    image: ${BACKEND_IMAGE:-heritage-backend-preserved}
     build: !reset null
     environment:
       RELEASE_REVISION: ${RELEASE_REVISION:?RELEASE_REVISION is required}
   frontend:
-    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required}
+    image: ${FRONTEND_IMAGE:-heritage-frontend-preserved}
     build: !reset null

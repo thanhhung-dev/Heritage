@@ -2,32 +2,9 @@
 set -Eeuo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-git -C "$tmp" init -q && git -C "$tmp" config user.email ci@example.invalid && git -C "$tmp" config user.name CI
-mkdir -p "$tmp/apps/backend/migrations/versions" "$tmp/apps/frontend" "$tmp/infra" "$tmp/corpus"
-touch "$tmp/README.md"; git -C "$tmp" add . && git -C "$tmp" commit -qm base; base=$(git -C "$tmp" rev-parse HEAD)
-
-touch "$tmp/apps/backend/app.py"; git -C "$tmp" add . && git -C "$tmp" commit -qm backend
-result=$(cd "$tmp" && "$root/jenkins/change-detection.sh" HEAD~ HEAD)
-grep -qx 'BACKEND_CHANGED=true' <<<"$result" && grep -qx 'FRONTEND_CHANGED=false' <<<"$result" && grep -qx 'MIGRATION_CHANGED=false' <<<"$result"
-
-touch "$tmp/apps/backend/migrations/versions/a.py"; git -C "$tmp" add . && git -C "$tmp" commit -qm migration
-result=$(cd "$tmp" && "$root/jenkins/change-detection.sh" HEAD~ HEAD)
-grep -qx 'BACKEND_CHANGED=true' <<<"$result" && grep -qx 'MIGRATION_CHANGED=true' <<<"$result" && grep -qx 'FRONTEND_CHANGED=false' <<<"$result"
-touch "$tmp/apps/frontend/page.tsx"; git -C "$tmp" add . && git -C "$tmp" commit -qm frontend
-result=$(cd "$tmp" && "$root/jenkins/change-detection.sh" HEAD~ HEAD)
-grep -qx 'FRONTEND_CHANGED=true' <<<"$result" && grep -qx 'BACKEND_CHANGED=false' <<<"$result"
-
-touch "$tmp/Jenkinsfile"; git -C "$tmp" add . && git -C "$tmp" commit -qm ci
-result=$(cd "$tmp" && "$root/jenkins/change-detection.sh" HEAD~ HEAD)
-grep -qx 'CI_CHANGED=true' <<<"$result" && grep -qx 'BACKEND_CHANGED=true' <<<"$result" && grep -qx 'FRONTEND_CHANGED=true' <<<"$result" && grep -qx 'MIGRATION_CHANGED=true' <<<"$result" && grep -qx 'IAC_CHANGED=false' <<<"$result"
-
-touch "$tmp/infra/main.tf"; git -C "$tmp" add . && git -C "$tmp" commit -qm iac
-result=$(cd "$tmp" && "$root/jenkins/change-detection.sh" HEAD~ HEAD)
-grep -qx 'IAC_CHANGED=true' <<<"$result" && grep -qx 'BACKEND_CHANGED=false' <<<"$result"
-
-touch "$tmp/corpus/aliases.json"; git -C "$tmp" add . && git -C "$tmp" commit -qm corpus
-result=$(cd "$tmp" && "$root/jenkins/change-detection.sh" HEAD~ HEAD)
-grep -qx 'BACKEND_CHANGED=true' <<<"$result" && grep -qx 'FRONTEND_CHANGED=false' <<<"$result"
+cd "$root"
+python3 -m unittest discover -s jenkins/tests -p 'test_*.py'
+cd - >/dev/null
 
 if CHANGE_ID=42 BRANCH_NAME=main GIT_COMMIT=$(printf a%.0s {1..40}) "$root/jenkins/guard-release.sh" deploy 2>/dev/null; then exit 1; fi
 BRANCH_NAME=main GIT_COMMIT=$(printf a%.0s {1..40}) "$root/jenkins/guard-release.sh" deploy
@@ -105,25 +82,59 @@ EOF
 chmod +x "$tmp/bin/curl" "$tmp/bin/aws" "$tmp/bin/docker"
 
 mkdir -p "$tmp/corpus/wiki_by_location"
+mkdir -p "$tmp/apps/backend" "$tmp/apps/frontend"
 printf '{}\n' >"$tmp/corpus/locations_index.json"
 printf 'document\n' >"$tmp/corpus/wiki_by_location/sample.txt"
 printf '%064d\n' 1 >"$tmp/corpus.sha256"
 touch "$tmp/apps/backend/Dockerfile" "$tmp/apps/frontend/Dockerfile"
 : >"$tmp/aws.log"; : >"$tmp/docker.log"
-(cd "$tmp" && env AWS_REGION=test ECR_REGISTRY=example.invalid ECR_BACKEND_REPOSITORY=backend ECR_FRONTEND_REPOSITORY=frontend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb STAGING_PUBLIC_API_URL=https://api.example.invalid MOCK_AWS_LOG="$tmp/aws.log" MOCK_DOCKER_LOG="$tmp/docker.log" PATH="$tmp/bin:$PATH" "$root/jenkins/ecr-build-push.sh")
-grep -q 'backend:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' "$tmp/docker.log"
+(cd "$tmp" && env AWS_REGION=test ECR_REGISTRY=example.invalid ECR_FRONTEND_REPOSITORY=frontend RELEASE_IMAGES=frontend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb STAGING_PUBLIC_API_URL=https://api.example.invalid MOCK_AWS_LOG="$tmp/aws.log" MOCK_DOCKER_LOG="$tmp/docker.log" PATH="$tmp/bin:$PATH" "$root/jenkins/ecr-build-push.sh")
+! grep -q 'backend:' "$tmp/docker.log"
 grep -q 'frontend:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' "$tmp/docker.log"
-grep -q 'BACKEND_IMAGE=example.invalid/backend@sha256:' "$tmp/release-images.env"
 grep -q 'FRONTEND_IMAGE=example.invalid/frontend@sha256:' "$tmp/release-images.env"
+
+: >"$tmp/aws.log"; : >"$tmp/docker.log"
+(cd "$tmp" && env AWS_REGION=test ECR_REGISTRY=example.invalid ECR_FRONTEND_REPOSITORY=frontend RELEASE_IMAGES=frontend,frontend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb STAGING_PUBLIC_API_URL=https://api.example.invalid MOCK_AWS_LOG="$tmp/aws.log" MOCK_DOCKER_LOG="$tmp/docker.log" PATH="$tmp/bin:$PATH" "$root/jenkins/ecr-build-push.sh")
+[[ $(grep -c '^build .*frontend:' "$tmp/docker.log") == 1 ]]
+
+: >"$tmp/aws.log"; : >"$tmp/docker.log"
+(cd "$tmp" && env AWS_REGION=test ECR_REGISTRY=example.invalid ECR_BACKEND_REPOSITORY=backend RELEASE_IMAGES=backend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb MOCK_AWS_LOG="$tmp/aws.log" MOCK_DOCKER_LOG="$tmp/docker.log" PATH="$tmp/bin:$PATH" "$root/jenkins/ecr-build-push.sh")
+grep -q 'backend:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' "$tmp/docker.log"
+! grep -q 'frontend:' "$tmp/docker.log"
+grep -q 'BACKEND_IMAGE=example.invalid/backend@sha256:' "$tmp/release-images.env"
 grep -q 'CORPUS_SHA256=' "$tmp/release-images.env"
 
-common=(AWS_REGION=test LAST_GOOD_PARAMETER=/test/last-good GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb SMOKE_URL=https://example.invalid/health MOCK_AWS_LOG="$tmp/aws.log" MOCK_CURL_COUNT="$tmp/curl.count" PATH="$tmp/bin:$PATH")
+: >"$tmp/aws.log"
+(cd "$tmp" && env AWS_REGION=test ECR_REGISTRY=example.invalid ECR_FRONTEND_REPOSITORY=frontend DEPLOY_UNITS=frontend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb STAGING_DEPLOY_DIR=/srv/heritage SSM_INSTANCE_ID=i-test SSM_DOCUMENT_NAME=deploy MOCK_AWS_LOG="$tmp/aws.log" PATH="$tmp/bin:$PATH" "$root/jenkins/deploy-staging.sh")
+grep -q 'up -d --no-deps.*frontend' "$tmp/aws.log"
+! grep -q 'up -d --no-deps.*backend' "$tmp/aws.log"
+grep -q 'docker inspect --format' "$tmp/aws.log"
+grep -q 'frontend@sha256:' "$tmp/aws.log"
+
+: >"$tmp/aws.log"
+(cd "$tmp" && env AWS_REGION=test ECR_REGISTRY=example.invalid ECR_FRONTEND_REPOSITORY=frontend DEPLOY_UNITS=frontend,frontend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb STAGING_DEPLOY_DIR=/srv/heritage SSM_INSTANCE_ID=i-test SSM_DOCUMENT_NAME=deploy MOCK_AWS_LOG="$tmp/aws.log" PATH="$tmp/bin:$PATH" "$root/jenkins/deploy-staging.sh")
+[[ $(grep -o 'up -d --no-deps.*frontend' "$tmp/aws.log" | wc -l | tr -d ' ') == 1 ]]
+
+grep -q "CI_PROFILE_CONTRACTS == 'true'" "$root/Jenkinsfile"
+grep -q "CI_PROFILE_FRONTEND == 'true'" "$root/Jenkinsfile"
+grep -q "CI_PROFILE_BACKEND == 'true'" "$root/Jenkinsfile"
+grep -q "CI_PROFILE_MIGRATION == 'true'" "$root/Jenkinsfile"
+grep -q "HAS_RELEASE == 'true'" "$root/Jenkinsfile"
+grep -q 'git rev-parse HEAD~1 2>/dev/null || git hash-object -t tree /dev/null' "$root/Jenkinsfile"
+
+common=(AWS_REGION=test LAST_GOOD_PARAMETER=/test/last-good DEPLOY_UNITS=backend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb SMOKE_URL=https://example.invalid/health MOCK_AWS_LOG="$tmp/aws.log" MOCK_CURL_COUNT="$tmp/curl.count" PATH="$tmp/bin:$PATH")
 : >"$tmp/aws.log"; rm -f "$tmp/curl.count"
 env "${common[@]}" "$root/jenkins/smoke-and-rollback.sh"
-grep -q 'put-parameter.*bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' "$tmp/aws.log"
+grep -q 'put-parameter.*--name /test/last-good/backend.*bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' "$tmp/aws.log"
 : >"$tmp/aws.log"; rm -f "$tmp/curl.count"
-if env "${common[@]}" MOCK_FIRST_CURL_EXIT=1 MOCK_SECOND_CURL_EXIT=0 ECR_REGISTRY=example.invalid ECR_BACKEND_REPOSITORY=backend ECR_FRONTEND_REPOSITORY=frontend STAGING_DEPLOY_DIR=/srv/heritage SSM_INSTANCE_ID=i-test SSM_DOCUMENT_NAME=deploy "$root/jenkins/smoke-and-rollback.sh" 2>/dev/null; then exit 1; fi
+if env "${common[@]}" MOCK_FIRST_CURL_EXIT=1 MOCK_SECOND_CURL_EXIT=0 ECR_REGISTRY=example.invalid ECR_BACKEND_REPOSITORY=backend DEPLOY_UNITS=backend STAGING_DEPLOY_DIR=/srv/heritage SSM_INSTANCE_ID=i-test SSM_DOCUMENT_NAME=deploy "$root/jenkins/smoke-and-rollback.sh" 2>/dev/null; then exit 1; fi
 grep -q 'send-command' "$tmp/aws.log"
 grep -q 'git checkout --detach.*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' "$tmp/aws.log"
 [[ $(cat "$tmp/curl.count") == 2 ]]
+
+: >"$tmp/aws.log"; rm -f "$tmp/curl.count"
+if env "${common[@]}" DEPLOY_UNITS=migrate,import-data,backend MOCK_FIRST_CURL_EXIT=1 MOCK_SECOND_CURL_EXIT=0 ECR_REGISTRY=example.invalid ECR_BACKEND_REPOSITORY=backend STAGING_DEPLOY_DIR=/srv/heritage SSM_INSTANCE_ID=i-test SSM_DOCUMENT_NAME=deploy "$root/jenkins/smoke-and-rollback.sh" 2>/dev/null; then exit 1; fi
+grep -q 'up -d --no-deps.*backend' "$tmp/aws.log"
+! grep -q 'run --rm --no-deps.*migrate' "$tmp/aws.log"
+! grep -q 'run --rm --no-deps.*import-data' "$tmp/aws.log"
 echo 'Jenkins safety tests passed'
