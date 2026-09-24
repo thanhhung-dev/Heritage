@@ -7,7 +7,6 @@ Async note: Alembic v1.19+ hỗ trợ async engine. Online mode dùng async_engi
 offline mode render SQL string (không kết nối, chỉ cần URL để format).
 """
 import asyncio
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -15,6 +14,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+from apps.backend.core.config import validate_database_config
 
 # ---------------------------------------------------------------------------
 # Model metadata — nguồn đúng cho autogenerate
@@ -37,7 +37,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_SETTINGS = validate_database_config()
+DATABASE_URL = DATABASE_SETTINGS.url
 
 
 def run_migrations_offline() -> None:
@@ -74,6 +75,7 @@ async def run_migrations_online() -> None:
         {"sqlalchemy.url": DATABASE_URL},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=DATABASE_SETTINGS.connect_args,
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

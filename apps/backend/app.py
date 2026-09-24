@@ -15,7 +15,7 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = validate_startup_config()
-    configure_database(settings.database_url)
+    configure_database(settings.database)
     app.state.settings = settings
     try:
         yield
@@ -51,6 +51,7 @@ async def root():
     return {
         "name": "Chatbot Văn hóa Đà Nẵng - Huế",
         "docs": "/docs",
-        "health": "/api/health",
+        "liveness": "/api/live",
+        "readiness": "/api/ready",
         "graph": "/api/graph/stats",
     }

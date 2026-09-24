@@ -198,7 +198,7 @@ volumes:
   postgres_data:
 ```
 
-Trong `.env.docker.example`, thêm:
+Trong `.env.example`, thêm:
 
 ```dotenv
 POSTGRES_DB=heritagegraph
