@@ -1,5 +1,5 @@
 pipeline {
-  agent any
+  agent { label 'heritage-linux' }
   options { skipDefaultCheckout(true); timestamps(); disableConcurrentBuilds() }
   environment { DEPLOY_BRANCH = 'main' }
   stages {
