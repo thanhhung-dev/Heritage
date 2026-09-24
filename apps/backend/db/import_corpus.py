@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from apps.backend.core.corpus import load_docs
+from apps.backend.core.config import validate_database_config
 from apps.backend.core.textutil import strip_accents
 
 
@@ -165,7 +165,10 @@ def build_import_plan() -> ImportPlan:
     return ImportPlan(documents, passages, entities, aliases, locations, skipped)
 
 
-def _connect(database_url: str):
+def _connect(
+    database_url: str,
+    connect_args: dict[str, str] | None = None,
+):
     import psycopg
     from sqlalchemy.engine import make_url
 
@@ -176,12 +179,17 @@ def _connect(database_url: str):
         password=url.password,
         host=url.host,
         port=url.port,
+        **(connect_args or {}),
     )
 
 
-def import_plan(plan: ImportPlan, database_url: str) -> None:
+def import_plan(
+    plan: ImportPlan,
+    database_url: str,
+    connect_args: dict[str, str] | None = None,
+) -> None:
     """Upsert a plan in one transaction and preserve unrelated database rows."""
-    with _connect(database_url) as connection:
+    with _connect(database_url, connect_args) as connection:
         with connection.cursor() as cursor:
             for document in plan.documents:
                 cursor.execute(
@@ -326,12 +334,14 @@ def import_plan(plan: ImportPlan, database_url: str) -> None:
 
 
 def main() -> None:
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError("DATABASE_URL is required")
+    database_settings = validate_database_config()
 
     plan = build_import_plan()
-    import_plan(plan, database_url)
+    import_plan(
+        plan,
+        database_settings.url,
+        database_settings.connect_args,
+    )
     print(
         "Imported "
         f"{len(plan.documents)} documents, {len(plan.passages)} passages, "

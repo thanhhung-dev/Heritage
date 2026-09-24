@@ -15,7 +15,7 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = validate_startup_config()
-    configure_database(settings.database_url)
+    configure_database(settings.database)
     app.state.settings = settings
     try:
         yield

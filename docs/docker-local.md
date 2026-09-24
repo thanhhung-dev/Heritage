@@ -31,7 +31,7 @@ chạy được.
 ```bash
 tar -xzf heritagegraph-docker.tar.gz
 cd HeritageGraph
-cp .env.docker.example .env
+cp .env.example .env
 # Thay POSTGRES_PASSWORD trong .env trước khi chạy.
 docker compose up -d
 docker compose ps

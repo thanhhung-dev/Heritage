@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from apps.backend.core.config import validate_database_config
 
 
 BASELINE_REVISION = "b6e199de17dd"
@@ -53,7 +53,10 @@ def classify_unversioned_schema(tables: set[str], views: set[str]) -> str:
     )
 
 
-def _database_objects(database_url: str) -> tuple[set[str], set[str], bool]:
+def _database_objects(
+    database_url: str,
+    connect_args: dict[str, str] | None = None,
+) -> tuple[set[str], set[str], bool]:
     import psycopg
     from sqlalchemy.engine import make_url
 
@@ -64,6 +67,7 @@ def _database_objects(database_url: str) -> tuple[set[str], set[str], bool]:
         password=url.password,
         host=url.host,
         port=url.port,
+        **(connect_args or {}),
     ) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -87,11 +91,12 @@ def main() -> None:
     from alembic import command
     from alembic.config import Config
 
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        raise RuntimeError("DATABASE_URL is required")
+    database_settings = validate_database_config()
 
-    tables, views, has_version = _database_objects(database_url)
+    tables, views, has_version = _database_objects(
+        database_settings.url,
+        database_settings.connect_args,
+    )
     config = Config("alembic.ini")
 
     if not has_version:

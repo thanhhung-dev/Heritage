@@ -108,6 +108,13 @@ POSTGRES_DB=heritagegraph
 POSTGRES_USER=heritagegraph
 POSTGRES_PASSWORD=replace-with-a-random-local-password
 DATABASE_URL=postgresql+psycopg://heritagegraph:replace-with-a-random-local-password@localhost:5433/heritagegraph
+DATABASE_POOL_SIZE=10
+DATABASE_MAX_OVERFLOW=20
+DATABASE_POOL_TIMEOUT=30
+DATABASE_POOL_RECYCLE=300
+DATABASE_ECHO=false
+DATABASE_SSL_MODE=disable
+DATABASE_SSL_ROOT_CERT=
 INFERENCE_BACKEND=llama_server
 LLAMA_SERVER_URL=http://localhost:8080
 LLAMA_SERVER_TIMEOUT=300
@@ -120,6 +127,17 @@ duyệt, vì vậy không đặt password hoặc API key vào đó. Không commi
 
 Nếu `DATABASE_URL` thiếu hoặc sai định dạng, backend sẽ dừng ngay khi startup và
 in ra biến cấu hình cần sửa; không mở cổng với cấu hình chưa hợp lệ.
+
+AWS staging phải mount AWS RDS CA bundle vào runtime rồi cấu hình đường dẫn bên
+trong máy/container chạy backend:
+
+```dotenv
+DATABASE_SSL_MODE=verify-full
+DATABASE_SSL_ROOT_CERT=/run/secrets/aws-rds/global-bundle.pem
+```
+
+Không thêm password hoặc connection string vào log. `DATABASE_ECHO` mặc định
+phải là `false`; chỉ bật tạm thời khi debug local.
 
 ### 4. Chuẩn bị corpus, database và model
 
@@ -211,7 +229,7 @@ Nếu không chạy Python/Node trực tiếp, tạo `.env` từ template Docker
 `POSTGRES_PASSWORD`, bảo đảm corpus và GGUF đã có rồi chạy:
 
 ```bash
-cp .env.docker.example .env
+cp .env.example .env
 docker compose up --build -d
 docker compose ps
 curl -i http://localhost:8000/api/health
@@ -220,7 +238,7 @@ curl -i http://localhost:8000/api/health
 Trên PowerShell, thay lệnh đầu bằng:
 
 ```powershell
-Copy-Item .env.docker.example .env
+Copy-Item .env.example .env
 ```
 
 Hướng dẫn vận hành Docker chi tiết nằm tại [docs/docker-local.md](docs/docker-local.md).

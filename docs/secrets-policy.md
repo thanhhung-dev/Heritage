@@ -9,7 +9,7 @@ khai của HeritageGraph.
 |---|---|---|---|
 | Backend local | `.env.example` | `.env` ở project root | Không |
 | Frontend local | `apps/frontend/.env.local.example` | `apps/frontend/.env.local` | Không |
-| Docker Compose local | `.env.docker.example` | `.env` ở project root | Không |
+| Docker Compose local | `.env.example` | `.env` ở project root | Không |
 | Jenkins | Không lưu secret trong repository | Jenkins Credentials | Không |
 | Production | Không dùng file secret trong image | Secret manager của nền tảng triển khai | Không |
 
@@ -60,7 +60,7 @@ cp apps/frontend/.env.local.example apps/frontend/.env.local
 Docker Compose:
 
 ```bash
-cp .env.docker.example .env
+cp .env.example .env
 ```
 
 Sau khi sao chép, thay toàn bộ placeholder trước khi chạy. Có thể kiểm tra file

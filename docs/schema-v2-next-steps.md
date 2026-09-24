@@ -70,7 +70,7 @@ Các điểm sau vẫn còn trong file DBML hiện tại và cần xử lý, kh�
 ## 4. P1: PostgreSQL và migrations
 
 - [ ] Thêm PostgreSQL vào `docker-compose.yml`, volume bền vững và healthcheck. Không công khai cổng database nếu không cần.
-- [ ] Cấu hình `DATABASE_URL` bằng môi trường; không commit mật khẩu. Cập nhật `.env.docker.example` bằng giá trị mẫu.
+- [ ] Cấu hình `DATABASE_URL` bằng môi trường; không commit mật khẩu. Cập nhật `.env.example` bằng giá trị mẫu.
 - [ ] Thêm SQLAlchemy, driver PostgreSQL và Alembic theo cách quản lý dependency hiện tại của apps.backend.
 - [ ] Tạo migration đầu tiên từ schema đã chốt; không dùng tự động tạo bảng để thay thế lịch sử migration.
 - [ ] Thực thi CHECK cho role, loại entity/alias, confidence trong [0,1], rating trong {-1,1}, offset hợp lệ, thời lượng và kích thước không âm.
