@@ -18,8 +18,20 @@ pipeline {
         }
         sh "jenkins/change-detection.sh '${base}' HEAD"
         sh 'python3 jenkins/python/release_plan.py'
-        readFile('.ci-components.env').split('\n').each { if (it) { def p=it.split('=',2); env[p[0]]=p[1] } }
-        readFile('.ci-release.env').split('\n').each { if (it) { def p=it.split('=',2); env[p[0]]=p[1] } }
+        readFile('.ci-components.env').split('\n').each { line ->
+          if (line.startsWith('CI_PROFILE_CONTRACTS=')) env.CI_PROFILE_CONTRACTS = line.substring(21)
+          if (line.startsWith('CI_PROFILE_BACKEND=')) env.CI_PROFILE_BACKEND = line.substring(19)
+          if (line.startsWith('CI_PROFILE_FRONTEND=')) env.CI_PROFILE_FRONTEND = line.substring(20)
+          if (line.startsWith('CI_PROFILE_MIGRATION=')) env.CI_PROFILE_MIGRATION = line.substring(21)
+          if (line.startsWith('CI_PROFILE_INFRASTRUCTURE=')) env.CI_PROFILE_INFRASTRUCTURE = line.substring(26)
+          if (line.startsWith('CI_PROFILE_DATA_PIPELINE=')) env.CI_PROFILE_DATA_PIPELINE = line.substring(25)
+          if (line.startsWith('CI_PROFILE_MODEL_CONTRACT=')) env.CI_PROFILE_MODEL_CONTRACT = line.substring(26)
+        }
+        readFile('.ci-release.env').split('\n').each { line ->
+          if (line.startsWith('RELEASE_IMAGES=')) env.RELEASE_IMAGES = line.substring(15)
+          if (line.startsWith('DEPLOY_UNITS=')) env.DEPLOY_UNITS = line.substring(13)
+          if (line.startsWith('HAS_RELEASE=')) env.HAS_RELEASE = line.substring(12)
+        }
       } }
     }
     stage('Quality gates') {
