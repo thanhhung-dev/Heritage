@@ -10,7 +10,7 @@
   ],
   "components": {
     "ci_config": {
-      "triggers": ["Jenkinsfile", "Jenkinsfile.model", "jenkins/**", ".gitignore"],
+      "triggers": ["Jenkinsfile", "Jenkinsfile.model", "jenkins/**", "docker/jenkins-agent/**", ".gitignore"],
       "ci_profiles": ["contracts"],
       "images": [],
       "deploy_units": []

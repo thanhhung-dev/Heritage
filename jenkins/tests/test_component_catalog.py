@@ -50,7 +50,9 @@ class DetectorContractTest(unittest.TestCase):
         self.assertEqual(["migrate", "import-data", "backend"], plan["deploy_units"])
 
     def test_ci_config_only_has_no_product_release(self):
-        selected, unmapped = classify(CATALOG, ["Jenkinsfile"], [])
+        selected, unmapped = classify(
+            CATALOG, ["Jenkinsfile", "docker/jenkins-agent/Dockerfile"], []
+        )
         self.assertEqual(["ci_config"], selected)
         self.assertEqual([], unmapped)
         self.assertIn("CI_PROFILE_CONTRACTS=true", render_env(CATALOG, selected))
