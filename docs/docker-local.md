@@ -46,8 +46,9 @@ Service `migrate` đợi PostgreSQL healthy, chạy migration bootstrap rồi m�
 backend khởi động. Database mới được upgrade bằng Alembic. Volume legacy chưa có
 `alembic_version` chỉ được nhận vào baseline khi tập bảng và view khớp topology
 legacy đã biết; wrapper sau đó bổ sung bảng `place_location` còn thiếu. Schema
-lạ hoặc không đầy đủ bị từ chối an toàn. Nếu migration lỗi, backend không khởi
-động và có thể xem chi tiết bằng:
+lạ hoặc không đầy đủ bị từ chối an toàn. Migration cũng bật idempotent các
+extension `vector`, `pg_trgm` và `pgcrypto`. Nếu migration lỗi, backend không
+khởi động và có thể xem chi tiết bằng:
 
 ```bash
 docker compose logs migrate db
@@ -65,7 +66,8 @@ Lần đầu Docker tải image và llama.cpp nạp model nên health check có 
 phút. Khi backend báo `healthy`:
 
 - Giao diện: <http://localhost:3000>
-- Backend health: <http://localhost:8000/api/health>
+- Backend liveness: <http://localhost:8000/api/live>
+- Backend readiness (database, model, corpus): <http://localhost:8000/api/ready>
 - API docs: <http://localhost:8000/docs>
 
 Test một câu không qua giao diện:

@@ -184,7 +184,8 @@ Các địa chỉ local:
 
 - Frontend: <http://localhost:3000>
 - Backend API docs: <http://localhost:8000/docs>
-- Backend health: <http://localhost:8000/api/health>
+- Backend liveness: <http://localhost:8000/api/live>
+- Backend readiness (database, model, corpus): <http://localhost:8000/api/ready>
 
 ### 6. Kiểm tra health
 
@@ -196,32 +197,35 @@ cp .env.example .env
 cp apps/frontend/.env.local.example apps/frontend/.env.local
 python3 -m venv apps/backend/.venv
 apps/backend/.venv/bin/pip install -r apps/backend/requirements.txt
+```
 
 ```powershell
-curl.exe -i http://localhost:8000/api/health
+curl.exe -i http://localhost:8000/api/live
+curl.exe -i http://localhost:8000/api/ready
 ```
 
 Khi llama.cpp và corpus đều sẵn sàng, endpoint trả HTTP `200`:
 
 ```json
 {
-  "status": "ok",
+  "status": "ready",
   "inference_backend": "llama_server",
+  "database_ready": true,
   "model_ready": true,
   "corpus_ready": true
 }
 ```
 
-HTTP `503` với `status: "starting"` nghĩa là backend đã nhận request nhưng model
-hoặc corpus chưa sẵn sàng. Kiểm tra lần lượt:
+HTTP `503` với `status: "not_ready"` nghĩa là backend đã nhận request nhưng
+database, model hoặc corpus chưa sẵn sàng. Kiểm tra lần lượt:
 
 ```bash
 docker compose ps db llm
 docker compose logs llm
 ```
 
-Health endpoint hiện kiểm tra model runtime và corpus. Trạng thái PostgreSQL xem
-bằng `docker compose ps db`.
+Readiness endpoint kiểm tra PostgreSQL bằng `SELECT 1`, model runtime và corpus.
+Liveness chỉ xác nhận tiến trình API còn nhận request.
 
 ### 7. Chạy toàn bộ bằng Docker
 
@@ -232,7 +236,8 @@ Nếu không chạy Python/Node trực tiếp, tạo `.env` từ template Docker
 cp .env.example .env
 docker compose up --build -d
 docker compose ps
-curl -i http://localhost:8000/api/health
+curl -i http://localhost:8000/api/live
+curl -i http://localhost:8000/api/ready
 ```
 
 Trên PowerShell, thay lệnh đầu bằng:

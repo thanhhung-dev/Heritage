@@ -51,6 +51,7 @@ async def root():
     return {
         "name": "Chatbot Văn hóa Đà Nẵng - Huế",
         "docs": "/docs",
-        "health": "/api/health",
+        "liveness": "/api/live",
+        "readiness": "/api/ready",
         "graph": "/api/graph/stats",
     }
