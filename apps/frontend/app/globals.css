@@ -1,5 +1,6 @@
 :root {
   --font-sans: "Inter", Inter Fallback, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-brand: "Poppins", var(--font-sans);
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -10,6 +11,7 @@
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+  --font-weight-extrabold: 800;
 
   --tracking-tight: -0.025em;
 
@@ -48,6 +50,7 @@
   --bg-hover: #36363a;
 
   --text: #ffffff;
+  --text-strong: #fffffff2;
   --text-secondary: #ccccd1;
   --text-tertiary: #a1a1aa;
 
@@ -55,6 +58,16 @@
   --border-subtle: var(--tl-8);
 
   --accent: var(--orange-500);
+  --accent-glow: #fa500f21;
+
+  --glass-surface: #8a8a8a4d;
+  --glass-surface-hover: #8a8a8a66;
+  --glass-surface-strong: #00000080;
+  --glass-border: #ffffff61;
+
+  --shadow-floating: 0 10px 30px #00000059;
+  --shadow-brand: 0 2px 4px #00000066;
+  --shadow-glass-inset: inset 0 0 6px 3px #8a8a8a4d;
 }
 
 * {
@@ -63,7 +76,9 @@
   padding: 0;
 }
 
+html,
 body {
+  min-height: 100%;
   font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
@@ -73,251 +88,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ===== App Shell ===== */
-.app {
-  height: 100vh;
-  height: 100dvh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-/* ===== Top Bar ===== */
-.topbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 24px;
-  z-index: 10;
-}
-
-.topbar-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.topbar-auth {
-  display: flex;
-  gap: 8px;
-}
-
-/* ===== Buttons ===== */
-.btn-icon {
-  background: transparent;
-  color: var(--text-secondary);
-  border: none;
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background var(--transition);
-}
-
-.btn-icon:hover {
-  background: var(--bg-hover);
-}
-
-.btn-ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  padding: 6px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  height: 32px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  transition: background var(--transition);
-}
-
-.btn-ghost:hover {
-  background: var(--bg-hover);
-}
-
-.btn-primary {
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  padding: 6px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  height: 32px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  font-weight: var(--font-weight-medium);
-  transition: opacity var(--transition);
-}
-
-.btn-primary:hover {
-  opacity: 0.85;
-}
-
-/* ===== Landing ===== */
-.landing {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  gap: 28px;
-  overflow-y: auto;
-}
-
-.landing-input {
-  width: 100%;
-  max-width: 600px;
-}
-
-/* ===== Chat Messages (Ant X Bubble.List) ===== */
-.chat-messages {
-  flex: 1;
-  min-height: 0;
-  max-width: 720px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 80px 24px 24px;
-  /* clip the scroll box's extended right edge so its scrollbar sits off-screen */
-  overflow: hidden;
-}
-
-/* Push the scroll box's right edge past the visible column; the parent clips it,
-   so the scrollbar is hidden outside the screen. */
-.chat-messages .ant-bubble-list-scroll-box {
-  width: calc(100% + 40px);
-  padding-right: 40px;
-  scrollbar-width: none;
-}
-
-.chat-messages .ant-bubble-list-scroll-box::-webkit-scrollbar {
-  display: none;
-}
-
-.thinking-spin {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.thinking-spin-ring {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.thingking-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.thinking-spin-ring::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 70%;
-  border: 5px solid var(--tl-15);
-  border-top-color: var(--accent);
-  animation: thinking-spin 1s linear infinite;
-}
-
-@keyframes thinking-spin {
-  to {
-    transform: rotate(360deg);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-}
-
-.thinking-spin-text {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.assistant-footer {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-/* ===== Ant Design X Sender (input box) ===== */
-.ant-sender {
-  background: var(--bg-raised);
-}
-
-/* ===== Input Area (sticky bottom) ===== */
-.input-area {
-  position: sticky;
-  bottom: 0;
-  padding: 12px 24px 24px;
-  background: linear-gradient(to bottom, transparent, var(--bg) 20%);
-  z-index: 5;
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.input-area-inner {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.input-area-disclaimer {
-  margin-top: 8px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
-/* ===== Help Button ===== */
-.help-btn {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: 16px;
-  z-index: 20;
-  transition: background var(--transition);
-}
-
-.help-btn:hover {
-  background: var(--bg-hover);
 }
 
 /* ===== Focus ===== */

@@ -3,11 +3,11 @@
 import { useEffect, useRef } from "react";
 import { Bubble, Sources } from "@ant-design/x";
 import type { BubbleListProps } from "@ant-design/x";
-import type { Message, Source } from "@/types/chat";
+import type { Message, Source } from "@/features/chat/types";
 import ChatInput from "./ChatInput";
 import { ChatActions } from "./ChatActions";
-import { HeritageLogo } from "./Logo/HeritageLogo";
-import { HeritageLogoMini } from "./Logo/HeritageLogoMinimal";
+import { HeritageLogoMini } from "@/components/Logo/HeritageLogoMinimal";
+import styles from "../chat.module.css";
 
 interface ChatViewProps {
   messages: Message[];
@@ -54,7 +54,7 @@ export function ChatView({
       content: msg.content,
       footer:
         msg.role === "assistant" ? (
-          <div className="assistant-footer">
+          <div className={styles.assistantFooter}>
             <ChatActions content={msg.content} />
             {msg.sources && msg.sources.length > 0 && (
               <SourceFooter sources={msg.sources} />
@@ -69,13 +69,13 @@ export function ChatView({
             role: "ai",
             avatar: null,
             content: (
-              <div className="thinking-spin">
-                <div className="thinking-spin-ring">
-                  <div className="thingking-logo">
-                    <HeritageLogoMini size={28}/>
+              <div className={styles.thinking}>
+                <div className={styles.thinkingRing}>
+                  <div className={styles.thinkingLogo}>
+                    <HeritageLogoMini size={28} />
                   </div>
                 </div>
-                <span className="thinking-spin-text">Đang suy nghĩ…</span>
+                <span className={styles.thinkingText}>Đang suy nghĩ…</span>
               </div>
             ),
           },
@@ -87,7 +87,7 @@ export function ChatView({
     <>
       <Bubble.List
         ref={listRef}
-        className="chat-messages"
+        className={styles.messages}
         autoScroll={false}
         styles={{ scroll: { height: "100%" } }}
         items={items}
@@ -105,8 +105,8 @@ export function ChatView({
         }}
       />
 
-      <div className="input-area">
-        <div className="input-area-inner">
+      <div className={styles.inputArea}>
+        <div className={styles.inputAreaInner}>
           <ChatInput
             value={input}
             onChange={onInputChange}
@@ -114,7 +114,7 @@ export function ChatView({
             placeholder="Hỏi thêm…"
             loading={loading}
           />
-          <div className="input-area-disclaimer">
+          <div className={styles.disclaimer}>
             HeritageGraph có thể mắc lỗi. Kiểm tra thông tin. · 100% local
           </div>
         </div>
