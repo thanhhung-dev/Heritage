@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Welcome } from "@ant-design/x";
 import ChatInput from "./ChatInput";
-import { SuggestionList } from "./Suggestion";
-import { HeritageLogo } from "./Logo/HeritageLogo";
+import { SuggestionList } from "./SuggestionList";
+import { HeritageLogo } from "@/components/Logo/HeritageLogo";
+import styles from "../chat.module.css";
 
 interface LandingProps {
   onSend: (text: string) => void;
@@ -12,17 +13,17 @@ interface LandingProps {
   loading?: boolean;
 }
 
-export function Landing({ onSend, suggestions, loading }: LandingProps) {
+export function ChatLanding({ onSend, suggestions, loading }: LandingProps) {
   const [input, setInput] = useState("");
 
   return (
-    <div className="landing">
+    <div className={styles.landing}>
       <Welcome
         variant="borderless"
         icon={<HeritageLogo size={64} />}
       />
 
-      <div className="landing-input">
+      <div className={styles.landingInput}>
         <ChatInput
           value={input}
           onChange={setInput}
@@ -32,7 +33,7 @@ export function Landing({ onSend, suggestions, loading }: LandingProps) {
               setInput("");
             }
           }}
-          placeholder="Hỏi về di sản Đà Nẵng – Huế…"
+          placeholder="Hỏi về di sản Đà Nẵng - Huế…"
           loading={loading}
         />
       </div>

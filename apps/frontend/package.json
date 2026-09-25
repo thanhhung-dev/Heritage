@@ -14,9 +14,12 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.3.4",
     "@ant-design/x": "^2.9.0",
     "@assistant-ui/react": "^0.15.18",
     "@assistant-ui/react-ai-sdk": "^1.4.9",
+    "@fontsource/poppins": "^5.3.0",
+    "antd": "^6.6.2",
     "next": "14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
