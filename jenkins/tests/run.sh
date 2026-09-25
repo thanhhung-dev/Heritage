@@ -120,6 +120,20 @@ grep -q "CI_PROFILE_FRONTEND == 'true'" "$root/Jenkinsfile"
 grep -q "CI_PROFILE_BACKEND == 'true'" "$root/Jenkinsfile"
 grep -q "CI_PROFILE_MIGRATION == 'true'" "$root/Jenkinsfile"
 grep -q "HAS_RELEASE == 'true'" "$root/Jenkinsfile"
+for assignment in \
+  'env.CI_PROFILE_CONTRACTS = line.substring(21)' \
+  'env.CI_PROFILE_BACKEND = line.substring(19)' \
+  'env.CI_PROFILE_FRONTEND = line.substring(20)' \
+  'env.CI_PROFILE_MIGRATION = line.substring(21)' \
+  'env.CI_PROFILE_INFRASTRUCTURE = line.substring(26)' \
+  'env.CI_PROFILE_DATA_PIPELINE = line.substring(25)' \
+  'env.CI_PROFILE_MODEL_CONTRACT = line.substring(26)' \
+  'env.RELEASE_IMAGES = line.substring(15)' \
+  'env.DEPLOY_UNITS = line.substring(13)' \
+  'env.HAS_RELEASE = line.substring(12)'; do
+  grep -Fq "$assignment" "$root/Jenkinsfile"
+done
+! grep -Eq 'env[[:space:]]*\[[^=;]+\][[:space:]]*=' "$root/Jenkinsfile"
 grep -q 'git rev-parse HEAD~1 2>/dev/null || git hash-object -t tree /dev/null' "$root/Jenkinsfile"
 
 common=(AWS_REGION=test LAST_GOOD_PARAMETER=/test/last-good DEPLOY_UNITS=backend GIT_COMMIT=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb SMOKE_URL=https://example.invalid/health MOCK_AWS_LOG="$tmp/aws.log" MOCK_CURL_COUNT="$tmp/curl.count" PATH="$tmp/bin:$PATH")
