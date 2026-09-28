@@ -1,5 +1,5 @@
 "use client";
-
+import { theme as antdTheme } from "antd";
 import { useCallback, useState } from "react";
 import { XProvider } from "@ant-design/x";
 import { ChatLanding } from "./components/ChatLanding";
@@ -8,6 +8,15 @@ import { CHAT_API_URL, CHAT_SUGGESTIONS } from "./config";
 import type { Message, Source } from "./types";
 import styles from "./chat.module.css";
 import { useHeritageTheme } from "./useHeritageTheme";
+import { HelpButton, TopBar } from "./components/TopBar";
+
+const SUGGESTIONS = [
+  "Lăng Tự Đức được xây dựng năm nào?",
+  "Cao lầu là món gì?",
+  "Festival Huế tổ chức mấy năm một lần?",
+  "Làng Non Nước nổi tiếng về gì?",
+  "Nhã nhạc cung đình Huế có gì đặc biệt?",
+];
 
 export function ChatExperience() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -71,9 +80,28 @@ export function ChatExperience() {
   );
 
   return (
-    <XProvider theme={theme}>
-      <section className={styles.experience} aria-label="Trợ lý di sản">
-        {hasMessages ? (
+    <XProvider
+      theme={{
+        algorithm: antdTheme.darkAlgorithm,
+        token: {
+          colorPrimary: "#FA500F",
+          colorBgBase: "#000000",
+          colorTextBase: "#ffffff",
+          borderRadius: 10,
+          fontFamily:
+            "Inter, Inter Fallback, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        },
+      }}
+    >
+      <div className={styles.app}>
+        <TopBar />
+        {!hasMessages ? (
+          <ChatLanding
+            suggestions={SUGGESTIONS}
+            onSend={(t) => send(t)}
+            loading={loading}
+          />
+        ) : (
           <ChatView
             messages={messages}
             input={input}
@@ -81,15 +109,10 @@ export function ChatExperience() {
             onInputChange={setInput}
             onSend={() => send()}
           />
-        ) : (
-          <ChatLanding
-            suggestions={[...CHAT_SUGGESTIONS]}
-            onSend={(message) => send(message)}
-            loading={loading}
-          />
         )}
 
-      </section>
+        <HelpButton />
+      </div>
     </XProvider>
   );
 }

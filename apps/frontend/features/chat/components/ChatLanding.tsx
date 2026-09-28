@@ -33,7 +33,7 @@ export function ChatLanding({ onSend, suggestions, loading }: LandingProps) {
               setInput("");
             }
           }}
-          placeholder="Hỏi về di sản Đà Nẵng - Huế…"
+          placeholder="Hỏi về di sản Đà Nẵng – Huế…"
           loading={loading}
         />
       </div>

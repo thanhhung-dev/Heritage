@@ -17,7 +17,7 @@ export function SuggestionList({ suggestions, onSelect }: SuggestionListProps) {
 
   return (
     <Prompts
-      className={styles.suggestions}
+      className={styles.suggestionList}
       title="Câu hỏi gợi ý"
       wrap
       items={items}

@@ -69,13 +69,13 @@ export function ChatView({
             role: "ai",
             avatar: null,
             content: (
-              <div className={styles.thinking}>
-                <div className={styles.thinkingRing}>
+              <div className={styles.thinkingSpin}>
+                <div className={styles.thinkingSpinRing}>
                   <div className={styles.thinkingLogo}>
                     <HeritageLogoMini size={28} />
                   </div>
                 </div>
-                <span className={styles.thinkingText}>Đang suy nghĩ…</span>
+                <span className={styles.thinkingSpinText}>Đang suy nghĩ…</span>
               </div>
             ),
           },
@@ -87,7 +87,7 @@ export function ChatView({
     <>
       <Bubble.List
         ref={listRef}
-        className={styles.messages}
+        className={styles.chatMessages}
         autoScroll={false}
         styles={{ scroll: { height: "100%" } }}
         items={items}
@@ -114,7 +114,7 @@ export function ChatView({
             placeholder="Hỏi thêm…"
             loading={loading}
           />
-          <div className={styles.disclaimer}>
+          <div className={styles.inputAreaDisclaimer}>
             HeritageGraph có thể mắc lỗi. Kiểm tra thông tin. · 100% local
           </div>
         </div>
