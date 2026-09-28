@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 
-const isDev = process.env.NODE_ENV === "development";
-
 export async function generateMetadata(): Promise<Metadata> {
   const APP_NAME = "Heritage";
   const APP_DESCRIPTION =
-    "Recruitify is a platform that helps employers find the best candidates for their jobs";
+    "Khám phá và kết nối với di sản văn hóa Đà Nẵng - Huế.";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return {
     title: {
@@ -15,9 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
     description: APP_DESCRIPTION,
 
-    metadataBase: new URL(
-      isDev ? "http://localhost:3000" : "https://recruitify.com",
-    ),
+    metadataBase: new URL(appUrl),
 
     icons: {
       shortcut: "/favicon.ico",
@@ -25,13 +22,13 @@ export async function generateMetadata(): Promise<Metadata> {
     },
 
     alternates: {
-      canonical: isDev ? "http://localhost:3000" : "https://recruitify.com",
+      canonical: appUrl,
     },
 
     openGraph: {
       title: APP_NAME,
       description: APP_DESCRIPTION,
-      url: isDev ? "http://localhost:3000" : "https://recruitify.com",
+      url: appUrl,
       siteName: APP_NAME,
       images: [
         {

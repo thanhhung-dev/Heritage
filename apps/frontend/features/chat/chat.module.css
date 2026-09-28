@@ -1,0 +1,149 @@
+.experience {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.landing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.landingInput,
+.suggestions {
+  width: min(100%, 600px);
+}
+
+.messages {
+  width: min(100%, 720px);
+  min-height: 0;
+  flex: 1;
+  margin: 0 auto;
+  padding: 80px 24px 24px;
+  overflow: hidden;
+}
+
+.messages :global(.ant-bubble-list-scroll-box) {
+  width: calc(100% + 40px);
+  padding-right: 40px;
+  scrollbar-width: none;
+}
+
+.messages :global(.ant-bubble-list-scroll-box::-webkit-scrollbar) {
+  display: none;
+}
+
+.thinking {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.thinkingRing {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.thinkingLogo {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.thinkingRing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 5px solid var(--tl-15);
+  border-top-color: var(--accent);
+  border-radius: 70%;
+  animation: thinking-spin 1s linear infinite;
+}
+
+@keyframes thinking-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.thinkingText {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.assistantFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sender {
+  background: var(--bg-raised);
+}
+
+.inputArea {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 12px 24px 24px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 20%);
+  animation: input-enter 0.3s var(--ease-out);
+}
+
+@keyframes input-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.inputAreaInner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.disclaimer {
+  margin-top: 8px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .landing {
+    padding: 24px 20px 104px;
+  }
+
+  .messages {
+    padding: 40px 20px 20px;
+  }
+
+  .inputArea {
+    padding: 12px 20px 20px;
+  }
+
+}
