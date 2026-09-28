@@ -121,26 +121,15 @@ duyệt, vì vậy không đặt password hoặc API key vào đó. Không commi
 Nếu `DATABASE_URL` thiếu hoặc sai định dạng, backend sẽ dừng ngay khi startup và
 in ra biến cấu hình cần sửa; không mở cổng với cấu hình chưa hợp lệ.
 
-### 4. Chuẩn bị corpus, database và model
+### 4. Chuẩn bị database và model
 
-Corpus không nằm trong Git. Crawl lần đầu bằng Python environment vừa tạo:
-
-```bash
-python pipelines/ingestion/crawl_by_location.py
-```
-
-Health check yêu cầu hai artifact sau tồn tại:
-
-- `corpus/locations_index.json` và thư mục `corpus/wiki_by_location/`;
-- `models/qwen-fused.gguf` khi dùng `llama_server` qua Docker Compose.
-
-Xem [hướng dẫn training](docs/training.md) để tạo GGUF. Sau khi có corpus và
-model, khởi tạo PostgreSQL, migration, dữ liệu và llama.cpp:
+Health check yêu cầu `models/qwen-fused.gguf` khi dùng `llama_server` qua Docker
+Compose. Xem [hướng dẫn training](docs/training.md) để tạo GGUF. Sau đó khởi tạo
+PostgreSQL, migration và llama.cpp:
 
 ```bash
 docker compose up -d db
 docker compose run --rm migrate
-docker compose run --rm import-data
 docker compose up -d llm
 ```
 
@@ -183,32 +172,31 @@ apps/backend/.venv/bin/pip install -r apps/backend/requirements.txt
 curl.exe -i http://localhost:8000/api/health
 ```
 
-Khi llama.cpp và corpus đều sẵn sàng, endpoint trả HTTP `200`:
+Khi llama.cpp sẵn sàng, endpoint trả HTTP `200`:
 
 ```json
 {
   "status": "ok",
   "inference_backend": "llama_server",
-  "model_ready": true,
-  "corpus_ready": true
+  "model_ready": true
 }
 ```
 
 HTTP `503` với `status: "starting"` nghĩa là backend đã nhận request nhưng model
-hoặc corpus chưa sẵn sàng. Kiểm tra lần lượt:
+chưa sẵn sàng. Kiểm tra:
 
 ```bash
 docker compose ps db llm
 docker compose logs llm
 ```
 
-Health endpoint hiện kiểm tra model runtime và corpus. Trạng thái PostgreSQL xem
-bằng `docker compose ps db`.
+Health endpoint kiểm tra model runtime. Trạng thái PostgreSQL xem bằng
+`docker compose ps db`.
 
 ### 7. Chạy toàn bộ bằng Docker
 
 Nếu không chạy Python/Node trực tiếp, tạo `.env` từ template Docker, thay
-`POSTGRES_PASSWORD`, bảo đảm corpus và GGUF đã có rồi chạy:
+`POSTGRES_PASSWORD`, bảo đảm GGUF đã có rồi chạy:
 
 ```bash
 cp .env.docker.example .env

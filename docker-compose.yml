@@ -55,20 +55,6 @@ services:
     networks:
       - heritage-network
 
-  import-data:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-    restart: "no"
-    environment:
-      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
-    command: ["python", "-m", "apps.backend.db.import_corpus"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    networks:
-      - heritage-network
-
   backend:
     build:
       context: .
@@ -92,7 +78,7 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     depends_on:
-      import-data:
+      migrate:
         condition: service_completed_successfully
       llm:
         condition: service_started

@@ -32,7 +32,6 @@ class HealthEndpointTests(unittest.TestCase):
                 "status": "ok",
                 "inference_backend": "llama_server",
                 "model_ready": True,
-                "corpus_ready": True,
             },
         )
         get.assert_called_once_with("http://llm:8080/health", timeout=2.0)

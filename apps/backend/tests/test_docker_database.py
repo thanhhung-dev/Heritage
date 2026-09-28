@@ -30,9 +30,10 @@ class DockerDatabaseConfigurationTests(unittest.TestCase):
 
     def test_complete_stack_contains_database_migration_and_frontend(self) -> None:
         self.assertTrue(
-            {"db", "migrate", "import-data", "backend", "frontend", "llm"}
+            {"db", "migrate", "backend", "frontend", "llm"}
             <= self.config["services"].keys()
         )
+        self.assertNotIn("import-data", self.config["services"])
 
     def test_docker_context_keeps_orm_models(self) -> None:
         patterns = (ROOT / ".dockerignore").read_text().splitlines()
@@ -56,15 +57,10 @@ class DockerDatabaseConfigurationTests(unittest.TestCase):
 
     def test_backend_waits_for_successful_migration(self) -> None:
         backend_dependencies = self.config["services"]["backend"]["depends_on"]
-        importer_dependencies = self.config["services"]["import-data"]["depends_on"]
         migrate_dependencies = self.config["services"]["migrate"]["depends_on"]
 
         self.assertEqual(
-            backend_dependencies["import-data"]["condition"],
-            "service_completed_successfully",
-        )
-        self.assertEqual(
-            importer_dependencies["migrate"]["condition"],
+            backend_dependencies["migrate"]["condition"],
             "service_completed_successfully",
         )
         self.assertEqual(migrate_dependencies["db"]["condition"], "service_healthy")
@@ -86,10 +82,6 @@ class DockerDatabaseConfigurationTests(unittest.TestCase):
         )
         self.assertEqual(
             self.config["services"]["migrate"]["environment"]["DATABASE_URL"],
-            expected,
-        )
-        self.assertEqual(
-            self.config["services"]["import-data"]["environment"]["DATABASE_URL"],
             expected,
         )
 

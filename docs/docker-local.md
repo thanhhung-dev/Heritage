@@ -1,6 +1,6 @@
 # Chạy HeritageGraph local bằng Docker Compose
 
-Gói portable dùng `llama.cpp` + GGUF. Stack gồm PostgreSQL, Alembic migration, corpus importer,
+Gói portable dùng `llama.cpp` + GGUF. Stack gồm PostgreSQL, Alembic migration,
 `llm`, `backend` và `frontend`. PostgreSQL chỉ nằm trong mạng Compose và lưu dữ
 liệu ở volume `postgres_data`.
 
@@ -53,13 +53,9 @@ lạ hoặc không đầy đủ bị từ chối an toàn. Nếu migration lỗi
 docker compose logs migrate db
 ```
 
-Sau migration, service `import-data` upsert 45 tài liệu corpus, passage, entity,
-alias và location đã xác minh rồi mới cho backend chạy. Importer có UUID ổn định
-và chạy lặp lại không tạo bản ghi trùng. Có thể chạy lại thủ công bằng:
-
-```bash
-docker compose run --rm backend python -m apps.backend.db.import_corpus
-```
+Sau migration, backend khởi động trực tiếp. Dữ liệu có cấu trúc được nhập vào
+PostgreSQL theo quy trình dữ liệu riêng; Compose không còn chạy crawler hoặc
+importer corpus cũ trong chuỗi khởi động.
 
 Lần đầu Docker tải image và llama.cpp nạp model nên health check có thể mất vài
 phút. Khi backend báo `healthy`:
@@ -79,7 +75,7 @@ curl -X POST http://localhost:8000/api/chat \
 Xem log hoặc dừng hệ thống:
 
 ```bash
-docker compose logs -f db migrate import-data llm backend
+docker compose logs -f db migrate llm backend
 docker compose down
 ```
 
