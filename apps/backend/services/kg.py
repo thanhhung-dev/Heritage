@@ -10,6 +10,7 @@ Quy tắc: repository chỉ truy vấn dữ liệu. Confidence, intent, câu tr�
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
@@ -19,6 +20,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.backend.core.fuzzy_match import rank_fuzzy_names, _without_location_type, QUESTION_BOUNDARY_WORDS
 from apps.backend.core.textutil import strip_accents, WORD_RE, STOPWORDS
 from apps.backend.models.kg import Entity, EntityAlias, PlaceLocation, Passage, Document
+
+
+@dataclass(frozen=True)
+class Evidence:
+    """Passage-level retrieval result safe to expose as a chat citation."""
+
+    evidence_id: str
+    evidence_type: str
+    entity_id: str | None
+    content: str
+    source_title: str
+    source_url: str
+    tier: int
+    observed_at: str | None
+    retrieval_score: float
+    reason: str
+
+    def to_source(self) -> dict[str, Any]:
+        return {
+            "passage_id": self.evidence_id,
+            "doc": self.source_title,
+            "url": self.source_url,
+            "quote": self.content,
+            "entity_id": self.entity_id,
+            "score": self.retrieval_score,
+        }
 
 
 # Từ chỉ vùng hành chính quá chung — không dùng làm keyword match address.
@@ -87,6 +114,65 @@ class KgRepository:
 
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    async def search_evidence(
+        self, query: str, *, corpus_version: int | None = None, limit: int = 8,
+    ) -> list[Evidence]:
+        """Rank published PostgreSQL passages using FTS plus trigram similarity."""
+        normalized = " ".join(strip_accents(query).lower().split())
+        if not normalized:
+            return []
+        statement = text("""
+            WITH ranked AS (
+              SELECT p.id AS passage_id, p.text AS content, p.corpus_version,
+                     d.title, d.source_url, COALESCE(d.tier, 4) AS tier,
+                     d.observed_at,
+                     GREATEST(
+                       ts_rank_cd(p.tsv, plainto_tsquery('simple', :query)),
+                       similarity(lower(unaccent(p.text)), :normalized) * 0.6
+                     ) AS score
+                FROM passage p
+                JOIN document d ON d.id = p.document_id
+                JOIN corpus_release cr ON cr.version = p.corpus_version
+               WHERE d.withdrawn_at IS NULL
+                 AND cr.status = 'published'
+                 AND (CAST(:version AS integer) IS NULL
+                      OR p.corpus_version = CAST(:version AS integer))
+                 AND (p.tsv @@ plainto_tsquery('simple', :query)
+                      OR similarity(lower(unaccent(p.text)), :normalized) > 0.12)
+            ), linked AS (
+              SELECT r.*, e.id AS entity_id,
+                     CASE WHEN e.id IS NULL THEN 0 ELSE 0.2 END AS entity_boost
+                FROM ranked r
+                LEFT JOIN entity_evidence ee ON ee.passage_id = r.passage_id
+                LEFT JOIN entity e ON e.id = ee.entity_id
+                  AND e.in_scope AND e.entry_status = 'published'
+                LEFT JOIN entity_alias ea ON ea.entity_id = e.id
+               WHERE e.id IS NULL
+                  OR e.normalized_name = :normalized
+                  OR position(e.normalized_name in :normalized) > 0
+                  OR position(ea.normalized_alias in :normalized) > 0
+                  OR similarity(ea.normalized_alias, :normalized) > 0.35
+            )
+            SELECT DISTINCT ON (passage_id) * FROM linked
+             WHERE score > 0
+             ORDER BY passage_id, (score + entity_boost) DESC, tier ASC
+             LIMIT :limit
+        """)
+        rows = await self.db.execute(statement, {
+            "query": query, "normalized": normalized,
+            "version": corpus_version, "limit": limit,
+        })
+        evidence = [Evidence(
+            evidence_id=str(row.passage_id), evidence_type="passage",
+            entity_id=str(row.entity_id) if row.entity_id else None,
+            content=row.content, source_title=row.title,
+            source_url=row.source_url or "", tier=int(row.tier),
+            observed_at=row.observed_at.isoformat() if row.observed_at else None,
+            retrieval_score=round(float(row.score + row.entity_boost), 6),
+            reason="PostgreSQL lexical match",
+        ) for row in rows]
+        return sorted(evidence, key=lambda item: (-item.retrieval_score, item.tier))[:limit]
 
     async def resolve_entities(
         self, query: str, region: str | None = None,

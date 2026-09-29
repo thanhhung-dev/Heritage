@@ -22,6 +22,10 @@ class Document(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     region: Mapped[str] = mapped_column(String(32), nullable=False, comment="domain region_code CHECK IN ('hue','da_nang')")
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    tier: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    observed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_text: Mapped[str] = mapped_column(Text, nullable=False, comment="toàn văn gốc, để re-chunk")
     license: Mapped[str | None] = mapped_column(Text, nullable=True)
     withdrawn_at: Mapped[datetime | None] = mapped_column(name="withdrawn_at", nullable=True, comment="rút nguồn, không xoá cứng")
@@ -32,13 +36,17 @@ class Document(Base):
 
     __table_args__ = (
         Index("idx_document_region", "region"),
-        CheckConstraint(
-            "withdrawn_at IS NULL",
-            name="_doc_not_withdrawn",
-        ),
     )
 
 
+
+
+class CorpusRelease(Base):
+    __tablename__ = "corpus_release"
+
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="draft")
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
 
 
 class Passage(Base):
@@ -77,6 +85,9 @@ class Entity(Base):
     normalized_name: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(String(16), nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    in_scope: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    depth_tier: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    entry_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="draft")
     embedding: Mapped[list[float]] = mapped_column(
         ARRAY(DOUBLE_PRECISION), nullable=True,
         comment="FLOAT8[] - TODO: migrate to VECTOR(1024) after pgvector",
@@ -131,6 +142,28 @@ class EntityAlias(Base):
             name="chk_alias_type",
         ),
         UniqueConstraint("entity_id", "normalized_alias", name="uq_alias_entity_norm"),
+    )
+
+
+class EntityEvidence(Base):
+    __tablename__ = "entity_evidence"
+
+    entity_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("entity.id", ondelete="CASCADE"), primary_key=True
+    )
+    passage_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("passage.id", ondelete="CASCADE"), primary_key=True
+    )
+
+
+class EntityAliasEvidence(Base):
+    __tablename__ = "entity_alias_evidence"
+
+    entity_alias_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("entity_alias.id", ondelete="CASCADE"), primary_key=True
+    )
+    passage_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("passage.id", ondelete="CASCADE"), primary_key=True
     )
 
 

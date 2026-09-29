@@ -611,3 +611,26 @@ Kiến trúc chốt:
 > **Microsoft GraphRAG-style knowledge indexing và Local Context → KAG-style
 > query planner và retrieval operators → HeritageGraph Evidence Builder →
 > Qwen3-4B generation → grounding gate.**
+
+## 17. Vận hành vertical slice PostgreSQL
+
+Runtime chatbot chỉ truy xuất PostgreSQL; không fallback sang `corpus/`. Nâng cấp
+schema bằng migration expand (không reset volume):
+
+```bash
+POSTGRES_PASSWORD=... docker compose run --rm migrate
+```
+
+Knowledge package JSON gồm `corpus_version`, `documents`, `passages`, `entities`
+và `aliases`. Mỗi document có `key`, metadata nguồn và `raw_text`; passage phải
+khớp chính xác `raw_text[char_start:char_end]`; entity/alias phải có
+`passage_key` và `quote` nằm trong passage. Nhập package trong một transaction:
+
+```bash
+DATABASE_URL=postgresql+psycopg://... \
+  python -m apps.backend.db.import_structured package.json
+```
+
+Importer dùng UUID ổn định và upsert nên có thể chạy lặp. Package sai span,
+reference hoặc quote bị từ chối trước lần ghi đầu tiên. Chỉ release `published`,
+nguồn chưa withdrawn và entity published/in-scope được dùng để tạo evidence.

@@ -264,7 +264,34 @@ async def chat(
     if db_response is not None:
         return db_response
 
-    # --- Existing pipeline: fuzzy match + BM25/graph + LLM (fallback) ---
+    # Schema v2 runtime is PostgreSQL-only. Absence/failure always fails closed;
+    # the old on-disk corpus must never become a production fallback.
+    try:
+        evidence = await KgRepository(db).search_evidence(req.message)
+    except Exception:
+        log.exception("PostgreSQL evidence retrieval lỗi")
+        return ChatResponse(
+            answer="Kho dữ liệu hiện không khả dụng; tôi chưa thể trả lời có bằng chứng.",
+            sources=[], resolution_status="unavailable",
+            answer_type="insufficient_evidence",
+        )
+    if not evidence:
+        return ChatResponse(
+            answer="Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có.",
+            sources=[], resolution_status="not_found",
+            answer_type="insufficient_evidence",
+        )
+    sources = [item.to_source() for item in evidence]
+    context = "\n\n".join(
+        f"[{item.evidence_id}] {item.content}" for item in evidence
+    )
+    try:
+        answer = generate_response(question=req.message, context=context)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"LLM error: {exc}") from exc
+    return ChatResponse(answer=answer, sources=sources, answer_type="answered")
+
+    # --- Legacy pipeline retained below for compatibility while callers migrate. ---
     sources: list[dict] = []
     corrections: list[dict] = []
     context = ""
@@ -296,7 +323,6 @@ async def chat(
         # "kể chi tiết về nhà thờ trần phú" → resolve → "Nhà thờ chính tòa Đà Nẵng"
         if not context.strip() or not sources:
             try:
-                from apps.backend.services.kg import KgRepository
                 repo = KgRepository(db)
                 resolved = await repo.resolve_entities(req.message, limit=3)
 

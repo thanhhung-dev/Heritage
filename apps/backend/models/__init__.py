@@ -7,7 +7,8 @@ from apps.backend.db.base import Base, TimestampMixin, AsyncSessionLocal, engine
 
 from apps.backend.models.admin import AdminAccount, AuditLog  # noqa: F401
 from apps.backend.models.kg import (  # noqa: F401
-    Document, Passage, Entity, EntityAlias, Predicate, Relation, PlaceLocation,
+    CorpusRelease, Document, Passage, Entity, EntityAlias, EntityEvidence,
+    EntityAliasEvidence, Predicate, Relation, PlaceLocation,
 )
 from apps.backend.models.content import Site, Scene, ModelAsset, RawAsset  # noqa: F401
 from apps.backend.models.tour import (  # noqa: F401
@@ -23,7 +24,8 @@ __all__ = [
     # admin
     "AdminAccount", "AuditLog",
     # kg
-    "Document", "Passage", "Entity", "EntityAlias", "Predicate", "Relation", "PlaceLocation",
+    "CorpusRelease", "Document", "Passage", "Entity", "EntityAlias",
+    "EntityEvidence", "EntityAliasEvidence", "Predicate", "Relation", "PlaceLocation",
     # content
     "Site", "Scene", "ModelAsset", "RawAsset",
     # tour
