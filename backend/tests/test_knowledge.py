@@ -20,4 +20,4 @@ def test_deterministic_knowledge_factory():
     
     custom_doc = KnowledgeFactory.create_document(doc_id="doc_custom_99", title="Phố cổ Hội An")
     assert custom_doc["id"] == "doc_custom_99"
-    assert custom_doc["title"] == "Phố cổ Hội An"
+    assert custom_doc["title"] == "Phố cổ Hội An"`

@@ -1,0 +1,13 @@
+{
+  "task_id": "HER-74",
+  "timestamp": "",
+  "model_version": "llama-server-backend",
+  "metrics": {
+    "accuracy": 0.0,
+    "latency_ms": 0,
+    "passed_test_cases": 0,
+    "total_test_cases": 0
+  },
+  "status": "PENDING",
+  "artifacts": []
+}
