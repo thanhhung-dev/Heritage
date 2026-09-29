@@ -91,7 +91,7 @@
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
-  background: rgb(255 255 255 / 94%);
+  background: rgb(20 24 31 / 94%);
   line-height: normal;
 }
 
@@ -112,7 +112,7 @@
   min-width: 0;
   overflow: auto;
   padding: 24px 32px 40px;
-  background: #f6f6f7;
+  background: #0a0e14;
 }
 
 .page-stack {

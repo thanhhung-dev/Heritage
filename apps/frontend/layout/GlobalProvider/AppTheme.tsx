@@ -5,9 +5,22 @@ import GlobalStyle from "@/components/ThemeProvider/GlobalStyle"
 import ConfigProvider from "@/components/ConfigProvider";
 import FontLoader from "@/components/FontLoader";
 import ThemeProvider from "@/components/ThemeProvider";
-import { memo, ReactNode } from "react";
+import { memo, useMemo, ReactNode } from "react";
 import Image from 'next/image';
 import Link from 'next/link';
+import { tapestryTheme } from "@/styles/theme/tapestryTheme";
+
+const FONT_CDN = "https://unpkg.com/@fontsource";
+
+const defaultFonts = [
+  `${FONT_CDN}/inter@5.3.0/400.css`,
+  `${FONT_CDN}/inter@5.3.0/500.css`,
+  `${FONT_CDN}/inter@5.3.0/600.css`,
+  `${FONT_CDN}/inter@5.3.0/700.css`,
+  `${FONT_CDN}/inter@5.3.0/800.css`,
+  `${FONT_CDN}/poppins@5.3.0/400.css`,
+  `${FONT_CDN}/poppins@5.3.0/600.css`,
+];
 export interface AppThemeProps {
     children?: ReactNode;
     customFontFamily?: string;
@@ -24,7 +37,7 @@ const useStyles = createStyles(({ css, token }) => ({
     display: flex;
     flex-direction: column;
     width: 100%;
-    background: #FFF;
+    background: #0a0e14;
     min-height: 100dvh;
     @media (min-width: 576px) {
       overflow: hidden;
@@ -80,19 +93,20 @@ const AppTheme = memo<AppThemeProps>(
         const { styles, cx, theme } = useStyles();
         return (
             <ThemeProvider
-                appearance="light"
-                themeMode="light"
+                appearance="dark"
+                themeMode="dark"
                 className={cx(styles.app, styles.scrollbar, styles.scrollbarPolyfill)}
-                // customTheme={{
-                //     neutralColor: neutralColor ?? defaultNeutralColor,
-                //     primaryColor: primaryColor ?? defaultPrimaryColor,
-                // }}
                 defaultAppearance={defaultAppearance}
+                customFonts={defaultFonts}
                 theme={{
                     cssVar: { prefix: "ant" },
                     token: {
-                        fontFamily: customFontFamily ? `${customFontFamily},${theme.fontFamily}` : undefined,
+                        ...(tapestryTheme.token ?? {}),
+                        fontFamily: customFontFamily
+                            ? `${customFontFamily}, ${tapestryTheme.token?.fontFamily ?? theme.fontFamily}`
+                            : (tapestryTheme.token?.fontFamily ?? theme.fontFamily),
                     },
+                    components: tapestryTheme.components,
                 }}
             >
                 {!!customFontURL && <FontLoader url={customFontURL} />}

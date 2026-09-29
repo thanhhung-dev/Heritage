@@ -32,6 +32,7 @@ import {
 } from '@ant-design/icons';
 
 import styles from './heritage.module.css';
+import { tapestryColors } from '@/styles/theme/tapestryTheme';
 
 // 1. HeritageLogo (Logo dải màu sọc đa sắc chuẩn Figma)
 function HeritageLogo({ size = 32 }: { size?: number }) {
@@ -157,22 +158,22 @@ export default function AdminLayout({
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: '#ea580c',
-          colorInfo: '#3a5a7a',
+          colorPrimary: tapestryColors.primary,
+          colorInfo: tapestryColors.primary,
           colorSuccess: '#16a34a',
           colorWarning: '#b07d1a',
           colorError: '#c0492c',
-          colorText: '#0f172a',
-          colorTextSecondary: '#64748b',
-          colorBorder: '#e2e8f0',
-          colorBgLayout: '#f8fafc',
+          colorText: 'rgba(240, 232, 221, 0.85)',
+          colorTextSecondary: 'rgba(240, 232, 221, 0.5)',
+          colorBorder: tapestryColors.border,
+          colorBgLayout: tapestryColors.background,
           borderRadius: 8,
           fontFamily: "'Poppins', sans-serif",
         },
         components: {
           Menu: {
-            itemSelectedBg: '#fff7ed',
-            itemSelectedColor: '#ea580c',
+            itemSelectedBg: 'rgba(255, 155, 45, 0.15)',
+            itemSelectedColor: tapestryColors.primary,
             itemBorderRadius: 8,
           },
           Button: {
@@ -182,21 +183,21 @@ export default function AdminLayout({
       }}
     >
       <AntApp>
-        <Layout style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Poppins', sans-serif" }}>
+        <Layout style={{ minHeight: '100vh', background: tapestryColors.background, fontFamily: "'Poppins', sans-serif" }}>
           {/* Sidebar cố định 100vh */}
           <Sider
             width={264}
             collapsedWidth={76}
             collapsed={collapsed}
             trigger={null}
-            theme="light"
+            theme="dark"
             style={{
               height: '100vh',
               position: 'sticky',
               top: 0,
               left: 0,
-              borderRight: '1px solid #eef2f6',
-              background: '#ffffff',
+              borderRight: `1px solid ${tapestryColors.border}`,
+              background: tapestryColors.surface,
               zIndex: 100,
             }}
           >
@@ -208,7 +209,7 @@ export default function AdminLayout({
                   alignItems: 'center',
                   justifyContent: collapsed ? 'center' : 'space-between',
                   padding: collapsed ? '16px 0' : '16px 18px',
-                  borderBottom: '1px solid #f1f5f9',
+                  borderBottom: `1px solid ${tapestryColors.border}`,
                   minHeight: 70,
                   flexShrink: 0,
                 }}
@@ -226,14 +227,14 @@ export default function AdminLayout({
                           style={{
                             fontWeight: 700,
                             fontSize: 16,
-                            color: '#0f172a',
+                            color: 'rgba(240, 232, 221, 0.85)',
                             lineHeight: 1.2,
                             letterSpacing: '-0.02em',
                           }}
                         >
                           Heritage
                         </div>
-                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>
+                        <div style={{ fontSize: 11, color: 'rgba(240, 232, 221, 0.3)', marginTop: 1 }}>
                           Knowledge Administr...
                         </div>
                       </div>
@@ -246,13 +247,13 @@ export default function AdminLayout({
                         width: 28,
                         height: 28,
                         borderRadius: 6,
-                        border: '1px solid #e2e8f0',
-                        background: '#fff',
+                        border: `1px solid ${tapestryColors.borderStrong}`,
+                        background: tapestryColors.surfaceHover,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        color: '#94a3b8',
+                        color: 'rgba(240, 232, 221, 0.5)',
                         outline: 'none',
                       }}
                     >
@@ -278,8 +279,8 @@ export default function AdminLayout({
               <div
                 style={{
                   padding: '16px',
-                  borderTop: '1px solid #f1f5f9',
-                  background: '#ffffff',
+                  borderTop: `1px solid ${tapestryColors.border}`,
+                  background: tapestryColors.surface,
                   marginTop: 'auto',
                   flexShrink: 0,
                 }}
@@ -291,10 +292,10 @@ export default function AdminLayout({
                     gap: 10,
                     padding: '8px 10px',
                     borderRadius: 10,
-                    border: '1px solid #e2e8f0',
+                    border: `1px solid ${tapestryColors.border}`,
                   }}
                 >
-                  <Avatar style={{ backgroundColor: '#ffedd5', color: '#ea580c', fontWeight: 600, flexShrink: 0 }}>
+                  <Avatar style={{ backgroundColor: 'rgba(255, 155, 45, 0.15)', color: tapestryColors.primary, fontWeight: 600, flexShrink: 0 }}>
                     VQ
                   </Avatar>
                   {!collapsed && (
@@ -303,7 +304,7 @@ export default function AdminLayout({
                         style={{
                           fontWeight: 600,
                           fontSize: 13,
-                          color: '#0f172a',
+                          color: 'rgba(240, 232, 221, 0.85)',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
@@ -314,7 +315,7 @@ export default function AdminLayout({
                       <div
                         style={{
                           fontSize: 11,
-                          color: '#94a3b8',
+                          color: 'rgba(240, 232, 221, 0.3)',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',
                           overflow: 'hidden',
@@ -346,17 +347,17 @@ export default function AdminLayout({
               </div>
 
               <Space size={12}>
-                <Input
+<Input
                   className={styles['global-search']}
-                  prefix={<SearchOutlined style={{ color: '#94a3b8' }} />}
-                  placeholder="Search everywhere…"
+                  prefix={<SearchOutlined style={{ color: 'rgba(240, 232, 221, 0.5)' }} />}
+                  placeholder="Search everywhere..."
                   style={{ fontFamily: "'Poppins', sans-serif" }}
                 />
                 <Button aria-label="Notifications" icon={<BellOutlined />} />
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
-                  style={{ backgroundColor: '#ea580c', borderColor: '#ea580c', color: '#fff', fontFamily: "'Poppins', sans-serif" }}
+                  style={{ backgroundColor: tapestryColors.primary, borderColor: tapestryColors.primary, color: '#0a0e14', fontFamily: "'Poppins', sans-serif" }}
                 >
                   Add Document
                 </Button>

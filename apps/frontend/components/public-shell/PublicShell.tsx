@@ -3,6 +3,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { PublicNavigation } from "./PublicNavigation";
 import styles from "./public-shell.module.css";
+import { LogoText } from "../LogoText";
 
 interface PublicShellProps {
   children: ReactNode;
@@ -21,19 +22,7 @@ export function PublicShell({ children }: PublicShellProps) {
           href="/"
           aria-label="Heritage - Trang chủ"
         >
-          <span className={styles.logoMark} aria-hidden="true">
-            <span className={styles.logoMarkMask}>
-              <Image
-                className={styles.logoMarkFill}
-                src="/figma/heritage-logo-mark.svg"
-                alt=""
-                width={24}
-                height={24}
-                priority
-              />
-            </span>
-          </span>
-          <span>HERITAGE</span>
+          <LogoText size={120}/>
         </Link>
 
         <div className={styles.controls}>
