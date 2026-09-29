@@ -8,7 +8,6 @@ from apps.backend.services.kg import Evidence
 class DatabaseChatTests(unittest.IsolatedAsyncioTestCase):
     async def test_no_evidence_fails_closed_without_generation(self) -> None:
         with (
-            patch("apps.backend.api.chat._try_db_location_answer", AsyncMock(return_value=None)),
             patch("apps.backend.api.chat.KgRepository") as repository_type,
             patch("apps.backend.api.chat.generate_response") as generate_response,
         ):
@@ -21,7 +20,6 @@ class DatabaseChatTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_database_failure_is_controlled_without_generation(self) -> None:
         with (
-            patch("apps.backend.api.chat._try_db_location_answer", AsyncMock(return_value=None)),
             patch("apps.backend.api.chat.KgRepository") as repository_type,
             patch("apps.backend.api.chat.generate_response") as generate_response,
         ):
@@ -40,16 +38,26 @@ class DatabaseChatTests(unittest.IsolatedAsyncioTestCase):
             tier=1, observed_at=None, retrieval_score=1.0, reason="lexical",
         )
         with (
-            patch("apps.backend.api.chat._try_db_location_answer", AsyncMock(return_value=None)),
             patch("apps.backend.api.chat.KgRepository") as repository_type,
-            patch("apps.backend.api.chat.generate_response", return_value="Trả lời") as generate_response,
+            patch(
+                "apps.backend.api.chat.generate_response",
+                return_value="Trả lời [Nguồn: nguồn giả — https://invalid.example]",
+            ) as generate_response,
         ):
             repository_type.return_value.search_evidence = AsyncMock(return_value=[evidence])
             response = await chat(ChatRequest(message="Cung An Định"), AsyncMock())
 
         self.assertEqual(response.sources[0]["passage_id"], "passage-uuid")
+        self.assertEqual(response.resolution_status, "resolved")
+        self.assertEqual(response.answer, "Trả lời")
         generate_response.assert_called_once_with(
-            question="Cung An Định", context="[passage-uuid] Đoạn trích có thật"
+            question="Cung An Định",
+            context=(
+                "[passage-uuid]\n"
+                "Tiêu đề: Nguồn\n"
+                "URL: https://example.org\n"
+                "Nội dung: Đoạn trích có thật"
+            ),
         )
 
 

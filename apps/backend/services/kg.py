@@ -139,24 +139,42 @@ class KgRepository:
                  AND (CAST(:version AS integer) IS NULL
                       OR p.corpus_version = CAST(:version AS integer))
                  AND (p.tsv @@ plainto_tsquery('simple', :query)
-                      OR similarity(lower(unaccent(p.text)), :normalized) > 0.12)
+                      OR similarity(lower(unaccent(p.text)), :normalized) > 0.12
+                      OR EXISTS (
+                        SELECT 1
+                          FROM entity_evidence matched_ee
+                          JOIN entity matched_e ON matched_e.id = matched_ee.entity_id
+                          LEFT JOIN entity_alias matched_ea
+                            ON matched_ea.entity_id = matched_e.id
+                         WHERE matched_ee.passage_id = p.id
+                           AND matched_e.in_scope
+                           AND matched_e.entry_status = 'published'
+                           AND (
+                             position(matched_e.normalized_name in :normalized) > 0
+                             OR position(matched_ea.normalized_alias in :normalized) > 0
+                             OR similarity(matched_ea.normalized_alias, :normalized) > 0.35
+                           )
+                      ))
             ), linked AS (
               SELECT r.*, e.id AS entity_id,
-                     CASE WHEN e.id IS NULL THEN 0 ELSE 0.2 END AS entity_boost
+                     CASE WHEN e.id IS NOT NULL AND (
+                       e.normalized_name = :normalized
+                       OR position(e.normalized_name in :normalized) > 0
+                       OR position(ea.normalized_alias in :normalized) > 0
+                       OR similarity(ea.normalized_alias, :normalized) > 0.35
+                     ) THEN 0.2 ELSE 0 END AS entity_boost
                 FROM ranked r
                 LEFT JOIN entity_evidence ee ON ee.passage_id = r.passage_id
                 LEFT JOIN entity e ON e.id = ee.entity_id
                   AND e.in_scope AND e.entry_status = 'published'
                 LEFT JOIN entity_alias ea ON ea.entity_id = e.id
-               WHERE e.id IS NULL
-                  OR e.normalized_name = :normalized
-                  OR position(e.normalized_name in :normalized) > 0
-                  OR position(ea.normalized_alias in :normalized) > 0
-                  OR similarity(ea.normalized_alias, :normalized) > 0.35
             )
-            SELECT DISTINCT ON (passage_id) * FROM linked
-             WHERE score > 0
-             ORDER BY passage_id, (score + entity_boost) DESC, tier ASC
+            SELECT * FROM (
+              SELECT DISTINCT ON (passage_id) * FROM linked
+               WHERE score > 0
+               ORDER BY passage_id, (score + entity_boost) DESC, tier ASC
+            ) deduplicated
+             ORDER BY (score + entity_boost) DESC, tier ASC
              LIMIT :limit
         """)
         rows = await self.db.execute(statement, {
@@ -169,7 +187,10 @@ class KgRepository:
             content=row.content, source_title=row.title,
             source_url=row.source_url or "", tier=int(row.tier),
             observed_at=row.observed_at.isoformat() if row.observed_at else None,
-            retrieval_score=round(float(row.score + row.entity_boost), 6),
+            retrieval_score=round(
+                float(row.score) + float(row.entity_boost),
+                6,
+            ),
             reason="PostgreSQL lexical match",
         ) for row in rows]
         return sorted(evidence, key=lambda item: (-item.retrieval_score, item.tier))[:limit]

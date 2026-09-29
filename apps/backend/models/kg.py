@@ -36,6 +36,15 @@ class Document(Base):
 
     __table_args__ = (
         Index("idx_document_region", "region"),
+        CheckConstraint(
+            "source_type IS NULL OR source_type IN "
+            "('official','academic','management','press','encyclopedia','other')",
+            name="chk_document_source_type_v2",
+        ),
+        CheckConstraint(
+            "tier IS NULL OR tier BETWEEN 1 AND 4",
+            name="chk_document_tier_v2",
+        ),
     )
 
 
@@ -59,7 +68,12 @@ class Passage(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     char_start: Mapped[int] = mapped_column(Integer, nullable=False)
     char_end: Mapped[int] = mapped_column(Integer, nullable=False)
-    corpus_version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    corpus_version: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("corpus_release.version"),
+        nullable=False,
+        server_default="1",
+    )
     tsv: Mapped[str | None] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('simple', text)", persisted=True),
@@ -110,6 +124,14 @@ class Entity(Base):
             "type IN ('person','place','event','artifact')",
             name="chk_entity_type",
         ),
+        CheckConstraint(
+            "depth_tier BETWEEN 1 AND 3",
+            name="chk_entity_depth_tier_v2",
+        ),
+        CheckConstraint(
+            "entry_status IN ('draft','reviewed','published','withdrawn')",
+            name="chk_entity_entry_status_v2",
+        ),
         UniqueConstraint("normalized_name", "type", name="uq_entity_norm"),
     )
 
@@ -138,7 +160,8 @@ class EntityAlias(Base):
         Index("ix_entity_alias_normalized", "normalized_alias"),
         CheckConstraint("confidence BETWEEN 0 AND 1", name="chk_alias_conf"),
         CheckConstraint(
-            "alias_type IN ('official','historical','common','typo')",
+            "alias_type IN "
+            "('official','historical','common','sino_vietnamese','english','typo')",
             name="chk_alias_type",
         ),
         UniqueConstraint("entity_id", "normalized_alias", name="uq_alias_entity_norm"),

@@ -5,7 +5,9 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +15,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.backend.core.textutil import strip_accents
-from apps.backend.db.base import AsyncSessionLocal
+from apps.backend.db.base import AsyncSessionLocal, configure_database, dispose_database
 from apps.backend.models.kg import (
     CorpusRelease, Document, Entity, EntityAlias, EntityAliasEvidence,
     EntityEvidence, Passage,
@@ -23,6 +25,8 @@ _NS = uuid.UUID("dc6ca935-a876-4b80-9900-9789a2c42386")
 _SOURCE_TYPES = {"official", "academic", "management", "press", "encyclopedia", "other"}
 _ENTITY_TYPES = {"person", "place", "event", "artifact"}
 _ALIAS_TYPES = {"official", "historical", "common", "sino_vietnamese", "english", "typo"}
+_ENTRY_STATUSES = {"draft", "reviewed", "published", "withdrawn"}
+_REGIONS = {"hue", "da_nang"}
 
 
 class PackageValidationError(ValueError):
@@ -43,6 +47,17 @@ def _normalize(value: str) -> str:
     return " ".join(strip_accents(value).lower().split())
 
 
+def _observed_at(value: object, path: str) -> datetime:
+    if not isinstance(value, str):
+        raise PackageValidationError(f"{path}.observed_at: must be an ISO datetime")
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise PackageValidationError(
+            f"{path}.observed_at: must be an ISO datetime"
+        ) from exc
+
+
 def validate_package(package: dict[str, Any]) -> dict[str, Any]:
     """Validate all references and exact source spans before any write occurs."""
     if not isinstance(package, dict):
@@ -55,6 +70,10 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
     passages = package.get("passages", [])
     entities = package.get("entities", [])
     aliases = package.get("aliases", [])
+    if package.get("release_status", "published") not in {
+        "draft", "published", "retired",
+    }:
+        raise PackageValidationError("release_status: invalid value")
     for name, rows in (("documents", documents), ("passages", passages),
                        ("entities", entities), ("aliases", aliases)):
         if not isinstance(rows, list):
@@ -68,9 +87,10 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
             raise PackageValidationError(f"{path}.key: duplicate {key}")
         raw_text = _required(doc, "raw_text", path)
         _required(doc, "title", path)
-        _required(doc, "region", path)
+        if _required(doc, "region", path) not in _REGIONS:
+            raise PackageValidationError(f"{path}.region: invalid value")
         _required(doc, "source_url", path)
-        _required(doc, "observed_at", path)
+        _observed_at(_required(doc, "observed_at", path), path)
         source_type = _required(doc, "source_type", path)
         tier = _required(doc, "tier", path)
         if source_type not in _SOURCE_TYPES:
@@ -79,6 +99,9 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
             raise PackageValidationError(f"{path}.tier: must be between 1 and 4")
         if not isinstance(raw_text, str):
             raise PackageValidationError(f"{path}.raw_text: must be a string")
+        expected_hash = hashlib.sha256(raw_text.encode()).hexdigest()
+        if doc.get("content_hash", expected_hash) != expected_hash:
+            raise PackageValidationError(f"{path}.content_hash: does not match raw_text")
         doc_by_key[key] = doc
 
     passage_by_key: dict[str, dict[str, Any]] = {}
@@ -106,6 +129,14 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
             raise PackageValidationError(f"{path}.key: duplicate {key}")
         if _required(entity, "type", path) not in _ENTITY_TYPES:
             raise PackageValidationError(f"{path}.type: invalid value")
+        _required(entity, "name", path)
+        if entity.get("entry_status", "published") not in _ENTRY_STATUSES:
+            raise PackageValidationError(f"{path}.entry_status: invalid value")
+        if not isinstance(entity.get("in_scope", True), bool):
+            raise PackageValidationError(f"{path}.in_scope: must be a boolean")
+        depth_tier = entity.get("depth_tier", 1)
+        if not isinstance(depth_tier, int) or not 1 <= depth_tier <= 3:
+            raise PackageValidationError(f"{path}.depth_tier: must be between 1 and 3")
         passage_key = str(_required(entity, "passage_key", path))
         if passage_key not in passage_by_key:
             raise PackageValidationError(f"{path}.passage_key: unknown reference {passage_key}")
@@ -116,6 +147,7 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
 
     for index, alias in enumerate(aliases):
         path = f"aliases[{index}]"
+        _required(alias, "alias", path)
         if str(_required(alias, "entity_key", path)) not in entity_keys:
             raise PackageValidationError(f"{path}.entity_key: unknown reference")
         passage_key = str(_required(alias, "passage_key", path))
@@ -123,6 +155,9 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
             raise PackageValidationError(f"{path}.passage_key: unknown reference")
         if alias.get("alias_type", "common") not in _ALIAS_TYPES:
             raise PackageValidationError(f"{path}.alias_type: invalid value")
+        confidence = alias.get("confidence", 1.0)
+        if not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
+            raise PackageValidationError(f"{path}.confidence: must be between 0 and 1")
         if _required(alias, "quote", path) not in passage_by_key[passage_key]["text"]:
             raise PackageValidationError(f"{path}.quote: not present in passage")
     return package
@@ -133,8 +168,6 @@ async def import_package(session: AsyncSession, package: dict[str, Any]) -> dict
     package = validate_package(package)
     version = package.get("corpus_version", 1)
     release_status = package.get("release_status", "published")
-    if release_status not in {"draft", "published", "retired"}:
-        raise PackageValidationError("release_status: invalid value")
     await session.execute(insert(CorpusRelease).values(
         version=version, status=release_status).on_conflict_do_update(
             index_elements=[CorpusRelease.version], set_={"status": release_status}))
@@ -146,22 +179,28 @@ async def import_package(session: AsyncSession, package: dict[str, Any]) -> dict
         doc_ids[doc["key"]] = doc_id
         values = {"id": doc_id, "title": doc["title"], "region": doc["region"],
                   "source_url": doc["source_url"], "source_type": doc["source_type"],
-                  "tier": doc["tier"], "observed_at": doc["observed_at"],
+                  "tier": doc["tier"],
+                  "observed_at": _observed_at(doc["observed_at"], "document"),
                   "content_hash": content_hash, "raw_text": doc["raw_text"],
                   "license": doc.get("license")}
         await session.execute(insert(Document).values(**values).on_conflict_do_update(
             index_elements=[Document.id], set_={k: v for k, v in values.items() if k != "id"}))
 
     passage_ids: dict[str, uuid.UUID] = {}
+    passage_doc_ids: dict[str, uuid.UUID] = {}
     for passage in package.get("passages", []):
         doc_id = doc_ids[passage["document_key"]]
         passage_id = _stable_id("passage", f"{doc_id}:{version}:{passage['char_start']}")
         passage_ids[passage["key"]] = passage_id
+        passage_doc_ids[passage["key"]] = doc_id
         values = {"id": passage_id, "document_id": doc_id, "text": passage["text"],
                   "char_start": passage["char_start"], "char_end": passage["char_end"],
                   "corpus_version": version}
-        await session.execute(insert(Passage).values(**values).on_conflict_do_update(
-            index_elements=[Passage.id], set_={"text": passage["text"], "char_end": passage["char_end"]}))
+        await session.execute(
+            insert(Passage).values(**values).on_conflict_do_nothing(
+                index_elements=[Passage.id]
+            )
+        )
 
     entity_ids: dict[str, uuid.UUID] = {}
     for entity in package.get("entities", []):
@@ -173,7 +212,7 @@ async def import_package(session: AsyncSession, package: dict[str, Any]) -> dict
                   "type": entity["type"], "in_scope": entity.get("in_scope", True),
                   "depth_tier": entity.get("depth_tier", 1),
                   "entry_status": entity.get("entry_status", "published"),
-                  "source_document_id": doc_ids[package["passages"][[p["key"] for p in package["passages"]].index(entity["passage_key"])]["document_key"]],
+                  "source_document_id": passage_doc_ids[entity["passage_key"]],
                   "source_passage_id": passage_id}
         await session.execute(insert(Entity).values(**values).on_conflict_do_update(
             index_elements=[Entity.id], set_={k: v for k, v in values.items() if k != "id"}))
@@ -186,7 +225,9 @@ async def import_package(session: AsyncSession, package: dict[str, Any]) -> dict
         passage_id = passage_ids[alias["passage_key"]]
         values = {"id": alias_id, "entity_id": entity_id, "alias": alias["alias"],
                   "normalized_alias": normalized, "alias_type": alias.get("alias_type", "common"),
-                  "confidence": alias.get("confidence", 1.0), "source_passage_id": passage_id}
+                  "confidence": alias.get("confidence", 1.0),
+                  "source_document_id": passage_doc_ids[alias["passage_key"]],
+                  "source_passage_id": passage_id}
         await session.execute(insert(EntityAlias).values(**values).on_conflict_do_update(
             index_elements=[EntityAlias.id], set_={k: v for k, v in values.items() if k != "id"}))
         await session.execute(insert(EntityAliasEvidence).values(
@@ -197,8 +238,15 @@ async def import_package(session: AsyncSession, package: dict[str, Any]) -> dict
 
 async def import_file(path: Path) -> dict[str, int]:
     package = json.loads(path.read_text(encoding="utf-8"))
-    async with AsyncSessionLocal() as session, session.begin():
-        return await import_package(session, package)
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is required")
+    configure_database(database_url)
+    try:
+        async with AsyncSessionLocal() as session, session.begin():
+            return await import_package(session, package)
+    finally:
+        await dispose_database()
 
 
 if __name__ == "__main__":

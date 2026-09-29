@@ -46,10 +46,12 @@ class DockerDatabaseConfigurationTests(unittest.TestCase):
             patterns.index("!apps/backend/models/*.py"),
         )
 
-    def test_database_is_internal_and_persistent(self) -> None:
+    def test_database_is_local_only_and_persistent(self) -> None:
         database = self.config["services"]["db"]
 
-        self.assertNotIn("ports", database)
+        self.assertEqual(database["ports"][0]["host_ip"], "127.0.0.1")
+        self.assertEqual(database["ports"][0]["published"], "5433")
+        self.assertEqual(database["ports"][0]["target"], 5432)
         self.assertEqual(
             database["volumes"][0]["target"], "/var/lib/postgresql/data"
         )

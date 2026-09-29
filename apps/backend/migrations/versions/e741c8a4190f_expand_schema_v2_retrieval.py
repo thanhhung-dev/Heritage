@@ -13,6 +13,7 @@ depends_on = None
 
 def upgrade() -> None:
     # Expand only: every statement is safe for an already populated volume.
+    op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
     op.execute("CREATE EXTENSION IF NOT EXISTS vector")
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
     op.execute("CREATE EXTENSION IF NOT EXISTS unaccent")
@@ -30,12 +31,26 @@ def upgrade() -> None:
         ALTER TABLE document ADD COLUMN IF NOT EXISTS observed_at timestamptz;
         ALTER TABLE document ADD COLUMN IF NOT EXISTS content_hash text;
         ALTER TABLE document DROP CONSTRAINT IF EXISTS _doc_not_withdrawn;
+        ALTER TABLE document ADD CONSTRAINT chk_document_source_type_v2 CHECK (
+          source_type IS NULL OR source_type IN (
+            'official', 'academic', 'management', 'press', 'encyclopedia', 'other'
+          )
+        );
+        ALTER TABLE document ADD CONSTRAINT chk_document_tier_v2 CHECK (
+          tier IS NULL OR tier BETWEEN 1 AND 4
+        );
         CREATE UNIQUE INDEX IF NOT EXISTS uq_document_source_version
           ON document(source_url, content_hash) WHERE source_url IS NOT NULL AND content_hash IS NOT NULL;
 
         ALTER TABLE entity ADD COLUMN IF NOT EXISTS in_scope boolean NOT NULL DEFAULT false;
         ALTER TABLE entity ADD COLUMN IF NOT EXISTS depth_tier smallint NOT NULL DEFAULT 1;
         ALTER TABLE entity ADD COLUMN IF NOT EXISTS entry_status varchar NOT NULL DEFAULT 'draft';
+        ALTER TABLE entity ADD CONSTRAINT chk_entity_depth_tier_v2 CHECK (
+          depth_tier BETWEEN 1 AND 3
+        );
+        ALTER TABLE entity ADD CONSTRAINT chk_entity_entry_status_v2 CHECK (
+          entry_status IN ('draft', 'reviewed', 'published', 'withdrawn')
+        );
         ALTER TABLE entity_alias DROP CONSTRAINT IF EXISTS chk_alias_type;
         ALTER TABLE entity_alias ADD CONSTRAINT chk_alias_type CHECK (
           alias_type IN ('official', 'historical', 'common', 'sino_vietnamese', 'english', 'typo')

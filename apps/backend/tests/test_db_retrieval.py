@@ -35,6 +35,17 @@ class DatabaseRetrievalTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await KgRepository(database).search_evidence("  "), [])
         database.execute.assert_not_called()
 
+    async def test_query_contract_excludes_withdrawn_sources_and_normalizes_accents(self) -> None:
+        database = AsyncMock()
+        database.execute.return_value = []
+
+        self.assertEqual(await KgRepository(database).search_evidence("Cung An Định"), [])
+
+        statement, parameters = database.execute.call_args.args
+        self.assertIn("d.withdrawn_at IS NULL", str(statement))
+        self.assertIn("cr.status = 'published'", str(statement))
+        self.assertEqual(parameters["normalized"], "cung an dinh")
+
 
 if __name__ == "__main__":
     unittest.main()

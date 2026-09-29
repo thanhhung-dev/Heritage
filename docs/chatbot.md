@@ -624,13 +624,16 @@ POSTGRES_PASSWORD=... docker compose run --rm migrate
 Knowledge package JSON gồm `corpus_version`, `documents`, `passages`, `entities`
 và `aliases`. Mỗi document có `key`, metadata nguồn và `raw_text`; passage phải
 khớp chính xác `raw_text[char_start:char_end]`; entity/alias phải có
-`passage_key` và `quote` nằm trong passage. Nhập package trong một transaction:
+`passage_key` và `quote` nằm trong passage. Database không mở cổng ra host, nên
+nhập package qua container backend trên cùng Docker network:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://... \
-  python -m apps.backend.db.import_structured package.json
+docker compose run --rm --no-deps --build \
+  -v "$PWD/package.json:/data/package.json:ro" \
+  backend python -m apps.backend.db.import_structured /data/package.json
 ```
 
 Importer dùng UUID ổn định và upsert nên có thể chạy lặp. Package sai span,
-reference hoặc quote bị từ chối trước lần ghi đầu tiên. Chỉ release `published`,
-nguồn chưa withdrawn và entity published/in-scope được dùng để tạo evidence.
+reference hoặc quote bị từ chối trước lần ghi đầu tiên. Retrieval chỉ đọc release
+`published` và nguồn chưa withdrawn; entity published/in-scope được dùng làm tín
+hiệu tăng hạng nhưng không chặn passage khớp trực tiếp.
