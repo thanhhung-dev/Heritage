@@ -20,8 +20,9 @@ def user_msg(source: str, question: str) -> str:
     return f"Nguồn: {source.strip() or '(không có)'}\n\nCâu hỏi: {question.strip()}"
 
 
-def chat_messages(source: str, question: str) -> list[dict[str, str]]:
-    return [
-        {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": user_msg(source, question)},
-    ]
+def chat_messages(source: str, question: str, history: list[dict[str, str]] | None = None) -> list[dict[str, str]]:
+    messages = [{"role": "system", "content": SYSTEM}]
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": user_msg(source, question)})
+    return messages

@@ -377,6 +377,15 @@ class Retriever:
             c for c in suggest_corrections(query, self.graph)
             if c["score"] >= MIN_FUZZY_SCORE
         ]
+        
+        # Giữ trọn vẹn dấu tiếng Việt nguyên bản từ query gốc
+        plain_query = strip_accents(query)
+        for c in corrections:
+            orig = c["original"]
+            idx = plain_query.find(orig)
+            if idx != -1:
+                c["original"] = query[idx : idx + len(orig)]
+
         q_seed = query
         if corrections:
             q_seed = query.replace(corrections[0]["original"], corrections[0]["suggested"])

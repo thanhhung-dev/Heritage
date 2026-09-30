@@ -95,10 +95,9 @@ def get_model():
     raise ValueError(f"INFERENCE_BACKEND không hợp lệ: {backend}")
 
 
-def generate_response(question: str, context: str = "", max_tokens: int = MAX_TOKENS) -> str:
+def generate_response(question: str, context: str = "", history: list[dict[str, str]] | None = None, *, max_tokens: int = MAX_TOKENS) -> str:
     model, tokenizer, backend = get_model()
-    messages = chat_messages(context, question)
-
+    messages = chat_messages(context, question, history=history)
     if backend == "llama_server":
         return _llama_server_generate(messages, max_tokens=max_tokens)
     if backend == "mlx":

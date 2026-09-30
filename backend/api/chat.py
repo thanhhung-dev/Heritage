@@ -15,6 +15,7 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     message: str
     use_rag: bool = True
+    history: list[dict] = []
 
 
 class ChatResponse(BaseModel):
@@ -83,6 +84,11 @@ def chat(req: ChatRequest):
     if req.use_rag:
         try:
             context, sources, corrections = retrieve_context(req.message)
+            if not context and req.history:
+                last_user_msg = next((m["content"] for m in reversed(req.history) if m.get("role") == "user"), None)
+                if last_user_msg:
+                    combined_msg = f"{last_user_msg}\n{req.message}"
+                    context, sources, corrections = retrieve_context(combined_msg)
         except Exception:
             log.exception("retrieval lỗi, trả lời với context rỗng")
             context, sources, corrections = "", [], []
@@ -108,11 +114,19 @@ def chat(req: ChatRequest):
             llm_question = f"Hãy giới thiệu về {corrected_to}."
 
     try:
-        answer = generate_response(
-            question=llm_question,
-            context=context,
-        )
+        if req.history:
+            answer = generate_response(
+                question=llm_question,
+                context=context,
+                history=req.history,
+            )
+        else:
+            answer = generate_response(
+                question=llm_question,
+                context=context,
+            )
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM error: {e}")
         raise HTTPException(status_code=500, detail=f"LLM error: {e}")
 
     return ChatResponse(
