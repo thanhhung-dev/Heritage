@@ -8,7 +8,7 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from apps.backend.core.fuzzy_match import LOCATION_TYPE_PREFIXES, _without_location_type
 from apps.backend.core.rag import retrieve_context

@@ -62,6 +62,7 @@ services:
     restart: unless-stopped
     environment:
       INFERENCE_BACKEND: llama_server
+      HEALTHCHECK_SKIP_MODEL: ${HEALTHCHECK_SKIP_MODEL:-false}
       LLAMA_SERVER_URL: http://llm:8080
       LLAMA_SERVER_TIMEOUT: ${LLAMA_SERVER_TIMEOUT:-300}
       DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"

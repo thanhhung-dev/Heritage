@@ -12,8 +12,11 @@ router = APIRouter()
 @router.get("/health")
 def health():
     inference_backend = os.environ.get("INFERENCE_BACKEND", "llama_server")
+    skip_model = os.environ.get("HEALTHCHECK_SKIP_MODEL", "").strip().lower() in ("1", "true", "yes")
 
-    if inference_backend == "llama_server":
+    if skip_model:
+        model_ready = True
+    elif inference_backend == "llama_server":
         url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8080").rstrip("/")
         try:
             response = httpx.get(f"{url}/health", timeout=2.0)

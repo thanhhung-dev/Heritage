@@ -60,7 +60,7 @@ export default function OverviewPage() {
 
       {/* 5 KPI Stat Cards */}
       <Row gutter={[14, 14]}>
-        <Col xs={24} sm={12} md={true} style={{ flex: 1, minWidth: 190 }}>
+        <Col xs={24} sm={12} md={12} style={{ flex: 1, minWidth: 190 }}>
           <Card bordered className={styles['kpi-card']}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 12 }}>
               <span>Total Documents</span>
@@ -73,7 +73,7 @@ export default function OverviewPage() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} md={true} style={{ flex: 1, minWidth: 190 }}>
+        <Col xs={24} sm={12} md={12} style={{ flex: 1, minWidth: 190 }}>
           <Card bordered className={styles['kpi-card']}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 12 }}>
               <span>Total Entities</span>
@@ -86,7 +86,7 @@ export default function OverviewPage() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} md={true} style={{ flex: 1, minWidth: 190 }}>
+        <Col xs={24} sm={12} md={12} style={{ flex: 1, minWidth: 190 }}>
           <Card bordered className={styles['kpi-card']}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 12 }}>
               <span>Total Relations</span>
@@ -99,7 +99,7 @@ export default function OverviewPage() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} md={true} style={{ flex: 1, minWidth: 190 }}>
+        <Col xs={24} sm={12} md={12} style={{ flex: 1, minWidth: 190 }}>
           <Card bordered className={styles['kpi-card']}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 12 }}>
               <span>Records Pending Review</span>
@@ -112,7 +112,7 @@ export default function OverviewPage() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} md={true} style={{ flex: 1, minWidth: 190 }}>
+        <Col xs={24} sm={12} md={12} style={{ flex: 1, minWidth: 190 }}>
           <Card bordered className={`${styles['kpi-card']} ${styles['kpi-card-warning']}`}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c0492c', fontSize: 12, fontWeight: 600 }}>
               <span>Fields Missing Sources</span>
