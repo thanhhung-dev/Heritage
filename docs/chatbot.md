@@ -1,639 +1,566 @@
 # Kiến trúc chatbot HeritageGraph
 
-Ngày cập nhật: 15/09/2026.
+Ngày cập nhật: 04/10/2026.
 
-## 1. Quyết định kiến trúc
+## 1. Mục tiêu và quyết định kiến trúc
 
-HeritageGraph dùng kiến trúc **Domain GraphRAG/KAG-lite**:
+HeritageGraph dùng kiến trúc **R2-backed Domain GraphRAG/KAG-lite**:
 
-- tham khảo **Microsoft GraphRAG** cho dataflow lập chỉ mục, provenance qua text
-  unit, Local Search và Context Builder;
-- tham khảo **OpenSPG KAG** cho ontology có schema, mutual indexing, query planner
-  và các retrieval operator;
-- dùng **PostgreSQL** làm nguồn sự thật thay vì sử dụng storage/runtime của hai
-  framework;
-- dùng **Qwen3-4B local** để tổng hợp và trình bày evidence, không dùng model làm
-  kho kiến thức;
-- giữ **FastAPI modular monolith**, chưa cần agent framework, Neo4j, OpenSPG hay
-  Microsoft GraphRAG runtime.
+- **Cloudflare R2 là kho tri thức bền vững**: giữ tài liệu gốc, nội dung đã biên
+  soạn, passage đã xử lý và manifest theo phiên bản;
+- **search index là projection có thể dựng lại**: giữ vector, lexical index,
+  metadata lọc và `object_key`, không phải nguồn sự thật của nội dung;
+- **PostgreSQL là kho nghiệp vụ**: giữ entity, claim, relation, timeline, trạng
+  thái ingestion, corpus release, hội thoại, cache và audit;
+- MVP có thể dùng PostgreSQL + pgvector làm search index để giảm hạ tầng, nhưng
+  nội dung chuẩn vẫn nằm trên R2 và index phải có thể dựng lại;
+- khi quy mô vượt khả năng một PostgreSQL, chuyển search index sang OpenSearch,
+  Qdrant, Pinecone, Weaviate hoặc Milvus mà không đổi cấu trúc tri thức trên R2;
+- Qwen3-4B local chỉ tổng hợp evidence, không làm kho kiến thức hoặc search engine.
 
-MVP là một vertical slice đào sâu một địa điểm. Sau khi pipeline được kiểm chứng,
-cùng mô hình được nhân sang 29 địa điểm còn lại.
+R2, search index và PostgreSQL không phải ba bản sao ngang hàng. Mỗi lớp có một
+trách nhiệm khác nhau:
 
-## 2. Phân chia reference
-
-| Thành phần | Reference chính | Cách áp dụng |
+| Lớp | Nguồn sự thật cho | Không chịu trách nhiệm |
 |---|---|---|
-| Document và chunk | Microsoft GraphRAG | `source_doc` → `passage` |
-| Provenance | Microsoft GraphRAG | Mọi tri thức trỏ về passage nguồn |
-| Local entity context | Microsoft GraphRAG Local Search | Dựng Entity Dossier theo entity trung tâm |
-| Context Builder | Microsoft GraphRAG | Hợp nhất, loại trùng và giới hạn evidence |
-| Ontology domain | KAG | Entity, event, predicate và field có schema |
-| Mutual indexing | KAG | Truy vấn được cả knowledge → chunk và chunk → knowledge |
-| Query planning | KAG | Chọn operator theo intent thay vì một search cho mọi câu |
-| Multi-hop reasoning | KAG | Graph traversal có giới hạn 1–2 hop |
-| Persistence | HeritageGraph | PostgreSQL + Alembic |
-| Narrative biên tập | HeritageGraph | Nội dung chuyên đề do người biên soạn và review |
-| Generation | HeritageGraph | Qwen3-4B local |
-| Grounding | HeritageGraph | Citation gate trước khi trả response |
+| R2 | Nội dung và phiên bản corpus | Semantic/keyword search trực tiếp |
+| Search index | Tìm candidate passage nhanh | Lưu bản gốc duy nhất |
+| PostgreSQL | Nghiệp vụ, graph, trạng thái và cache | Lưu mọi file crawl/binary |
+| Qwen | Diễn đạt câu trả lời từ evidence | Tự bổ sung hoặc tự xác minh tri thức |
 
-Không sao chép nguyên framework. Chỉ dùng những pattern phù hợp với dữ liệu di
-sản curated và quy mô 30 địa điểm lõi.
-
-## 3. Kiến trúc tổng thể
+## 2. Kiến trúc tổng thể
 
 ```text
-                     OFFLINE — KNOWLEDGE INDEXER
-                     (Microsoft GraphRAG + KAG)
+                         OFFLINE — KNOWLEDGE PIPELINE
 
-Nguồn chính thức / học thuật / quản lý / báo chí
-                           │
-                           ▼
-                    Source ingestion
-                           │
-                           ▼
-                source_doc → passage
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-           entity        claim     timeline_event
-              │                           │
-              └──────── relation ─────────┘
-                           │
-                           ▼
-                  narrative_section
-                           │
-                           ▼
-                Review + corpus_version
-                           │
-                           ▼
-              FTS / n-gram / vector indexes
+Nguồn web / PDF / tài liệu biên soạn
+                 │
+                 ▼
+      R2 raw/ — bản gốc bất biến
+                 │
+                 ▼
+ Trích text → làm sạch → chia passage → embedding
+                 │
+        ┌────────┴─────────┐
+        ▼                  ▼
+R2 curated/processed/   PostgreSQL
+text + manifest         entity/claim/relation/
+theo corpus version     timeline/job/release
+        │                  │
+        └────────┬─────────┘
+                 ▼
+        Search index có thể dựng lại
+        vector + lexical + object_key
+                 │
+                 ▼
+             Publish version
 
 
-                         ONLINE — QA SOLVER
-                              (KAG-lite)
+                           ONLINE — QA SOLVER
 
-User → Normalize → Resolve entity → Classify intent → Query planner
-                                                           │
-                  ┌────────────────────────────────────────┤
-                  ▼               ▼                        ▼
-             Exact operator  Graph operator           Text operator
-             claim/timeline  relation 1–2 hop      BM25/ngram/vector
-                  └───────────────┬────────────────────────┘
-                                  ▼
-                    Local Context / Entity Dossier
-                                  ▼
-                       Evidence Context Builder
-                                  ▼
-                             Qwen3-4B
-                                  ▼
-                       Citation/Grounding Gate
-                         ├── answered
-                         ├── clarify
-                         └── abstained
+User → Query cache → Normalize → Resolve entity → Query planner
+          │ hit                                      │
+          ▼                         ┌─────────────────┼───────────────┐
+       Trả cache                    ▼                 ▼               ▼
+                              Exact/Graph       Vector/keyword    Section
+                              PostgreSQL         search index     operator
+                                   └─────────────────┬───────────────┘
+                                                     ▼
+                                       Lấy top object_key/passages
+                                                     ▼
+                                      Fetch 3–8 evidence từ R2
+                                                     ▼
+                                         Evidence Context Builder
+                                                     ▼
+                                                Qwen3-4B
+                                                     ▼
+                                          Citation/Grounding Gate
+                                           ├── answered
+                                           ├── clarify
+                                           └── abstained
 ```
 
-## 4. Ranh giới trách nhiệm
+Runtime **không quét toàn bộ R2 cho mỗi câu hỏi**. Nếu search index không có kết
+quả, solver phải `abstain` hoặc báo corpus chưa được xử lý; nó không fallback sang
+việc tải hàng loạt object. File mới chỉ phục vụ chatbot sau khi ingestion và
+publish index hoàn tất.
 
-### 4.1 Knowledge Indexer
+## 3. Tổ chức kho tri thức trên R2
 
-Chạy offline hoặc khi publish corpus version mới:
-
-1. Thu thập và lưu tài liệu nguồn.
-2. Chia tài liệu thành passage.
-3. Trích hoặc biên tập entity, claim, event và relation.
-4. Liên kết mọi tri thức dẫn xuất về passage.
-5. Review trước khi publish.
-6. Dựng lại lexical/vector indexes có thể tái tạo.
-
-LLM có thể đề xuất extraction nhưng không được tự publish tri thức.
-
-### 4.2 QA Solver
-
-Chạy cho mỗi câu hỏi:
-
-1. Chuẩn hóa câu hỏi.
-2. Resolve entity và kiểm tra phạm vi.
-3. Phân loại intent.
-4. Lập query plan nhỏ, xác định trước.
-5. Chạy các operator cần thiết.
-6. Dựng evidence package.
-7. Gọi Qwen3-4B.
-8. Kiểm tra grounding và citation.
-
-QA Solver không sửa dữ liệu và không tạo knowledge graph trong lúc trả lời.
-
-### 4.3 Qwen3-4B
-
-Qwen làm:
-
-- tổng hợp evidence thành câu trả lời tiếng Việt;
-- giải thích quan hệ giữa dữ kiện, sự kiện và entity;
-- trình bày chronology;
-- đính chính tiền đề sai nếu evidence chứng minh;
-- gắn citation ID đã được backend cấp.
-
-Qwen không làm:
-
-- tự sinh SQL production;
-- tự tìm toàn bộ database;
-- tự tạo nguồn, entity, relation hoặc citation;
-- dùng kiến thức trong trọng số để bổ sung dữ liệu còn thiếu;
-- tự quyết định `in_scope`, `depth_tier` hoặc `entry_status`.
-
-## 5. Data model theo Microsoft GraphRAG
-
-Mô hình cơ sở:
+R2 không có thư mục thật; các đường dẫn dưới đây là object key dùng prefix để mô
+phỏng cây thư mục. Tên key dùng chữ thường, không dấu và dấu gạch ngang.
 
 ```text
-Microsoft GraphRAG       HeritageGraph
-──────────────────       ─────────────
-Document                 source_doc
-TextUnit                 passage
-Entity                   entity
-Relationship             relation
-Covariate/Claim          claim + timeline_event
-Community Report         không dùng trong MVP
+knowledge/
+├── raw/
+│   └── web/2026/hue-gov-vn/<content-hash>.html
+├── curated/
+│   └── vi/
+│       ├── hue/do-an/dia-diem/chua-thien-mu/
+│       │   ├── tong-quan/<content-hash>.md
+│       │   ├── kien-truc/<content-hash>.md
+│       │   ├── lich-su/<content-hash>.md
+│       │   ├── co-vat/<content-hash>.md
+│       │   ├── le-hoi/<content-hash>.md
+│       │   └── nhan-vat-lien-quan/<content-hash>.md
+│       └── nhan-vat/nguyen-hoang/
+│           ├── tieu-su/<content-hash>.md
+│           └── di-san-lien-quan/<content-hash>.md
+└── processed/
+    └── corpus-v1/
+        ├── passages/<document-id>/<passage-id>.json
+        └── manifest.json
 ```
 
-### 5.1 `source_doc`
+Ba namespace có ý nghĩa cố định:
 
-Một dòng là một tài liệu nguồn: trang web, PDF, hồ sơ di sản hoặc bài nghiên cứu.
-Bảng lưu URL, loại nguồn, tier, license, raw text, hash và thời điểm thu thập.
+- `raw/`: HTML, PDF, DOCX, JSON, ảnh hoặc text crawl nguyên bản; không sửa tại chỗ;
+- `curated/`: Markdown đã được người biên soạn tổng hợp và review;
+- `processed/`: passage, metadata và manifest do pipeline tạo; luôn gắn phiên bản.
 
-### 5.2 `passage`
+Mỗi phiên bản nội dung dùng một key chứa content hash và không bị overwrite. Có
+thể duy trì `latest.json` thân thiện cho người biên soạn, nhưng manifest release
+chỉ được trỏ tới key bất biến. Tiểu sử đầy đủ của nhân vật có canonical key riêng;
+chủ đề `nhan-vat-lien-quan` trong địa điểm chỉ mô tả vai trò của nhân vật tại địa
+điểm đó để tránh sao chép tiểu sử.
 
-Passage tương đương TextUnit của Microsoft GraphRAG. Đây là đơn vị:
+Bucket phải private. Backend lưu `object_key`, không lưu public URL cố định; khi
+cần cho người dùng tải nguồn thì cấp signed URL có thời hạn. Đổi tên key được xem
+là copy sang key mới, cập nhật manifest/mapping rồi mới xóa key cũ.
 
-- retrieval;
-- citation;
-- extraction;
-- truy vết provenance;
-- tái lập tri thức dẫn xuất.
+## 4. Document, passage và mapping
 
-Văn bản gốc chỉ lưu một lần tại passage. Các bảng tri thức không copy toàn bộ
-đoạn nguồn.
+### 4.1 Document
 
-### 5.3 `entity` và `entity_alias`
-
-`entity` là sổ danh tính, mỗi đối tượng một ID/slug ổn định. `entity_alias` ánh xạ
-tên chính thức, Hán Việt, dân gian, lịch sử, tiếng Anh và lỗi gõ đã review về
-cùng entity ID.
-
-Ba cờ điều khiển có trách nhiệm rõ ràng:
-
-- `in_scope`: solver có được phép trả lời về entity không;
-- `depth_tier`: mức độ sâu mà retrieval được kỳ vọng hỗ trợ;
-- `entry_status`: dữ liệu đang draft hay đã đủ điều kiện phục vụ.
-
-`place_profile` giữ dữ liệu riêng của địa điểm như tọa độ và địa chỉ hiển thị.
-
-### 5.4 `claim`
-
-Một dòng là một thuộc tính nguyên tử, một nguồn và một thời điểm quan sát:
-
-```text
-entity          field             value
-Chùa Thiên Mụ   nam_khoi_lap      1601
-Hiện vật X      chieu_cao         250 cm
-Địa điểm Y      gia_ve            150000 VND
-```
-
-Claim dùng cho câu hỏi “bao nhiêu”, giá trị hiện tại và canonical lookup. Dữ liệu
-biến động dùng `valid_until` để solver biết khi nào không được khẳng định như mới.
-
-### 5.5 `timeline_event`
-
-Một dòng là một sự kiện có thời gian, actor/object và evidence:
-
-```text
-1601       Dựng chùa
-1710       Đúc Đại Hồng Chung
-1844–1846 Xây tháp Phước Duyên
-```
-
-Timeline dùng cho “khi nào”, “chuyện gì xảy ra”, sắp xếp chronology và lọc theo
-thế kỷ/khoảng năm.
-
-Claim và timeline có thể cùng phản ánh một năm nhưng không cùng trách nhiệm:
-
-- `claim.nam_khoi_lap = 1601` trả một giá trị canonical;
-- timeline mô tả ai làm gì, trong bối cảnh nào vào năm 1601.
-
-Cả hai trỏ về cùng passage nếu cùng xuất phát từ một bằng chứng.
-
-### 5.6 `relation`
-
-Relation là cạnh knowledge graph giữa hai entity:
-
-```text
-Khải Tường Lâu ──IS_PART_OF────▶ Cung An Định
-Cung An Định    ──LIEN_QUAN_DEN▶ Vua Khải Định
-Hiện vật X      ──TRUNG_BAY_TAI▶ Cung An Định
-```
-
-Predicate là tập đóng theo ontology. Không cho extraction tự phát minh predicate
-mới khi chưa qua review.
-
-### 5.7 `narrative_section`
-
-Narrative là văn bản do người biên soạn theo từng chủ đề:
-
-```text
-tong_quan
-ten_goi
-khoi_lap
-vai_tro_lich_su
-kien_truc
-hien_vat
-nhan_vat
-bien_dong_hien_dai
-tham_quan
-```
-
-Narrative không tương đương Community Report của Microsoft GraphRAG:
-
-- Community Report là summary do model tạo cho một cụm graph;
-- Narrative Section là nội dung domain được biên tập và review.
-
-MVP dùng narrative cho câu hỏi giải thích chuyên sâu, không cần community
-clustering/report generation.
-
-## 6. Mutual indexing theo KAG
-
-Mọi knowledge record phải truy ngược được về evidence:
-
-```text
-source_doc D1
-    └── passage P17
-          ├── hỗ trợ claim C4
-          ├── hỗ trợ timeline event T8
-          ├── hỗ trợ relation R3
-          └── được dùng bởi narrative N2
-```
-
-Hệ thống hỗ trợ hai chiều:
-
-- passage → các entity/claim/event/relation được trích;
-- entity/claim/event/relation → supporting passages;
-- narrative → các passages đã dùng để biên soạn;
-- chat answer → evidence package của lượt trả lời.
-
-Để một knowledge record có nhiều nguồn mà không nhân đôi bản ghi, kiến trúc bổ
-sung hai bảng nối:
-
-```text
-relation_evidence
-├── relation_id
-└── passage_id
-
-narrative_evidence
-├── narrative_section_id
-└── passage_id
-```
-
-`source_url` trong narrative chỉ phục vụ hiển thị/legacy. `narrative_evidence` mới
-là liên kết provenance chính xác ở mức passage.
-
-## 7. Query understanding
-
-### 7.1 Contract chuẩn hóa
+Một document là một nguồn độc lập: URL web, PDF, Markdown biên soạn hoặc hồ sơ.
+Metadata tối thiểu:
 
 ```json
 {
-  "raw_query": "Khải Tường Lâu xây khi nào?",
-  "normalized_query": "khai tuong lau xay khi nao",
-  "intent": "timeline",
-  "entity_ids": ["entity-khai-tuong-lau"],
-  "field_code": null,
-  "time_range": null,
-  "requested_relations": [],
-  "needs_clarification": false
-}
-```
-
-### 7.2 Entity resolution
-
-Thứ tự resolve:
-
-1. canonical name chính xác;
-2. normalized alias chính xác;
-3. alias xuất hiện trong câu;
-4. fuzzy candidates;
-5. hỏi lại nếu candidates gần nhau.
-
-Entity ID đã chọn được dùng xuyên suốt query plan. Không tiếp tục truy vấn bằng
-chuỗi tên đã được sửa.
-
-### 7.3 Intent taxonomy
-
-| Intent | Ví dụ | Operator chính |
-|---|---|---|
-| `overview` | “Giới thiệu Cung An Định” | Local Context/Dossier |
-| `field` | “Cung có diện tích bao nhiêu?” | Exact claim |
-| `timeline` | “Cung được xây dựng khi nào?” | Timeline |
-| `relationship` | “Cung liên quan đến những vị vua nào?” | Graph |
-| `section` | “Kiến trúc có gì đặc biệt?” | Narrative + text |
-| `comparison` | “Cổng chính khác Khải Tường Lâu thế nào?” | Multi-operator |
-| `open_text` | Câu hỏi không ánh xạ chính xác | Hybrid text |
-| `out_of_scope` | Ngoài knowledge domain | Abstain |
-
-Router ưu tiên luật và metadata. Qwen chỉ hỗ trợ phân loại trường hợp khó và phải
-trả output theo schema, không tự thực hiện retrieval.
-
-## 8. Query planner theo KAG
-
-Planner không phải autonomous agent. Nó tạo một danh sách operator nhỏ từ intent
-và entity đã resolve.
-
-### 8.1 Exact operator
-
-Đọc claim canonical cho giá vé, năm khởi lập, kích thước, xếp hạng và thông tin
-tham quan. Không dùng vector search để đoán một giá trị đã có cấu trúc.
-
-### 8.2 Timeline operator
-
-Lọc event theo entity, event type và khoảng thời gian, sau đó lấy passage hỗ trợ.
-
-### 8.3 Graph operator
-
-Đi tối đa 1–2 hop qua predicate allowlist phù hợp intent. Câu hỏi nhân vật không
-mở rộng qua cạnh địa điểm lân cận nếu không liên quan.
-
-### 8.4 Section operator
-
-Lấy narrative section đúng chủ đề và passages chứng minh cho section đó.
-
-### 8.5 Text operator
-
-Kết hợp:
-
-- BM25 word cho từ khóa chính xác;
-- BM25 n-gram cho truy vấn không dấu và lỗi gõ;
-- dense vector cho paraphrase nếu eval chứng minh có lợi;
-- RRF để hợp nhất thứ hạng;
-- reranker để chọn evidence cuối.
-
-### 8.6 Multi-operator plan
-
-Ví dụ:
-
-> Vì sao Khải Tường Lâu mang phong cách châu Âu và nó liên quan thế nào tới vua
-> Khải Định?
-
-```text
-Resolve Khải Tường Lâu
-  → Graph: IS_PART_OF Cung An Định
-  → Graph: tìm relation tới vua Khải Định
-  → Section: kiến trúc
-  → Text: passage nói về phong cách châu Âu
-  → Context Builder: hợp nhất và loại trùng evidence
-```
-
-## 9. Local Context và Entity Dossier
-
-Đây là phần áp dụng Microsoft GraphRAG Local Search cho domain di sản.
-
-Với entity trung tâm, Context Builder có thể lấy:
-
-- thuộc tính canonical;
-- timeline events quan trọng;
-- entity lân cận và relations;
-- narrative sections đúng intent;
-- passages hỗ trợ.
-
-Khi người dùng hỏi “hãy giúp tôi hiểu toàn bộ địa điểm”, backend dựng dossier
-tạm thời:
-
-```json
-{
-  "entity": {"id": "...", "name": "Cung An Định", "type": "place"},
-  "canonical_claims": [],
-  "key_timeline_events": [],
-  "relevant_sections": [],
-  "important_relations": [],
-  "supporting_passages": []
-}
-```
-
-Dossier không phải bảng mới và không phải bản copy toàn bộ database. Nó được dựng
-theo query và token budget.
-
-## 10. Evidence Context Builder
-
-Mọi operator trả cùng một contract:
-
-```json
-{
-  "evidence_id": "passage-uuid",
-  "evidence_type": "timeline",
-  "entity_id": "entity-uuid",
-  "content": "Đầu năm 1919, công việc xây dựng hoàn tất...",
-  "source_title": "Tên tài liệu",
+  "document_id": "DOC-000101",
+  "title": "Lịch sử chùa Thiên Mụ",
   "source_url": "https://example.org/source",
-  "tier": 1,
-  "observed_at": "2026-09-15",
-  "retrieval_score": 0.92,
-  "reason": "supports timeline event 1917–1919"
+  "object_key": "knowledge/curated/vi/hue/do-an/dia-diem/chua-thien-mu/lich-su/<content-hash>.md",
+  "content_hash": "sha256:...",
+  "source_type": "official",
+  "language_code": "vi",
+  "corpus_version": 1
 }
 ```
 
-Context Builder chịu trách nhiệm:
+`object_key + content_hash + corpus_version` xác định chính xác nội dung đã được
+lập chỉ mục. Search hit thuộc phiên bản khác phiên bản đang publish không được đưa
+vào context.
 
-1. Loại evidence trùng.
-2. Xác minh evidence thuộc đúng entity và corpus version.
-3. Ưu tiên nguồn theo tier và độ mới phù hợp với loại dữ kiện.
-4. Giữ nguồn mâu thuẫn nếu cần trình bày xung đột.
-5. Chọn khoảng 3–8 evidence mạnh nhất trong token budget.
-6. Cấp citation ID cho model.
+### 4.2 Passage
 
-Các retriever không tự tạo prompt riêng. Chúng chỉ trả candidate evidence.
+Passage là đoạn nhỏ lấy từ document và là đơn vị retrieval, citation, extraction
+và provenance. Chunker ưu tiên ranh giới heading → đoạn → câu, không cắt cứng theo
+số ký tự.
 
-## 11. Generation và grounding
+Cấu hình khởi đầu để đo bằng eval:
 
-### 11.1 Input cho Qwen3-4B
+- mục tiêu 400–700 token, tối đa khoảng 800 token;
+- overlap 50–120 token, khoảng 10–20%;
+- giữ heading và thông tin nguồn cùng passage;
+- bảng giữ header với các dòng liên quan;
+- không dùng ranh giới trang PDF làm ranh giới ngữ nghĩa.
 
-```text
-Quy tắc:
-- Chỉ sử dụng evidence bên dưới.
-- Không bổ sung kiến thức bên ngoài.
-- Mỗi khẳng định thực tế phải có citation.
-- Nếu nguồn mâu thuẫn, trình bày rõ sự khác biệt.
+Khi một hit nằm sát ranh giới, retriever có thể lấy passage trước/sau theo
+`document_id + passage_index`, sau đó gộp và loại phần overlap trùng. Không luôn
+lấy `±1` vì sẽ lãng phí token budget.
 
-[P17] ...
-[P21] ...
+Target lưu trữ passage:
 
-Câu hỏi: ...
+```json
+{
+  "passage_id": "PSG-000305",
+  "document_id": "DOC-000101",
+  "passage_index": 3,
+  "heading": "Khởi dựng",
+  "text": "...",
+  "source_object_key": "knowledge/curated/.../lich-su.md",
+  "passage_object_key": "knowledge/processed/corpus-v1/passages/DOC-000101/PSG-000305.json",
+  "corpus_version": 1
+}
 ```
 
-Generation mặc định deterministic, temperature `0–0.2`. Không bật reasoning dài
-nếu eval chưa chứng minh nó cải thiện chất lượng.
+Search index chỉ cần giữ `passage_id`, vector/lexical index, metadata lọc,
+`passage_object_key` và phiên bản. `source_object_key` dùng để truy nguyên tài
+liệu; `passage_object_key` dùng để fetch evidence online. Nếu passage được gom
+thành shard, mapping thay bằng `shard_object_key + byte_start + byte_length` để
+runtime đọc đúng byte range mà không tải và chia lại toàn bộ document. MVP được
+phép giữ `passage.text` trong PostgreSQL để triển khai nhanh, nhưng đó là
+projection có thể tái tạo từ R2, không phải bản gốc duy nhất.
 
-### 11.2 Pre-generation gate
+## 5. Biên soạn nhiều nguồn và provenance
 
-- entity đã resolve hoặc câu hỏi không cần entity;
-- `in_scope = true`;
-- `entry_status` cho phép phục vụ;
-- query plan hợp lệ;
-- evidence vượt ngưỡng của intent;
-- dữ liệu biến động chưa hết hạn;
-- evidence thuộc đúng corpus version.
-
-### 11.3 Post-generation gate
-
-- citation ID chỉ thuộc evidence package;
-- mọi số và ngày tháng xuất hiện trong evidence;
-- câu factual có citation hỗ trợ;
-- mức chắc chắn không cao hơn nguồn;
-- xung đột nguồn không bị che giấu;
-- lỗi format chỉ retry một lần.
-
-Response có đúng một trạng thái:
+Không trộn nội dung nhiều website thành một văn bản rồi mất dấu nguồn. Mỗi URL là
+một document riêng trong `raw/`; nội dung tổng hợp nằm trong `curated/` và phải
+trỏ về passages nguồn.
 
 ```text
-answered   Có câu trả lời và citation hợp lệ
-clarify    Cần người dùng làm rõ entity hoặc ý định
-abstained  Evidence không đủ hoặc grounding thất bại
+Source document D1 ──┐
+                     ├──▶ Claim C1 ──▶ narrative lich-su.md
+Source document D2 ──┘
 ```
 
-## 12. Luồng nhập dữ liệu
-
-Không nhập theo kiểu hoàn thành từng bảng trên toàn dự án. Xử lý lần lượt từng
-nguồn của một địa điểm:
+Một claim có thể có nhiều evidence:
 
 ```text
-1. source_doc
-2. passage
-3. entity/alias phát hiện trong passage
-4. claim có thể trích
-5. timeline event có mốc rõ
-6. relation giữa các entity
-7. review structured knowledge
-8. biên soạn narrative từ nhiều passages
-9. publish corpus version
+claim_evidence
+├── claim_id
+├── passage_id
+└── support_type: supports | contradicts
 ```
 
-Một passage có thể hỗ trợ đồng thời nhiều projection:
+Nguồn mâu thuẫn không được ghi đè nhau. Claim canonical chỉ chuyển sang
+`accepted` sau review; claim còn nghi vấn giữ `proposed` hoặc `disputed`. Context
+Builder phải giữ đủ evidence để câu trả lời trình bày xung đột thay vì che giấu.
+
+Thứ tự ưu tiên mặc định:
+
+1. cơ quan quản lý, hồ sơ và văn bản chính thức;
+2. nghiên cứu học thuật, sách chuyên khảo;
+3. bảo tàng và trung tâm lưu trữ;
+4. báo chí uy tín;
+5. encyclopedia cộng đồng, blog và website du lịch.
+
+LLM được phép đề xuất extraction hoặc bản nháp, nhưng không được tự publish claim,
+relation hoặc narrative.
+
+## 6. Knowledge pipeline và publish nhất quán
+
+Pipeline chạy offline hoặc khi có tài liệu thay đổi:
+
+1. Upload bản gốc vào `raw/`, tính hash và ghi metadata.
+2. Trích text; chạy OCR nếu nguồn là ảnh/PDF scan.
+3. Làm sạch Unicode, khoảng trắng, navigation, quảng cáo và nội dung lặp.
+4. Biên soạn/review nội dung `curated/` khi cần tổng hợp nhiều nguồn.
+5. Chia passage có overlap và tạo embedding.
+6. Trích entity, alias, claim, event, relation cùng provenance.
+7. Ghi passage vào `processed/corpus-vN/` và dựng search index staging.
+8. Chạy validation, retrieval eval và kiểm tra object key tồn tại.
+9. Tạo release descriptor trỏ tới immutable index build; trong một transaction
+   PostgreSQL, ghi release published và CAS active-release pointer sang release mới.
+
+Importer phải idempotent. `document_id` được xác định từ source identity ổn định,
+không từ nội dung vì hai nguồn khác nhau có thể có cùng text. Derived artifact
+được định danh bởi `document_id + content_hash + processing_config_digest`, trong
+đó digest bao phủ extractor/OCR, cleaning, chunking, embedding model và dimension.
+Thay đổi một document chỉ tái xử lý document đó; publish vẫn tạo corpus version
+mới để runtime không trộn index cũ với object mới.
+
+Publish qua R2, search service và PostgreSQL không thể là một transaction ACID.
+Hệ thống dùng protocol activation có bù lỗi:
+
+1. Upload tất cả object và release descriptor bất biến.
+2. Build immutable index mang cùng `release_id` và `index_build_id`.
+3. Verify object, manifest, graph snapshot và immutable index.
+4. Trong một transaction PostgreSQL, ghi trạng thái published và CAS
+   active-release pointer từ release cũ sang descriptor mới.
+
+Nếu bước 1–4 lỗi, active pointer vẫn giữ release cũ; index mới và object mới trở
+thành staging/orphan để job dọn sau, không được runtime đọc. Rollback chỉ cần CAS
+pointer về descriptor cũ vì các index build và object đã publish đều bất biến.
+Release cũ chỉ hết điều kiện rollback sau retention window và một lần diễn tập
+rollback thành công.
+
+Manifest tối thiểu chứa:
+
+```json
+{
+  "release_id": "REL-000001",
+  "corpus_version": 1,
+  "processing_config_digest": "sha256:...",
+  "embedding_model": "<model-id>",
+  "embedding_dimension": 1024,
+  "lexical_index_config": {"kind": "postgres-fts", "version": "v1"},
+  "index_build_id": "IDX-000001",
+  "documents": [{"document_id": "DOC-000101", "object_key": "...", "sha256": "...", "size": 123}],
+  "passages": [{"passage_id": "PSG-000305", "document_id": "DOC-000101", "passage_object_key": "...", "sha256": "...", "size": 456}],
+  "created_at": "2026-10-04T00:00:00Z"
+}
+```
+
+Manifest thực tế tuân theo một JSON Schema được version hóa. Ngoài các trường
+minh họa trên, schema phải giữ chunking config, source-to-processed mapping và
+checksum của chính manifest để một release có thể verify/rebuild độc lập.
+
+## 7. Search layer và chiến lược mở rộng
+
+Search layer luôn là dữ liệu dẫn xuất và phải rebuild được từ manifest + objects
+trên R2.
+
+| Quy mô | Search layer | Nội dung đầy đủ |
+|---|---|---|
+| Pilot/MVP | PostgreSQL FTS + pg_trgm + pgvector | PostgreSQL projection hoặc fetch R2 |
+| Nhiều địa điểm, traffic vừa | Qdrant cho vector + PostgreSQL FTS | R2 |
+| Hybrid search lớn | OpenSearch vector + BM25/n-gram | R2 |
+| Vector rất lớn | Milvus/Pinecone/Weaviate | R2 |
+
+Không chọn công nghệ chỉ theo số document. Quyết định tách search dựa trên p95,
+kích thước index, thời gian rebuild, tải đồng thời và chi phí vận hành.
+
+Nếu search service chỉ giữ vector + mapping, hệ thống có semantic search nhưng
+không có keyword search. Hybrid retrieval cần một inverted index từ text, dù có
+thể tắt lưu `_source` và fetch nội dung cuối từ R2.
+
+## 8. Runtime query, cache và consistency
+
+### 8.1 Luồng truy vấn
+
+1. Resolve active-release pointer đúng một lần và ghim `release_id`, corpus,
+   manifest, graph snapshot và immutable `index_build_id` cho toàn bộ request.
+2. Chuẩn hóa câu hỏi và resolve entity trong release đã ghim.
+3. Tính cache key có `release_id`, model và prompt version.
+4. Cache hit hợp lệ thì trả kết quả đã kiểm grounding.
+5. Cache miss thì Query Planner chọn operator.
+6. Search layer trả candidate `passage_id + passage_object_key + score`.
+7. Backend fetch 3–8 passage mạnh nhất từ R2, có timeout và giới hạn byte.
+8. Context Builder hợp nhất evidence từ search và PostgreSQL, loại trùng, kiểm
+   release/version và cấp citation ID.
+9. Qwen sinh câu trả lời; grounding gate kiểm tra rồi mới cache.
+
+Exact, timeline và graph operator đọc PostgreSQL nhưng không trả claim/relation
+trần cho model. Mỗi record phải có supporting `passage_id`; mapping của release
+chuyển ID đó thành `passage_object_key` và trả cùng evidence contract với Text
+operator. Record thiếu evidence trong release đang ghim không được serve.
+
+Cache câu trả lời không thay thế retrieval index. Câu hỏi diễn đạt khác nhau có
+thể dùng semantic cache, nhưng ngưỡng phải bảo thủ và cache key phải bao gồm:
 
 ```text
-Passage P1
-├── claim: nam_khoi_lap = 1601
-├── timeline: năm 1601 dựng chùa
-└── relation: chùa DUOC_TAO_BOI Nguyễn Hoàng
+normalized_query hoặc question_embedding
+entity_ids
+release_id
+model_version
+prompt_version
 ```
 
-Đây không phải copy dữ liệu: text chỉ tồn tại ở P1; ba bản ghi còn lại phục vụ ba
-loại truy vấn khác nhau.
+Publish corpus mới làm cache cũ tự mất hiệu lực nhờ version, không cần xóa đồng
+loạt trong transaction phân tán.
 
-## 13. MVP cho một địa điểm chuyên sâu
+### 8.2 Query Planner
 
-### Knowledge package
-
-- nhiều source document có độ tin cậy khác nhau;
-- passages theo section tự nhiên;
-- một root place và các entity phụ có giá trị truy vấn;
-- aliases đã review;
-- claims cho dữ kiện chính xác;
-- timeline cho các mốc quan trọng;
-- relations có supporting passages;
-- narrative sections cho các chủ đề cần giải thích dài.
-
-Không đặt quota cứng. Chỉ tạo entity và knowledge record khi nội dung thật sự tồn
-tại và có ích cho câu hỏi.
-
-### Ba lớp kiểm thử
-
-1. **Retrieval test:** query → expected entity, intent, operator và passage.
-2. **Generation test:** evidence đúng cố định → Qwen answer, faithfulness, citation.
-3. **End-to-end test:** resolver → planner → retrieval → context → Qwen → gate.
-
-Chỉ mở rộng sang địa điểm tiếp theo khi pipeline không chứa logic hard-code dành
-riêng cho địa điểm pilot.
-
-## 14. Ánh xạ vào repository
-
-| Trách nhiệm | Module sở hữu |
+| Intent | Operator chính |
 |---|---|
-| Query normalization | `apps/backend/core/textutil.py` |
+| `overview` | Local Context/Entity Dossier |
+| `field` | Exact claim |
+| `timeline` | Timeline |
+| `relationship` | Graph tối đa 1–2 hop |
+| `section` | Narrative + passages |
+| `comparison` | Multi-operator |
+| `open_text` | Hybrid vector/keyword |
+| `out_of_scope` | Abstain |
+
+Planner không phải autonomous agent. Exact claim không được thay bằng vector
+search; graph traversal chỉ qua predicate allowlist; Text operator có thể hợp
+nhất BM25, n-gram và vector bằng RRF rồi rerank.
+
+## 9. Evidence Context Builder và grounding
+
+Mọi operator trả cùng contract:
+
+```json
+{
+  "evidence_id": "PSG-000305",
+  "entity_id": "ENT-000012",
+  "content": "...",
+  "source_title": "Lịch sử chùa Thiên Mụ",
+  "source_url": "https://example.org/source",
+  "source_object_key": "knowledge/curated/.../lich-su.md",
+  "corpus_version": 1,
+  "retrieval_score": 0.92,
+  "reason": "supports timeline event 1601"
+}
+```
+
+Context Builder:
+
+1. loại evidence và overlap trùng;
+2. từ chối object/index khác corpus version;
+3. ưu tiên tier nguồn và độ mới phù hợp;
+4. giữ nguồn mâu thuẫn cần thiết;
+5. chọn 3–8 evidence trong token budget;
+6. cấp citation ID cho model.
+
+Qwen chỉ nhận evidence đã chọn. Mọi khẳng định factual phải có citation; số và
+ngày phải xuất hiện trong evidence; thiếu bằng chứng thì `clarify` hoặc `abstain`.
+QA Solver không sửa corpus trong lúc trả lời.
+
+## 10. Trạng thái lỗi và suy giảm
+
+| Sự cố | Hành vi |
+|---|---|
+| R2 tạm thời lỗi, cache hit | Trả cache còn hạn và ghi rõ version |
+| R2 lỗi, cache miss | Không sinh từ metadata rỗng; trả lỗi tạm thời/abstain |
+| Search index lỗi | Không quét R2; trả degradation có quan sát được |
+| Object key thiếu | Loại evidence, ghi lỗi integrity, không đưa cho Qwen |
+| Version mismatch | Loại hit và cảnh báo deployment/index drift |
+| Evidence không đủ | `clarify` hoặc `abstained` |
+| Nguồn mâu thuẫn | Trình bày khác biệt và citation từng phía |
+
+R2 và search index cần health check riêng. Dashboard theo dõi object thiếu,
+passage không có mapping, index lag, ingestion failure và cache hit rate.
+
+## 11. Bảo mật và chi phí
+
+- Bucket private; credential chỉ cấp quyền tối thiểu theo service account.
+- Ingestion có quyền ghi; runtime chatbot ưu tiên chỉ đọc.
+- Không đưa secret hoặc signed URL còn hạn vào log/chat history.
+- Giới hạn kích thước object, MIME type và checksum trước xử lý.
+- Không tạo một object cực nhỏ cho mọi token; passage là đơn vị hợp lý ở pilot.
+  Khi request count trở thành vấn đề, gom passage thành shard JSONL/Parquet và lưu
+  mapping shard + offset/range.
+- Không áp lifecycle xóa lên raw/curated/processed input của bất kỳ release nào
+  còn được giữ hoặc còn nghĩa vụ provenance. Chỉ được hết hạn staging object chưa
+  từng publish, multipart upload lỗi, cache artifact và release đã qua retention,
+  đã export archive kiểm checksum và không còn reference.
+
+## 12. Ánh xạ vào repository
+
+| Trách nhiệm | Owner dự kiến |
+|---|---|
+| R2 client, signed URL | adapter mới trong `apps/backend/` |
+| Ingestion orchestration | `pipelines/ingestion/` |
+| Chunking dùng chung | `apps/backend/core/corpus.py` |
 | Entity resolution | `apps/backend/services/kg.py` |
-| Intent router/query planner | module riêng trong `apps/backend/core/` |
-| BM25/ngram/RRF | `apps/backend/core/retriever.py` |
-| Graph retrieval | `apps/backend/core/kg.py` + PostgreSQL repository |
-| Local Context/Entity Dossier | service context riêng hoặc `apps/backend/core/rag.py` |
+| Search adapter | interface core + adapter pgvector/OpenSearch/Qdrant |
+| Query planner | module riêng trong `apps/backend/core/` |
 | Evidence Context Builder | `apps/backend/core/rag.py` |
 | Prompt | `apps/backend/core/prompt.py` |
 | Qwen inference | `apps/backend/core/llm.py` |
-| API orchestration | service chat, endpoint chỉ validate/serialize |
-| Provenance | PostgreSQL + SQLAlchemy models |
+| Chat/cache orchestration | `apps/backend/services/chat.py` |
+| Metadata, graph, release, audit | SQLAlchemy/Alembic/PostgreSQL |
 | Evaluation | `pipelines/evaluation/` + regression tests |
 
-Không đặt SQL, retrieval, planning, prompt và citation validation cùng trong
-endpoint `/api/chat`.
+Endpoint `/api/chat` chỉ validate/serialize; không chứa SQL, R2 SDK, retrieval,
+prompt hoặc citation validation trực tiếp. Core phụ thuộc port/interface, không
+phụ thuộc SDK của Cloudflare hay search vendor.
 
-## 15. Những phần không áp dụng từ references ở MVP
+## 13. Hiện trạng và đích chuyển đổi
 
-Từ Microsoft GraphRAG:
+Hiện trạng repository đã có PostgreSQL/pgvector, bảng `document`, `passage`,
+`corpus_release` và retrieval từ database. Đây là **as-built**, không phải lý do
+để PostgreSQL tiếp tục là nguồn nội dung duy nhất.
 
-- community detection bằng Leiden;
-- community reports;
-- Global Search map-reduce;
-- DRIFT search;
-- tự động extraction và publish hoàn toàn bằng LLM.
+Đích chuyển đổi:
 
-Từ KAG:
+- bổ sung `object_key`, hash và storage metadata cho document/passage;
+- upload raw/curated/processed content lên R2;
+- coi `passage.text` trong PostgreSQL là projection có thể rebuild trong giai
+  đoạn chuyển tiếp;
+- thêm storage port để retrieval có thể fetch top passages từ R2;
+- giữ search adapter thay thế được để tách khỏi PostgreSQL khi có số liệu cần tách.
 
-- OpenSPG/TuGraph runtime;
-- logical-form language đầy đủ;
-- solver agent nhiều vòng;
-- tất cả loại index như AtomicQuery, KnowledgeUnit và Outline;
-- graph traversal không giới hạn.
+Không xóa `passage.text` trước khi R2 ingestion, manifest, rollback và retrieval
+eval chạy ổn định. Migration phải theo kiểu expand → backfill → verify → switch →
+contract, không reset volume.
 
-Những phần này chỉ được xem xét khi câu hỏi và eval thực tế chứng minh kiến trúc
-hiện tại không đáp ứng.
+## 14. Roadmap triển khai
 
-## 16. Tiêu chí hoàn thành
+### Giai đoạn 0 — Chốt contract và baseline
 
-- Một địa điểm được mô hình hóa đủ sâu và có provenance.
-- Entity, claim, event, relation và narrative truy ngược được về passage.
-- Tên chuẩn, không dấu và alias resolve về cùng entity.
-- Claim lookup không phụ thuộc LLM suy đoán.
-- Timeline query lọc và sắp xếp đúng theo năm.
-- Graph query đi đúng relation path tối đa 2 hop.
-- Câu hỏi chuyên đề lấy đúng narrative và supporting passages.
-- Câu hỏi tổng quan dựng được Local Context/Entity Dossier trong token budget.
-- Qwen3-4B chỉ nhận evidence đã được chọn.
-- Mọi câu factual có citation hợp lệ.
-- Thiếu evidence thì clarify hoặc abstain.
-- Evaluation phân biệt được lỗi retrieval và lỗi generation.
+**Deliverables**
+
+- Chốt object-key convention, document/passage schema và corpus manifest.
+- Đo baseline retrieval, p95, dung lượng database và kích thước corpus hiện tại;
+  ghi ngân sách gate vào release policy.
+- Chọn Chùa Thiên Mụ làm vertical slice đầu tiên.
+
+**Gate:** một document, passage và citation có ID ổn định; test hiện tại chạy xanh;
+baseline ghi đủ recall@1, citation coverage, p95 và error rate.
+
+### Giai đoạn 1 — R2 làm kho tri thức
+
+**Deliverables**
+
+- Tạo bucket private, credential theo quyền và cấu hình môi trường.
+- Upload cây `raw/` và `curated/` cho Thiên Mụ; chưa publish `processed/`.
+- Thêm mapping `object_key`, `content_hash`, `corpus_version` và health check.
+- Có lệnh kiểm tra toàn bộ object trong manifest tồn tại và đúng checksum.
+
+**Gate:** 100% raw/curated object trong manifest tồn tại, đúng size/checksum và có
+thể khôi phục package nguồn pilot chỉ từ R2.
+
+### Giai đoạn 2 — Pipeline xử lý có thể tái lập
+
+**Deliverables**
+
+- Extract/OCR/clean/chunk/overlap/embedding theo một pipeline version.
+- Import idempotent; reprocess một document không làm thay đổi ID document khác.
+- Publish corpus version bằng activation protocol và rollback về version trước.
+- Tạo mapping provenance tối thiểu từ claim/relation/narrative tới passage trước
+  khi bất kỳ nội dung curated nào được phép serve.
+
+**Gate:** chạy pipeline hai lần tạo cùng stable IDs, object checksums và config
+digest; index có cùng ID/count và retrieval score trên bộ cố định không lệch quá
+ngưỡng đã chốt ở Giai đoạn 0; rollback trả lại đúng release descriptor cũ.
+
+### Giai đoạn 3 — Retrieval từ index + R2
+
+**Deliverables**
+
+- Search adapter trả `passage_id`, score và `passage_object_key`.
+- Runtime fetch chỉ top evidence từ R2, có timeout, retry giới hạn và dedupe.
+- Hybrid retrieval, neighbor expansion và citation contract có regression test.
+
+**Gate:** recall@1 ≥95%, citation coverage 100%, không có factual claim thiếu
+evidence trong bộ pilot; p95 đầu-cuối ≤8 giây; tắt R2 hoặc index cho ra degradation
+đúng thiết kế, không hallucinate và không scan fallback.
+
+### Giai đoạn 4 — Curation và provenance nhiều nguồn
+
+**Deliverables**
+
+- Workflow raw source → evidence → claim/relation/narrative đã review.
+- Mở rộng mapping evidence tối thiểu từ Giai đoạn 2 thành workflow nhiều nguồn,
+  hỗ trợ `supports | contradicts` và review conflict.
+- Dashboard phát hiện claim mâu thuẫn, source thiếu và object orphan.
+
+**Gate:** 100% factual answer pilot truy ngược được đến passage + source object;
+mọi conflict fixture giữ citation của cả hai phía.
+
+### Giai đoạn 5 — Cache và quan sát vận hành
+
+**Deliverables**
+
+- Exact/semantic cache gắn release/model/prompt version và TTL.
+- Metrics cache hit, retrieval latency, R2 latency, index lag, abstention và lỗi
+  grounding.
+- Load test câu hỏi lặp, paraphrase và cache invalidation khi publish corpus mới.
+
+**Gate:** 0 cache hit sai release trong test publish/rollback; p95 giữ ≤8 giây và
+không tăng quá ngân sách so với baseline đã chốt ở Giai đoạn 0.
+
+### Giai đoạn 6 — Mở rộng và tách search service khi cần
+
+**Deliverables**
+
+- Nhân pipeline sang Huế/Đà Nẵng và các địa điểm tiếp theo.
+- Đo ngưỡng PostgreSQL theo index size, QPS, p95 và thời gian rebuild.
+- Chỉ khi vượt ngưỡng, chạy shadow index trên OpenSearch/Qdrant, so sánh quality và
+  latency trước cutover.
+
+**Gate:** shadow index giữ recall/citation không thấp hơn gate Giai đoạn 3, đạt
+ngân sách p95/error rate đã chốt; cutover/rollback không đổi API chatbot, corpus
+R2 hoặc ID evidence.
+
+## 15. Tiêu chí hoàn thành kiến trúc
+
+- R2 là nơi có thể khôi phục toàn bộ nội dung và phiên bản corpus.
+- Search index bị xóa vẫn dựng lại được mà không crawl lại Internet.
+- PostgreSQL hỏng cache không làm mất tài liệu tri thức gốc.
+- Runtime không quét R2 và không dùng Qwen để thay thế retrieval.
+- Mọi hit search ánh xạ được tới object + checksum + corpus version hợp lệ.
+- Passage xử lý đúng ranh giới, overlap và neighbor expansion qua kiểm thử.
+- Claim/relation/narrative truy ngược được về một hoặc nhiều nguồn.
+- Câu factual có citation; xung đột nguồn được trình bày; thiếu nguồn thì abstain.
+- Search backend có thể đổi qua adapter mà không thay contract của QA Solver.
 
 Kiến trúc chốt:
 
-> **Microsoft GraphRAG-style knowledge indexing và Local Context → KAG-style
-> query planner và retrieval operators → HeritageGraph Evidence Builder →
-> Qwen3-4B generation → grounding gate.**
-
-## 17. Vận hành vertical slice PostgreSQL
-
-Runtime chatbot chỉ truy xuất PostgreSQL; không fallback sang `corpus/`. Nâng cấp
-schema bằng migration expand (không reset volume):
-
-```bash
-POSTGRES_PASSWORD=... docker compose run --rm migrate
-```
-
-Knowledge package JSON gồm `corpus_version`, `documents`, `passages`, `entities`
-và `aliases`. Mỗi document có `key`, metadata nguồn và `raw_text`; passage phải
-khớp chính xác `raw_text[char_start:char_end]`; entity/alias phải có
-`passage_key` và `quote` nằm trong passage. Database không mở cổng ra host, nên
-nhập package qua container backend trên cùng Docker network:
-
-```bash
-docker compose run --rm --no-deps --build \
-  -v "$PWD/package.json:/data/package.json:ro" \
-  backend python -m apps.backend.db.import_structured /data/package.json
-```
-
-Importer dùng UUID ổn định và upsert nên có thể chạy lặp. Package sai span,
-reference hoặc quote bị từ chối trước lần ghi đầu tiên. Retrieval chỉ đọc release
-`published` và nguồn chưa withdrawn; entity published/in-scope được dùng làm tín
-hiệu tăng hạng nhưng không chặn passage khớp trực tiếp.
+> **R2 versioned knowledge store → reproducible ingestion → replaceable hybrid
+> search index → KAG-lite query planner → Evidence Context Builder → Qwen3-4B →
+> grounding gate; PostgreSQL giữ graph, nghiệp vụ, trạng thái và cache.**
