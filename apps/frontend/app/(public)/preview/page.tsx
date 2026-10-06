@@ -21,8 +21,8 @@ export default function HeritagePreviewPage() {
           <TriptychCard
             key={item.slug}
             item={item}
-            exploreLabel="Khám phá"
-            infoLabel="Chi tiết"
+            exploreLabel="Explore"
+            infoLabel="Info"
             onInfo={(slug) => window.alert(`Mở chi tiết: ${slug}`)}
           />
         ))}
@@ -33,8 +33,8 @@ export default function HeritagePreviewPage() {
           <PortraitCard
             key={`portrait-${item.slug}`}
             item={item as unknown as PortraitCardData}
-            exploreLabel="Khám phá"
-            infoLabel="Chi tiết"
+            exploreLabel="Explore"
+            infoLabel="Info"
             onInfo={(slug) => window.alert(`Mở chi tiết: ${slug}`)}
           />
         ))}
