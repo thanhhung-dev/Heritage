@@ -11,6 +11,9 @@ from apps.backend.models.kg import (  # noqa: F401
     EntityAliasEvidence, Predicate, Relation, PlaceLocation,
 )
 from apps.backend.models.content import Site, Scene, ModelAsset, RawAsset  # noqa: F401
+from apps.backend.models.heritage import Heritage  # noqa: F401
+from apps.backend.models.language import Language  # noqa: F401
+from apps.backend.models.voice import Voice  # noqa: F401
 from apps.backend.models.tour import (  # noqa: F401
     Tour, Story, Narration, Transcript, Highlight, Citation, TourStop,
 )
@@ -28,6 +31,8 @@ __all__ = [
     "EntityEvidence", "EntityAliasEvidence", "Predicate", "Relation", "PlaceLocation",
     # content
     "Site", "Scene", "ModelAsset", "RawAsset",
+    # heritage
+    "Heritage", "Language", "Voice",
     # tour
     "Tour", "Story", "Narration", "Transcript", "Highlight", "Citation", "TourStop",
     # chat

@@ -1,8 +1,9 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Integer, BigInteger, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, BigInteger, Text, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from apps.backend.db.base import Base
 
 class Heritage(Base):
     __tablename__ = "heritage"
@@ -100,3 +101,24 @@ class Heritage(Base):
         BigInteger,
         nullable=True,
     )
+    language1 = relationship(
+        "Language",
+        foreign_keys=[language1_id],
+        primaryjoin="Heritage.language1_id == Language.id",
+    )
+
+    language2 = relationship(
+        "Language",
+        foreign_keys=[language2_id],
+        primaryjoin="Heritage.language2_id == Language.id",
+    )
+
+    voices: Mapped[list["Voice"]] = relationship(
+        back_populates="heritage",
+        order_by="Voice.id",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def voice_length(self) -> int:
+        return len(self.voices)

@@ -7,6 +7,44 @@ import os
 
 BASELINE_REVISION = "b6e199de17dd"
 LEGACY_VIEW = "v_tour_stop"
+HERITAGE_REVISION = "e741c8a4190f"
+HERITAGE_TABLES = frozenset(
+    {
+        "admin_account",
+        "audit_log",
+        "chat_feedback",
+        "chat_message",
+        "chat_session",
+        "claim",
+        "claim_field",
+        "document",
+        "entity",
+        "entity_alias",
+        "event_type",
+        "heritage",
+        "interactive",
+        "interactive_highlight",
+        "language",
+        "link",
+        "media_item",
+        "model_asset",
+        "narrative_section",
+        "participant_role",
+        "partner",
+        "passage",
+        "place_profile",
+        "predicate",
+        "relation",
+        "relation_evidence",
+        "scene",
+        "scene_highlight",
+        "sky_preset",
+        "timeline_event",
+        "timeline_event_participant",
+        "voice",
+        "voice_clip",
+    }
+)
 BASELINE_TABLES = frozenset(
     {
         "admin_account",
@@ -40,12 +78,17 @@ def classify_unversioned_schema(tables: set[str], views: set[str]) -> str:
     if not application_tables and not views:
         return "empty"
 
+    if application_tables == HERITAGE_TABLES:
+        return "heritage"
+
     expected_tables = (BASELINE_TABLES, BASELINE_TABLES | {"place_location"})
     if application_tables in expected_tables and views == {LEGACY_VIEW}:
         return "legacy"
 
     missing = sorted(BASELINE_TABLES - application_tables)
-    unexpected = sorted(application_tables - BASELINE_TABLES - {"place_location"})
+    unexpected = sorted(
+        application_tables - BASELINE_TABLES - HERITAGE_TABLES - {"place_location"}
+    )
     raise ValueError(
         "Unsupported unversioned schema; refusing to stamp it blindly. "
         f"Missing tables: {missing or 'none'}; "
@@ -99,6 +142,10 @@ def main() -> None:
         if schema_kind == "legacy":
             print(f"Adopting recognized legacy schema at revision {BASELINE_REVISION}")
             command.stamp(config, BASELINE_REVISION)
+        elif schema_kind == "heritage":
+            print("Adopting recognized heritage schema at head; no migrations run")
+            command.stamp(config, "head")
+            return
 
     command.upgrade(config, "head")
 
