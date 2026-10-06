@@ -2,6 +2,7 @@
 
 import TriptychCard, { type TriptychCardData } from "@/components/TriptychCard/TriptychCard";
 import PortraitCard, { type PortraitCardData } from "@/components/PortraitCard/PortraitCard";
+import { Button } from "@/components/Button/Button";
 import mockData from "@/mocks/heritage-mock.json";
 import styles from "./preview.module.css";
 
@@ -23,7 +24,7 @@ export default function HeritagePreviewPage() {
             item={item}
             exploreLabel="Explore"
             infoLabel="Info"
-            onInfo={(slug) => window.alert(`Mở chi tiết: ${slug}`)}
+            onInfo={(slug: string) => window.alert(`Mở chi tiết: ${slug}`)}
           />
         ))}
       </div>
@@ -38,6 +39,11 @@ export default function HeritagePreviewPage() {
             onInfo={(slug) => window.alert(`Mở chi tiết: ${slug}`)}
           />
         ))}
+      </div>
+
+      <div className={styles.moreRow}>
+        <Button href="/library">Browse Library</Button>
+        <Button>Browse Library (button)</Button>
       </div>
     </div>
   );

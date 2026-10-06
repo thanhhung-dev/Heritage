@@ -57,3 +57,9 @@
   gap: 16px;
   width: 100%;
 }
+
+.moreRow {
+  display: flex;
+  gap: 16px;
+  margin-top: 48px;
+}
