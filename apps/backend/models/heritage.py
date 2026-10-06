@@ -40,9 +40,11 @@ class Heritage(Base):
         nullable=False,
     )
 
-    publish_state: Mapped[int] = mapped_column(
-        Integer,
+    # DDL: TEXT NOT NULL DEFAULT 'draft'
+    publish_state: Mapped[str] = mapped_column(
+        Text,
         nullable=False,
+        server_default="draft",
     )
 
     publish_date: Mapped[date | None] = mapped_column(
@@ -94,13 +96,16 @@ class Heritage(Base):
 
     language1_id: Mapped[int | None] = mapped_column(
         BigInteger,
+        ForeignKey("language.id", ondelete="SET NULL"),
         nullable=True,
     )
 
     language2_id: Mapped[int | None] = mapped_column(
         BigInteger,
+        ForeignKey("language.id", ondelete="SET NULL"),
         nullable=True,
     )
+
     language1 = relationship(
         "Language",
         foreign_keys=[language1_id],
@@ -113,12 +118,8 @@ class Heritage(Base):
         primaryjoin="Heritage.language2_id == Language.id",
     )
 
-    voices: Mapped[list["Voice"]] = relationship(
+    scenes: Mapped[list["Scene"]] = relationship(
         back_populates="heritage",
-        order_by="Voice.id",
+        order_by="Scene.sequence",
         cascade="all, delete-orphan",
     )
-
-    @property
-    def voice_length(self) -> int:
-        return len(self.voices)

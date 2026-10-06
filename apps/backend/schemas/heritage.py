@@ -1,5 +1,6 @@
 from datetime import date
-from pydantic import BaseModel, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class VoiceOut(BaseModel):
@@ -20,6 +21,19 @@ class LanguageOut(BaseModel):
     name: str
 
 
+class SceneOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    slug: str
+    title: str
+    description: str | None = None
+    sequence: int
+
+class HeritageContentOut(BaseModel):
+    heritage: HeritageOut
+    scenes: list[SceneOut] = Field(default_factory=list)
+
 class HeritageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,7 +47,7 @@ class HeritageOut(BaseModel):
     lng: float | None = None
     duration_seconds: int | None = None
     launch_date: date | None = None
-    publish_state: int
+    publish_state: str
     publish_date: date | None = None
     headline: str | None = None
     map_zoom: float | None = None
@@ -46,5 +60,5 @@ class HeritageOut(BaseModel):
 
     language1: LanguageOut | None = None
     language2: LanguageOut | None = None
-    voices: list[VoiceOut] = []
+    voices: list[VoiceOut] = Field(default_factory=list)
     voice_length: int = 0
