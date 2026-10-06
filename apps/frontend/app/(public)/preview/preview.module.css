@@ -1,0 +1,59 @@
+.wrap {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(24px, 5vw, 72px) clamp(16px, 4vw, 64px);
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(255, 155, 45, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(196, 0, 29, 0.12), transparent 55%),
+    #0a0e14;
+  color: #fff;
+}
+
+.head {
+  margin-bottom: clamp(20px, 3vw, 36px);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-family: "Poppins", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ff9b2d;
+}
+
+.head h1 {
+  margin: 0 0 6px;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.head > p:last-child {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Container flex để card triptych hoạt động: hover card nào tự doãn ra */
+.hero {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  height: min(70vh, 560px);
+  min-height: 420px;
+  margin-bottom: 48px;
+}
+
+/* Grid cho portrait cards */
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+}
