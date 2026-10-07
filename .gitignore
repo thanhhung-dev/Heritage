@@ -108,3 +108,8 @@ Thumbs.db
 .agents
 .opencode
 _bmad/
+.tfvars 
+*.pem
+*.tfstate
+*.tfstate.backup
+.terraform/
