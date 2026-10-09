@@ -48,7 +48,7 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
-    command: ["python", "-m", "apps.backend.db.migrate"]
+    command: ["python", "-m", "apps.backend.db.init_db"]
     depends_on:
       db:
         condition: service_healthy

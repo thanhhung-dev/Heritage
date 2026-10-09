@@ -42,7 +42,6 @@ from apps.backend.services.heritageServices import (
 router = APIRouter(prefix="/heritage", tags=["heritage"])
 
 
-# ── Dependencies ───────────────────────────────────────────────────
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
@@ -53,7 +52,6 @@ def get_service(db: AsyncSession = Depends(get_db)) -> HeritageService:
     return HeritageService(db)
 
 
-# ── Helpers ────────────────────────────────────────────────────────
 
 def _heritage_out(heritage, voices, voice_length) -> HeritageOut:
     """Build HeritageOut with computed voices field."""
@@ -89,7 +87,7 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     )
 
 
-# ── GET /api/heritage ─────────────────────────────────────────────
+# ── GET /api/heritage 
 
 @router.get("", response_model=list[HeritageOut])
 async def list_heritages(service: HeritageService = Depends(get_service)):
@@ -102,7 +100,7 @@ async def list_heritages(service: HeritageService = Depends(get_service)):
     return results
 
 
-# ── GET /api/heritage/{heritage_slug} ──────────────────────────────
+# ── GET /api/heritage/{heritage_slug}
 
 @router.get(
     "/{heritage_slug}",
@@ -133,7 +131,7 @@ async def get_heritage_content(
     return HeritageContentOut(heritage=heritage_out, scenes=scenes_out)
 
 
-# ── GET /api/heritage/{heritage_slug}/scenes/{scene_key} ───────────
+# ── GET /api/heritage/{heritage_slug}/scenes/{scene_key}
 
 @router.get(
     "/{heritage_slug}/scenes/{scene_key}",
