@@ -22,7 +22,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type RefObject } from "react";
-
+import logoText from "./logo-text.svg";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
 import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
@@ -113,7 +113,7 @@ export default function HeritageViewer() {
           />
           <Image
             className={`${styles.tapestryLogo} ${styles.tapestryLogo_type}`}
-            src="https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/icon/svgviewer-output%20(1).svg"
+            src={logoText}
             alt="Tapestry"
             width={146}
             height={29}
@@ -410,10 +410,11 @@ export default function HeritageViewer() {
                     onClick={() => setIsPlaying(true)}
                     style={{ display: isPlaying ? "none" : "block" }}
                   >
-                    <CaretRightFilled
+                    <img
                       id="ssPlayButton_img"
                       aria-hidden="true"
-                      className={styles.ssPlayPauseImg}
+                      className={`${styles.ssPlayPauseImg}`}
+                      src={`https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/icon/svgviewer-output.svg`}
                     />
                     <div className={styles.ssNavToolTip}>Play</div>
                   </button>
