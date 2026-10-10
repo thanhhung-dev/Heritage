@@ -63,11 +63,11 @@ pipeline {
             stage('Frontend build') { steps { dir('apps/frontend') { sh 'npm run build' } } }
           }
         }
-        stage('Migration cycle') {
+        stage('Schema init cycle') {
           when { expression { env.CI_PROFILE_MIGRATION == 'true' } }
           steps { sh '''python3.12 -m venv .migration-venv
             .migration-venv/bin/pip install -r jenkins/requirements-ci.txt
-            PATH="$WORKSPACE/.migration-venv/bin:$PATH" jenkins/migration-check.sh''' }
+            PATH="$WORKSPACE/.migration-venv/bin:$PATH" jenkins/schema-init-check.sh''' }
         }
         stage('Terraform plan') {
           when { expression { env.CI_PROFILE_INFRASTRUCTURE == 'true' } }

@@ -69,7 +69,8 @@ function handle(req, res) {
       result = result.filter((it) => (it.region || "").toLowerCase().includes(region));
     }
     result = result.slice(0, limit);
-    return send(res, 200, result);
+    // Trim to the HeritageOut shape used by the homepage list.
+    return send(res, 200, result.map(({ heritage, scenes, ...it }) => it));
   }
 
   const match = pathname.match(/^\/api\/heritages\/([^/]+)$/);
@@ -79,7 +80,14 @@ function handle(req, res) {
     if (!item) {
       return send(res, 404, { detail: "Heritage not found" });
     }
-    return send(res, 200, item);
+    // Full single-load payload: heritage object + overview (intro) + scenes.
+    const scenes = item.scenes || [];
+    const base = { heritage: item, overview: null, scenes };
+    if (item.overview) {
+      base.overview = item.overview;
+      base.scenes = scenes.filter((s) => s.sequence !== undefined && s.sequence !== -1);
+    }
+    return send(res, 200, base);
   }
 
   if (pathname === "/") {
