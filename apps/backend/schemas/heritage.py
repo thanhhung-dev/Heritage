@@ -1,10 +1,9 @@
 """Pydantic v2 response schemas for Heritage public API (Story 4).
 
-Contracts:
-- HeritageOut          — homepage list + content overview
-- SceneOut             — scene summary in content overview
-- HeritageContentOut   — GET /api/heritage/{slug}
-- SceneDetailOut       — GET /api/heritage/{slug}/scenes/{scene_key}
+Contracts (mirrors CyArk Tapestry single-load model):
+- HeritageOut          — homepage list item
+- SceneDetailOut       — full scene payload (camera, model, media, ...)
+- HeritageContentOut   — GET /api/heritages/{slug}  (heritage + full scenes, one load)
 - ModelAssetOut, SkyPresetOut, CameraOut, VoiceClipOut, VoiceOut,
   MediaItemOut, InteractiveHighlightOut, InteractiveOut, SceneHighlightOut
 """
@@ -131,6 +130,26 @@ class SceneHighlightOut(BaseModel):
     animation_type: str | None = None
 
 
+#######################################################################
+# Scene detail (full) — becomes "scene" in the FULL single-load payload
+#######################################################################
+
+class SceneDetailOut(BaseModel):
+    """Full scene payload for the single-load content endpoint."""
+    id: int
+    slug: str
+    title: str
+    description: str | None = None
+    sequence: int
+    sky: SkyPresetOut | None = None
+    camera: CameraOut
+    voice_clips: list[VoiceClipOut] = Field(default_factory=list)
+    models: list[ModelAssetOut] = Field(default_factory=list)
+    media: list[MediaItemOut] = Field(default_factory=list)
+    interactive: list[InteractiveOut] = Field(default_factory=list)
+    highlights: list[SceneHighlightOut] = Field(default_factory=list)
+
+
 # ── Aggregate schemas ──────────────────────────────────────────────
 
 class HeritageOut(BaseModel):
@@ -163,34 +182,16 @@ class HeritageOut(BaseModel):
     voice_length: int = 0
 
 
-class SceneOut(BaseModel):
-    """Scene summary used in content overview. `slug` is derived from `sequence`."""
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    slug: str  # derived: f"s{sequence + 1}"
-    title: str
-    description: str | None = None
-    sequence: int
-
+# ── Aggregate schemas ──────────────────────────────────────────────
 
 class HeritageContentOut(BaseModel):
-    """GET /api/heritage/{heritage_slug}"""
-    heritage: HeritageOut
-    scenes: list[SceneOut] = Field(default_factory=list)
+    """GET /api/heritages/{heritage_slug} — full single-load payload.
 
-
-class SceneDetailOut(BaseModel):
-    """GET /api/heritage/{heritage_slug}/scenes/{scene_key}"""
+    Mirrors CyArk /content/{slug}: heritage + voices + full scenes
+    (with camera, sky, voice_clips, models, media, interactive, highlights).
+    """
     heritage: HeritageOut
-    scene: SceneOut
-    models: list[ModelAssetOut] = Field(default_factory=list)
-    sky: SkyPresetOut | None = None
-    camera: CameraOut
-    voices: list[VoiceClipOut] = Field(default_factory=list)
-    media: list[MediaItemOut] = Field(default_factory=list)
-    interactive: list[InteractiveOut] = Field(default_factory=list)
-    highlights: list[SceneHighlightOut] = Field(default_factory=list)
+    scenes: list[SceneDetailOut] = Field(default_factory=list)
 
 
 # ── Error schema ───────────────────────────────────────────────────

@@ -1,9 +1,11 @@
 """Heritage public API — Story 4.
 
 Endpoints:
-- GET /api/heritage                                → homepage list
-- GET /api/heritage/{heritage_slug}                → content overview
-- GET /api/heritage/{heritage_slug}/scenes/{key}   → scene detail
+- GET /api/heritages                    → homepage list
+- GET /api/heritages/{heritage_slug}    → FULL single-load content (heritage + full scenes)
+
+Mirrors CyArk Tapestry /content/{slug}: one request returns the whole tour,
+so the client does not need per-scene requests.
 """
 from __future__ import annotations
 
@@ -28,16 +30,11 @@ from apps.backend.schemas.heritage import (
     ModelAssetOut,
     SceneDetailOut,
     SceneHighlightOut,
-    SceneOut,
     SkyPresetOut,
     VoiceClipOut,
     VoiceOut,
 )
-from apps.backend.services.heritageServices import (
-    HeritageService,
-    parse_scene_key,
-    scene_slug,
-)
+from apps.backend.services.heritageServices import HeritageService, scene_slug
 
 router = APIRouter(prefix="/heritages", tags=["heritage"])
 
@@ -87,88 +84,8 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     )
 
 
-
-@router.get("", response_model=list[HeritageOut])
-async def list_heritages(service: HeritageService = Depends(get_service)):
-    """Homepage — list published heritages."""
-    items = await service.list_published()
-    results = []
-    for item in items:
-        out = _heritage_out(item["heritage"], item["voices"], item["voice_length"])
-        results.append(out)
-    return results
-
-
-
-@router.get(
-    "/{heritage_slug}",
-    response_model=HeritageContentOut,
-    responses={404: {"model": ErrorResponse}},
-)
-async def get_heritage_content(
-    heritage_slug: str,
-    service: HeritageService = Depends(get_service),
-):
-    """Content overview — heritage info + scene list."""
-    data = await service.get_content_by_slug(heritage_slug)
-    if data is None:
-        return _error(404, "HERITAGE_NOT_FOUND", f"Heritage '{heritage_slug}' not found")
-
-    heritage_out = _heritage_out(data["heritage"], data["voices"], data["voice_length"])
-    scenes_out = [
-        SceneOut(
-            id=sc.id,
-            slug=scene_slug(sc.sequence),
-            title=sc.title,
-            description=sc.description,
-            sequence=sc.sequence,
-        )
-        for sc in data["scenes"]
-    ]
-
-    return HeritageContentOut(heritage=heritage_out, scenes=scenes_out)
-
-
-
-@router.get(
-    "/{heritage_slug}/scenes/{scene_key}",
-    response_model=SceneDetailOut,
-    responses={404: {"model": ErrorResponse}, 400: {"model": ErrorResponse}},
-)
-async def get_scene_detail(
-    heritage_slug: str,
-    scene_key: str,
-    service: HeritageService = Depends(get_service),
-):
-    """Scene detail — full scene data with models, camera, sky, voices, media, etc."""
-    sequence = parse_scene_key(scene_key)
-    if sequence is None:
-        return _error(
-            400,
-            "INVALID_SCENE_KEY",
-            f"Scene key '{scene_key}' is invalid. Expected format: s1, s2, s3, ...",
-        )
-
-    data = await service.get_scene_detail(heritage_slug, sequence)
-
-    if data is None:
-        # Determine if heritage or scene is missing
-        heritage = await service.get_by_slug(heritage_slug)
-        if heritage is None:
-            return _error(404, "HERITAGE_NOT_FOUND", f"Heritage '{heritage_slug}' not found")
-        return _error(404, "SCENE_NOT_FOUND", f"Scene '{scene_key}' not found")
-
-    heritage_out = _heritage_out(data["heritage"], data["voices"], data["voice_length"])
-    sc = data["scene"]
-
-    scene_out = SceneOut(
-        id=sc.id,
-        slug=scene_slug(sc.sequence),
-        title=sc.title,
-        description=sc.description,
-        sequence=sc.sequence,
-    )
-
+def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
+    """Serialize a full Scene ORM row into SceneDetailOut (no per-scene needs)."""
     camera_out = CameraOut(
         node_name=sc.camera_node_name,
         start_position=sc.cam_start_pos,
@@ -220,7 +137,6 @@ async def get_scene_detail(
 
     highlights_out = [SceneHighlightOut.model_validate(h) for h in sc.scene_highlights]
 
-    policy = asset_policy()
     for model in models_out:
         _resolve_urls(model, policy, "file_url")
     for clip in voices_out:
@@ -235,13 +151,54 @@ async def get_scene_detail(
         _resolve_urls(scene_highlight, policy, "model_url")
 
     return SceneDetailOut(
-        heritage=heritage_out,
-        scene=scene_out,
-        models=models_out,
+        id=sc.id,
+        slug=scene_slug(sc.sequence),
+        title=sc.title,
+        description=sc.description,
+        sequence=sc.sequence,
         sky=sky_out,
         camera=camera_out,
-        voices=voices_out,
+        voice_clips=voices_out,
+        models=models_out,
         media=media_out,
         interactive=interactive_out,
         highlights=highlights_out,
     )
+
+
+
+@router.get("", response_model=list[HeritageOut])
+async def list_heritages(service: HeritageService = Depends(get_service)):
+    """Homepage — list published heritages."""
+    items = await service.list_published()
+    results = []
+    for item in items:
+        out = _heritage_out(item["heritage"], item["voices"], item["voice_length"])
+        results.append(out)
+    return results
+
+
+
+@router.get(
+    "/{heritage_slug}",
+    response_model=HeritageContentOut,
+    responses={404: {"model": ErrorResponse}},
+)
+async def get_heritage_content(
+    heritage_slug: str,
+    service: HeritageService = Depends(get_service),
+):
+    """FULL single-load content — heritage info + every scene (with camera,
+    models, media, voice clips, interactives, highlights). No per-scene request."""
+    data = await service.get_content_by_slug(heritage_slug)
+    if data is None:
+        return _error(404, "HERITAGE_NOT_FOUND", f"Heritage '{heritage_slug}' not found")
+
+    heritage_out = _heritage_out(data["heritage"], data["voices"], data["voice_length"])
+    policy = asset_policy()
+    scenes_out = [
+        _scene_detail_out(sc, policy)
+        for sc in data["scenes"]
+    ]
+
+    return HeritageContentOut(heritage=heritage_out, scenes=scenes_out)

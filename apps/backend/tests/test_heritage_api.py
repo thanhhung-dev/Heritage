@@ -247,20 +247,6 @@ class FakeHeritageService:
                 return row
         return None
 
-    async def get_scene_detail(self, slug, sequence):
-        for row in self._rows:
-            if row["heritage"].slug != slug:
-                continue
-            for scene in row["scenes"]:
-                if scene.sequence == sequence:
-                    return {
-                        "heritage": row["heritage"],
-                        "voices": row["voices"],
-                        "voice_length": row["voice_length"],
-                        "scene": scene,
-                    }
-        return None
-
 
 # ── Test base ────────────────────────────────────────────────────────────────
 
@@ -275,7 +261,7 @@ class HeritageApiTestBase(unittest.TestCase):
         app.dependency_overrides[get_service] = lambda: service
 
 
-# ── Homepage: GET /api/heritage ──────────────────────────────────────────────
+# ── Homepage: GET /api/heritages ─────────────────────────────────────────────
 
 class HomepageTests(HeritageApiTestBase):
     def test_homepage_lists_published_heritages(self) -> None:
@@ -283,7 +269,7 @@ class HomepageTests(HeritageApiTestBase):
         voice = make_voice(headshot_url="https://cdn.example.com/voice.jpg")
         self._install_service([make_row(heritage, scenes=[], voices=[voice])])
 
-        response = self.client.get("/api/heritage")
+        response = self.client.get("/api/heritages")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -306,15 +292,15 @@ class HomepageTests(HeritageApiTestBase):
     def test_homepage_returns_empty_list_when_nothing_published(self) -> None:
         self._install_service([])
 
-        response = self.client.get("/api/heritage")
+        response = self.client.get("/api/heritages")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
 
-# ── Content overview: GET /api/heritage/{slug} ───────────────────────────────
+# ── Content (full single-load): GET /api/heritages/{slug} ─────────────────────
 
-class ContentOverviewTests(HeritageApiTestBase):
+class ContentUpdateTests(HeritageApiTestBase):
     def test_returns_heritage_and_derived_scene_slugs(self) -> None:
         scenes = [
             make_scene(id=10, sequence=0, title="Tam Quan"),
@@ -322,29 +308,23 @@ class ContentOverviewTests(HeritageApiTestBase):
         ]
         self._install_service([make_row(make_heritage(), scenes)])
 
-        response = self.client.get("/api/heritage/chua-thien-mu")
+        response = self.client.get("/api/heritages/chua-thien-mu")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["heritage"]["slug"], "chua-thien-mu")
         self.assertEqual(len(payload["scenes"]), 2)
-        self.assertEqual(
-            payload["scenes"][0],
-            {
-                "id": 10,
-                "slug": "s1",
-                "title": "Tam Quan",
-                "description": "Cổng tam quan",
-                "sequence": 0,
-            },
-        )
+        self.assertEqual(payload["scenes"][0]["id"], 10)
+        self.assertEqual(payload["scenes"][0]["slug"], "s1")
+        self.assertEqual(payload["scenes"][0]["title"], "Tam Quan")
+        self.assertEqual(payload["scenes"][0]["sequence"], 0)
         self.assertEqual(payload["scenes"][1]["slug"], "s2")
         self.assertEqual(payload["scenes"][1]["sequence"], 1)
 
     def test_404_for_unknown_heritage(self) -> None:
         self._install_service([])
 
-        response = self.client.get("/api/heritage/khong-ton-tai")
+        response = self.client.get("/api/heritages/khong-ton-tai")
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(
@@ -360,21 +340,21 @@ class ContentOverviewTests(HeritageApiTestBase):
     def test_heritage_without_scenes_returns_empty_list(self) -> None:
         self._install_service([make_row(make_heritage(), scenes=[])])
 
-        response = self.client.get("/api/heritage/chua-thien-mu")
+        response = self.client.get("/api/heritages/chua-thien-mu")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["scenes"], [])
 
 
-# ── Scene detail: GET /api/heritage/{slug}/scenes/{key} ──────────────────────
+# ── Scene payload structure inside the full content payload ─────────────────
 
-class SceneDetailTests(HeritageApiTestBase):
+class ScenePayloadTests(HeritageApiTestBase):
     def _install_scene_row(self, scene=None, heritage=None) -> None:
         heritage = heritage if heritage is not None else make_heritage()
         scene = scene if scene is not None else make_scene()
         self._install_service([make_row(heritage, [scene])])
 
-    def test_returns_full_payload(self) -> None:
+    def test_scene_carries_full_payload(self) -> None:
         scene = make_scene(
             sequence=0,
             sky_preset=make_sky_preset(),
@@ -404,112 +384,79 @@ class SceneDetailTests(HeritageApiTestBase):
         )
         self._install_scene_row(scene)
 
-        response = self.client.get("/api/heritage/chua-thien-mu/scenes/s1")
+        response = self.client.get("/api/heritages/chua-thien-mu")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["heritage"]["slug"], "chua-thien-mu")
+        self.assertEqual(len(payload["scenes"]), 1)
+        sc = payload["scenes"][0]
         self.assertEqual(
-            payload["scene"],
-            {
-                "id": 10,
-                "slug": "s1",
-                "title": "Tam Quan",
-                "description": "Cổng tam quan",
-                "sequence": 0,
-            },
+            (sc["id"], sc["slug"], sc["title"], sc["description"], sc["sequence"]),
+            (10, "s1", "Tam Quan", "Cổng tam quan", 0),
         )
 
         # Camera is derived from scene columns, not a DB table.
-        camera = payload["camera"]
+        camera = sc["camera"]
         self.assertEqual(camera["node_name"], "Camera_Main")
         self.assertEqual(camera["start_position"], [0.0, 1.5, 6.0])
         self.assertEqual(camera["start_target"], [0.0, 1.0, 0.0])
         self.assertTrue(camera["instant_move"])
 
         # Sky preset.
-        self.assertEqual(payload["sky"]["name"], "midday")
-        self.assertEqual(payload["sky"]["turbidity"], 10.0)
+        self.assertEqual(sc["sky"]["name"], "midday")
+        self.assertEqual(sc["sky"]["turbidity"], 10.0)
 
         # Models keep the DB column name (file_url) and LOD list.
-        self.assertEqual(len(payload["models"]), 2)
+        self.assertEqual(len(sc["models"]), 2)
         self.assertEqual(
-            payload["models"][0]["file_url"],
+            sc["models"][0]["file_url"],
             "https://cdn.example.com/scenes/s1/tam-quan.glb",
         )
-        self.assertEqual(payload["models"][0]["format"], "glb")
-        self.assertEqual(payload["models"][1]["lod_level"], 1)
-        self.assertEqual(payload["models"][1]["compression"], "draco")
+        self.assertEqual(sc["models"][0]["format"], "glb")
+        self.assertEqual(sc["models"][1]["lod_level"], 1)
+        self.assertEqual(sc["models"][1]["compression"], "draco")
 
         # Voice clips sorted by sort_order with nested voice.
-        self.assertEqual(payload["voices"][0]["bubble_text"], "Welcome")
-        self.assertEqual(payload["voices"][0]["voice"]["name"], "Nguyen Minh Anh")
-        self.assertEqual(payload["voices"][1]["sort_order"], 1)
+        self.assertEqual(sc["voice_clips"][0]["bubble_text"], "Welcome")
+        self.assertEqual(sc["voice_clips"][0]["voice"]["name"], "Nguyen Minh Anh")
+        self.assertEqual(sc["voice_clips"][1]["sort_order"], 1)
 
         # Media sorted by sort_order.
-        self.assertEqual(payload["media"][0]["id"], 301)
-        self.assertEqual(payload["media"][1]["id"], 300)
+        self.assertEqual(sc["media"][0]["id"], 301)
+        self.assertEqual(sc["media"][1]["id"], 300)
 
         # Interactive with nested highlights.
-        self.assertEqual(payload["interactive"][0]["mode"], "orbit")
+        self.assertEqual(sc["interactive"][0]["mode"], "orbit")
         self.assertEqual(
-            payload["interactive"][0]["highlights"][0]["popup_title"], "Chuông đồng"
+            sc["interactive"][0]["highlights"][0]["popup_title"], "Chuông đồng"
         )
 
         # Scene highlights.
         self.assertEqual(
-            payload["highlights"][0]["model_url"],
+            sc["highlights"][0]["model_url"],
             "https://cdn.example.com/highlights/bell.glb",
         )
-
-    def test_404_when_heritage_is_missing(self) -> None:
-        self._install_service([])
-
-        response = self.client.get("/api/heritage/khong-ton-tai/scenes/s1")
-
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json()["error"]["code"], "HERITAGE_NOT_FOUND")
-
-    def test_404_when_scene_is_missing(self) -> None:
-        self._install_scene_row(make_scene(sequence=0))
-
-        response = self.client.get("/api/heritage/chua-thien-mu/scenes/s9")
-
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(
-            response.json(),
-            {"error": {"code": "SCENE_NOT_FOUND", "message": "Scene 's9' not found"}},
-        )
-
-    def test_400_for_invalid_scene_keys(self) -> None:
-        self._install_scene_row()
-
-        for key in ("abc", "1", "s0", "S1", "s", "scene-1"):
-            with self.subTest(key=key):
-                response = self.client.get(
-                    f"/api/heritage/chua-thien-mu/scenes/{key}"
-                )
-                self.assertEqual(response.status_code, 400)
-                self.assertEqual(response.json()["error"]["code"], "INVALID_SCENE_KEY")
 
     def test_empty_collections_are_lists_not_null(self) -> None:
         self._install_scene_row()
 
-        response = self.client.get("/api/heritage/chua-thien-mu/scenes/s1")
+        response = self.client.get("/api/heritages/chua-thien-mu")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        for key in ("models", "voices", "media", "interactive", "highlights"):
+        sc = payload["scenes"][0]
+        for key in ("models", "voice_clips", "media", "interactive", "highlights"):
             with self.subTest(key=key):
-                self.assertEqual(payload[key], [])
+                self.assertEqual(sc[key], [])
 
     def test_missing_sky_returns_null(self) -> None:
         self._install_scene_row(make_scene(sky_preset=None))
 
-        response = self.client.get("/api/heritage/chua-thien-mu/scenes/s1")
+        response = self.client.get("/api/heritages/chua-thien-mu")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["sky"])
+        self.assertIsNone(response.json()["scenes"][0]["sky"])
 
     def test_missing_asset_urls_stay_null(self) -> None:
         scene = make_scene(
@@ -520,14 +467,15 @@ class SceneDetailTests(HeritageApiTestBase):
         )
         self._install_scene_row(scene)
 
-        response = self.client.get("/api/heritage/chua-thien-mu/scenes/s1")
+        response = self.client.get("/api/heritages/chua-thien-mu")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(len(payload["voices"]), 1)
-        self.assertIsNone(payload["voices"][0]["video_url"])
-        self.assertIsNone(payload["voices"][0]["audio_url"])
-        self.assertIsNone(payload["interactive"][0]["highlights"][0]["media_url"])
+        sc = payload["scenes"][0]
+        self.assertEqual(len(sc["voice_clips"]), 1)
+        self.assertIsNone(sc["voice_clips"][0]["video_url"])
+        self.assertIsNone(sc["voice_clips"][0]["audio_url"])
+        self.assertIsNone(sc["interactive"][0]["highlights"][0]["media_url"])
 
 
 # ── R2 asset URL policy (task 4.6) ───────────────────────────────────────────
@@ -587,34 +535,36 @@ class AssetUrlPolicyApiTests(HeritageApiTestBase):
         heritage = make_heritage(splash_image_url="heritage/splash.jpg")
         self._install_service([make_row(heritage, [scene])])
 
-        response = self.client.get("/api/heritage/chua-thien-mu/scenes/s1")
+        response = self.client.get("/api/heritages/chua-thien-mu")
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
+        heritage = payload["heritage"]
+        scene = payload["scenes"][0]
         self.assertEqual(
-            payload["models"][0]["file_url"],
+            scene["models"][0]["file_url"],
             "https://assets.heritage.vn/scenes/s1/tam-quan.glb",
         )
         self.assertEqual(
-            payload["voices"][0]["audio_url"], "https://assets.heritage.vn/voices/intro.mp3"
+            scene["voice_clips"][0]["audio_url"], "https://assets.heritage.vn/voices/intro.mp3"
         )
         self.assertEqual(
-            payload["voices"][0]["voice"]["headshot_url"],
+            scene["voice_clips"][0]["voice"]["headshot_url"],
             "https://assets.heritage.vn/voices/face.jpg",
         )
         self.assertEqual(
-            payload["media"][0]["asset_url"], "https://assets.heritage.vn/media/photo.jpg"
+            scene["media"][0]["asset_url"], "https://assets.heritage.vn/media/photo.jpg"
         )
         self.assertEqual(
-            payload["interactive"][0]["highlights"][0]["media_url"],
+            scene["interactive"][0]["highlights"][0]["media_url"],
             "https://assets.heritage.vn/media/popup.mp4",
         )
         self.assertEqual(
-            payload["highlights"][0]["model_url"],
+            scene["highlights"][0]["model_url"],
             "https://assets.heritage.vn/highlights/bell.glb",
         )
         self.assertEqual(
-            payload["heritage"]["splash_image_url"],
+            heritage["splash_image_url"],
             "https://assets.heritage.vn/heritage/splash.jpg",
         )
 

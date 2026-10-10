@@ -2,18 +2,16 @@
 
 Provides:
 - list_published()          → homepage list
-- get_by_slug()             → heritage detail
-- get_content_by_slug()     → heritage + scenes (content overview)
-- get_scene_detail()        → full scene detail
+- get_by_slug()             → heritage detail (languages + full scenes loaded)
+- get_content_by_slug()     → heritage + full scenes (single-load content page)
 """
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 
 from apps.backend.models.heritage import Heritage
 from apps.backend.models.interactive import Interactive
@@ -22,20 +20,6 @@ from apps.backend.models.voice_clip import VoiceClip
 
 
 # ── Helpers ────────────────────────────────────────────────────────
-
-_SCENE_KEY_RE = re.compile(r"^s(\d+)$")
-
-
-def parse_scene_key(scene_key: str) -> int | None:
-    """Parse 's1' → sequence 0, 's2' → sequence 1, etc.  Returns None if invalid."""
-    m = _SCENE_KEY_RE.match(scene_key)
-    if not m:
-        return None
-    num = int(m.group(1))
-    if num < 1:
-        return None
-    return num - 1  # 0-based sequence
-
 
 def scene_slug(sequence: int) -> str:
     """Derive scene route key from 0-based sequence: 0 → 's1', 1 → 's2', ..."""
@@ -79,8 +63,11 @@ class HeritageService:
 
     # ── Content overview ───────────────────────────────────────────
 
+    async def _load_heritage(self, stmt) -> Heritage | None:
+        return (await self.db.execute(stmt)).scalars().unique().first()
+
     async def get_by_slug(self, slug: str) -> Heritage | None:
-        """Return a single published heritage by slug (with languages loaded)."""
+        """Return a single published heritage by slug (with languages + scenes loaded)."""
         stmt = (
             select(Heritage)
             .where(Heritage.slug == slug, Heritage.publish_state == "published")
@@ -91,12 +78,19 @@ class HeritageService:
                 selectinload(Heritage.scenes)
                 .selectinload(Scene.voice_clips)
                 .selectinload(VoiceClip.voice),
+                selectinload(Heritage.scenes).selectinload(Scene.model_assets),
+                selectinload(Heritage.scenes).selectinload(Scene.sky_preset),
+                selectinload(Heritage.scenes).selectinload(Scene.media_items),
+                selectinload(Heritage.scenes)
+                .selectinload(Scene.interactives)
+                .selectinload(Interactive.highlights),
+                selectinload(Heritage.scenes).selectinload(Scene.scene_highlights),
             )
         )
-        return (await self.db.execute(stmt)).scalars().unique().first()
+        return await self._load_heritage(stmt)
 
     async def get_content_by_slug(self, slug: str) -> dict[str, Any] | None:
-        """Return heritage + scenes for content overview page."""
+        """Return heritage + full scenes for content page (single load)."""
         heritage = await self.get_by_slug(slug)
         if heritage is None:
             return None
@@ -108,53 +102,4 @@ class HeritageService:
             "voices": voices,
             "voice_length": len(voices),
             "scenes": heritage.scenes,
-        }
-
-    # ── Scene detail ───────────────────────────────────────────────
-
-    async def get_scene_detail(
-        self, slug: str, sequence: int
-    ) -> dict[str, Any] | None:
-        """Return full scene detail for a heritage by slug + scene sequence.
-
-        Returns None if the heritage or scene is not found.
-        """
-        heritage = await self.get_by_slug(slug)
-        if heritage is None:
-            return None
-
-        # Find scene by sequence
-        scene: Scene | None = None
-        for sc in heritage.scenes:
-            if sc.sequence == sequence:
-                scene = sc
-                break
-
-        if scene is None:
-            return None
-
-        # Reload scene with all eager-loaded relationships
-        stmt = (
-            select(Scene)
-            .where(Scene.id == scene.id)
-            .options(
-                selectinload(Scene.model_assets),
-                selectinload(Scene.voice_clips).selectinload(VoiceClip.voice),
-                selectinload(Scene.media_items),
-                selectinload(Scene.interactives).selectinload(
-                    Interactive.highlights
-                ),
-                selectinload(Scene.scene_highlights),
-                joinedload(Scene.sky_preset),
-            )
-        )
-        scene = (await self.db.execute(stmt)).scalars().unique().first()
-
-        voices = list(heritage.voices)
-
-        return {
-            "heritage": heritage,
-            "voices": voices,
-            "voice_length": len(voices),
-            "scene": scene,
         }
