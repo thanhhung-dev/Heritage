@@ -1,0 +1,695 @@
+"use client";
+
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type RefObject } from "react";
+
+import { useHeritageTour } from "@/context/heritage-tour";
+import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
+import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
+import styles from "./styles.module.css";
+
+const CDN = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net";
+
+const voices = [
+  { id: 1, name: "Amal Saraheen", avatar: `${CDN}/petra-data/Voices/Amal_headshot-256x256.webp` },
+  { id: 2, name: "Mamoun Nawafleh", avatar: `${CDN}/petra-data/Voices/Mamoun_headshot-256x256.webp` },
+  { id: 3, name: "Dr. Majed Hasanat", avatar: `${CDN}/petra-data/Voices/Majed_headshot-256x256.jpg` },
+  { id: 4, name: "Dr. Suleiman Al-Farajat", avatar: `${CDN}/petra-data/Voices/Suliman-256x256.webp` },
+];
+
+const ARROW_ICON = `${CDN}/ui-elements/icons/icon_arrow_up.svg`;
+
+export default function HeritageViewer() {
+  const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
+  const router = useRouter();
+  const { payload, currentScene } = useHeritageTour();
+
+  // Playback / audio state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState("0:00");
+  const [total, setTotal] = useState("1:05");
+
+  // UI state
+  const [ccOn, setCcOn] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Carousel refs
+  const voicesViewportRef = useRef<HTMLDivElement>(null);
+  const intViewportRef = useRef<HTMLDivElement>(null);
+
+  // Scene navigation
+  const keys = sceneKeys(payload);
+  const scene = currentScene;
+  const index = keys.indexOf(sceneKey);
+
+  const goPrev = () => {
+    if (index > 0) router.push(`/content/${slug}/${keys[index - 1]}`);
+  };
+  const goNext = () => {
+    if (index >= 0 && index < keys.length - 1) {
+      router.push(`/content/${slug}/${keys[index + 1]}`);
+    }
+  };
+
+  const sceneTitle = (key: string) =>
+    resolveSceneByKey(payload, key)?.title ?? key;
+
+  // Fullscreen
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  };
+
+  // Media handlers (TODO: nối với audio/video ref)
+  const handleRestart = () => {
+    // TODO: audio.currentTime = 0
+    setIsPlaying(true);
+  };
+
+  const handleSeek = (_seconds: number) => {
+    // TODO: audio.currentTime += _seconds
+  };
+
+  const scrollCarousel = (ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) => {
+    ref.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
+  };
+
+  return (
+    <div className={styles.viewer} style={tapestryTourVarsStyle}>
+      {/* Stop nav: vertical skewed tiles, left edge */}
+      <nav
+        id="story-panel"
+        className={styles.stopNav}
+        role="tablist"
+        aria-label="Tour navigation"
+      >
+        <div className={styles.ssNavBars}>
+          {keys.map((key) => {
+            const active = key === sceneKey;
+            return (
+              <div
+                key={key}
+                className={`${styles.ssNavBarGroup} ${active ? styles.ssActiveNavBar : ""}`}
+              >
+                <Link
+                  href={`/content/${slug}/${key}`}
+                  role="tab"
+                  aria-selected={active}
+                  className={styles.ssNavBar}
+                  data-no={key}
+                  aria-label={`Scene ${key}`}
+                  title={sceneTitle(key)}
+                >
+                  <span className={styles.ssDivBarText}>{sceneTitle(key)}</span>
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Stop header: title and description for the active scene */}
+      <div className={`${styles.stopHeader} ${styles.fadeIn}`}>
+        <h1 className={styles.stopTitle}>{scene?.title}</h1>
+        <div className={styles.stopDivider} />
+        <p className={styles.stopDesc}>{scene?.description}</p>
+      </div>
+
+      {/* Attribution */}
+      <footer className={styles.attributionBar} aria-label="Data attribution">
+        <p>{payload.heritage.region}</p>
+      </footer>
+
+      {/* Scene-transition blackout */}
+      <div className={styles.sceneFade} aria-hidden="true" />
+
+      {/* Bottom media strip */}
+      <div id="mediaStrip" className={styles.mediaStrip} style={{ display: "flex" }}>
+        {/* Closed captions */}
+        <div
+          className={styles.closedCaptionsGroup}
+          id="closedCaptionsGroup"
+          style={{ display: ccOn ? "flex" : "none", zIndex: 500 }}
+        >
+          <div className={styles.closedCaptions} id="closedCaptions">
+            <div
+              className={`${styles.closedCaptionsText} ${styles.rightToLeftText}`}
+              id="closedCaptionsText"
+            />
+          </div>
+        </div>
+
+        <div className={styles.mediaStripContent} id="mediaStripContent" style={{ display: "block" }}>
+          {/* Voices carousel */}
+          <div className={`${styles.mediaCarousel} ${styles.fadeIn}`} id="mediaCarousel" style={{ display: "flex" }}>
+            <button
+              tabIndex={0}
+              className={`${styles.carouselArrow} ${styles.navIconBg}`}
+              id="carouselArrow_left"
+              aria-label="Scroll left"
+              onClick={() => scrollCarousel(voicesViewportRef, -1)}
+            >
+              <img
+                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
+                src={ARROW_ICON}
+                alt="scroll left"
+                style={{ transform: "rotate(-90deg)" }}
+              />
+            </button>
+
+            <div className={styles.carouselViewport} id="carouselViewport" ref={voicesViewportRef}>
+              <div className={styles.carouselTrack} id="carouselTrack">
+                <div className={styles.voicesList} id="voicesList">
+                  {voices.map((voice) => (
+                    <div key={voice.id} className={styles.voiceItem}>
+                      <button
+                        tabIndex={0}
+                        className={`${styles.voice} ${styles.accOverviewPages} ${styles.accScenePages}`}
+                        id={`voice_${voice.id}`}
+                        aria-label={`Listen ${voice.name} talk about`}
+                      >
+                        <img
+                          className={styles.voiceIconSvg}
+                          src={`${CDN}/ui-elements/nav_items/items_voice.svg`}
+                          alt=""
+                          aria-hidden="true"
+                        />
+                        <div className={styles.voiceAvatar}>
+                          <img
+                            className={styles.voiceAvatarImg}
+                            id={`voiceAvatar_${voice.id}`}
+                            src={voice.avatar}
+                            alt={`Image of ${voice.name}`}
+                          />
+                          <div
+                            className={`${styles.voiceRing} ${styles.ping} ${styles.rounded}`}
+                            id={`voiceRing_${voice.id}`}
+                          />
+                        </div>
+                        <div
+                          className={`${styles.voiceText} ${styles.fadeIn} ${styles.rightToLeftText}`}
+                          id={`voiceText_${voice.id}`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.mediaList} id="mediaList" />
+              </div>
+            </div>
+
+            <button
+              tabIndex={0}
+              className={`${styles.carouselArrow} ${styles.navIconBg}`}
+              id="carouselArrow_right"
+              aria-label="Scroll right"
+              onClick={() => scrollCarousel(voicesViewportRef, 1)}
+            >
+              <img
+                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
+                src={ARROW_ICON}
+                alt="scroll right"
+                style={{ transform: "rotate(90deg)" }}
+              />
+            </button>
+          </div>
+
+          {/* Interactive media carousel */}
+          <div className={styles.intMediaCarousel} id="intMediaCarousel">
+            <button
+              tabIndex={0}
+              className={`${styles.carouselArrow} ${styles.navIconBg}`}
+              id="intCarouselArrow_left"
+              aria-label="Scroll left"
+              onClick={() => scrollCarousel(intViewportRef, -1)}
+            >
+              <img
+                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
+                src={ARROW_ICON}
+                alt="scroll left"
+                style={{ transform: "rotate(-90deg)" }}
+              />
+            </button>
+
+            <div className={styles.intCarouselViewport} id="intCarouselViewport" ref={intViewportRef}>
+              <div className={styles.intMediaCarouselItems} id="intMediaCarouselItems" />
+            </div>
+
+            <button
+              tabIndex={0}
+              className={`${styles.carouselArrow} ${styles.navIconBg}`}
+              id="intCarouselArrow_right"
+              aria-label="Scroll right"
+              onClick={() => scrollCarousel(intViewportRef, 1)}
+            >
+              <img
+                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
+                src={ARROW_ICON}
+                alt="scroll right"
+                style={{ transform: "rotate(90deg)" }}
+              />
+            </button>
+          </div>
+
+          {/* Playback timeline */}
+          <div className={styles.playbackTimeline} id="playbackTimeline">
+            <div
+              className={styles.playbackTimelineFill}
+              id="playbackTimelineFill"
+              style={{ width: `${progress}%` }}
+            />
+            <span className={`${styles.playbackTime} ${styles.playbackTimeElapsed}`} id="playbackTimeElapsed">
+              {elapsed}
+            </span>
+            <span className={`${styles.playbackTime} ${styles.playbackTimeTotal}`} id="playbackTimeTotal">
+              {total}
+            </span>
+          </div>
+
+          {/* Strip controls */}
+          <div className={styles.stripControls}>
+            {/* Info controls */}
+            <div className={styles.infoControls} id="infoControls">
+              <button
+                tabIndex={-1}
+                className={`${styles.navIconBg} ${styles.tutIcon}`}
+                id="tutBg"
+                aria-label="Tutorial"
+                aria-disabled="true"
+                disabled
+                style={{ pointerEvents: "none" }}
+              >
+                <img
+                  className={styles.navIcons}
+                  id="tut"
+                  src={`${CDN}/ui-elements/settings_bar/tutorial.png`}
+                  alt="tutorial icon"
+                />
+                <div className={styles.navToolTip}>Tutorial</div>
+              </button>
+
+              <button tabIndex={0} className={styles.navIconBg} id="resourcesIcon" aria-label="Resources">
+                <img
+                  className={styles.navIcons}
+                  width={16}
+                  height={16}
+                  src={`${CDN}/ui-elements/settings_bar/resources.png`}
+                  alt="resources navigation icon"
+                />
+                <div className={styles.navToolTip}>Resources</div>
+              </button>
+
+              <button tabIndex={0} className={styles.navIconBg} id="shareIcon" aria-label="Share this location">
+                <img className={styles.navIcons} width={16} height={16} src="/images/icon_share.svg" alt="" />
+                <div className={styles.navToolTip}>Share</div>
+              </button>
+
+              <button tabIndex={0} className={styles.navIconBg} id="settingsIcon" aria-label="Settings Mode">
+                <img
+                  className={styles.navIcons}
+                  width={16}
+                  height={16}
+                  src={`${CDN}/ui-elements/settings_bar/settings.png`}
+                  alt="Settings icon"
+                />
+                <div className={styles.navToolTip}>Settings</div>
+              </button>
+            </div>
+
+            {/* Playback controls */}
+            <div className={styles.playbackControls}>
+              {/* Previous scene */}
+              <button
+                tabIndex={0}
+                className={`${styles.ssPrevButton} ${styles.ssButton} ${styles.ssButtonPC} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                id="prev-o"
+                aria-label="Previous scene"
+                onClick={goPrev}
+                disabled={index <= 0}
+              >
+                <div className={styles.ssInnerButton} id="ssP-Prev">
+                  <img
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    alt=""
+                    className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
+                    src={`${CDN}/ui-elements/nav_bar/navigation_arrow_left_orange.svg`}
+                  />
+                  <div className={styles.ssNavToolTip} id="ssPrevButtonTooltip">Previous Scene</div>
+                </div>
+              </button>
+
+              {/* Replay scene */}
+              <button
+                tabIndex={0}
+                className={`${styles.ssButton} ${styles.ssButtonPC} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                id="ssP-Restart"
+                aria-label="Restart narration"
+                onClick={handleRestart}
+              >
+                <div className={styles.ssInnerButton}>
+                  <img
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    alt=""
+                    className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
+                    src={`${CDN}/ui-elements/nav_bar/navigation_restart.svg`}
+                  />
+                  <div className={styles.ssNavToolTip} id="ssRestartTooltip">Replay Scene</div>
+                </div>
+              </button>
+
+              {/* Back 15 */}
+              <button
+                tabIndex={0}
+                id="ssBack15"
+                className={`${styles.ssMiddleButton} ${styles.ssSeekButton} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                aria-label="Skip back 15 seconds"
+                onClick={() => handleSeek(-15)}
+              >
+                <svg
+                  className={styles.ssSeekImg}
+                  viewBox="0 0 24 24"
+                  width={24}
+                  height={24}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth={1.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                  <text
+                    x={12}
+                    y={15.5}
+                    textAnchor="middle"
+                    fontSize={8.5}
+                    fontWeight={600}
+                    fontFamily="sans-serif"
+                    fill="#ffffff"
+                    stroke="none"
+                  >
+                    15
+                  </text>
+                </svg>
+                <div className={styles.ssNavToolTip}>Back 15 seconds</div>
+              </button>
+
+              {/* Play / Pause / Explore */}
+              <div id="ssMiddleButtonPress" className={styles.middleButtonGroup} style={{ display: "flex" }}>
+                <div id="ssAudioButton" className={styles.ssAudioButton} style={{ display: "flex", scale: "1" }}>
+                  <button
+                    id="ssPlayButton"
+                    className={`${styles.ssMiddleButton} ${styles.ssPlayButton}`}
+                    aria-label="Play"
+                    onClick={() => setIsPlaying(true)}
+                    style={{ display: isPlaying ? "none" : "block" }}
+                  >
+                    <img
+                      id="ssPlayButton_img"
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      className={`${styles.ssPlayPauseImg} ${styles.tabIndexZero}`}
+                      src={`${CDN}/ui-elements/nav_bar/navigation_play.svg`}
+                      alt=""
+                    />
+                    <div className={styles.ssNavToolTip}>Play</div>
+                  </button>
+
+                  <button
+                    id="ssPauseButton"
+                    className={`${styles.ssMiddleButton} ${styles.ssPauseButton}`}
+                    aria-label="Pause"
+                    onClick={() => setIsPlaying(false)}
+                    style={{ display: isPlaying ? "block" : "none" }}
+                  >
+                    <img
+                      id="ssPauseButton_img"
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      className={`${styles.ssPlayPauseImg} ${styles.tabIndexZero}`}
+                      src={`${CDN}/ui-elements/nav_bar/navigation_pause.svg`}
+                      alt=""
+                    />
+                    <div className={styles.ssNavToolTip}>Pause</div>
+                  </button>
+                </div>
+
+                <button
+                  id="ssExploreButton"
+                  className={styles.ssExploreButton}
+                  style={{ display: "none", width: 50 }}
+                >
+                  <img
+                    id="ssExploreButton_img"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    className={`${styles.ssExploreImg} ${styles.tabIndexZero} ${styles.ssPlaypenStill}`}
+                    src={`${CDN}/ui-elements/icons/explore_lens.svg`}
+                    alt="Explore in 3D"
+                  />
+                  <div className={styles.ssExploreFootsteps} aria-hidden="true">
+                    <img
+                      className={`${styles.footstep} ${styles.footstepL}`}
+                      src={`${CDN}/ui-elements/icons/icon_footstep_l.svg`}
+                      alt=""
+                    />
+                    <img
+                      className={`${styles.footstep} ${styles.footstepR}`}
+                      src={`${CDN}/ui-elements/icons/icon_footstep_r.svg`}
+                      alt=""
+                    />
+                  </div>
+                  <span id="ssExploreButton_text" className={styles.ssExploreButtonText} style={{ display: "none" }}>
+                    Explore
+                  </span>
+                  <div className={styles.ssNavToolTip}>Explore in 3D</div>
+                </button>
+
+                <div id="intButtonRing" />
+              </div>
+
+              {/* Forward 15 */}
+              <button
+                tabIndex={0}
+                id="ssForward15"
+                className={`${styles.ssMiddleButton} ${styles.ssSeekButton} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                aria-label="Skip forward 15 seconds"
+                onClick={() => handleSeek(15)}
+              >
+                <svg
+                  className={styles.ssSeekImg}
+                  viewBox="0 0 24 24"
+                  width={24}
+                  height={24}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth={1.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <text
+                    x={12}
+                    y={15.5}
+                    textAnchor="middle"
+                    fontSize={8.5}
+                    fontWeight={600}
+                    fontFamily="sans-serif"
+                    fill="#ffffff"
+                    stroke="none"
+                  >
+                    15
+                  </text>
+                </svg>
+                <div className={styles.ssNavToolTip}>Forward 15 seconds</div>
+              </button>
+
+              {/* Next scene / Skip */}
+              <div className={styles.ringButtonGroup}>
+                <button
+                  tabIndex={0}
+                  className={`${styles.ssNextButton} ${styles.ssButton} ${styles.ssButtonPC} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                  id="next-0"
+                  aria-label="Skip narration"
+                  onClick={goNext}
+                  disabled={index === -1 || index === keys.length - 1}
+                  style={{ filter: "brightness(1)", pointerEvents: "all" }}
+                >
+                  <div className={styles.ssInnerButton} id="ssN-Next" style={{ display: "none" }}>
+                    <img
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      alt=""
+                      className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
+                      src={`${CDN}/ui-elements/nav_bar/navigation_arrow_right_orange.svg`}
+                    />
+                    <div className={styles.ssNavToolTip}>Next Scene</div>
+                  </div>
+                  <div className={styles.ssInnerButton} id="ssN-Skip" style={{ display: "inline-flex" }}>
+                    <img
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      alt=""
+                      className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
+                      src={`${CDN}/ui-elements/nav_bar/navigation_skip.svg`}
+                    />
+                    <div className={styles.ssNavToolTip}>Skip Voiceover</div>
+                  </div>
+                </button>
+                <div
+                  className={`${styles.ssNextButtonRing} ${styles.ping} ${styles.rounded}`}
+                  id="ssNextButtonRing"
+                  style={{ display: "none" }}
+                />
+              </div>
+            </div>
+
+            {/* System controls */}
+            <div className={styles.systemControls} id="systemControls">
+              <button
+                tabIndex={0}
+                className={`${styles.navIconBg} ${styles.mobileHamburgerBtn}`}
+                id="mobileHamburgerBtn"
+                aria-label="Menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((v) => !v)}
+              >
+                <img
+                  className={styles.navIcons}
+                  src={`${CDN}/ui-elements/mobile/hamburger_menu.svg`}
+                  alt="Menu icon"
+                />
+              </button>
+
+              <button
+                tabIndex={0}
+                className={styles.navIconBg}
+                id="navMute"
+                aria-label="Mute sound"
+                onClick={() => setIsMuted(true)}
+                style={{ display: isMuted ? "none" : "flex" }}
+              >
+                <img
+                  className={styles.navIcons}
+                  width={16}
+                  height={16}
+                  src={`${CDN}/ui-elements/settings_bar/mute.png`}
+                  alt="mute navigation icon"
+                />
+                <div className={styles.navToolTip}>Sound Off</div>
+              </button>
+
+              <button
+                tabIndex={0}
+                className={styles.navIconBg}
+                id="navUnmute"
+                aria-label="Unmute sound"
+                onClick={() => setIsMuted(false)}
+                style={{ display: isMuted ? "flex" : "none" }}
+              >
+                <img
+                  className={styles.navIcons}
+                  width={16}
+                  height={16}
+                  src={`${CDN}/ui-elements/settings_bar/unmute.png`}
+                  alt="unmute navigation icon"
+                />
+                <div className={styles.navToolTip}>Sound On</div>
+              </button>
+
+              <div className={styles.additionalIcons} style={{ display: "flex" }}>
+                <button
+                  tabIndex={0}
+                  className={styles.navIconBg}
+                  id="ccIconBg"
+                  aria-label="Toggle Closed Captions"
+                  aria-pressed={ccOn}
+                  onClick={() => setCcOn((v) => !v)}
+                >
+                  <img
+                    className={styles.navIcons}
+                    id="ccIcon"
+                    style={{ filter: `opacity(${ccOn ? 1 : 0.5})` }}
+                    src={`${CDN}/ui-elements/settings_bar/cc.png`}
+                    alt="Closed Captions navigation icon"
+                  />
+                  <div className={styles.navToolTip}>Closed Captions</div>
+                </button>
+              </div>
+
+              <button
+                tabIndex={0}
+                className={styles.navIconBg}
+                id="fullScreenIcon"
+                aria-label="Fullscreen Mode"
+                onClick={toggleFullscreen}
+                style={{ display: isFullscreen ? "none" : "flex" }}
+              >
+                <img
+                  className={styles.navIcons}
+                  width={16}
+                  height={16}
+                  src={`${CDN}/ui-elements/settings_bar/full_screen.png`}
+                  alt="Fullscreen Mode navigation icon"
+                />
+                <div className={styles.navToolTip}>Fullscreen Mode</div>
+              </button>
+
+              <button
+                tabIndex={0}
+                className={styles.navIconBg}
+                id="exitFullScreenIcon"
+                aria-label="Exit fullscreen Mode"
+                onClick={toggleFullscreen}
+                style={{ display: isFullscreen ? "flex" : "none" }}
+              >
+                <img
+                  className={styles.navIcons}
+                  width={16}
+                  height={16}
+                  src={`${CDN}/ui-elements/settings_bar/full_screen_exit.png`}
+                  alt="exit Fullscreen Mode navigation icon"
+                />
+                <div className={styles.navToolTip}>Exit fullscreen Mode</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Transient toast */}
+      <div className={styles.toast} role="status" aria-live="polite" />
+
+      {/* Highlight details */}
+      <aside className={styles.hotspotPopup} hidden aria-label="Highlight details">
+        <button className={styles.hotspotPopupClose} type="button" aria-label="Close highlight">
+          &times;
+        </button>
+        <div className={styles.hotspotPopupMedia} />
+        <h2 id="hotspot-popup-title" />
+        <p id="hotspot-popup-text" />
+      </aside>
+
+      {/* Caption display */}
+      <div className={styles.captionDisplay} aria-live="polite" />
+    </div>
+  );
+}
