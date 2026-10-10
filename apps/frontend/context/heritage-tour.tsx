@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo } from "react";
 
 import type { HeritagePayload, HeritageScene } from "@/types/heritage";
 import { resolveSceneByKey } from "@/lib/heritage";
@@ -16,7 +16,6 @@ export interface HeritageTourContextValue {
   heritageSlug: string;
   currentSceneKey: string;
   currentScene: HeritageScene | null;
-  setCurrentSceneKey: (key: string) => void;
   status: "demo" | "ready";
   error: string | null;
 }
@@ -28,7 +27,7 @@ export const HeritageTourContext = createContext<HeritageTourContextValue | null
 interface HeritageTourProviderProps {
   payload: HeritagePayload;
   heritageSlug: string;
-  initialSceneKey: string;
+  currentSceneKey: string;
   status: "demo" | "ready";
   error: string | null;
   children: ReactNode;
@@ -37,21 +36,15 @@ interface HeritageTourProviderProps {
 export function HeritageTourProvider({
   payload,
   heritageSlug,
-  initialSceneKey,
+  currentSceneKey,
   status,
   error,
   children,
 }: HeritageTourProviderProps) {
-  const [currentSceneKey, setCurrentSceneKey] = useState<string>(initialSceneKey);
-
   const currentScene = useMemo(
     () => resolveSceneByKey(payload, currentSceneKey),
     [payload, currentSceneKey]
   );
-
-  const handleSetSceneKey = useCallback((key: string) => {
-    setCurrentSceneKey(key);
-  }, []);
 
   const value = useMemo<HeritageTourContextValue>(
     () => ({
@@ -59,11 +52,10 @@ export function HeritageTourProvider({
       heritageSlug,
       currentSceneKey,
       currentScene,
-      setCurrentSceneKey: handleSetSceneKey,
       status,
       error,
     }),
-    [payload, heritageSlug, currentSceneKey, currentScene, handleSetSceneKey, status, error]
+    [payload, heritageSlug, currentSceneKey, currentScene, status, error]
   );
 
   return (

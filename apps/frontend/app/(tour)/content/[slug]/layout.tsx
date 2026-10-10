@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { HeritageTourProvider } from "@/context/heritage-tour";
+import HeritageViewer from "@/features/tour/HeritageViewer";
 import { DEMO_HERITAGE_PAYLOAD } from "@/lib/demo-heritage";
 import { fetchHeritagePayload } from "@/lib/heritage";
 import type { HeritagePayload } from "@/types/heritage";
@@ -33,7 +34,7 @@ export default function HeritageContentLayout({
 }: {
   children: ReactNode;
 }) {
-  const params = useParams<{ slug: string }>();
+  const params = useParams<{ slug: string; sceneKey?: string }>();
   const slug = params.slug;
 
   const [state, setState] = useState<TourState>({
@@ -79,10 +80,11 @@ export default function HeritageContentLayout({
       <HeritageTourProvider
         payload={state.payload}
         heritageSlug={slug}
-        initialSceneKey="s0"
+        currentSceneKey={params.sceneKey ?? "s0"}
         status={state.status}
         error={state.error}
       >
+        {params.sceneKey ? <HeritageViewer /> : null}
         {children}
       </HeritageTourProvider>
     </div>
