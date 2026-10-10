@@ -1347,8 +1347,9 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 .playbackTimeline {
   width: 100%;
   height: 1.2px;
+  box-sizing: content-box;
   border-radius: 4px;
-  background-color: rgba(233, 221, 240, 1);
+  background-color: rgba(240, 232, 221, 0.5);
   position: relative;
   overflow: visible;
   padding: 10px 0 10px 0;
@@ -2827,10 +2828,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 .viewer .mediaStrip {
   display: flex;
   justify-content: center;
-}
-
-.viewer .playbackTime {
-  opacity: 1;
 }
 
 .viewer .ssPlayButton {
