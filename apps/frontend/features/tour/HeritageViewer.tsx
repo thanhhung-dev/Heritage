@@ -119,13 +119,13 @@ export default function HeritageViewer() {
             return (
               <div
                 key={key}
-                className={`${styles.ssNavBarGroup} ${active ? styles.ssActiveNavBar : ""}`}
+                className={styles.ssNavBarGroup}
               >
                 <Link
                   href={`/content/${slug}/${key}`}
                   role="tab"
                   aria-selected={active}
-                  className={styles.ssNavBar}
+                  className={`${styles.ssNavBar} ${active ? styles.ssActiveNavBar : ""}`}
                   data-no={key}
                   aria-label={`Scene ${key}`}
                   title={sceneTitle(key)}
