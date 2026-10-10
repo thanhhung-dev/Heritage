@@ -1,5 +1,24 @@
 "use client";
 
+import {
+  CaretRightFilled,
+  CompassOutlined,
+  CustomerServiceOutlined,
+  FileTextOutlined,
+  FullscreenExitOutlined,
+  FullscreenOutlined,
+  LeftOutlined,
+  MenuOutlined,
+  MutedOutlined,
+  PauseOutlined,
+  QuestionCircleOutlined,
+  ReloadOutlined,
+  RightOutlined,
+  SettingOutlined,
+  ShareAltOutlined,
+  SoundOutlined,
+  StepForwardOutlined,
+} from "@ant-design/icons";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -17,8 +36,6 @@ const voices = [
   { id: 3, name: "Dr. Majed Hasanat", avatar: `${CDN}/petra-data/Voices/Majed_headshot-256x256.jpg` },
   { id: 4, name: "Dr. Suleiman Al-Farajat", avatar: `${CDN}/petra-data/Voices/Suliman-256x256.webp` },
 ];
-
-const ARROW_ICON = `${CDN}/ui-elements/icons/icon_arrow_up.svg`;
 
 export default function HeritageViewer() {
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
@@ -162,11 +179,9 @@ export default function HeritageViewer() {
               aria-label="Scroll left"
               onClick={() => scrollCarousel(voicesViewportRef, -1)}
             >
-              <img
+              <LeftOutlined
                 className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                src={ARROW_ICON}
-                alt="scroll left"
-                style={{ transform: "rotate(-90deg)" }}
+                aria-hidden="true"
               />
             </button>
 
@@ -177,14 +192,12 @@ export default function HeritageViewer() {
                     <div key={voice.id} className={styles.voiceItem}>
                       <button
                         tabIndex={0}
-                        className={`${styles.voice} ${styles.accOverviewPages} ${styles.accScenePages}`}
+                        className={styles.voice}
                         id={`voice_${voice.id}`}
                         aria-label={`Listen ${voice.name} talk about`}
                       >
-                        <img
+                        <CustomerServiceOutlined
                           className={styles.voiceIconSvg}
-                          src={`${CDN}/ui-elements/nav_items/items_voice.svg`}
-                          alt=""
                           aria-hidden="true"
                         />
                         <div className={styles.voiceAvatar}>
@@ -218,11 +231,9 @@ export default function HeritageViewer() {
               aria-label="Scroll right"
               onClick={() => scrollCarousel(voicesViewportRef, 1)}
             >
-              <img
+              <RightOutlined
                 className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                src={ARROW_ICON}
-                alt="scroll right"
-                style={{ transform: "rotate(90deg)" }}
+                aria-hidden="true"
               />
             </button>
           </div>
@@ -236,11 +247,9 @@ export default function HeritageViewer() {
               aria-label="Scroll left"
               onClick={() => scrollCarousel(intViewportRef, -1)}
             >
-              <img
+              <LeftOutlined
                 className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                src={ARROW_ICON}
-                alt="scroll left"
-                style={{ transform: "rotate(-90deg)" }}
+                aria-hidden="true"
               />
             </button>
 
@@ -255,11 +264,9 @@ export default function HeritageViewer() {
               aria-label="Scroll right"
               onClick={() => scrollCarousel(intViewportRef, 1)}
             >
-              <img
+              <RightOutlined
                 className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                src={ARROW_ICON}
-                alt="scroll right"
-                style={{ transform: "rotate(90deg)" }}
+                aria-hidden="true"
               />
             </button>
           </div>
@@ -292,39 +299,26 @@ export default function HeritageViewer() {
                 disabled
                 style={{ pointerEvents: "none" }}
               >
-                <img
+                <QuestionCircleOutlined
                   className={styles.navIcons}
                   id="tut"
-                  src={`${CDN}/ui-elements/settings_bar/tutorial.png`}
-                  alt="tutorial icon"
+                  aria-hidden="true"
                 />
                 <div className={styles.navToolTip}>Tutorial</div>
               </button>
 
               <button tabIndex={0} className={styles.navIconBg} id="resourcesIcon" aria-label="Resources">
-                <img
-                  className={styles.navIcons}
-                  width={16}
-                  height={16}
-                  src={`${CDN}/ui-elements/settings_bar/resources.png`}
-                  alt="resources navigation icon"
-                />
+                <FileTextOutlined className={styles.navIcons} aria-hidden="true" />
                 <div className={styles.navToolTip}>Resources</div>
               </button>
 
               <button tabIndex={0} className={styles.navIconBg} id="shareIcon" aria-label="Share this location">
-                <img className={styles.navIcons} width={16} height={16} src="/images/icon_share.svg" alt="" />
+                <ShareAltOutlined className={styles.navIcons} aria-hidden="true" />
                 <div className={styles.navToolTip}>Share</div>
               </button>
 
               <button tabIndex={0} className={styles.navIconBg} id="settingsIcon" aria-label="Settings Mode">
-                <img
-                  className={styles.navIcons}
-                  width={16}
-                  height={16}
-                  src={`${CDN}/ui-elements/settings_bar/settings.png`}
-                  alt="Settings icon"
-                />
+                <SettingOutlined className={styles.navIcons} aria-hidden="true" />
                 <div className={styles.navToolTip}>Settings</div>
               </button>
             </div>
@@ -334,19 +328,16 @@ export default function HeritageViewer() {
               {/* Previous scene */}
               <button
                 tabIndex={0}
-                className={`${styles.ssPrevButton} ${styles.ssButton} ${styles.ssButtonPC} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                className={`${styles.ssPrevButton} ${styles.ssButton} ${styles.ssButtonPC}`}
                 id="prev-o"
                 aria-label="Previous scene"
                 onClick={goPrev}
                 disabled={index <= 0}
               >
                 <div className={styles.ssInnerButton} id="ssP-Prev">
-                  <img
+                  <LeftOutlined
                     aria-hidden="true"
-                    tabIndex={-1}
-                    alt=""
-                    className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
-                    src={`${CDN}/ui-elements/nav_bar/navigation_arrow_left_orange.svg`}
+                    className={styles.ssButtonImg}
                   />
                   <div className={styles.ssNavToolTip} id="ssPrevButtonTooltip">Previous Scene</div>
                 </div>
@@ -355,18 +346,15 @@ export default function HeritageViewer() {
               {/* Replay scene */}
               <button
                 tabIndex={0}
-                className={`${styles.ssButton} ${styles.ssButtonPC} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                className={`${styles.ssButton} ${styles.ssButtonPC}`}
                 id="ssP-Restart"
                 aria-label="Restart narration"
                 onClick={handleRestart}
               >
                 <div className={styles.ssInnerButton}>
-                  <img
+                  <ReloadOutlined
                     aria-hidden="true"
-                    tabIndex={-1}
-                    alt=""
-                    className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
-                    src={`${CDN}/ui-elements/nav_bar/navigation_restart.svg`}
+                    className={styles.ssButtonImg}
                   />
                   <div className={styles.ssNavToolTip} id="ssRestartTooltip">Replay Scene</div>
                 </div>
@@ -376,7 +364,7 @@ export default function HeritageViewer() {
               <button
                 tabIndex={0}
                 id="ssBack15"
-                className={`${styles.ssMiddleButton} ${styles.ssSeekButton} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                className={`${styles.ssMiddleButton} ${styles.ssSeekButton}`}
                 aria-label="Skip back 15 seconds"
                 onClick={() => handleSeek(-15)}
               >
@@ -420,13 +408,10 @@ export default function HeritageViewer() {
                     onClick={() => setIsPlaying(true)}
                     style={{ display: isPlaying ? "none" : "block" }}
                   >
-                    <img
+                    <CaretRightFilled
                       id="ssPlayButton_img"
                       aria-hidden="true"
-                      tabIndex={-1}
-                      className={`${styles.ssPlayPauseImg} ${styles.tabIndexZero}`}
-                      src={`${CDN}/ui-elements/nav_bar/navigation_play.svg`}
-                      alt=""
+                      className={styles.ssPlayPauseImg}
                     />
                     <div className={styles.ssNavToolTip}>Play</div>
                   </button>
@@ -438,13 +423,10 @@ export default function HeritageViewer() {
                     onClick={() => setIsPlaying(false)}
                     style={{ display: isPlaying ? "block" : "none" }}
                   >
-                    <img
+                    <PauseOutlined
                       id="ssPauseButton_img"
                       aria-hidden="true"
-                      tabIndex={-1}
-                      className={`${styles.ssPlayPauseImg} ${styles.tabIndexZero}`}
-                      src={`${CDN}/ui-elements/nav_bar/navigation_pause.svg`}
-                      alt=""
+                      className={styles.ssPlayPauseImg}
                     />
                     <div className={styles.ssNavToolTip}>Pause</div>
                   </button>
@@ -454,26 +436,34 @@ export default function HeritageViewer() {
                   id="ssExploreButton"
                   className={styles.ssExploreButton}
                   style={{ display: "none", width: 50 }}
+                  aria-label="Explore in 3D"
                 >
-                  <img
+                  <CompassOutlined
                     id="ssExploreButton_img"
                     aria-hidden="true"
-                    tabIndex={-1}
-                    className={`${styles.ssExploreImg} ${styles.tabIndexZero} ${styles.ssPlaypenStill}`}
-                    src={`${CDN}/ui-elements/icons/explore_lens.svg`}
-                    alt="Explore in 3D"
+                    className={`${styles.ssExploreImg} ${styles.ssPlaypenStill}`}
                   />
                   <div className={styles.ssExploreFootsteps} aria-hidden="true">
-                    <img
+                    <svg
                       className={`${styles.footstep} ${styles.footstepL}`}
-                      src={`${CDN}/ui-elements/icons/icon_footstep_l.svg`}
-                      alt=""
-                    />
-                    <img
+                      width={14}
+                      height={32}
+                      viewBox="0 0 14 32"
+                      fill="#FEF0D7"
+                    >
+                      <path d="M3.26487 26.2322C3.65327 28.7649 5.99176 30.5248 8.53295 30.1969C11.1641 29.8574 12.9984 27.4162 12.5922 24.7945L12.196 22.2365C12 20.9716 10.8158 20.1051 9.55089 20.3011L4.83844 21.0311C3.55869 21.2294 2.68126 22.4266 2.87757 23.7066L3.26487 26.2322Z" />
+                      <path d="M5.04955 0.557214C-0.557487 2.09686 0.311432 11.627 1.72526 17.471C1.95668 18.4275 2.88435 19.0279 3.86028 18.901L9.79358 18.1292C10.5353 18.0327 11.1684 17.5354 11.3447 16.8085C12.72 11.1371 12.2236 -1.41273 5.04955 0.557214Z" />
+                    </svg>
+                    <svg
                       className={`${styles.footstep} ${styles.footstepR}`}
-                      src={`${CDN}/ui-elements/icons/icon_footstep_r.svg`}
-                      alt=""
-                    />
+                      width={14}
+                      height={32}
+                      viewBox="0 0 14 32"
+                      fill="#FEF0D7"
+                    >
+                      <path d="M10.0672 26.2361C9.67876 28.7688 7.34027 30.5287 4.79908 30.2008C2.1679 29.8613 0.333633 27.4201 0.739791 24.7984L1.13608 22.2404C1.33203 20.9755 2.51627 20.109 3.78114 20.305L8.49359 21.035C9.77334 21.2333 10.6508 22.4305 10.4545 23.7105L10.0672 26.2361Z" />
+                      <path d="M8.27857 0.557214C13.8856 2.09686 13.0167 11.627 11.6029 17.471C11.3714 18.4275 10.4438 19.0279 9.46785 18.901L3.53455 18.1292C2.79285 18.0327 2.15972 17.5354 1.98346 16.8085C0.608173 11.1371 1.10449 -1.41273 8.27857 0.557214Z" />
+                    </svg>
                   </div>
                   <span id="ssExploreButton_text" className={styles.ssExploreButtonText} style={{ display: "none" }}>
                     Explore
@@ -488,7 +478,7 @@ export default function HeritageViewer() {
               <button
                 tabIndex={0}
                 id="ssForward15"
-                className={`${styles.ssMiddleButton} ${styles.ssSeekButton} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                className={`${styles.ssMiddleButton} ${styles.ssSeekButton}`}
                 aria-label="Skip forward 15 seconds"
                 onClick={() => handleSeek(15)}
               >
@@ -526,7 +516,7 @@ export default function HeritageViewer() {
               <div className={styles.ringButtonGroup}>
                 <button
                   tabIndex={0}
-                  className={`${styles.ssNextButton} ${styles.ssButton} ${styles.ssButtonPC} ${styles.accScenePages} ${styles.accOverviewPages}`}
+                  className={`${styles.ssNextButton} ${styles.ssButton} ${styles.ssButtonPC}`}
                   id="next-0"
                   aria-label="Skip narration"
                   onClick={goNext}
@@ -534,22 +524,16 @@ export default function HeritageViewer() {
                   style={{ filter: "brightness(1)", pointerEvents: "all" }}
                 >
                   <div className={styles.ssInnerButton} id="ssN-Next" style={{ display: "none" }}>
-                    <img
+                    <RightOutlined
                       aria-hidden="true"
-                      tabIndex={-1}
-                      alt=""
-                      className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
-                      src={`${CDN}/ui-elements/nav_bar/navigation_arrow_right_orange.svg`}
+                      className={styles.ssButtonImg}
                     />
                     <div className={styles.ssNavToolTip}>Next Scene</div>
                   </div>
                   <div className={styles.ssInnerButton} id="ssN-Skip" style={{ display: "inline-flex" }}>
-                    <img
+                    <StepForwardOutlined
                       aria-hidden="true"
-                      tabIndex={-1}
-                      alt=""
-                      className={`${styles.ssButtonImg} ${styles.tabIndexZero}`}
-                      src={`${CDN}/ui-elements/nav_bar/navigation_skip.svg`}
+                      className={styles.ssButtonImg}
                     />
                     <div className={styles.ssNavToolTip}>Skip Voiceover</div>
                   </div>
@@ -572,11 +556,7 @@ export default function HeritageViewer() {
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((v) => !v)}
               >
-                <img
-                  className={styles.navIcons}
-                  src={`${CDN}/ui-elements/mobile/hamburger_menu.svg`}
-                  alt="Menu icon"
-                />
+                <MenuOutlined className={styles.navIcons} aria-hidden="true" />
               </button>
 
               <button
@@ -587,13 +567,7 @@ export default function HeritageViewer() {
                 onClick={() => setIsMuted(true)}
                 style={{ display: isMuted ? "none" : "flex" }}
               >
-                <img
-                  className={styles.navIcons}
-                  width={16}
-                  height={16}
-                  src={`${CDN}/ui-elements/settings_bar/mute.png`}
-                  alt="mute navigation icon"
-                />
+                <SoundOutlined className={styles.navIcons} aria-hidden="true" />
                 <div className={styles.navToolTip}>Sound Off</div>
               </button>
 
@@ -605,13 +579,7 @@ export default function HeritageViewer() {
                 onClick={() => setIsMuted(false)}
                 style={{ display: isMuted ? "flex" : "none" }}
               >
-                <img
-                  className={styles.navIcons}
-                  width={16}
-                  height={16}
-                  src={`${CDN}/ui-elements/settings_bar/unmute.png`}
-                  alt="unmute navigation icon"
-                />
+                <MutedOutlined className={styles.navIcons} aria-hidden="true" />
                 <div className={styles.navToolTip}>Sound On</div>
               </button>
 
@@ -624,13 +592,14 @@ export default function HeritageViewer() {
                   aria-pressed={ccOn}
                   onClick={() => setCcOn((v) => !v)}
                 >
-                  <img
-                    className={styles.navIcons}
+                  <span
+                    className={`${styles.navIcons} ${styles.captionIcon}`}
                     id="ccIcon"
-                    style={{ filter: `opacity(${ccOn ? 1 : 0.5})` }}
-                    src={`${CDN}/ui-elements/settings_bar/cc.png`}
-                    alt="Closed Captions navigation icon"
-                  />
+                    style={{ opacity: ccOn ? 1 : 0.5 }}
+                    aria-hidden="true"
+                  >
+                    CC
+                  </span>
                   <div className={styles.navToolTip}>Closed Captions</div>
                 </button>
               </div>
@@ -643,13 +612,7 @@ export default function HeritageViewer() {
                 onClick={toggleFullscreen}
                 style={{ display: isFullscreen ? "none" : "flex" }}
               >
-                <img
-                  className={styles.navIcons}
-                  width={16}
-                  height={16}
-                  src={`${CDN}/ui-elements/settings_bar/full_screen.png`}
-                  alt="Fullscreen Mode navigation icon"
-                />
+                <FullscreenOutlined className={styles.navIcons} aria-hidden="true" />
                 <div className={styles.navToolTip}>Fullscreen Mode</div>
               </button>
 
@@ -661,13 +624,7 @@ export default function HeritageViewer() {
                 onClick={toggleFullscreen}
                 style={{ display: isFullscreen ? "flex" : "none" }}
               >
-                <img
-                  className={styles.navIcons}
-                  width={16}
-                  height={16}
-                  src={`${CDN}/ui-elements/settings_bar/full_screen_exit.png`}
-                  alt="exit Fullscreen Mode navigation icon"
-                />
+                <FullscreenExitOutlined className={styles.navIcons} aria-hidden="true" />
                 <div className={styles.navToolTip}>Exit fullscreen Mode</div>
               </button>
             </div>

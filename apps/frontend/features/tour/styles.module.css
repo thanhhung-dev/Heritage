@@ -88,7 +88,7 @@
   color: var(--title);
 }
 
-.viewer button {
+:where(.viewer) button {
   appearance: unset;
   writing-mode: unset;
   font-style: unset;
@@ -1180,6 +1180,9 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
   margin: 0 3px;
   color: #fff;
   background-color: #1c1b1acc;
@@ -1256,7 +1259,16 @@ html:not(.no-hover) .stripControls .navIconBg:hover {
   height: 13px;
   width: 13px;
   padding: 0;
-  filter: brightness(0) invert(1)
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #fff;
+}
+
+.stripControls .captionIcon {
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .stripControls .navToolTip {
@@ -2055,9 +2067,13 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 /* ─────────────────────────────────────────────────────────────
    Next/Previous Buttons
    ───────────────────────────────────────────────────────────── */
-.ssPlayButton {
+.ssPlayButton,
+.ssPauseButton {
   padding: 13px;
   box-sizing: border-box;
+}
+
+.ssPlayButton {
   display: none;
 }
 
@@ -2086,15 +2102,36 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 .ssPlayPauseImg {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
   height: 100%;
+  font-size: 14px;
+  color: #fff;
   padding: 0px;
 }
 
 .ssButtonImg {
+  height: 14px;
+  width: 14px;
+  font-size: 14px;
+  color: #fff;
+  padding: 0;
+  pointer-events: none;
+}
+
+.ssExploreImg {
   height: 22px;
   width: 22px;
+  font-size: 22px;
+  color: #fff;
   padding: 0;
+}
+
+.ssPrevButton .ssButtonImg,
+.ssNextButton .ssButtonImg {
+  color: #ff9b2d;
 }
 
 .ssMiddleButton {
@@ -2114,29 +2151,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   outline: none;
   background-color: #302e2ce6;
   box-shadow: 0 0 0 1.2px rgba(255, 255, 255, .3);
-}
-
-.ssPrevButton,
-.ssNextButton {
-  width: 56px;
-  height: 56px;
-  border-radius: 20%;
-  background-color: var(--gd-media-strip-bg);
-  background-image: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 6px;
-  cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.ssPrevButton:hover,
-.ssNextButton:hover {
-  transform: scale(1.15);
-  filter: brightness(1.2);
 }
 
 /* Slide in from left — for navbar tiles */
@@ -2878,11 +2892,12 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   transform: scale(1.08);
 }
 
-.carouselArrow_icon {
+.carouselArrow_icon,
+.carouselArrowIcon {
   width: 14px;
   height: 14px;
-  object-fit: contain;
-  filter: brightness(0) invert(1);
+  font-size: 14px;
+  color: #fff;
 }
 
 .carouselViewport {
@@ -2930,6 +2945,8 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   left: -2px;
   width: 18px;
   height: 18px;
+  font-size: 18px;
+  color: #fff;
   z-index: 5;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
   pointer-events: none;
@@ -3024,8 +3041,10 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 .ssMiddleButtonPress,
 .middleButtonGroup {
   display: flex;
+  height: 40px;
+  min-width: 46px;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   position: relative;
 }
 
@@ -3033,25 +3052,10 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-}
-
-.ssSeekButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--gd-media-strip-bg);
-  border: none;
-  cursor: pointer;
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  transition: background-color 0.2s ease;
-}
-
-.ssSeekButton:hover {
-  background-color: rgba(0, 0, 0, 0.75);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .ssSeekImg {
@@ -3062,14 +3066,23 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.ssButtonPC {
-  /* PC desktop */
+.viewer:not(.no-hover) .ssButtonPC:hover {
+  background-color: var(--gd-button-hover);
+  box-shadow: 0 0 0 1.2px rgba(255, 255, 255, .3);
+}
+
+.viewer:not(.no-hover) .ssButtonPC:hover .ssNavToolTip {
+  display: block;
 }
 
 .ringButtonGroup {
   position: relative;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
