@@ -35,8 +35,8 @@ export function PublicShell({ children }: PublicShellProps) {
             <input
               className={styles.searchInput}
               type="search"
-              aria-label="Search Tapestries"
-              placeholder="Search Tapestries…"
+              aria-label="Search Heritages…"
+              placeholder="Search Heritages…"
             />
           </div>
           <PublicNavigation />

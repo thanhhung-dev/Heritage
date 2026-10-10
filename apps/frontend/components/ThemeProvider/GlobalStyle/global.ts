@@ -148,10 +148,6 @@ const globalStyle = (token: Theme) => css`
     -webkit-text-fill-color: unset !important;
   }
 
-  :focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
 
   ::-webkit-scrollbar {
     width: 6px;

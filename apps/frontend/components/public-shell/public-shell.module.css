@@ -4,7 +4,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 48px !important;
   width: 100% !important;
   box-sizing: border-box;
   margin: 0 !important;
@@ -129,13 +128,9 @@
     border-color var(--transition);
 }
 
-.searchField:hover {
-  background: var(--glass-surface-hover);
-}
 
-.searchField:focus-within {
-  border-color: rgba(255, 155, 45, 0.7);
-}
+
+
 
 .searchField img {
   width: 16px;

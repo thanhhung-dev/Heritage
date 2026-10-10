@@ -1,0 +1,268 @@
+.hp_triptych_card {
+    flex-shrink: 0;
+    width: 220px;
+    min-width: 160px;
+    height: 100%;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    background: rgba(20,26,36,.6);
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    transition: flex .6s cubic-bezier(0.25, 0.1, 0.25, 1),box-shadow .4s ease;
+    cursor: pointer;
+    will-change: flex-grow;
+    contain: style;
+    --font-size-13: 13px;
+    --font-size-12: 12px;
+    --font-size-11: 11px;
+    flex: 1
+}
+
+.hp_triptych_card.hp_triptych_card_active {
+    flex: 3;
+    box-shadow: 0 16px 48px rgba(0,0,0,.5),0 0 24px rgba(255,155,45,.2),0 0 48px rgba(255,155,45,.1)
+}
+
+.hp_triptych_card.hp_triptych_card_collapsed {
+    flex: 1
+}
+
+.hp_triptych_card_img {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    overflow: hidden;
+    transition: opacity .4s ease;
+    filter: contrast(1.06) saturate(1.08)
+}
+
+.hp_triptych_card_img::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    background-size: cover;
+    background-position: center;
+    transition: transform .6s ease
+}
+
+.hp_triptych_card_active .hp_triptych_card_img::before {
+    transform: scale(1.1)
+}
+
+.hp_triptych_card_video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .4s ease;
+    filter: contrast(1.06) saturate(1.08)
+}
+
+.hp_triptych_card_active .hp_triptych_card_video {
+    opacity: 1
+}
+
+.hp_triptych_card_active .hp_triptych_card_img {
+    opacity: 0
+}
+
+.hp_triptych_card_overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, rgba(10, 14, 20, 0.95) 0%, rgba(10, 14, 20, 0.7) 30%, rgba(10, 14, 20, 0.3) 60%, transparent 100%);
+    border-radius: inherit;
+    z-index: 1;
+    opacity: .85;
+    transition: opacity .4s ease;
+    transform: translateZ(0)
+}
+
+.hp_triptych_card_active .hp_triptych_card_overlay {
+    opacity: .9
+}
+
+.hp_triptych_card_content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 20px;
+    min-height: 0;
+    transform: translateZ(0)
+}
+
+.hp_triptych_card_text {
+    display: flex;
+    flex-direction: column
+}
+
+.hp_triptych_card_heading {
+    display: flex;
+    flex-direction: column
+}
+
+.hp_triptych_card_title {
+    font-family: "Poppins",sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #fff;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+    text-shadow: 0 2px 8px rgba(0,0,0,.5)
+}
+
+.hp_triptych_card_title .hp_triptych_card_title_short {
+    display: none
+}
+
+.hp_triptych_card_title .hp_triptych_card_title_full {
+    display: inline
+}
+
+.hp_triptych_card_location {
+    font-size: var(--font-size-13);
+    color: rgba(255,255,255,.8);
+    margin: 0 0 12px;
+    text-shadow: 0 1px 4px rgba(0,0,0,.4)
+}
+
+.hp_triptych_card_details {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height .4s ease,opacity .4s ease
+}
+
+/* Hiển thị thông tin chi tiết ngay khi hover (không cần click) */
+.hp_triptych_card:hover .hp_triptych_card_details,
+.hp_triptych_card:focus-within .hp_triptych_card_details,
+.hp_triptych_card_active .hp_triptych_card_details {
+    max-height: 200px;
+    opacity: 1
+}
+
+.hp_triptych_card:hover .hp_triptych_card_img::before {
+    transform: scale(1.05)
+}
+
+.hp_triptych_card:hover .hp_triptych_card_overlay {
+    opacity: .9
+}
+
+.hp_triptych_card_meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--font-size-11);
+    color: rgba(255,255,255,.8);
+    margin-bottom: 8px;
+    flex-wrap: wrap
+}
+
+.hp_triptych_card_meta span:first-child {
+    color: #ff9b2d;
+    font-weight: 600
+}
+
+.hp_triptych_card_meta_sep {
+    color: rgba(255,255,255,.5);
+    font-weight: 300
+}
+
+.hp_triptych_card_desc {
+    font-size: var(--font-size-13);
+    line-height: 1.5;
+    color: rgba(255,255,255,.85);
+    margin: 0 0 12px;
+    text-shadow: 0 1px 4px rgba(0,0,0,.4)
+}
+
+.hp_triptych_card_buttons {
+    display: flex;
+    gap: 8px
+}
+
+.hp_triptych_card_cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: var(--font-size-13);
+    font-weight: 600;
+    font-family: "Poppins",sans-serif;
+    color: #fff;
+    background: rgba(255,255,255,.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 8px;
+    text-decoration: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.1);
+    transition: all .3s ease;
+    cursor: pointer
+}
+
+@media(hover: hover)and (pointer: fine) {
+    .hp_triptych_card_cta:hover {
+        transform:translateY(-1px);
+        background: rgba(255,255,255,.18);
+        border-color: rgba(255,255,255,.35);
+        box-shadow: 0 4px 16px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.15)
+    }
+}
+
+.hp_triptych_card_cta.hp_triptych_card_explore_btn {
+    background: linear-gradient(135deg, #ff9b2d 0%, #f07847 100%);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: var(--font-size-12);
+    box-shadow: 0 4px 16px rgba(255,155,45,.4);
+    text-shadow: 0 1px 2px rgba(0,0,0,.2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    flex: 1.5;
+    max-width: 100px
+}
+
+@media(hover: hover)and (pointer: fine) {
+    .hp_triptych_card_cta.hp_triptych_card_explore_btn:hover {
+        background:linear-gradient(135deg, #ffab4d 0%, #f58857 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(255,155,45,.5)
+    }
+}
+
+.hp_triptych_card_cta.hp_triptych_card_info_btn {
+    flex-shrink: 0
+}
+
+.hp_triptych_card_cta.hp_triptych_card_cta_secondary {
+    background: rgba(255,255,255,.15)
+}
+
+.hp_hero_triptych .hp_hero_scroll {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10
+}
+
+/* Hover-based: card bình thường thu (flex:1), hover/di chuột vào tự doãn ra (flex:3) và hiện chi tiết */
+.hp_triptych_card:hover {
+    flex: 3;
+    box-shadow: 0 16px 48px rgba(0,0,0,.5),0 0 24px rgba(255,155,45,.2),0 0 48px rgba(255,155,45,.1)
+}

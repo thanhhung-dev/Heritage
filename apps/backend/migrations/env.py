@@ -16,11 +16,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# ---------------------------------------------------------------------------
-# Model metadata — nguồn đúng cho autogenerate
-# ---------------------------------------------------------------------------
-from apps.backend.db.base import Base  # noqa: E402
-from apps.backend.models import *  # noqa: E402,F401
+
+from apps.backend.db.base import Base  
+from apps.backend.models import *  
 
 target_metadata = Base.metadata
 
@@ -28,10 +26,6 @@ target_metadata = Base.metadata
 def include_object(object_, name, type_, reflected, compare_to):
     """The ORM maps v_tour_stop for reads; Alembic manages it as a SQL view."""
     return not (type_ == "table" and name == "v_tour_stop")
-
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
 config = context.config
 
 if config.config_file_name is not None:
