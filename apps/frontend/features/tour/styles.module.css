@@ -47,12 +47,6 @@
   }
 }
 
-.playbackControls {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
 .skip-link {
   position: fixed;
   top: -100px;
@@ -940,27 +934,10 @@
 .mediaStripContent {
   margin: 0 auto;
   z-index: 15;
-  width: 40vw;
-  min-width: 320px;
+  width: calc(100% - 32px);
+  max-width: 720px;
+  box-sizing: border-box;
   pointer-events: auto;
-}
-
-@media (max-width: 1200px) {
-  .mediaStripContent {
-    width: 55vw;
-  }
-}
-
-@media (max-width: 900px) {
-  .mediaStripContent {
-    width: 70vw;
-  }
-}
-
-@media (max-width: 768px) {
-  .mediaStripContent {
-    width: 90vw;
-  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1235,10 +1212,11 @@
 }
 
 .stripControls {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   width: 100%;
-  justify-content: space-between;
-  align-items: center
+  align-items: center;
+  gap: 10px;
 }
 
 .infoControls,
@@ -1250,11 +1228,14 @@
   z-index: 5
 }
 
+.systemControls {
+  justify-self: end;
+}
+
 .stripControls .navIconBg {
   background-color: var(--gd-media-strip-bg);
   width: 32px;
   height: 32px;
-  right: -7px;
   border-radius: 50%;
   margin: 0;
   display: flex;
@@ -1309,8 +1290,25 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 
 .playbackControls {
   display: flex;
+  align-items: center;
   justify-content: center;
-  width: 100%
+  width: max-content;
+}
+
+@media (max-width: 640px) {
+  .mediaStrip {
+    padding-bottom: 32px;
+  }
+
+  .stripControls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .playbackControls {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+  }
 }
 
 .ssSeekButton {
@@ -2815,20 +2813,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 .viewer .mediaStrip {
   display: flex;
   justify-content: center;
-}
-
-.viewer .mediaStripContent {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0 16px;
-}
-
-.viewer .stripControls {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
 }
 
 .viewer .playbackTime {
