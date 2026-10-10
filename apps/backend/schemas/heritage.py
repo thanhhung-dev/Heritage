@@ -187,10 +187,12 @@ class HeritageOut(BaseModel):
 class HeritageContentOut(BaseModel):
     """GET /api/heritages/{heritage_slug} — full single-load payload.
 
-    Mirrors CyArk /content/{slug}: heritage + voices + full scenes
-    (with camera, sky, voice_clips, models, media, interactive, highlights).
+    Mirrors CyArk /content/{slug}: heritage + overview (intro scene,
+    sequence -1) + voices + full scenes (camera, sky, voice_clips, models,
+    media, interactive, highlights).
     """
     heritage: HeritageOut
+    overview: SceneDetailOut | None = None
     scenes: list[SceneDetailOut] = Field(default_factory=list)
 
 

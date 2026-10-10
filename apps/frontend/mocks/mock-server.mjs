@@ -80,8 +80,14 @@ function handle(req, res) {
     if (!item) {
       return send(res, 404, { detail: "Heritage not found" });
     }
-    // Full single-load payload: heritage object + full scenes array.
-    return send(res, 200, { heritage: item, scenes: item.scenes || [] });
+    // Full single-load payload: heritage object + overview (intro) + scenes.
+    const scenes = item.scenes || [];
+    const base = { heritage: item, overview: null, scenes };
+    if (item.overview) {
+      base.overview = item.overview;
+      base.scenes = scenes.filter((s) => s.sequence !== undefined && s.sequence !== -1);
+    }
+    return send(res, 200, base);
   }
 
   if (pathname === "/") {

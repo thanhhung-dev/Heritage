@@ -86,16 +86,29 @@ class HeritageService:
         return await self._load_heritage(stmt)
 
     async def get_content_by_slug(self, slug: str) -> dict[str, Any] | None:
-        """Return heritage + full scenes for content page (single load)."""
+        """Return heritage + overview + full scenes for content page (single load).
+
+        The overview (intro) scene is the one with ``sequence == -1``; all
+        other scenes are returned under ``scenes``.
+        """
         heritage = await self.get_by_slug(slug)
         if heritage is None:
             return None
 
         voices = list(heritage.voices)
 
+        overview = None
+        scenes = []
+        for sc in heritage.scenes:
+            if sc.sequence == -1:
+                overview = sc
+            else:
+                scenes.append(sc)
+
         return {
             "heritage": heritage,
             "voices": voices,
             "voice_length": len(voices),
-            "scenes": heritage.scenes,
+            "overview": overview,
+            "scenes": scenes,
         }

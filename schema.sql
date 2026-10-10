@@ -117,7 +117,8 @@ CREATE TABLE scene (
     instant_move BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_scene_heritage_sequence UNIQUE (heritage_id, sequence),
-    CONSTRAINT chk_scene_sequence CHECK (sequence >= 0)
+    -- -1 = overview (intro) scene; >= 0 = regular scenes
+    CONSTRAINT chk_scene_sequence CHECK (sequence >= -1)
 );
 
 CREATE INDEX idx_scene_heritage_sequence ON scene (heritage_id, sequence);

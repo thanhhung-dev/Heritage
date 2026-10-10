@@ -188,17 +188,27 @@ async def get_heritage_content(
     heritage_slug: str,
     service: HeritageService = Depends(get_service),
 ):
-    """FULL single-load content — heritage info + every scene (with camera,
-    models, media, voice clips, interactives, highlights). No per-scene request."""
+    """FULL single-load content — heritage info + overview intro + every scene
+    (with camera, models, media, voice clips, interactives, highlights).
+    No per-scene request."""
     data = await service.get_content_by_slug(heritage_slug)
     if data is None:
         return _error(404, "HERITAGE_NOT_FOUND", f"Heritage '{heritage_slug}' not found")
 
     heritage_out = _heritage_out(data["heritage"], data["voices"], data["voice_length"])
     policy = asset_policy()
+    overview_out = (
+        _scene_detail_out(data["overview"], policy)
+        if data["overview"] is not None
+        else None
+    )
     scenes_out = [
         _scene_detail_out(sc, policy)
         for sc in data["scenes"]
     ]
 
-    return HeritageContentOut(heritage=heritage_out, scenes=scenes_out)
+    return HeritageContentOut(
+        heritage=heritage_out,
+        overview=overview_out,
+        scenes=scenes_out,
+    )

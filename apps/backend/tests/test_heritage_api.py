@@ -206,13 +206,14 @@ def make_scene_highlight(**overrides: Any) -> SimpleNamespace:
     return SimpleNamespace(**data)
 
 
-def make_row(heritage: Any, scenes: Any, voices: Any = None) -> dict[str, Any]:
+def make_row(heritage: Any, scenes: Any, voices: Any = None, overview: Any = None) -> dict[str, Any]:
     if voices is None:
         voices = []
     return {
         "heritage": heritage,
         "voices": voices,
         "voice_length": len(voices),
+        "overview": overview,
         "scenes": scenes,
     }
 
@@ -313,6 +314,7 @@ class ContentUpdateTests(HeritageApiTestBase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["heritage"]["slug"], "chua-thien-mu")
+        self.assertIsNone(payload["overview"])
         self.assertEqual(len(payload["scenes"]), 2)
         self.assertEqual(payload["scenes"][0]["id"], 10)
         self.assertEqual(payload["scenes"][0]["slug"], "s1")
@@ -320,6 +322,30 @@ class ContentUpdateTests(HeritageApiTestBase):
         self.assertEqual(payload["scenes"][0]["sequence"], 0)
         self.assertEqual(payload["scenes"][1]["slug"], "s2")
         self.assertEqual(payload["scenes"][1]["sequence"], 1)
+
+    def test_overview_scene_is_sequence_minus_one(self) -> None:
+        overview = make_scene(
+            id=99,
+            sequence=-1,
+            title="Chùa Thiên Mụ",
+            description="Giới thiệu toàn cảnh",
+        )
+        scenes = [
+            make_scene(id=10, sequence=0, title="Tam Quan"),
+            make_scene(id=11, sequence=1, title="Tháp Phước Duyên"),
+        ]
+        self._install_service([make_row(make_heritage(), scenes, overview=overview)])
+
+        response = self.client.get("/api/heritages/chua-thien-mu")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["overview"]["id"], 99)
+        self.assertEqual(payload["overview"]["sequence"], -1)
+        self.assertEqual(payload["overview"]["title"], "Chùa Thiên Mụ")
+        # Overview is NOT duplicated inside scenes.
+        self.assertEqual(len(payload["scenes"]), 2)
+        self.assertTrue(all(sc["sequence"] >= 0 for sc in payload["scenes"]))
 
     def test_404_for_unknown_heritage(self) -> None:
         self._install_service([])
