@@ -19,20 +19,17 @@ from apps.backend.models.scene import Scene
 from apps.backend.models.voice_clip import VoiceClip
 
 
-# ── Helpers ────────────────────────────────────────────────────────
 
 def scene_slug(sequence: int) -> str:
     """Derive scene route key from 0-based sequence: 0 → 's1', 1 → 's2', ..."""
     return f"s{sequence + 1}"
 
 
-# ── Service ────────────────────────────────────────────────────────
 
 class HeritageService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    # ── Homepage ───────────────────────────────────────────────────
 
     async def list_published(self) -> list[dict[str, Any]]:
         """Return published heritages with computed voices for homepage."""
@@ -61,7 +58,6 @@ class HeritageService:
             })
         return results
 
-    # ── Content overview ───────────────────────────────────────────
 
     async def _load_heritage(self, stmt) -> Heritage | None:
         return (await self.db.execute(stmt)).scalars().unique().first()
