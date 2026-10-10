@@ -39,7 +39,7 @@ from apps.backend.services.heritageServices import (
     scene_slug,
 )
 
-router = APIRouter(prefix="/heritage", tags=["heritage"])
+router = APIRouter(prefix="/heritages", tags=["heritage"])
 
 
 
@@ -87,7 +87,6 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     )
 
 
-# ── GET /api/heritage 
 
 @router.get("", response_model=list[HeritageOut])
 async def list_heritages(service: HeritageService = Depends(get_service)):
@@ -100,7 +99,6 @@ async def list_heritages(service: HeritageService = Depends(get_service)):
     return results
 
 
-# ── GET /api/heritage/{heritage_slug}
 
 @router.get(
     "/{heritage_slug}",
@@ -131,7 +129,6 @@ async def get_heritage_content(
     return HeritageContentOut(heritage=heritage_out, scenes=scenes_out)
 
 
-# ── GET /api/heritage/{heritage_slug}/scenes/{scene_key}
 
 @router.get(
     "/{heritage_slug}/scenes/{scene_key}",
