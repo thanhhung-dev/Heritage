@@ -878,17 +878,93 @@
   }
 }
 
+
+
+.topNavBar {
+  display: block;
+  zoom: var(--zoom-value);
+}
+
+.topNav_logo {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  bottom: env(safe-area-inset-bottom);
+  padding-bottom: 15px;
+  left: 15px;
+  z-index: 60;
+  animation: logoFadeIn 5s ease forwards;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  pointer-events: all;
+}
+
+.topNav_logo:hover {
+  opacity: 1 !important;
+  animation: none;
+  filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.4)) brightness(1.2);
+}
+
+.topNav_logo:hover .tapestryLogo_type {
+  max-width: 200px;
+  opacity: 0.5;
+  animation: none;
+}
+
+@keyframes logoFadeIn {
+  from { opacity: 0.9; }
+  to { opacity: 0.4; }
+}
+
+.tapestryLogo {
+  width: auto;
+  height: 14px;
+}
+
+.tapestryLogo_icon {
+  height: 18px;
+}
+
+.tapestryLogo_type {
+  height: 15px;
+  max-width: 200px;
+  opacity: 0.65;
+  overflow: hidden;
+  animation: logoTypeFadeOut 20s ease forwards;
+  transition: max-width 0.3s ease, opacity 0.3s ease;
+}
+
+@keyframes logoTypeFadeOut {
+  0% { opacity: 0.65; max-width: 200px; }
+  90% { opacity: 0; max-width: 200px; }
+  100% { opacity: 0; max-width: 0; }
+}
+
+@media (max-width: 780px) {
+  .topNavBar {
+    margin: 0 25px;
+  }
+}
+
+@media (max-width: 769px) {
+  .topNav_logo {
+    display: none;
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
    Closed Captions Group
    ───────────────────────────────────────────────────────────── */
 
 .closedCaptionsGroup {
- position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: 80vw;
+  width: 100%;
+  width: -moz-available;
+  width: -webkit-fill-available;
+  position: absolute;
   pointer-events: none;
+  bottom: 80px;
+  font-size: var(--font-size-13);
+  z-index: 15;
+  transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 }
 
 .closedCaptions {
@@ -912,6 +988,10 @@
   box-sizing: border-box;
   background-color: var(--black-opacity-70);
   border-radius: 10px;
+}
+
+.closedCaptionsText:empty {
+  background-color: transparent;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1300,15 +1380,30 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 .playbackControls {
-  display: flex;
+  display: grid;
+  /* Play/Pause occupies the fourth slot; the empty seventh balances Replay. */
+  grid-template-columns: repeat(7, 40px);
   align-items: center;
-  justify-content: center;
+  justify-items: center;
+  gap: 6px;
   width: max-content;
+}
+
+.playbackControls button {
+  margin: 0;
+}
+
+.playbackControls .middleButtonGroup {
+  min-width: 40px;
 }
 
 @media (max-width: 640px) {
   .mediaStrip {
     padding-bottom: 32px;
+  }
+
+  .closedCaptionsGroup {
+    bottom: calc(100% + 10px);
   }
 
   .stripControls {
@@ -1319,6 +1414,12 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
     grid-column: 1 / -1;
     grid-row: 1;
     justify-self: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .playbackControls {
+    gap: 0;
   }
 }
 
@@ -2689,44 +2790,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   display: none;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Media Carousel Responsive
-   ───────────────────────────────────────────────────────────── */
-
-@media only screen and (max-height: 665px) {
-  .voicesList {
-    height: auto;
-  }
-}
-
-@media only screen and (max-height: 650px) {
-  .mediaCarousel {
-    margin-top: unset;
-  }
-
-  .voicesList {
-    height: auto;
-  }
-}
-
-@media only screen and (max-height: 540px) {
-  .mediaCarousel {
-    margin-top: 0;
-  }
-}
-
-@media (max-width: 768px) {
-
-  .viewer.no-hover .mediaCarousel .carouselArrow.navIconBg,
-  .viewer.no-hover .mediaCarousel .carouselArrow.navIconBg.arrow_visible {
-    display: none;
-  }
-
-  .viewer.no-hover #carouselTrack {
-    transform: none !important;
-  }
-}
-
 .stripControls .mobileHamburgerBtn {
   display: none;
 }
@@ -2839,18 +2902,8 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Media Carousel & Voices List
+   Interactive Media Carousel
    ───────────────────────────────────────────────────────────── */
-
-.mediaCarousel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  position: relative;
-  margin-bottom: 8px;
-  gap: 8px;
-}
 
 .carouselArrow {
   border: none;
@@ -2879,92 +2932,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   color: #fff;
 }
 
-.carouselViewport {
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  max-width: 100%;
-  position: relative;
-}
-
-.carouselTrack {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: transform 0.3s ease;
-}
-
-.voicesList {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.voiceItem {
-  display: flex;
-  align-items: center;
-  position: relative;
-}
-
-.voice {
-  position: relative;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  outline: none;
-}
-
-.voiceIconSvg {
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
-  color: #fff;
-  z-index: 5;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-  pointer-events: none;
-}
-
-.voiceAvatar {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.voiceAvatar_img {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.voice:hover .voiceAvatar_img {
-  border-color: #ff9b2d;
-  transform: scale(1.05);
-}
-
-.voiceRing {
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 2px solid #ff9b2d;
-  pointer-events: none;
-}
-
-.voiceRing.ping,
 .ping {
   animation: pingRing 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
@@ -2982,19 +2949,8 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   border-radius: 50%;
 }
 
-.voiceText {
-  font-size: 11px;
-  color: #fff;
-  margin-top: 4px;
-}
-
 .rightToLeftText {
   direction: ltr;
-}
-
-.mediaList {
-  display: flex;
-  align-items: center;
 }
 
 .intMediaCarousel {

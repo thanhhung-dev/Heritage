@@ -3,7 +3,6 @@
 import {
   CaretRightFilled,
   CompassOutlined,
-  CustomerServiceOutlined,
   FileTextOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
@@ -19,6 +18,7 @@ import {
   SoundOutlined,
   StepForwardOutlined,
 } from "@ant-design/icons";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -27,15 +27,6 @@ import { useHeritageTour } from "@/context/heritage-tour";
 import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
 import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
 import styles from "./styles.module.css";
-
-const CDN = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net";
-
-const voices = [
-  { id: 1, name: "Amal Saraheen", avatar: `${CDN}/petra-data/Voices/Amal_headshot-256x256.webp` },
-  { id: 2, name: "Mamoun Nawafleh", avatar: `${CDN}/petra-data/Voices/Mamoun_headshot-256x256.webp` },
-  { id: 3, name: "Dr. Majed Hasanat", avatar: `${CDN}/petra-data/Voices/Majed_headshot-256x256.jpg` },
-  { id: 4, name: "Dr. Suleiman Al-Farajat", avatar: `${CDN}/petra-data/Voices/Suliman-256x256.webp` },
-];
 
 export default function HeritageViewer() {
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
@@ -55,7 +46,6 @@ export default function HeritageViewer() {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Carousel refs
-  const voicesViewportRef = useRef<HTMLDivElement>(null);
   const intViewportRef = useRef<HTMLDivElement>(null);
 
   // Scene navigation
@@ -106,6 +96,32 @@ export default function HeritageViewer() {
 
   return (
     <div className={styles.viewer} style={tapestryTourVarsStyle}>
+      <div className={styles.topNavBar}>
+        <button
+          id="logo"
+          type="button"
+          className={styles.topNav_logo}
+          aria-label="Tapestry"
+        >
+          <Image
+            className={`${styles.tapestryLogo} ${styles.tapestryLogo_icon}`}
+            src="https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/icon/Heritages.svg"
+            alt="Tapestry logo icon"
+            width={29}
+            height={29}
+            unoptimized
+          />
+          <Image
+            className={`${styles.tapestryLogo} ${styles.tapestryLogo_type}`}
+            src="https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/icon/svgviewer-output%20(1).svg"
+            alt="Tapestry"
+            width={146}
+            height={29}
+            unoptimized
+          />
+        </button>
+      </div>
+
       {/* Stop nav: vertical skewed tiles, left edge */}
       <nav
         id="story-panel"
@@ -117,10 +133,7 @@ export default function HeritageViewer() {
           {keys.map((key) => {
             const active = key === sceneKey;
             return (
-              <div
-                key={key}
-                className={styles.ssNavBarGroup}
-              >
+              <div key={key} className={styles.ssNavBarGroup}>
                 <Link
                   href={`/content/${slug}/${key}`}
                   role="tab"
@@ -154,12 +167,16 @@ export default function HeritageViewer() {
       <div className={styles.sceneFade} aria-hidden="true" />
 
       {/* Bottom media strip */}
-      <div id="mediaStrip" className={styles.mediaStrip} style={{ display: "flex" }}>
+      <div
+        id="mediaStrip"
+        className={styles.mediaStrip}
+        style={{ display: "flex" }}
+      >
         {/* Closed captions */}
         <div
           className={styles.closedCaptionsGroup}
           id="closedCaptionsGroup"
-          style={{ display: ccOn ? "flex" : "none", zIndex: 500 }}
+          style={{ display: ccOn ? "block" : "none" }}
         >
           <div className={styles.closedCaptions} id="closedCaptions">
             <div
@@ -169,75 +186,11 @@ export default function HeritageViewer() {
           </div>
         </div>
 
-        <div className={styles.mediaStripContent} id="mediaStripContent" style={{ display: "block" }}>
-          {/* Voices carousel */}
-          <div className={`${styles.mediaCarousel} ${styles.fadeIn}`} id="mediaCarousel" style={{ display: "flex" }}>
-            <button
-              tabIndex={0}
-              className={`${styles.carouselArrow} ${styles.navIconBg}`}
-              id="carouselArrow_left"
-              aria-label="Scroll left"
-              onClick={() => scrollCarousel(voicesViewportRef, -1)}
-            >
-              <LeftOutlined
-                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                aria-hidden="true"
-              />
-            </button>
-
-            <div className={styles.carouselViewport} id="carouselViewport" ref={voicesViewportRef}>
-              <div className={styles.carouselTrack} id="carouselTrack">
-                <div className={styles.voicesList} id="voicesList">
-                  {voices.map((voice) => (
-                    <div key={voice.id} className={styles.voiceItem}>
-                      <button
-                        tabIndex={0}
-                        className={styles.voice}
-                        id={`voice_${voice.id}`}
-                        aria-label={`Listen ${voice.name} talk about`}
-                      >
-                        <CustomerServiceOutlined
-                          className={styles.voiceIconSvg}
-                          aria-hidden="true"
-                        />
-                        <div className={styles.voiceAvatar}>
-                          <img
-                            className={styles.voiceAvatarImg}
-                            id={`voiceAvatar_${voice.id}`}
-                            src={voice.avatar}
-                            alt={`Image of ${voice.name}`}
-                          />
-                          <div
-                            className={`${styles.voiceRing} ${styles.ping} ${styles.rounded}`}
-                            id={`voiceRing_${voice.id}`}
-                          />
-                        </div>
-                        <div
-                          className={`${styles.voiceText} ${styles.fadeIn} ${styles.rightToLeftText}`}
-                          id={`voiceText_${voice.id}`}
-                        />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className={styles.mediaList} id="mediaList" />
-              </div>
-            </div>
-
-            <button
-              tabIndex={0}
-              className={`${styles.carouselArrow} ${styles.navIconBg}`}
-              id="carouselArrow_right"
-              aria-label="Scroll right"
-              onClick={() => scrollCarousel(voicesViewportRef, 1)}
-            >
-              <RightOutlined
-                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-
+        <div
+          className={styles.mediaStripContent}
+          id="mediaStripContent"
+          style={{ display: "block" }}
+        >
           {/* Interactive media carousel */}
           <div className={styles.intMediaCarousel} id="intMediaCarousel">
             <button
@@ -253,8 +206,15 @@ export default function HeritageViewer() {
               />
             </button>
 
-            <div className={styles.intCarouselViewport} id="intCarouselViewport" ref={intViewportRef}>
-              <div className={styles.intMediaCarouselItems} id="intMediaCarouselItems" />
+            <div
+              className={styles.intCarouselViewport}
+              id="intCarouselViewport"
+              ref={intViewportRef}
+            >
+              <div
+                className={styles.intMediaCarouselItems}
+                id="intMediaCarouselItems"
+              />
             </div>
 
             <button
@@ -278,10 +238,16 @@ export default function HeritageViewer() {
               id="playbackTimelineFill"
               style={{ width: `${progress}%` }}
             />
-            <span className={`${styles.playbackTime} ${styles.playbackTimeElapsed}`} id="playbackTimeElapsed">
+            <span
+              className={`${styles.playbackTime} ${styles.playbackTimeElapsed}`}
+              id="playbackTimeElapsed"
+            >
               {elapsed}
             </span>
-            <span className={`${styles.playbackTime} ${styles.playbackTimeTotal}`} id="playbackTimeTotal">
+            <span
+              className={`${styles.playbackTime} ${styles.playbackTimeTotal}`}
+              id="playbackTimeTotal"
+            >
               {total}
             </span>
           </div>
@@ -307,18 +273,42 @@ export default function HeritageViewer() {
                 <div className={styles.navToolTip}>Tutorial</div>
               </button>
 
-              <button tabIndex={0} className={styles.navIconBg} id="resourcesIcon" aria-label="Resources">
-                <FileTextOutlined className={styles.navIcons} aria-hidden="true" />
+              <button
+                tabIndex={0}
+                className={styles.navIconBg}
+                id="resourcesIcon"
+                aria-label="Resources"
+              >
+                <FileTextOutlined
+                  className={styles.navIcons}
+                  aria-hidden="true"
+                />
                 <div className={styles.navToolTip}>Resources</div>
               </button>
 
-              <button tabIndex={0} className={styles.navIconBg} id="shareIcon" aria-label="Share this location">
-                <ShareAltOutlined className={styles.navIcons} aria-hidden="true" />
+              <button
+                tabIndex={0}
+                className={styles.navIconBg}
+                id="shareIcon"
+                aria-label="Share this location"
+              >
+                <ShareAltOutlined
+                  className={styles.navIcons}
+                  aria-hidden="true"
+                />
                 <div className={styles.navToolTip}>Share</div>
               </button>
 
-              <button tabIndex={0} className={styles.navIconBg} id="settingsIcon" aria-label="Settings Mode">
-                <SettingOutlined className={styles.navIcons} aria-hidden="true" />
+              <button
+                tabIndex={0}
+                className={styles.navIconBg}
+                id="settingsIcon"
+                aria-label="Settings Mode"
+              >
+                <SettingOutlined
+                  className={styles.navIcons}
+                  aria-hidden="true"
+                />
                 <div className={styles.navToolTip}>Settings</div>
               </button>
             </div>
@@ -339,7 +329,9 @@ export default function HeritageViewer() {
                     aria-hidden="true"
                     className={styles.ssButtonImg}
                   />
-                  <div className={styles.ssNavToolTip} id="ssPrevButtonTooltip">Previous Scene</div>
+                  <div className={styles.ssNavToolTip} id="ssPrevButtonTooltip">
+                    Previous Scene
+                  </div>
                 </div>
               </button>
 
@@ -356,7 +348,9 @@ export default function HeritageViewer() {
                     aria-hidden="true"
                     className={styles.ssButtonImg}
                   />
-                  <div className={styles.ssNavToolTip} id="ssRestartTooltip">Replay Scene</div>
+                  <div className={styles.ssNavToolTip} id="ssRestartTooltip">
+                    Replay Scene
+                  </div>
                 </div>
               </button>
 
@@ -399,8 +393,16 @@ export default function HeritageViewer() {
               </button>
 
               {/* Play / Pause / Explore */}
-              <div id="ssMiddleButtonPress" className={styles.middleButtonGroup} style={{ display: "flex" }}>
-                <div id="ssAudioButton" className={styles.ssAudioButton} style={{ display: "flex", scale: "1" }}>
+              <div
+                id="ssMiddleButtonPress"
+                className={styles.middleButtonGroup}
+                style={{ display: "flex" }}
+              >
+                <div
+                  id="ssAudioButton"
+                  className={styles.ssAudioButton}
+                  style={{ display: "flex", scale: "1" }}
+                >
                   <button
                     id="ssPlayButton"
                     className={`${styles.ssMiddleButton} ${styles.ssPlayButton}`}
@@ -465,7 +467,11 @@ export default function HeritageViewer() {
                       <path d="M8.27857 0.557214C13.8856 2.09686 13.0167 11.627 11.6029 17.471C11.3714 18.4275 10.4438 19.0279 9.46785 18.901L3.53455 18.1292C2.79285 18.0327 2.15972 17.5354 1.98346 16.8085C0.608173 11.1371 1.10449 -1.41273 8.27857 0.557214Z" />
                     </svg>
                   </div>
-                  <span id="ssExploreButton_text" className={styles.ssExploreButtonText} style={{ display: "none" }}>
+                  <span
+                    id="ssExploreButton_text"
+                    className={styles.ssExploreButtonText}
+                    style={{ display: "none" }}
+                  >
                     Explore
                   </span>
                   <div className={styles.ssNavToolTip}>Explore in 3D</div>
@@ -523,14 +529,22 @@ export default function HeritageViewer() {
                   disabled={index === -1 || index === keys.length - 1}
                   style={{ filter: "brightness(1)", pointerEvents: "all" }}
                 >
-                  <div className={styles.ssInnerButton} id="ssN-Next" style={{ display: "none" }}>
+                  <div
+                    className={styles.ssInnerButton}
+                    id="ssN-Next"
+                    style={{ display: "none" }}
+                  >
                     <RightOutlined
                       aria-hidden="true"
                       className={styles.ssButtonImg}
                     />
                     <div className={styles.ssNavToolTip}>Next Scene</div>
                   </div>
-                  <div className={styles.ssInnerButton} id="ssN-Skip" style={{ display: "inline-flex" }}>
+                  <div
+                    className={styles.ssInnerButton}
+                    id="ssN-Skip"
+                    style={{ display: "inline-flex" }}
+                  >
                     <StepForwardOutlined
                       aria-hidden="true"
                       className={styles.ssButtonImg}
@@ -583,7 +597,10 @@ export default function HeritageViewer() {
                 <div className={styles.navToolTip}>Sound On</div>
               </button>
 
-              <div className={styles.additionalIcons} style={{ display: "flex" }}>
+              <div
+                className={styles.additionalIcons}
+                style={{ display: "flex" }}
+              >
                 <button
                   tabIndex={0}
                   className={styles.navIconBg}
@@ -612,7 +629,10 @@ export default function HeritageViewer() {
                 onClick={toggleFullscreen}
                 style={{ display: isFullscreen ? "none" : "flex" }}
               >
-                <FullscreenOutlined className={styles.navIcons} aria-hidden="true" />
+                <FullscreenOutlined
+                  className={styles.navIcons}
+                  aria-hidden="true"
+                />
                 <div className={styles.navToolTip}>Fullscreen Mode</div>
               </button>
 
@@ -624,7 +644,10 @@ export default function HeritageViewer() {
                 onClick={toggleFullscreen}
                 style={{ display: isFullscreen ? "flex" : "none" }}
               >
-                <FullscreenExitOutlined className={styles.navIcons} aria-hidden="true" />
+                <FullscreenExitOutlined
+                  className={styles.navIcons}
+                  aria-hidden="true"
+                />
                 <div className={styles.navToolTip}>Exit fullscreen Mode</div>
               </button>
             </div>
@@ -636,8 +659,16 @@ export default function HeritageViewer() {
       <div className={styles.toast} role="status" aria-live="polite" />
 
       {/* Highlight details */}
-      <aside className={styles.hotspotPopup} hidden aria-label="Highlight details">
-        <button className={styles.hotspotPopupClose} type="button" aria-label="Close highlight">
+      <aside
+        className={styles.hotspotPopup}
+        hidden
+        aria-label="Highlight details"
+      >
+        <button
+          className={styles.hotspotPopupClose}
+          type="button"
+          aria-label="Close highlight"
+        >
           &times;
         </button>
         <div className={styles.hotspotPopupMedia} />
