@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date, datetime
 
 from sqlalchemy import Boolean, Date, DateTime, Float, Integer, BigInteger, Text, ForeignKey
@@ -122,4 +124,11 @@ class Heritage(Base):
         back_populates="heritage",
         order_by="Scene.sequence",
         cascade="all, delete-orphan",
+    )
+
+    voices: Mapped[list["Voice"]] = relationship(
+        "Voice",
+        secondary="heritage_voice",
+        back_populates="heritages",
+        order_by="HeritageVoice.sort_order",
     )

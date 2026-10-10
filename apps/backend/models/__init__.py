@@ -17,6 +17,7 @@ from apps.backend.models.scene import Scene  # noqa: F401
 from apps.backend.models.model_asset import ModelAsset  # noqa: F401
 from apps.backend.models.voice import Voice  # noqa: F401
 from apps.backend.models.voice_clip import VoiceClip  # noqa: F401
+from apps.backend.models.heritage_voice import HeritageVoice  # noqa: F401
 from apps.backend.models.media_item import MediaItem  # noqa: F401
 from apps.backend.models.interactive import Interactive  # noqa: F401
 from apps.backend.models.interactive_highlight import InteractiveHighlight  # noqa: F401
@@ -37,7 +38,7 @@ __all__ = [
     "Heritage", "Language",
     # scene graph
     "SkyPreset", "Scene", "ModelAsset",
-    "Voice", "VoiceClip",
+    "Voice", "VoiceClip", "HeritageVoice",
     "MediaItem",
     "Interactive", "InteractiveHighlight", "SceneHighlight",
     # chat

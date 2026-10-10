@@ -4,7 +4,8 @@ Run from project root with the backend venv:
   cd /mnt/d/Workspace/HeritageGraph
   apps/backend/.venv/bin/python apps/backend/db/seed_homepage_mock.py
 
-Idempotent: existing slugs are kept, only their voices are refreshed.
+Idempotent: existing slugs are kept, voices are keyed by name, and the
+heritage_voice junction rows are upserted with sort order.
 """
 from __future__ import annotations
 
@@ -124,13 +125,13 @@ def main() -> None:
     conn.autocommit = True
     cur = conn.cursor()
 
-    # Language ids from the seeded language table (vi / eng).
+    # Language ids from the seeded language table (vi / en).
     cur.execute("SELECT id FROM language WHERE code = 'vi'")
     vi = cur.fetchone()
-    cur.execute("SELECT id FROM language WHERE code = 'eng'")
+    cur.execute("SELECT id FROM language WHERE code = 'en'")
     eng = cur.fetchone()
     if not vi or not eng:
-        raise RuntimeError("language table must have 'vi' and 'eng' rows seeded first")
+        raise RuntimeError("language table must have 'vi' and 'en' rows seeded first")
     vi_id, eng_id = vi[0], eng[0]
 
     # Reusable voices (ids 1..3 already exist from the first seed).
@@ -160,7 +161,7 @@ def main() -> None:
                 UPDATE heritage SET title=%s, tagline=%s, headline=%s, description=%s,
                        region=%s, lat=%s, lng=%s, duration_seconds=%s,
                        card_image_url=%s, splash_image_url=%s, hover_video_url=%s,
-                       display_map=true, publish_state=1, publish_date=CURRENT_DATE,
+                       display_map=true, publish_state='published', publish_date=CURRENT_DATE,
                        launch_date=CURRENT_DATE, updated_at=now()
                 WHERE id=%s
                 """,
@@ -179,7 +180,7 @@ def main() -> None:
                      community_made, display_map, presented_by_logo_url,
                      language1_id, language2_id, created_at, updated_at)
                 VALUES
-                    (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_DATE, 1, CURRENT_DATE,
+                    (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_DATE, 'published', CURRENT_DATE,
                      %s, %s, NULL, false, true, NULL, %s, %s, now(), now())
                 RETURNING id
                 """,
@@ -190,16 +191,41 @@ def main() -> None:
             hid = cur.fetchone()[0]
             inserted += 1
 
-        # Refresh voices for this heritage.
-        cur.execute("DELETE FROM voice WHERE heritage_id = %s", (hid,))
+        # Link the same voice pool to this heritage through the junction table.
+        # Idempotent: voices are keyed by name, heritage_voice upserts on (heritage_id, voice_id).
+        voice_ids = []
         for name, vtitle, bio in voice_pool:
             cur.execute(
-                """
-                INSERT INTO voice (heritage_id, name, title, bio, created_at)
-                VALUES (%s, %s, %s, %s, now())
-                """,
-                (hid, name, vtitle, bio),
+                "SELECT id FROM voice WHERE name = %s",
+                (name,),
             )
+            row = cur.fetchone()
+            if row:
+                cur.execute(
+                    "UPDATE voice SET title = %s, bio = %s WHERE id = %s",
+                    (vtitle, bio, row[0]),
+                )
+                voice_ids.append(row[0])
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO voice (name, title, bio, created_at)
+                    VALUES (%s, %s, %s, now())
+                    RETURNING id
+                    """,
+                    (name, vtitle, bio),
+                )
+                voice_ids.append(cur.fetchone()[0])
+
+        cur.executemany(
+            """
+            INSERT INTO heritage_voice (heritage_id, voice_id, sort_order, created_at)
+            VALUES (%s, %s, %s, now())
+            ON CONFLICT (heritage_id, voice_id) DO UPDATE
+               SET sort_order = EXCLUDED.sort_order
+            """,
+            [(hid, vid, i) for i, vid in enumerate(voice_ids)],
+        )
 
     # Remove legacy mock slugs superseded by renamed rows.
     stale_slugs = ["mue-lin", "vong-canh", "tomb-gia-long", "tomb-thieu-tri"]

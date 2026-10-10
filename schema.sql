@@ -34,7 +34,7 @@ CREATE TABLE passage (
     page_number INT,
     location_note TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_passage_index CHECK (passage_index >= 0),
+    CONSTRAINT chk_passage_index CHECK (passage_index >= 0)
 );
 
 CREATE INDEX idx_passage_text_trgm
@@ -81,8 +81,6 @@ CREATE TABLE heritage (
     card_image_url TEXT,
     splash_image_url TEXT,
     hover_video_url TEXT,
-    presented_by_logo_url TEXT,
-    community_made BOOLEAN NOT NULL DEFAULT FALSE,
     language1_id BIGINT REFERENCES language(id) ON DELETE SET NULL,
     language2_id BIGINT REFERENCES language(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

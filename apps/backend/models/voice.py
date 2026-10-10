@@ -7,7 +7,7 @@ from apps.backend.db.base import Base
 
 
 class Voice(Base):
-    """voice — DDL has NO heritage_id. Voice is linked via VoiceClip → Scene → Heritage."""
+    """voice — linked to Heritage via the heritage_voice junction table."""
     __tablename__ = "voice"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -22,4 +22,11 @@ class Voice(Base):
         "VoiceClip",
         back_populates="voice",
         cascade="all, delete-orphan",
+    )
+
+    heritages: Mapped[list["Heritage"]] = relationship(
+        "Heritage",
+        secondary="heritage_voice",
+        back_populates="voices",
+        order_by="HeritageVoice.sort_order",
     )

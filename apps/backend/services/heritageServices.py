@@ -18,7 +18,6 @@ from sqlalchemy.orm import selectinload, joinedload
 from apps.backend.models.heritage import Heritage
 from apps.backend.models.interactive import Interactive
 from apps.backend.models.scene import Scene
-from apps.backend.models.voice import Voice
 from apps.backend.models.voice_clip import VoiceClip
 
 
@@ -43,22 +42,6 @@ def scene_slug(sequence: int) -> str:
     return f"s{sequence + 1}"
 
 
-def _collect_unique_voices(heritage: Heritage) -> list[Voice]:
-    """Collect unique Voice entities across all scenes of a heritage.
-
-    Voice is linked via VoiceClip → Scene → Heritage; there is NO direct
-    Heritage → Voice FK in the database.
-    """
-    seen: set[int] = set()
-    voices: list[Voice] = []
-    for sc in heritage.scenes:
-        for clip in sc.voice_clips:
-            if clip.voice_id not in seen:
-                seen.add(clip.voice_id)
-                voices.append(clip.voice)
-    return voices
-
-
 # ── Service ────────────────────────────────────────────────────────
 
 class HeritageService:
@@ -75,6 +58,7 @@ class HeritageService:
             .options(
                 selectinload(Heritage.language1),
                 selectinload(Heritage.language2),
+                selectinload(Heritage.voices),
                 selectinload(Heritage.scenes)
                 .selectinload(Scene.voice_clips)
                 .selectinload(VoiceClip.voice),
@@ -85,7 +69,7 @@ class HeritageService:
 
         results = []
         for h in heritages:
-            voices = _collect_unique_voices(h)
+            voices = list(h.voices)
             results.append({
                 "heritage": h,
                 "voices": voices,
@@ -103,6 +87,7 @@ class HeritageService:
             .options(
                 selectinload(Heritage.language1),
                 selectinload(Heritage.language2),
+                selectinload(Heritage.voices),
                 selectinload(Heritage.scenes)
                 .selectinload(Scene.voice_clips)
                 .selectinload(VoiceClip.voice),
@@ -116,7 +101,7 @@ class HeritageService:
         if heritage is None:
             return None
 
-        voices = _collect_unique_voices(heritage)
+        voices = list(heritage.voices)
 
         return {
             "heritage": heritage,
@@ -165,7 +150,7 @@ class HeritageService:
         )
         scene = (await self.db.execute(stmt)).scalars().unique().first()
 
-        voices = _collect_unique_voices(heritage)
+        voices = list(heritage.voices)
 
         return {
             "heritage": heritage,
