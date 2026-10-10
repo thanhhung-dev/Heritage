@@ -18,6 +18,7 @@ from apps.backend.models.tour import (  # noqa: F401
     Tour, Story, Narration, Transcript, Highlight, Citation, TourStop,
 )
 from apps.backend.models.chat import ChatSession, ChatMessage, ChatFeedback  # noqa: F401
+from apps.backend.models.user import Account, Role, UserConsent, UserProfile  # noqa: F401
 from apps.backend.models.admin import _uuid_pk as uuid_pk  # noqa: F401
 
 __all__ = [
@@ -37,4 +38,6 @@ __all__ = [
     "Tour", "Story", "Narration", "Transcript", "Highlight", "Citation", "TourStop",
     # chat
     "ChatSession", "ChatMessage", "ChatFeedback",
+    # user
+    "Role", "Account", "UserProfile", "UserConsent",
 ]

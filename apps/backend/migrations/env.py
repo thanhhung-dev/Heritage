@@ -7,18 +7,25 @@ Async note: Alembic v1.19+ hỗ trợ async engine. Online mode dùng async_engi
 offline mode render SQL string (không kết nối, chỉ cần URL để format).
 """
 import asyncio
+import logging
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from alembic import context
+from dotenv import load_dotenv
+from sqlalchemy import pool
+from sqlalchemy.exc import ArgumentError
+from sqlalchemy.engine import Connection
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
-
-from apps.backend.db.base import Base  
-from apps.backend.models import *  
+from apps.backend.db.base import Base
+from apps.backend.models import *
 
 target_metadata = Base.metadata
 
@@ -31,12 +38,45 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+logger = logging.getLogger("alembic.env")
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(dotenv_path=PROJECT_ROOT / ".env", override=False)
+
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+if not DATABASE_URL:
+    logger.error(
+        "DATABASE_URL is not set. Create a .env file from .env.example, "
+        "set DATABASE_URL to a PostgreSQL URL using postgresql+psycopg:// "
+        "or postgresql+asyncpg://, or export DATABASE_URL before running Alembic."
+    )
+    raise RuntimeError("DATABASE_URL is required to run Alembic migrations.")
+
+try:
+    database_url = make_url(DATABASE_URL)
+except (ArgumentError, TypeError, ValueError) as exc:
+    logger.error(
+        "DATABASE_URL is invalid. Set it to a valid PostgreSQL URL using "
+        "postgresql+psycopg:// or postgresql+asyncpg://."
+    )
+    raise RuntimeError("DATABASE_URL is not a valid SQLAlchemy URL.") from exc
+
+if database_url.drivername not in {
+    "postgresql+psycopg",
+    "postgresql+asyncpg",
+}:
+    logger.error(
+        "DATABASE_URL must use postgresql+psycopg:// or postgresql+asyncpg:// "
+        "for async Alembic migrations."
+    )
+    raise RuntimeError("DATABASE_URL uses an unsupported PostgreSQL driver.")
+
+# Escape interpolation markers for ConfigParser, which Alembic uses internally.
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:
     """Render SQL string — không cần DBAPI connection."""
-    url = DATABASE_URL or config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -63,9 +103,9 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    """Async engine — dùng DATABASE_URL trực tiếp (postgresql+psycopg://)."""
+    """Create the async engine using the validated DATABASE_URL."""
     connectable = async_engine_from_config(
-        {"sqlalchemy.url": DATABASE_URL},
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
