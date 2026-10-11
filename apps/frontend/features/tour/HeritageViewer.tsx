@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CaretRightFilled,
   CompassOutlined,
   FileTextOutlined,
   FullscreenExitOutlined,
@@ -9,7 +8,6 @@ import {
   LeftOutlined,
   MenuOutlined,
   MutedOutlined,
-  PauseOutlined,
   QuestionCircleOutlined,
   ReloadOutlined,
   RightOutlined,
@@ -22,7 +20,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import logoText from "./logo-text.svg";
+import logoText from "@/access/icons/logo-text.svg";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
 import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
@@ -31,6 +29,8 @@ import FullScreenExit from "@/access/icons/full_screen_exit.png"
 import Captions from "@/access/icons/trans_icon.png"
 import sound_off from "@/access/icons/sound_off.png"
 import sound_on from "@/access/icons/sound_on.png"
+import Pause from "@/access/icons/pause.svg"
+import Play from "@/access/icons/play.svg"
 import styles from "./styles.module.css";
 
 export default function HeritageViewer() {
@@ -435,11 +435,12 @@ export default function HeritageViewer() {
                     onClick={() => setIsPlaying(true)}
                     style={{ display: isPlaying ? "none" : "block" }}
                   >
-                    <img
-                      id="ssPlayButton_img"
-                      aria-hidden="true"
+                    <Image
                       className={`${styles.ssPlayPauseImg}`}
-                      src={`https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/icon/svgviewer-output.svg`}
+                      src={Play}
+                      alt="play"
+                      height={24}
+                      width={24}
                     />
                     <div className={styles.ssNavToolTip}>Play</div>
                   </button>
@@ -451,10 +452,12 @@ export default function HeritageViewer() {
                     onClick={() => setIsPlaying(false)}
                     style={{ display: isPlaying ? "block" : "none" }}
                   >
-                    <PauseOutlined
-                      id="ssPauseButton_img"
-                      aria-hidden="true"
+                    <Image
                       className={styles.ssPlayPauseImg}
+                      src={Pause}
+                      alt="pause"
+                      height={24}
+                      width={24}
                     />
                     <div className={styles.ssNavToolTip}>Pause</div>
                   </button>
