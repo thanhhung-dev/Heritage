@@ -104,7 +104,7 @@
   .accountName { display: none; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .guest { flex-wrap: wrap; }
   .loginButton.loginButton,
   .registerButton.registerButton { min-height: 44px; }

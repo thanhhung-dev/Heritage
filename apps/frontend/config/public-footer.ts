@@ -1,3 +1,5 @@
+import { PUBLIC_SHELL_PATHS } from "./public-navigation";
+
 export interface FooterLink {
   key: string;
   label: string;
@@ -33,4 +35,4 @@ export const PUBLIC_FOOTER = {
   ],
 };
 
-export const PUBLIC_FOOTER_PATHS = ["/", "/map", "/library", "/faq"];
+export const PUBLIC_FOOTER_PATHS = PUBLIC_SHELL_PATHS;

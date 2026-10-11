@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button, Drawer } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
@@ -22,9 +22,18 @@ export function PublicHeaderControls({ account: suppliedAccount, onSignOut: supp
   const [menuOpen, setMenuOpen] = useState(false);
   const mobileNavigationId = useId();
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const desktopAccountRef = useRef<HTMLButtonElement>(null);
+  const mobileAccountRef = useRef<HTMLButtonElement>(null);
   const menuWasOpened = useRef(false);
   const restoreMobileFocus = useRef(false);
   const pathname = usePathname();
+
+  const restoreAccountFocus = useCallback(() => {
+    const target = window.matchMedia("(min-width: 768px)").matches
+      ? desktopAccountRef.current
+      : mobileAccountRef.current;
+    target?.focus();
+  }, []);
 
   const signOutFromHeader = onSignOut ? () => {
     restoreMobileFocus.current = window.matchMedia("(max-width: 767px)").matches;
@@ -59,10 +68,10 @@ export function PublicHeaderControls({ account: suppliedAccount, onSignOut: supp
     <>
       <div className={styles.desktop}>
         <PublicNavigation />
-        <AccountNavigation account={account} onSignOut={signOutFromHeader} />
+        <AccountNavigation account={account} onSignOut={signOutFromHeader} triggerButtonRef={desktopAccountRef} onResponsiveClose={restoreAccountFocus} />
       </div>
       <div className={styles.mobile}>
-        {account ? <AccountNavigation account={account} onSignOut={signOutFromHeader} /> : null}
+        {account ? <AccountNavigation account={account} onSignOut={signOutFromHeader} triggerButtonRef={mobileAccountRef} onResponsiveClose={restoreAccountFocus} /> : null}
         <Button
           ref={menuTriggerRef}
           className={styles.menuTrigger}

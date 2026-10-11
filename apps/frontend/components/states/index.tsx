@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Spin, Empty, Button, Result } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
+import styles from './states.module.css';
 
 interface LoadingStateProps {
   tip?: string;
@@ -10,11 +11,12 @@ interface LoadingStateProps {
 }
 
 export const LoadingState: React.FC<LoadingStateProps> = ({
-  tip = 'Đang tải dữ liệu di sản...',
+  tip = 'Đang tải…',
   className = '',
 }) => (
-  <div className={`flex flex-col items-center justify-center p-8 min-h-[200px] ${className}`}>
-    <Spin size="large" tip={tip} />
+  <div className={`${styles.loading} ${className}`} role="status" aria-live="polite" aria-atomic="true">
+    <span className={styles.srOnly}>{tip}</span>
+    <span aria-hidden="true"><Spin size="large" indicator={<LoadingOutlined spin />} /></span>
   </div>
 );
 
@@ -33,10 +35,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
   className = '',
 }) => (
-  <div className={`flex flex-col items-center justify-center p-8 min-h-[240px] text-center ${className}`}>
-    <Empty description={<span className="text-stone-400">{description}</span>}>
+  <div className={`${styles.empty} ${className}`}>
+    <Empty description={<span className={styles.description}>{description}</span>}>
       {actionText && onAction && (
-        <Button type="primary" onClick={onAction} style={{ background: '#b45309', borderColor: '#b45309' }}>
+        <Button type="primary" onClick={onAction} className={styles.primaryAction}>
           {actionText}
         </Button>
       )}
@@ -48,6 +50,8 @@ interface ErrorStateProps {
   title?: string;
   subTitle?: string;
   onRetry?: () => void;
+  retryLabel?: string;
+  headingLevel?: 1 | 2 | 3;
   className?: string;
 }
 
@@ -55,20 +59,25 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   title = 'Đã xảy ra lỗi kết nối',
   subTitle = 'Không thể đồng bộ dữ liệu với máy chủ di sản. Vui lòng thử lại sau.',
   onRetry,
+  retryLabel = 'Tải lại trang',
+  headingLevel = 2,
   className = '',
-}) => (
-  <div className={`flex items-center justify-center p-6 ${className}`}>
-    <Result
-      status="error"
-      title={<span className="text-red-500 font-medium">{title}</span>}
-      subTitle={<span className="text-stone-400">{subTitle}</span>}
-      extra={
-        onRetry && (
-          <Button icon={<ReloadOutlined />} onClick={onRetry} danger>
-            Tải lại trang
-          </Button>
-        )
-      }
-    />
-  </div>
-);
+}) => {
+  const Heading = headingLevel === 1 ? 'h1' : headingLevel === 2 ? 'h2' : 'h3';
+  return (
+    <div className={`${styles.error} ${className}`} role="alert">
+      <Result
+        status="error"
+        title={<Heading className={styles.title}>{title}</Heading>}
+        subTitle={<span className={styles.description}>{subTitle}</span>}
+        extra={
+          onRetry && (
+            <Button icon={<ReloadOutlined aria-hidden="true" />} onClick={onRetry} className={styles.retryAction}>
+              {retryLabel}
+            </Button>
+          )
+        }
+      />
+    </div>
+  );
+};

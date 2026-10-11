@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Avatar, Button, Dropdown, type MenuProps } from "antd";
@@ -15,6 +15,8 @@ interface AccountNavigationProps {
   onAuthRequest?: (mode: AuthMode) => void;
   onSignOut?: () => void;
   className?: string;
+  triggerButtonRef?: RefObject<HTMLButtonElement>;
+  onResponsiveClose?: () => void;
 }
 
 export function AccountNavigation({
@@ -22,13 +24,16 @@ export function AccountNavigation({
   onAuthRequest,
   onSignOut: suppliedSignOut,
   className,
+  triggerButtonRef,
+  onResponsiveClose,
 }: AccountNavigationProps) {
   const session = usePublicAccount();
   const account = suppliedAccount === undefined ? session.account : suppliedAccount;
   const onSignOut = suppliedSignOut ?? (suppliedAccount === undefined ? session.onSignOut : undefined);
   const [open, setOpen] = useState(false);
   const menuId = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const internalTriggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = triggerButtonRef ?? internalTriggerRef;
   const loginRef = useRef<HTMLButtonElement>(null);
   const restoreGuestFocus = useRef(false);
   const previousAccount = useRef(account);
@@ -43,6 +48,23 @@ export function AccountNavigation({
       restoreGuestFocus.current = false;
     }
   }, [account]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const closeOnBreakpointChange = () => {
+      setOpen(false);
+      if (onResponsiveClose) {
+        onResponsiveClose();
+      } else {
+        triggerRef.current?.focus();
+      }
+    };
+
+    desktop.addEventListener("change", closeOnBreakpointChange);
+    return () => desktop.removeEventListener("change", closeOnBreakpointChange);
+  }, [open, onResponsiveClose, triggerRef]);
 
   if (!account) {
     return (

@@ -78,6 +78,10 @@ const globalStyle = (token: Theme) => css`
     --public-header-glass: rgba(255, 255, 255, 0.12);
     --public-active-background: rgba(255, 155, 45, 0.12);
     --public-accent-hover: #ffb04f;
+    --public-navigation-active: #ffb366;
+    --public-navigation-hover: #ffd6ab;
+    --shadow-navigation: 0 12px 40px rgba(0, 0, 0, 0.4);
+    --shadow-logo: 0 2px 8px rgba(0, 0, 0, 0.4);
 
     --glass-surface: #8a8a8a4d;
     --glass-surface-hover: #8a8a8a66;
