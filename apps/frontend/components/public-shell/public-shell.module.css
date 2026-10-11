@@ -261,3 +261,27 @@
     font-size: 0.625rem;
   }
 }
+
+/* HER-163: retain the shared shell while using a header drawer on mobile. */
+.shell {
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 100dvh;
+}
+
+.controls { gap: 16px; min-width: 0; }
+.header { box-sizing: border-box; }
+.brand { flex: none; }
+.searchField:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+.brand:focus-visible,
+.navigationLink:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+@media (max-width: 1024px) {
+  .header { min-height: 76px; padding: 16px 24px; gap: 16px; }
+  .searchField { display: none; }
+  .main { padding-bottom: 0; }
+}
+
+@media (max-width: 420px) {
+  .header { padding-inline: 16px; }
+}

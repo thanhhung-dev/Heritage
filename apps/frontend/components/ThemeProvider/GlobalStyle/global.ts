@@ -71,6 +71,14 @@ const globalStyle = (token: Theme) => css`
     --danger: #ea3241;
     --muted: rgba(240, 232, 221, 0.5);
 
+    --public-footer-border: rgba(255, 155, 45, 0.18);
+    --public-footer-background:
+      radial-gradient(ellipse at 50% 0%, rgba(255, 155, 45, 0.1), rgba(255, 130, 50, 0.04) 40%, transparent 65%),
+      #060504;
+    --public-header-glass: rgba(255, 255, 255, 0.12);
+    --public-active-background: rgba(255, 155, 45, 0.12);
+    --public-accent-hover: #ffb04f;
+
     --glass-surface: #8a8a8a4d;
     --glass-surface-hover: #8a8a8a66;
     --glass-surface-strong: #00000080;

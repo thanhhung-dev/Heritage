@@ -1,0 +1,95 @@
+.guest {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loginButton.loginButton,
+.registerButton.registerButton {
+  height: 36px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.loginButton.loginButton {
+  border-color: var(--border);
+  background: var(--public-header-glass);
+  color: var(--text-strong);
+}
+
+.loginButton.loginButton:hover {
+  border-color: var(--accent);
+  background: var(--glass-surface-hover);
+  color: var(--accent);
+}
+
+.registerButton.registerButton {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.registerButton.registerButton:hover {
+  border-color: var(--public-accent-hover);
+  background: var(--public-accent-hover);
+  color: var(--bg);
+}
+
+.avatarTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 3px 8px 3px 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--public-header-glass);
+  color: var(--text-strong);
+  cursor: pointer;
+}
+
+.avatar.avatar { background: var(--surface); color: var(--accent); }
+.chevron { font-size: 10px; }
+.avatarTrigger:hover { border-color: var(--accent); }
+.avatarTrigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.dropdown.dropdown {
+  width: 260px;
+  max-width: calc(100vw - 32px);
+}
+
+.dropdownPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+}
+
+.accountIdentity { padding: 16px 16px 12px; }
+.accountIdentity p { color: var(--text); font-weight: var(--font-weight-semibold); overflow-wrap: anywhere; }
+.accountIdentity span { display: block; margin-top: 4px; color: var(--text-tertiary); font-size: var(--text-xs); overflow-wrap: anywhere; }
+
+.dropdownPanel :global(.ant-dropdown-menu) {
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.dropdownPanel :global(.ant-dropdown-menu-item) { min-height: 44px; }
+.dropdownPanel :global(.ant-dropdown-menu-item a) { color: inherit; }
+
+.preview { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); }
+.preview h2 { margin-bottom: 12px; font-size: var(--text-xl); color: var(--text); }
+.preview > p { margin-bottom: 20px; color: var(--text-secondary); font-size: var(--text-sm); }
+.previewActions.previewActions { display: flex; margin-bottom: 20px; }
+
+@media (max-width: 640px) {
+  .guest { flex-wrap: wrap; }
+  .loginButton.loginButton,
+  .registerButton.registerButton { min-height: 44px; }
+}
