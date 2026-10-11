@@ -1,11 +1,13 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Avatar, Button, Dropdown, type MenuProps } from "antd";
-import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
+import { LogoutOutlined, SettingOutlined, UserOutlined } from "@ant-design/icons";
 import { PUBLIC_ACCOUNT_LINKS } from "@/config/public-account";
 import type { AuthMode, PublicAccount } from "./types";
+import { usePublicAccount } from "./PublicAccountProvider";
 import styles from "./account.module.css";
 
 interface AccountNavigationProps {
@@ -16,19 +18,36 @@ interface AccountNavigationProps {
 }
 
 export function AccountNavigation({
-  account,
+  account: suppliedAccount,
   onAuthRequest,
-  onSignOut,
+  onSignOut: suppliedSignOut,
   className,
 }: AccountNavigationProps) {
+  const session = usePublicAccount();
+  const account = suppliedAccount === undefined ? session.account : suppliedAccount;
+  const onSignOut = suppliedSignOut ?? (suppliedAccount === undefined ? session.onSignOut : undefined);
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const loginRef = useRef<HTMLButtonElement>(null);
+  const restoreGuestFocus = useRef(false);
+  const previousAccount = useRef(account);
+
+  useEffect(() => {
+    if (previousAccount.current !== account) {
+      setOpen(false);
+      previousAccount.current = account;
+    }
+    if (!account && restoreGuestFocus.current) {
+      loginRef.current?.focus();
+      restoreGuestFocus.current = false;
+    }
+  }, [account]);
 
   if (!account) {
     return (
       <div className={[styles.guest, className].filter(Boolean).join(" ")}>
-        <Button className={styles.loginButton} onClick={onAuthRequest ? () => onAuthRequest("login") : undefined}>
+        <Button ref={loginRef} className={styles.loginButton} onClick={onAuthRequest ? () => onAuthRequest("login") : undefined}>
           Đăng nhập
         </Button>
         <Button type="primary" className={styles.registerButton} onClick={onAuthRequest ? () => onAuthRequest("register") : undefined}>
@@ -51,7 +70,10 @@ export function AccountNavigation({
       icon: <LogoutOutlined />,
       label: "Đăng xuất",
       disabled: !onSignOut,
-      onClick: onSignOut,
+      onClick: onSignOut ? () => {
+        restoreGuestFocus.current = true;
+        onSignOut();
+      } : undefined,
     },
   ];
 
@@ -104,8 +126,16 @@ export function AccountNavigation({
           }
         }}
       >
-        <Avatar size={36} src={account.avatarUrl} icon={<UserOutlined />} className={styles.avatar} />
-        <DownOutlined aria-hidden="true" className={styles.chevron} />
+        <Avatar size={40} src={account.avatarUrl} icon={<UserOutlined />} className={styles.avatar} />
+        <span className={styles.accountName} title={account.displayName}>{account.displayName}</span>
+        <Image
+          src={open ? "/figma/account-angle-up.svg" : "/figma/account-angle-down.svg"}
+          alt=""
+          aria-hidden="true"
+          width={24}
+          height={24}
+          className={styles.chevron}
+        />
       </button>
     </Dropdown>
   );
