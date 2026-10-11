@@ -1,23 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Button, Drawer } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import { AccountNavigation } from "@/features/account/AccountNavigation";
+import { usePublicAccount } from "@/features/account/PublicAccountProvider";
 import type { PublicAccount } from "@/features/account/types";
 import { PublicNavigation } from "./PublicNavigation";
 import styles from "./public-header-controls.module.css";
 
 interface PublicHeaderControlsProps {
   account?: PublicAccount | null;
+  onSignOut?: () => void;
 }
 
-export function PublicHeaderControls({ account }: PublicHeaderControlsProps) {
+export function PublicHeaderControls({ account: suppliedAccount, onSignOut: suppliedSignOut }: PublicHeaderControlsProps) {
+  const session = usePublicAccount();
+  const account = suppliedAccount === undefined ? session.account : suppliedAccount;
+  const onSignOut = suppliedSignOut ?? (suppliedAccount === undefined ? session.onSignOut : undefined);
   const [menuOpen, setMenuOpen] = useState(false);
+  const mobileNavigationId = useId();
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const menuWasOpened = useRef(false);
+  const restoreMobileFocus = useRef(false);
   const pathname = usePathname();
+
+  const signOutFromHeader = onSignOut ? () => {
+    restoreMobileFocus.current = window.matchMedia("(max-width: 767px)").matches;
+    onSignOut();
+  } : undefined;
+
+  useEffect(() => {
+    if (!account && restoreMobileFocus.current) {
+      menuTriggerRef.current?.focus();
+      restoreMobileFocus.current = false;
+    }
+  }, [account]);
 
   useEffect(() => { setMenuOpen(false); }, [pathname]);
 
@@ -40,10 +59,10 @@ export function PublicHeaderControls({ account }: PublicHeaderControlsProps) {
     <>
       <div className={styles.desktop}>
         <PublicNavigation />
-        <AccountNavigation account={account} />
+        <AccountNavigation account={account} onSignOut={signOutFromHeader} />
       </div>
       <div className={styles.mobile}>
-        {account ? <AccountNavigation account={account} /> : null}
+        {account ? <AccountNavigation account={account} onSignOut={signOutFromHeader} /> : null}
         <Button
           ref={menuTriggerRef}
           className={styles.menuTrigger}
@@ -52,7 +71,7 @@ export function PublicHeaderControls({ account }: PublicHeaderControlsProps) {
           aria-label="Mở menu điều hướng"
           aria-haspopup="dialog"
           aria-expanded={menuOpen}
-          aria-controls={menuOpen ? "public-mobile-navigation" : undefined}
+          aria-controls={menuOpen ? mobileNavigationId : undefined}
           onClick={() => setMenuOpen(true)}
         />
       </div>
@@ -72,11 +91,11 @@ export function PublicHeaderControls({ account }: PublicHeaderControlsProps) {
           }
         }}
       >
-        <div id="public-mobile-navigation">
+        <div id={mobileNavigationId}>
           <PublicNavigation className={styles.mobileNavigation} onNavigate={() => setMenuOpen(false)} />
           {!account ? (
             <div className={styles.mobileAccount}>
-              <AccountNavigation />
+              <AccountNavigation account={account} />
             </div>
           ) : null}
         </div>
