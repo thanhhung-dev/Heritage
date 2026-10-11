@@ -31,6 +31,7 @@ import sound_off from "@/access/icons/sound_off.png"
 import sound_on from "@/access/icons/sound_on.png"
 import Pause from "@/access/icons/pause.svg"
 import Play from "@/access/icons/play.svg"
+import HeritageCanvas from "./three/HeritageCanvas";
 import styles from "./styles.module.css";
 
 export default function HeritageViewer() {
@@ -121,6 +122,7 @@ export default function HeritageViewer() {
 
   return (
     <div className={styles.viewer} style={tapestryTourVarsStyle}>
+      <HeritageCanvas />
       <div className={styles.topNavBar}>
         <button
           id="logo"
