@@ -13,9 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.backend.api.tour import get_db
 from apps.backend.services.heritage import HeritageDetail, HeritageService
 
-router = APIRouter(prefix="/heritage", tags=["heritage"])
-
-
+router = APIRouter(prefix="/content", tags=["content"])
+    
 class HeritageSource(BaseModel):
     title: str
     url: str | None = None

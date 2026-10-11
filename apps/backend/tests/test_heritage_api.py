@@ -42,7 +42,7 @@ class HeritageDetailApiTests(unittest.TestCase):
     def tearDown(self) -> None:
         app.dependency_overrides.pop(get_db, None)
 
-    def _get(self, detail, url="/api/heritage/lang-tu-duc"):
+    def _get(self, detail, url="/api/content/lang-tu-duc"):
         mock = AsyncMock(return_value=detail)
         with patch.object(HeritageService, "get_published_detail", new=mock):
             response = self.client.get(url)
@@ -90,13 +90,13 @@ class HeritageDetailApiTests(unittest.TestCase):
         self.assertEqual(response.json()["sources"], [])
 
     def test_unknown_or_unpublished_returns_404(self) -> None:
-        response, _ = self._get(None, url="/api/heritage/khong-ton-tai")
+        response, _ = self._get(None, url="/api/content/khong-ton-tai")
 
         self.assertEqual(response.status_code, 404)
 
     def test_locale_is_forwarded_without_fallback(self) -> None:
         _, mock = self._get(
-            make_detail(locale="en"), url="/api/heritage/lang-tu-duc?locale=en"
+            make_detail(locale="en"), url="/api/content/lang-tu-duc?locale=en"
         )
 
         mock.assert_awaited_once_with(slug="lang-tu-duc", locale="en")
