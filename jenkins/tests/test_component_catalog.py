@@ -41,7 +41,7 @@ class DetectorContractTest(unittest.TestCase):
 
     def test_migration_adds_backend_gate_and_units(self):
         selected, unmapped = classify(
-            CATALOG, ["apps/backend/migrations/versions/revision.py"], []
+            CATALOG, ["apps/backend/db/init_db.py"], []
         )
         self.assertEqual(["backend", "migration"], selected)
         self.assertEqual([], unmapped)

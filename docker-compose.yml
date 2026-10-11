@@ -41,19 +41,6 @@ services:
     networks:
       - heritage-network
 
-  migrate:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-    restart: "no"
-    environment:
-      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
-    command: ["python", "-m", "apps.backend.db.migrate"]
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - heritage-network
 
   backend:
     build:
@@ -76,11 +63,12 @@ services:
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-}
       CORPUS_VERSION: ${CORPUS_VERSION:-1}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+      R2_ALLOWED_ASSET_HOSTS: ${R2_ALLOWED_ASSET_HOSTS:-}
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       llm:
         condition: service_started
     healthcheck:

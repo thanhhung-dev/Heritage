@@ -125,7 +125,7 @@ in ra biến cấu hình cần sửa; không mở cổng với cấu hình chưa
 
 Health check yêu cầu `models/qwen-fused.gguf` khi dùng `llama_server` qua Docker
 Compose. Xem [hướng dẫn training](docs/training.md) để tạo GGUF. Sau đó khởi tạo
-PostgreSQL, migration và llama.cpp:
+PostgreSQL, schema và llama.cpp:
 
 ```bash
 docker compose up -d db

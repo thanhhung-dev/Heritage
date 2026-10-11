@@ -31,7 +31,7 @@
       "link": null,
       "locked": false,
       "fontSize": 30,
-      "fontFamily": 2,
+    "fontFamily": 2,
       "text": "HERITAGEGRAPH · HYBRID RAG, GRAPHRAG & PERSONALIZED DISCOVERY",
       "textAlign": "center",
       "verticalAlign": "middle",

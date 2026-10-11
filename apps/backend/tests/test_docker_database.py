@@ -28,7 +28,7 @@ class DockerDatabaseConfigurationTests(unittest.TestCase):
         )
         cls.config = json.loads(result.stdout)
 
-    def test_complete_stack_contains_database_migration_and_frontend(self) -> None:
+    def test_complete_stack_contains_database_init_and_frontend(self) -> None:
         self.assertTrue(
             {"db", "migrate", "backend", "frontend", "llm"}
             <= self.config["services"].keys()
@@ -57,20 +57,20 @@ class DockerDatabaseConfigurationTests(unittest.TestCase):
         )
         self.assertIn("postgres_data", self.config["volumes"])
 
-    def test_backend_waits_for_successful_migration(self) -> None:
+    def test_backend_waits_for_successful_schema_init(self) -> None:
         backend_dependencies = self.config["services"]["backend"]["depends_on"]
-        migrate_dependencies = self.config["services"]["migrate"]["depends_on"]
+        init_dependencies = self.config["services"]["migrate"]["depends_on"]
 
         self.assertEqual(
             backend_dependencies["migrate"]["condition"],
             "service_completed_successfully",
         )
-        self.assertEqual(migrate_dependencies["db"]["condition"], "service_healthy")
+        self.assertEqual(init_dependencies["db"]["condition"], "service_healthy")
 
-    def test_migration_service_adopts_supported_legacy_schema(self) -> None:
+    def test_migrate_service_builds_schema_from_models(self) -> None:
         self.assertEqual(
             self.config["services"]["migrate"]["command"],
-            ["python", "-m", "apps.backend.db.migrate"],
+            ["python", "-m", "apps.backend.db.init_db"],
         )
 
     def test_database_url_uses_compose_service_and_internal_port(self) -> None:
