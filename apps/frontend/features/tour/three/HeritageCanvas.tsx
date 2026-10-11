@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { createTourEngine } from "./tour-engine";
 import styles from "../styles.module.css";
 
-export default function HeritageCanvas() {
+export default function HeritageCanvas({
+  landing = false,
+  onReady,
+}: {
+  landing?: boolean;
+  onReady: () => void;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<string | null>("Đang tải model 3D Tự Đức (111 MB)…");
   const [error, setError] = useState<string | null>(null);
@@ -16,17 +22,23 @@ export default function HeritageCanvas() {
       setError(cause instanceof Error ? cause.message : "Không thể khởi tạo hoặc tải model 3D.");
     };
     try {
-      return createTourEngine(host, "/tour-assets/tuduc.glb", setStatus, onError);
+      return createTourEngine(host, "/tour-assets/tuduc.glb", (message) => {
+        setStatus(message);
+        if (message === null) onReady();
+      }, onError);
     } catch (cause) {
       onError(cause);
     }
-  }, []);
+  }, [onReady]);
 
   return (
     <>
       <div className={styles.threeCanvas} ref={hostRef} />
       {(error || status) && (
-        <div className={styles.threeStatus} role={error ? "alert" : "status"}>
+        <div
+          className={`${styles.threeStatus} ${landing ? styles.threeStatusLanding : ""}`}
+          role={error ? "alert" : "status"}
+        >
           {error || status}
         </div>
       )}

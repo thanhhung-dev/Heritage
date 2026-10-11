@@ -1,11 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 
 import { HeritageTourProvider } from "@/context/heritage-tour";
 import HeritageViewer from "@/features/tour/HeritageViewer";
+import HeritageCanvas from "@/features/tour/three/HeritageCanvas";
 import { DEMO_HERITAGE_PAYLOAD } from "@/lib/demo-heritage";
 import { fetchHeritagePayload } from "@/lib/heritage";
 import type { HeritagePayload } from "@/types/heritage";
@@ -35,7 +36,16 @@ export default function HeritageContentLayout({
   children: ReactNode;
 }) {
   const params = useParams<{ slug: string; sceneKey?: string }>();
+  const router = useRouter();
   const slug = params.slug;
+  const [isModelReady, setIsModelReady] = useState(false);
+  const onModelReady = useCallback(() => setIsModelReady(true), []);
+
+  useEffect(() => {
+    if (params.sceneKey && !isModelReady) {
+      router.replace(`/content/${slug}`);
+    }
+  }, [params.sceneKey, isModelReady, router, slug]);
 
   const [state, setState] = useState<TourState>({
     payload: DEMO_HERITAGE_PAYLOAD,
@@ -83,8 +93,10 @@ export default function HeritageContentLayout({
         currentSceneKey={params.sceneKey ?? "s0"}
         status={state.status}
         error={state.error}
+        isModelReady={isModelReady}
       >
-        {params.sceneKey ? <HeritageViewer /> : null}
+        <HeritageCanvas landing={!params.sceneKey} onReady={onModelReady} />
+        {params.sceneKey && isModelReady ? <HeritageViewer /> : null}
         {children}
       </HeritageTourProvider>
     </div>

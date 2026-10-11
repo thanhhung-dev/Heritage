@@ -18,7 +18,7 @@ Thêm bản xem 3D đầu tiên vào giao diện tour hiện có, cài Three.js 
 
 ## Implementation Notes
 
-- Giữ layout/provider đang sở hữu viewer. Thêm canvas client và engine Three.js bên trong viewer, không dùng camera demo vì không tương ứng model thật.
+- Theo yêu cầu sửa của người dùng, canvas client và engine Three.js được mount trực tiếp ở layout `/content/[slug]`, không nằm trong viewer: tải ngay trên trang bắt đầu và giữ canvas khi vào scene hoặc quay lại trang bắt đầu. Viewer chỉ là lớp UI trong suốt, không chặn thao tác camera ở vùng trống. Không dùng camera demo vì không tương ứng model thật.
 - GLB 110765772 bytes, không có camera, có KHR_texture_basisu; cần KTX2Loader và decoder Basis.
 - R2 GET với Origin localhost chưa trả Access-Control-Allow-Origin. Dùng rewrite một đường dẫn cố định tới asset này, không proxy URL do người dùng cung cấp.
 - Tự fit camera theo bounding box nhưng không thay đổi transform model. Cần loading/error, resize, huỷ tải và giải phóng renderer/geometry/material/texture lúc unmount, kể cả StrictMode.
@@ -27,6 +27,7 @@ Thêm bản xem 3D đầu tiên vào giao diện tour hiện có, cài Three.js 
 - Tự review thay vì dùng subagent cho review thường lệ. Không thay đổi camera/database/audio hoặc các lỗi giao diện có sẵn.
 - Đã chạy lint, TypeScript và test hiện có trên Node 20.19.6: đạt, chỉ hai cảnh báo img cũ trong PortraitCard. Kiểm tra browser với WebGL/SwiftShader tải model R2 thật và decoder, xoay/zoom làm đổi hình canvas, đổi scene không thêm request GLB, resize 390px, menu, rời tour xoá canvas và không phát sinh pageerror.
 - Probe HTTP503 và WebGL không hỗ trợ hiển thị thông báo lỗi; loading hiển thị dung lượng model. Đã xem ảnh desktop/orbit/mobile/loading/error trong .amp/in/artifacts.
+- Kiểm tra lại sau sửa ownership: model tải tại `/content/tu-duc` trước Start; Start và browser Back giữ cùng canvas, không thêm request GLB; viewer có nền trong suốt và vùng trống nhận pointer tại canvas. Không có pageerror. Đã xem ảnh content loading/ready và scene desktop/mobile. Hai request ban đầu trong dev là do StrictMode, không phải do đổi route. API payload hiện lỗi kết nối nên landing vẫn có thông báo `Failed to fetch`, độc lập với model đã render.
 
 ## Review Triage Log
 

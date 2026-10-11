@@ -84,7 +84,7 @@
   height: 100%;
   position: fixed;
   inset: 0;
-  background-color: #1c1b1a;
+  pointer-events: none;
   color: var(--title);
 }
 
@@ -112,6 +112,12 @@
   color: #fff;
   text-align: center;
   pointer-events: none;
+}
+
+.threeStatusLanding {
+  top: auto;
+  bottom: 24px;
+  transform: translateX(-50%);
 }
 
 :where(.viewer) button {
@@ -160,6 +166,7 @@
 
 .viewer button,
 .viewer a {
+  pointer-events: auto;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 
@@ -2772,12 +2779,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 /* ─────────────────────────────────────────────────────────────
    Viewer Viewport (Three.js canvas)
    ───────────────────────────────────────────────────────────── */
-
-/* Warm dark backdrop behind the transparent WebGL canvas */
-.viewer {
-  background:
-    radial-gradient(120% 90% at 50% 30%, #2b2620 0%, #17130e 65%, #0d0b08 100%);
-}
 
 .viewerViewport {
   position: fixed;

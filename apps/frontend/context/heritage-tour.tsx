@@ -18,6 +18,7 @@ export interface HeritageTourContextValue {
   currentScene: HeritageScene | null;
   status: "demo" | "ready";
   error: string | null;
+  isModelReady: boolean;
 }
 
 export const HeritageTourContext = createContext<HeritageTourContextValue | null>(
@@ -30,6 +31,7 @@ interface HeritageTourProviderProps {
   currentSceneKey: string;
   status: "demo" | "ready";
   error: string | null;
+  isModelReady: boolean;
   children: ReactNode;
 }
 
@@ -39,6 +41,7 @@ export function HeritageTourProvider({
   currentSceneKey,
   status,
   error,
+  isModelReady,
   children,
 }: HeritageTourProviderProps) {
   const currentScene = useMemo(
@@ -54,8 +57,9 @@ export function HeritageTourProvider({
       currentScene,
       status,
       error,
+      isModelReady,
     }),
-    [payload, heritageSlug, currentSceneKey, currentScene, status, error]
+    [payload, heritageSlug, currentSceneKey, currentScene, status, error, isModelReady]
   );
 
   return (

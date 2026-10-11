@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { useHeritageTour } from "@/context/heritage-tour";
 import styles from "./content-shell.module.css";
@@ -10,13 +9,14 @@ import styles from "./content-shell.module.css";
  * `/content/{slug}` — landing screen.
  *
  * Renders IMMEDIATELY from the payload (demo data is the fallback until the
- * real backend payload arrives). The 3D scene loading (your team's part)
- * hooks into `useHeritageTour()`. When loading completes the user presses
+ * real backend payload arrives). The shared layout loads the 3D model.
+ * When loading and decoding complete the user presses
  * Start → navigates to `/content/{slug}/s0`.
  */
 export default function ContentLoadingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { payload, status, error } = useHeritageTour();
+  const router = useRouter();
+  const { payload, status, error, isModelReady } = useHeritageTour();
 
   return (
     <div className={styles.loading}>
@@ -38,9 +38,14 @@ export default function ContentLoadingPage() {
             : null}
       </p>
       {error ? <p className={styles.errorMessage}>{error}</p> : null}
-      <Link className={styles.startButton} href={`/content/${slug}/s0`}>
-        Bắt đầu trải nghiệm
-      </Link>
+      <button
+        type="button"
+        className={styles.startButton}
+        disabled={!isModelReady}
+        onClick={() => router.push(`/content/${slug}/s0`)}
+      >
+        {isModelReady ? "Bắt đầu trải nghiệm" : "Đang tải trải nghiệm 3D…"}
+      </button>
     </div>
   );
 }
