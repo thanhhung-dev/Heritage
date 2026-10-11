@@ -2247,11 +2247,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   padding: 0;
 }
 
-.ssPrevButton .ssButtonImg,
-.ssNextButton .ssButtonImg {
-  color: #ff9b2d;
-}
-
 .ssMiddleButton {
   width: 40px;
   height: 40px;
