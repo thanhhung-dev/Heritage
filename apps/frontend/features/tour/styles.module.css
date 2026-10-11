@@ -911,8 +911,13 @@
 }
 
 @keyframes logoFadeIn {
-  from { opacity: 0.9; }
-  to { opacity: 0.4; }
+  from {
+    opacity: 0.9;
+  }
+
+  to {
+    opacity: 0.4;
+  }
 }
 
 .tapestryLogo {
@@ -935,9 +940,20 @@
 }
 
 @keyframes logoTypeFadeOut {
-  0% { opacity: 0.65; max-width: 200px; }
-  90% { opacity: 0; max-width: 200px; }
-  100% { opacity: 0; max-width: 0; }
+  0% {
+    opacity: 0.65;
+    max-width: 200px;
+  }
+
+  90% {
+    opacity: 0;
+    max-width: 200px;
+  }
+
+  100% {
+    opacity: 0;
+    max-width: 0;
+  }
 }
 
 @media (max-width: 780px) {
@@ -1264,7 +1280,7 @@
   height: 40px;
   box-sizing: border-box;
   margin: 0 3px;
-  color: #fff;
+  color: rgb(255, 255, 255);
   background-color: #1c1b1acc;
   border-radius: 12px;
   text-align: center;
@@ -2806,7 +2822,7 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
     display: none;
   }
 
-  .systemControls > .navIconBg:not(.mobileHamburgerBtn),
+  .systemControls>.navIconBg:not(.mobileHamburgerBtn),
   .systemControls .additionalIcons {
     display: none !important;
   }

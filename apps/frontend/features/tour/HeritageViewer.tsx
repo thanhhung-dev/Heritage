@@ -26,6 +26,11 @@ import logoText from "./logo-text.svg";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
 import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
+import Fullscreen from "@/access/icons/full_screen.png";
+import FullScreenExit from "@/access/icons/full_screen_exit.png"
+import Captions from "@/access/icons/trans_icon.png"
+import sound_off from "@/access/icons/sound_off.png"
+import sound_on from "@/access/icons/sound_on.png"
 import styles from "./styles.module.css";
 
 export default function HeritageViewer() {
@@ -603,7 +608,13 @@ export default function HeritageViewer() {
                 onClick={() => setIsMuted(true)}
                 style={{ display: isMuted ? "none" : "flex" }}
               >
-                <SoundOutlined className={styles.navIcons} aria-hidden="true" />
+                <Image
+                  className={styles.navIcons}
+                  src={sound_on}
+                  alt="sound_on"
+                  height={24}
+                  width={24}
+                />
                 <div className={styles.navToolTip}>Sound Off</div>
               </button>
 
@@ -615,7 +626,13 @@ export default function HeritageViewer() {
                 onClick={() => setIsMuted(false)}
                 style={{ display: isMuted ? "flex" : "none" }}
               >
-                <MutedOutlined className={styles.navIcons} aria-hidden="true" />
+                <Image
+                  className={styles.navIcons}
+                  src={sound_off}
+                  alt="sound_off"
+                  height={24}
+                  width={24}
+                />
                 <div className={styles.navToolTip}>Sound On</div>
               </button>
 
@@ -631,14 +648,14 @@ export default function HeritageViewer() {
                   aria-pressed={ccOn}
                   onClick={() => setCcOn((v) => !v)}
                 >
-                  <span
+                  <Image
                     className={`${styles.navIcons} ${styles.captionIcon}`}
-                    id="ccIcon"
+                    src={Captions}
+                    alt="captions"
+                    width={24}
                     style={{ opacity: ccOn ? 1 : 0.5 }}
-                    aria-hidden="true"
-                  >
-                    CC
-                  </span>
+                    height={24}
+                  />
                   <div className={styles.navToolTip}>Closed Captions</div>
                 </button>
               </div>
@@ -651,10 +668,14 @@ export default function HeritageViewer() {
                 onClick={toggleFullscreen}
                 style={{ display: isFullscreen ? "none" : "flex" }}
               >
-                <FullscreenOutlined
+                <Image
                   className={styles.navIcons}
-                  aria-hidden="true"
+                  src={Fullscreen}
+                  alt="Fullscreen"
+                  width={24}
+                  height={24}
                 />
+
                 <div className={styles.navToolTip}>Fullscreen Mode</div>
               </button>
 
@@ -666,9 +687,12 @@ export default function HeritageViewer() {
                 onClick={toggleFullscreen}
                 style={{ display: isFullscreen ? "flex" : "none" }}
               >
-                <FullscreenExitOutlined
+                <Image
                   className={styles.navIcons}
-                  aria-hidden="true"
+                  src={FullScreenExit}
+                  alt="FullscreenExit"
+                  width={24}
+                  height={24}
                 />
                 <div className={styles.navToolTip}>Exit fullscreen Mode</div>
               </button>
