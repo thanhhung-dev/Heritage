@@ -65,6 +65,26 @@ export default function HeritageViewer() {
   const sceneTitle = (key: string) =>
     resolveSceneByKey(payload, key)?.title ?? key;
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const mobile = window.matchMedia("(max-width: 640px)");
+    const onResize = () => {
+      if (!mobile.matches) setMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        document.getElementById("mobileHamburgerBtn")?.focus();
+      }
+    };
+    mobile.addEventListener("change", onResize);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      mobile.removeEventListener("change", onResize);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
   // Fullscreen
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -569,6 +589,7 @@ export default function HeritageViewer() {
                 id="mobileHamburgerBtn"
                 aria-label="Menu"
                 aria-expanded={menuOpen}
+                aria-controls="mobileGlassMenu"
                 onClick={() => setMenuOpen((v) => !v)}
               >
                 <MenuOutlined className={styles.navIcons} aria-hidden="true" />
@@ -655,6 +676,52 @@ export default function HeritageViewer() {
           </div>
         </div>
       </div>
+
+      {menuOpen && (
+        <>
+          <button
+            type="button"
+            className={styles.mobileGlassBackdrop}
+            aria-label="Close menu"
+            onClick={() => setMenuOpen(false)}
+          />
+          <nav id="mobileGlassMenu" className={styles.mobileGlassMenu} aria-label="Mobile controls">
+            <Link
+              href={`/content/${slug}`}
+              className={styles.mobileGlassMenu_logo}
+              aria-label="Back to splash page"
+              onClick={() => setMenuOpen(false)}
+            >
+              <Image src={logoText} alt="Heritage" width={146} height={29} unoptimized />
+            </Link>
+            <ul className={styles.mobileGlassMenu_list}>
+              {[
+                { id: "tutBg", label: "Tutorial", icon: QuestionCircleOutlined, disabled: true },
+                { id: "resourcesIcon", label: "Resources", icon: FileTextOutlined, disabled: true },
+                { id: "shareIcon", label: "Share", icon: ShareAltOutlined, disabled: true },
+                { id: "settingsIcon", label: "Settings", icon: SettingOutlined, disabled: true },
+                { id: isMuted ? "navUnmute" : "navMute", label: isMuted ? "Sound On" : "Sound Off", icon: isMuted ? MutedOutlined : SoundOutlined, onClick: () => setIsMuted((value) => !value), pressed: isMuted },
+                { id: "ccIconBg", label: "Closed Captions", icon: null, onClick: () => setCcOn((value) => !value), pressed: ccOn },
+                { id: isFullscreen ? "exitFullScreenIcon" : "fullScreenIcon", label: isFullscreen ? "Exit fullscreen Mode" : "Fullscreen Mode", icon: isFullscreen ? FullscreenExitOutlined : FullscreenOutlined, onClick: () => { setMenuOpen(false); void toggleFullscreen(); } },
+              ].map(({ id, label, icon: Icon, disabled, onClick, pressed }) => (
+                <li key={id}>
+                  <button
+                    type="button"
+                    className={styles.mobileGlassMenu_item}
+                    data-btn-id={id}
+                    disabled={disabled}
+                    aria-pressed={pressed}
+                    onClick={onClick}
+                  >
+                    {Icon ? <Icon className={styles.mobileGlassMenu_icon} aria-hidden="true" /> : <span className={`${styles.mobileGlassMenu_icon} ${styles.captionIcon}`} aria-hidden="true">CC</span>}
+                    <span className={styles.mobileGlassMenu_label}>{label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </>
+      )}
 
       {/* Transient toast */}
       <div className={styles.toast} role="status" aria-live="polite" />
