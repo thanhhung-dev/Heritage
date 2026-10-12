@@ -1,116 +1,339 @@
 .shell {
   position: fixed;
   inset: 0;
-  background: #0b0d10;
-  color: #f5f1e8;
   overflow: hidden;
+  background: #090d0b;
+  color: #fff;
 }
 
-.loading,
-.error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 1rem;
-  text-align: center;
-  padding: 2rem;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid rgba(245, 241, 232, 0.2);
-  border-top-color: #d9a441;
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.splash {
+.loading {
   position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  color: #fff;
+  font-family: "Poppins", "Avenir Next", Avenir, sans-serif;
+}
+
+.splash,
+.scrim {
+  position: absolute;
+  z-index: -1;
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.splash {
   object-fit: cover;
-  opacity: 0.35;
+  object-position: center;
+}
+
+.scrim {
+  box-shadow: inset 0 30px 200px -77px rgba(0, 0, 0, 0.9);
   pointer-events: none;
-  z-index: 0;
+}
+
+.brand {
+  position: absolute;
+  top: clamp(16px, 3.3vh, 40px);
+  left: clamp(18px, 3vw, 58px);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+}
+
+.brandMark {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #f5b31b 0 48%, #ed4b27 49% 100%);
+  -webkit-mask: url("/figma/heritage-logo-mask.svg") center / contain no-repeat;
+  mask: url("/figma/heritage-logo-mask.svg") center / contain no-repeat;
+}
+
+.brandName {
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+
+.infoCard {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  display: flex;
+  box-sizing: border-box;
+  width: min(832px, calc(100% - 32px));
+  min-width: min(738px, calc(100% - 32px));
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 48px 22px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.38);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  text-align: center;
+}
+
+.region {
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  line-height: normal;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+  text-transform: uppercase;
 }
 
 .title {
-  position: relative;
-  z-index: 1;
-  font-size: 2rem;
-  font-weight: 700;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  margin: 0;
+  color: #fff;
+  font-size: clamp(28px, 2.3958vw, 46px);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.12;
+  text-align: center;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
 }
 
 .subtitle {
-  color: rgba(245, 241, 232, 0.85);
-  max-width: 40ch;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: clamp(14px, 0.8333vw, 16px);
+  font-weight: 400;
+  line-height: 24px;
+  text-align: center;
 }
 
-.mode {
+.description {
+  width: 100%;
+  margin: 20px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: clamp(13px, 0.78125vw, 15px);
+  font-weight: 400;
+  line-height: 24px;
+  text-align: center;
+}
+
+.languages {
+  display: flex;
+  width: min(320px, 100%);
+  height: 48px;
+  box-sizing: border-box;
+  margin: 16px auto 0;
+  padding: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(240, 232, 221, 0.3);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.language,
+.languageActive {
+  display: flex;
+  flex: 1 1 50%;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font: 500 14px/1 "Poppins", "Avenir Next", Avenir, sans-serif;
+  white-space: nowrap;
+}
+
+.languageActive {
+  background: rgba(240, 232, 221, 0.22);
+  color: #fff;
+}
+
+.language:focus-visible,
+.languageActive:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.85);
+  outline-offset: -2px;
+}
+
+.action {
+  position: absolute;
+  bottom: 6%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 300px;
+  height: 50px;
+  box-sizing: border-box;
+  overflow: hidden;
+  transform: translateX(-50%);
+  border: 1px solid rgba(240, 232, 221, 0.3);
+  border-radius: 30px;
+  color: #fef0d7;
+  text-decoration: none;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 6px 1px rgba(240, 232, 221, 0.2);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.loadingAction {
+  background: rgba(0, 0, 0, 0.2);
+  cursor: progress;
+}
+
+.loadingAction[aria-disabled="true"] {
+  cursor: progress;
+}
+
+.startAction {
+  background: linear-gradient(
+    99deg,
+    rgba(255, 255, 255, 0.12),
+    rgba(255, 255, 255, 0.08)
+  );
+  cursor: pointer;
+}
+
+.startAction:hover {
+  border-color: rgba(254, 240, 215, 0.52);
+  background: linear-gradient(
+    99deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.11)
+  );
+  box-shadow: 0 0 10px 1px rgba(240, 232, 221, 0.25);
+}
+
+.action:focus-visible {
+  outline: 2px solid #fef0d7;
+  outline-offset: 4px;
+}
+
+.loadingProgress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 36%;
+  border-radius: inherit;
+  background: rgba(240, 232, 221, 0.48);
+  box-shadow: 0 0 6px 1px rgba(240, 232, 221, 0.2);
+  animation: loading-progress 1.8s ease-in-out infinite alternate;
+}
+
+.actionLabel {
   position: relative;
   z-index: 1;
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
+  color: #fef0d7;
+  font-family: "Poppins", "Avenir Next", Avenir, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  line-height: 48px;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   text-transform: uppercase;
-  color: rgba(217, 164, 65, 0.9);
-  margin: 0;
 }
 
-.startButton {
-  margin-top: 0.5rem;
-  padding: 0.75rem 2.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #0b0d10;
-  background: #d9a441;
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.1s ease;
+@keyframes loading-progress {
+  from {
+    width: 30%;
+  }
+  to {
+    width: 42%;
+  }
 }
 
-.startButton:hover {
-  background: #e6b85c;
+@media (max-width: 780px) {
+  .infoCard {
+    width: min(832px, calc(100% - 24px));
+    min-width: min(738px, calc(100% - 24px));
+    padding: 22px clamp(20px, 5vw, 48px) 20px;
+  }
+
+  .title {
+    font-size: clamp(26px, 5vw, 40px);
+  }
+
+  .description {
+    font-size: 13px;
+    line-height: 21px;
+  }
+
+  .languages {
+    height: 44px;
+  }
+
+  .action {
+    width: min(300px, calc(100% - 48px));
+  }
 }
 
-.startButton:active {
-  transform: scale(0.98);
+@media (max-height: 780px) {
+  .infoCard {
+    bottom: 18%;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .region {
+    margin-bottom: 8px;
+  }
+
+  .description {
+    margin-top: 14px;
+    line-height: 1.45;
+  }
+
+  .languages {
+    height: 42px;
+    margin-top: 12px;
+  }
+
+  .action {
+    bottom: 5%;
+  }
 }
 
-.errorTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
+@media (max-width: 540px) {
+  .infoCard {
+    bottom: 17%;
+    padding: 18px 20px 18px;
+  }
+
+  .title {
+    font-size: clamp(24px, 7vw, 34px);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .description {
+    font-size: 12px;
+    line-height: 19px;
+  }
+
+  .language,
+  .languageActive {
+    font-size: 12px;
+  }
 }
 
-.errorMessage {
-  color: rgba(245, 241, 232, 0.7);
-  max-width: 50ch;
-  font-size: 0.9rem;
-}
-
-.backButton {
-  margin-top: 0.5rem;
-  padding: 0.5rem 1.5rem;
-  font-size: 0.9rem;
-  color: #f5f1e8;
-  background: transparent;
-  border: 1px solid rgba(245, 241, 232, 0.4);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.backButton:hover {
-  border-color: #f5f1e8;
+@media (prefers-reduced-motion: reduce) {
+  .loadingProgress {
+    animation: none;
+  }
 }
