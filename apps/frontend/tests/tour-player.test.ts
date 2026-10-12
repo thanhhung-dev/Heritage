@@ -95,3 +95,26 @@ test("model scene cũ tải trễ không xuất hiện sau khi thay scene", asyn
   assert.equal(scene.getObjectByName("old-detail"), undefined);
   controller.dispose();
 });
+
+test("highlight không có end_time giữ hiện, LoopRepeat seek theo thời gian narration", async () => {
+  const scene = new THREE.Scene();
+  const source = new THREE.Group();
+  const animated = new THREE.Object3D();
+  animated.name = "animated";
+  source.add(animated);
+  const clip = new THREE.AnimationClip("move", 2, [new THREE.NumberKeyframeTrack("animated.position[x]", [0, 2], [0, 8])]);
+  const loader = { load: async () => ({ scene: source, animations: [clip] }) } as unknown as ModelLoader;
+  const controller = createSceneHighlights(scene, loader, () => {});
+  await controller.set([{ ...highlight, startSeconds: 2.5, endSeconds: null, animation_type: "LoopRepeat" }]);
+  controller.update(3.25);
+  assert.equal(scene.getObjectByName("animated")!.position.x, 3);
+  controller.update(2.75);
+  assert.equal(scene.getObjectByName("animated")!.position.x, 1);
+  controller.update(100);
+  const visible: string[] = [];
+  scene.traverseVisible((object) => visible.push(object.name));
+  assert.ok(visible.includes("animated"));
+  assert.equal(scene.getObjectByName("animated")!.position.x, 6);
+  assert.equal(controller.update(100), false);
+  controller.dispose();
+});

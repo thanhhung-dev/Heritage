@@ -16,7 +16,7 @@ export function createTourEngine(
 ) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  renderer.domElement.setAttribute("aria-label", "Model 3D Lăng Tự Đức — kéo để xoay, cuộn để zoom");
+  renderer.domElement.setAttribute("aria-label", "Model 3D — kéo để xoay, cuộn để zoom");
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -89,6 +89,7 @@ export function createTourEngine(
     resetExplore() { explore.reset(); invalidate(); },
     exitExplore() { explore.exit(); highlights.show(false); highlights.select(null); invalidate(); },
     getCameraPose: cameraController.snapshot,
+    restoreCameraPose(pose: ReturnType<typeof cameraController.snapshot>) { cameraController.restore(pose); invalidate(); },
     applyCameraPreset(preset: HeritageCamera, zoom = false) {
       const applied = cameraController.applyPreset(preset, zoom);
       invalidate();

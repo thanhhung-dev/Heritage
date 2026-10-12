@@ -7,7 +7,8 @@ export function createInteractiveHighlights(scene: THREE.Scene) {
   const group = new THREE.Group();
   group.visible = false;
   scene.add(group);
-  const geometry = new THREE.SphereGeometry(0.35, 12, 8);
+  // Lens nguồn thường có scale 15–26; marker thử phải nhỏ để không che di tích.
+  const geometry = new THREE.SphereGeometry(0.025, 12, 8);
   const markers = new Map<number, THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>>();
   let items: HeritageInteractiveHighlight[] = [];
   const listeners = new Set<(item: HeritageInteractiveHighlight | null) => void>();

@@ -40,7 +40,7 @@ export default function HeritageViewer() {
   const router = useRouter();
   const { payload, currentScene } = useHeritageTour();
 
-  // Adapter narration/VTT sẽ truyền URL thật vào hook này khi payload có contract.
+  // Trang thử dùng narration/VTT từ tour.json; payload backend chưa có các URL này.
   const player = useTourPlayer();
   const { isPlaying, isMuted, setIsMuted, ccOn, setCcOn } = player;
   const progress = player.duration > 0 ? player.currentTime / player.duration * 100 : 0;
@@ -708,7 +708,8 @@ export default function HeritageViewer() {
       {/* Transient toast */}
       <div className={styles.toast} role="status" aria-live="polite" />
 
-      <ExploreControls mode={player.exploreMode} onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore} />
+      <ExploreControls mode={player.exploreMode} onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore}
+        initialMode={player.initialExploreMode} onCameraView={player.hasSceneData ? player.toggleCameraView : undefined} zoomed={player.zoomed} />
       <HighlightPanel highlight={player.selectedHighlight} onClose={player.closeHighlight} />
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}
     </div>

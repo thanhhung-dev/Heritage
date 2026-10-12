@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 function disposeModels(roots: Iterable<THREE.Object3D>) {
   const geometries = new Set<THREE.BufferGeometry>();
@@ -29,7 +30,8 @@ export function createModelLoader(renderer: THREE.WebGLRenderer) {
   const controller = new AbortController();
   const decoder = new KTX2Loader().setTranscoderPath("/three/basis/").setWorkerLimit(2);
   decoder.detectSupport(renderer);
-  const loader = new GLTFLoader().setKTX2Loader(decoder);
+  const draco = new DRACOLoader().setDecoderPath("/three/draco/").setWorkerLimit(2);
+  const loader = new GLTFLoader().setKTX2Loader(decoder).setDRACOLoader(draco);
   const cache = new Map<string, Promise<GLTF>>();
   const models = new Set<THREE.Object3D>();
   let disposed = false;
@@ -69,6 +71,7 @@ export function createModelLoader(renderer: THREE.WebGLRenderer) {
       models.clear();
       cache.clear();
       decoder.dispose();
+      draco.dispose();
     },
   };
 }

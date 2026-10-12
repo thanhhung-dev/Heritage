@@ -11,6 +11,7 @@ import type { TourEngine } from "@/features/tour/three/tour-engine";
 import { DEMO_HERITAGE_PAYLOAD } from "@/lib/demo-heritage";
 import { fetchHeritagePayload } from "@/lib/heritage";
 import type { HeritagePayload } from "@/types/heritage";
+import { TEST_TOUR } from "@/features/tour/tour-data";
 import styles from "./content-shell.module.css";
 
 type TourState = {
@@ -39,6 +40,7 @@ export default function HeritageContentLayout({
   const params = useParams<{ slug: string; sceneKey?: string }>();
   const router = useRouter();
   const slug = params.slug;
+  const fixture = slug === "tapestry-test" ? TEST_TOUR : null;
   const [engine, setEngine] = useState<TourEngine | null>(null);
   const isModelReady = engine !== null;
 
@@ -49,12 +51,13 @@ export default function HeritageContentLayout({
   }, [params.sceneKey, isModelReady, router, slug]);
 
   const [state, setState] = useState<TourState>({
-    payload: DEMO_HERITAGE_PAYLOAD,
-    status: "demo",
+    payload: fixture?.payload ?? DEMO_HERITAGE_PAYLOAD,
+    status: fixture ? "ready" : "demo",
     error: null,
   });
 
   useEffect(() => {
+    if (fixture) return;
     let cancelled = false;
 
     fetchHeritagePayload(slug)
@@ -84,19 +87,20 @@ export default function HeritageContentLayout({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, fixture]);
 
   return (
     <div className={styles.shell}>
       <HeritageTourProvider
-        payload={state.payload}
+        payload={fixture?.payload ?? state.payload}
         heritageSlug={slug}
         currentSceneKey={params.sceneKey ?? "s0"}
-        status={state.status}
-        error={state.error}
+        status={fixture ? "ready" : state.status}
+        error={fixture ? null : state.error}
         engine={engine}
+        playback={fixture?.playback}
       >
-        <HeritageCanvas landing={!params.sceneKey} onReady={setEngine} />
+        <HeritageCanvas landing={!params.sceneKey} onReady={setEngine} modelUrl={fixture?.modelUrl} />
         {params.sceneKey && isModelReady ? <HeritageViewer /> : null}
         {children}
       </HeritageTourProvider>

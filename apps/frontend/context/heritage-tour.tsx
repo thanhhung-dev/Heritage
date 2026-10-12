@@ -6,6 +6,7 @@ import { createContext, useContext, useMemo } from "react";
 import type { HeritagePayload, HeritageScene } from "@/types/heritage";
 import { resolveSceneByKey } from "@/lib/heritage";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
+import type { ScenePlayback } from "@/features/tour/tour-data";
 
 /**
  * React context that holds the full single-load heritage payload for the
@@ -21,6 +22,7 @@ export interface HeritageTourContextValue {
   error: string | null;
   isModelReady: boolean;
   engine: TourEngine | null;
+  scenePlayback: ScenePlayback | null;
 }
 
 export const HeritageTourContext = createContext<HeritageTourContextValue | null>(
@@ -34,6 +36,7 @@ interface HeritageTourProviderProps {
   status: "demo" | "ready";
   error: string | null;
   engine: TourEngine | null;
+  playback?: Record<string, ScenePlayback>;
   children: ReactNode;
 }
 
@@ -44,6 +47,7 @@ export function HeritageTourProvider({
   status,
   error,
   engine,
+  playback,
   children,
 }: HeritageTourProviderProps) {
   const currentScene = useMemo(
@@ -61,8 +65,9 @@ export function HeritageTourProvider({
       error,
       isModelReady: engine !== null,
       engine,
+      scenePlayback: playback?.[currentSceneKey] ?? null,
     }),
-    [payload, heritageSlug, currentSceneKey, currentScene, status, error, engine]
+    [payload, heritageSlug, currentSceneKey, currentScene, status, error, engine, playback]
   );
 
   return (
