@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CompassOutlined,
   FileTextOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
@@ -31,6 +30,9 @@ import sound_off from "@/access/icons/sound_off.png"
 import sound_on from "@/access/icons/sound_on.png"
 import Pause from "@/access/icons/pause.svg"
 import Play from "@/access/icons/play.svg"
+import { useTourPlayer } from "./player/useTourPlayer";
+import ExploreControls from "./components/ExploreControls";
+import HighlightPanel from "./components/HighlightPanel";
 import styles from "./styles.module.css";
 
 export default function HeritageViewer() {
@@ -38,15 +40,15 @@ export default function HeritageViewer() {
   const router = useRouter();
   const { payload, currentScene } = useHeritageTour();
 
-  // Playback / audio state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [elapsed, setElapsed] = useState("0:00");
-  const [total, setTotal] = useState("1:05");
+  // Adapter narration/VTT sẽ truyền URL thật vào hook này khi payload có contract.
+  const player = useTourPlayer();
+  const { isPlaying, isMuted, setIsMuted, ccOn, setCcOn } = player;
+  const progress = player.duration > 0 ? player.currentTime / player.duration * 100 : 0;
+  const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+  const elapsed = formatTime(player.currentTime);
+  const total = formatTime(player.duration);
 
   // UI state
-  const [ccOn, setCcOn] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -105,15 +107,8 @@ export default function HeritageViewer() {
     }
   };
 
-  // Media handlers (TODO: nối với audio/video ref)
-  const handleRestart = () => {
-    // TODO: audio.currentTime = 0
-    setIsPlaying(true);
-  };
-
-  const handleSeek = (_seconds: number) => {
-    // TODO: audio.currentTime += _seconds
-  };
+  const handleRestart = player.restart;
+  const handleSeek = player.seekBy;
 
   const scrollCarousel = (ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) => {
     ref.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
@@ -205,9 +200,10 @@ export default function HeritageViewer() {
         >
           <div className={styles.closedCaptions} id="closedCaptions">
             <div
-              className={`${styles.closedCaptionsText} ${styles.rightToLeftText}`}
+              className={styles.closedCaptionsText}
+              dir="auto"
               id="closedCaptionsText"
-            />
+            >{player.captionText}</div>
           </div>
         </div>
 
@@ -432,7 +428,9 @@ export default function HeritageViewer() {
                     id="ssPlayButton"
                     className={`${styles.ssMiddleButton} ${styles.ssPlayButton}`}
                     aria-label="Play"
-                    onClick={() => setIsPlaying(true)}
+                    disabled={!player.hasAudio}
+                    title={!player.hasAudio ? "Chưa có URL narration" : undefined}
+                    onClick={() => void player.play()}
                     style={{ display: isPlaying ? "none" : "block" }}
                   >
                     <Image
@@ -449,7 +447,7 @@ export default function HeritageViewer() {
                     id="ssPauseButton"
                     className={`${styles.ssMiddleButton} ${styles.ssPauseButton}`}
                     aria-label="Pause"
-                    onClick={() => setIsPlaying(false)}
+                    onClick={player.pause}
                     style={{ display: isPlaying ? "block" : "none" }}
                   >
                     <Image
@@ -462,49 +460,6 @@ export default function HeritageViewer() {
                     <div className={styles.ssNavToolTip}>Pause</div>
                   </button>
                 </div>
-
-                <button
-                  id="ssExploreButton"
-                  className={styles.ssExploreButton}
-                  style={{ display: "none", width: 50 }}
-                  aria-label="Explore in 3D"
-                >
-                  <CompassOutlined
-                    id="ssExploreButton_img"
-                    aria-hidden="true"
-                    className={`${styles.ssExploreImg} ${styles.ssPlaypenStill}`}
-                  />
-                  <div className={styles.ssExploreFootsteps} aria-hidden="true">
-                    <svg
-                      className={`${styles.footstep} ${styles.footstepL}`}
-                      width={14}
-                      height={32}
-                      viewBox="0 0 14 32"
-                      fill="#FEF0D7"
-                    >
-                      <path d="M3.26487 26.2322C3.65327 28.7649 5.99176 30.5248 8.53295 30.1969C11.1641 29.8574 12.9984 27.4162 12.5922 24.7945L12.196 22.2365C12 20.9716 10.8158 20.1051 9.55089 20.3011L4.83844 21.0311C3.55869 21.2294 2.68126 22.4266 2.87757 23.7066L3.26487 26.2322Z" />
-                      <path d="M5.04955 0.557214C-0.557487 2.09686 0.311432 11.627 1.72526 17.471C1.95668 18.4275 2.88435 19.0279 3.86028 18.901L9.79358 18.1292C10.5353 18.0327 11.1684 17.5354 11.3447 16.8085C12.72 11.1371 12.2236 -1.41273 5.04955 0.557214Z" />
-                    </svg>
-                    <svg
-                      className={`${styles.footstep} ${styles.footstepR}`}
-                      width={14}
-                      height={32}
-                      viewBox="0 0 14 32"
-                      fill="#FEF0D7"
-                    >
-                      <path d="M10.0672 26.2361C9.67876 28.7688 7.34027 30.5287 4.79908 30.2008C2.1679 29.8613 0.333633 27.4201 0.739791 24.7984L1.13608 22.2404C1.33203 20.9755 2.51627 20.109 3.78114 20.305L8.49359 21.035C9.77334 21.2333 10.6508 22.4305 10.4545 23.7105L10.0672 26.2361Z" />
-                      <path d="M8.27857 0.557214C13.8856 2.09686 13.0167 11.627 11.6029 17.471C11.3714 18.4275 10.4438 19.0279 9.46785 18.901L3.53455 18.1292C2.79285 18.0327 2.15972 17.5354 1.98346 16.8085C0.608173 11.1371 1.10449 -1.41273 8.27857 0.557214Z" />
-                    </svg>
-                  </div>
-                  <span
-                    id="ssExploreButton_text"
-                    className={styles.ssExploreButtonText}
-                    style={{ display: "none" }}
-                  >
-                    Explore
-                  </span>
-                  <div className={styles.ssNavToolTip}>Explore in 3D</div>
-                </button>
 
                 <div id="intButtonRing" />
               </div>
@@ -753,26 +708,9 @@ export default function HeritageViewer() {
       {/* Transient toast */}
       <div className={styles.toast} role="status" aria-live="polite" />
 
-      {/* Highlight details */}
-      <aside
-        className={styles.hotspotPopup}
-        hidden
-        aria-label="Highlight details"
-      >
-        <button
-          className={styles.hotspotPopupClose}
-          type="button"
-          aria-label="Close highlight"
-        >
-          &times;
-        </button>
-        <div className={styles.hotspotPopupMedia} />
-        <h2 id="hotspot-popup-title" />
-        <p id="hotspot-popup-text" />
-      </aside>
-
-      {/* Caption display */}
-      <div className={styles.captionDisplay} aria-live="polite" />
+      <ExploreControls mode={player.exploreMode} onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore} />
+      <HighlightPanel highlight={player.selectedHighlight} onClose={player.closeHighlight} />
+      {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}
     </div>
   );
 }

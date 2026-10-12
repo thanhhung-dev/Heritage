@@ -1,29 +1,12 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
-
-function disposeModel(root: THREE.Object3D) {
-  const geometries = new Set<THREE.BufferGeometry>();
-  const materials = new Set<THREE.Material>();
-  const textures = new Set<THREE.Texture>();
-  root.traverse((object) => {
-    if (!(object instanceof THREE.Mesh)) return;
-    geometries.add(object.geometry);
-    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-      materials.add(material);
-      for (const value of Object.values(material)) {
-        if (value instanceof THREE.Texture) textures.add(value);
-      }
-    }
-  });
-  geometries.forEach((geometry) => geometry.dispose());
-  materials.forEach((material) => material.dispose());
-  textures.forEach((texture) => {
-    texture.dispose();
-    if (texture.image instanceof ImageBitmap) texture.image.close();
-  });
-}
+import type { HeritageCamera, HeritageInteractiveHighlight } from "@/types/heritage";
+import { setupEnvironment } from "./environment";
+import { createModelLoader } from "./model-loader";
+import { createCameraController } from "./camera-controller";
+import { createExploreController, type ExploreMode } from "./explore-controller";
+import { createInteractiveHighlights } from "./interactive-highlights";
+import { createSceneHighlights, type TimedSceneHighlight } from "./scene-highlights";
 
 export function createTourEngine(
   host: HTMLDivElement,
@@ -37,78 +20,41 @@ export function createTourEngine(
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color("#1c1b1a");
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x72726b, 2));
-  const light = new THREE.DirectionalLight(0xffffff, 2);
-  light.position.set(1, 2, 1);
-  scene.add(light);
+  setupEnvironment(scene, renderer);
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.maxPolarAngle = Math.PI / 2;
+  const cameraController = createCameraController(camera, controls);
+  const explore = createExploreController(cameraController, controls);
+  const loader = createModelLoader(renderer);
+  const highlights = createInteractiveHighlights(scene);
   let needsRender = true;
+  const invalidate = () => { needsRender = true; };
+  const timedHighlights = createSceneHighlights(scene, loader, invalidate);
+  let playbackTime = 0;
+  let glbCameras: THREE.Camera[] = [];
+  let disposed = false;
   const resize = () => {
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
-    const oldHalfFov = Math.min(
-      THREE.MathUtils.degToRad(camera.fov) / 2,
-      Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect),
-    );
-    camera.aspect = width / height;
-    const newHalfFov = Math.min(
-      THREE.MathUtils.degToRad(camera.fov) / 2,
-      Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect),
-    );
-    // Giữ mức zoom tương đối khi đổi desktop/mobile, không crop model do aspect.
-    const ratio = Math.sin(oldHalfFov) / Math.sin(newHalfFov);
-    camera.position.sub(controls.target).multiplyScalar(ratio).add(controls.target);
-    controls.minDistance *= ratio;
-    controls.maxDistance *= ratio;
-    camera.updateProjectionMatrix();
+    explore.resize(cameraController.resize(width, height));
     renderer.setSize(width, height);
-    needsRender = true;
+    invalidate();
   };
   resize();
   const observer = new ResizeObserver(resize);
   observer.observe(host);
 
-  const controller = new AbortController();
-  const ktx2 = new KTX2Loader().setTranscoderPath("/three/basis/").setWorkerLimit(2);
-  ktx2.detectSupport(renderer);
-  const loader = new GLTFLoader().setKTX2Loader(ktx2);
-  let disposed = false;
-  let model: THREE.Object3D | null = null;
-
-  // Không dùng camera demo hoặc thay đổi transform của model thật.
   async function load() {
     try {
-      const response = await fetch(modelUrl, { signal: controller.signal });
-      if (!response.ok) throw new Error(`Không tải được model (HTTP ${response.status}).`);
-      const bytes = await response.arrayBuffer();
+      const gltf = await loader.load(modelUrl, () => onStatus("Đang giải mã model và texture…"));
       if (disposed) return;
-      onStatus("Đang giải mã model và texture…");
-      const gltf = await loader.parseAsync(bytes, modelUrl.slice(0, modelUrl.lastIndexOf("/") + 1));
-      if (disposed) {
-        disposeModel(gltf.scene);
-        return;
-      }
-      model = gltf.scene;
-      scene.add(model);
-      model.updateWorldMatrix(true, true);
-      const sphere = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere());
-      const verticalFov = THREE.MathUtils.degToRad(camera.fov);
-      const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
-      const distance = sphere.radius / Math.sin(Math.min(verticalFov, horizontalFov) / 2) * 1.15;
-      controls.target.copy(sphere.center);
-      camera.position.copy(sphere.center).addScaledVector(new THREE.Vector3(1, 0.8, 1).normalize(), distance);
-      camera.near = Math.max(sphere.radius / 1000, 0.01);
-      camera.far = distance + sphere.radius * 100;
-      camera.updateProjectionMatrix();
-      controls.minDistance = sphere.radius * 0.05;
-      controls.maxDistance = distance * 5;
-      controls.update();
-      needsRender = true;
+      scene.add(gltf.scene);
+      glbCameras = gltf.cameras;
+      cameraController.fit(gltf.scene);
+      invalidate();
       onStatus(null);
     } catch (error) {
       if (!disposed) onError(error);
@@ -116,23 +62,65 @@ export function createTourEngine(
   }
   void load();
   renderer.setAnimationLoop(() => {
-    // Model scan tĩnh: chỉ vẽ lại khi camera/canvas/model thay đổi.
-    if (controls.update() || needsRender) {
+    const cameraChanged = controls.update();
+    const highlightsChanged = timedHighlights.update(playbackTime);
+    if (cameraChanged || highlightsChanged || needsRender) {
       renderer.render(scene, camera);
       needsRender = false;
     }
   });
 
-  return () => {
-    disposed = true;
-    controller.abort();
-    observer.disconnect();
-    renderer.setAnimationLoop(null);
-    controls.dispose();
-    if (model) disposeModel(model);
-    ktx2.dispose();
-    renderer.dispose();
-    renderer.forceContextLoss();
-    renderer.domElement.remove();
+  const pointerStart = new THREE.Vector2();
+  const onPointerDown = (event: PointerEvent) => pointerStart.set(event.clientX, event.clientY);
+  const onPointerUp = (event: PointerEvent) => {
+    if (pointerStart.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 6) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    const point = new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(point, camera);
+    highlights.pick(raycaster);
+    invalidate();
+  };
+  renderer.domElement.addEventListener("pointerdown", onPointerDown);
+  renderer.domElement.addEventListener("pointerup", onPointerUp);
+
+  return {
+    enterExplore(mode: ExploreMode) { explore.enter(mode); highlights.show(true); invalidate(); },
+    resetExplore() { explore.reset(); invalidate(); },
+    exitExplore() { explore.exit(); highlights.show(false); highlights.select(null); invalidate(); },
+    getCameraPose: cameraController.snapshot,
+    applyCameraPreset(preset: HeritageCamera, zoom = false) {
+      const applied = cameraController.applyPreset(preset, zoom);
+      invalidate();
+      return applied;
+    },
+    useGLBCamera(name: string) {
+      const source = glbCameras.find((camera) => camera.name === name);
+      if (!(source instanceof THREE.PerspectiveCamera)) return false;
+      cameraController.useGLBCamera(source);
+      invalidate();
+      return true;
+    },
+    setInteractiveHighlights(items: HeritageInteractiveHighlight[]) { highlights.set(items); invalidate(); },
+    selectHighlight(id: number | null) { highlights.select(id); invalidate(); },
+    onHighlightSelect: highlights.subscribe,
+    setSceneHighlights: (items: TimedSceneHighlight[]) => timedHighlights.set(items),
+    setPlaybackTime: (seconds: number) => { playbackTime = seconds; },
+    dispose() {
+      disposed = true;
+      observer.disconnect();
+      renderer.setAnimationLoop(null);
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      highlights.dispose();
+      timedHighlights.dispose();
+      controls.dispose();
+      loader.dispose();
+      renderer.dispose();
+      renderer.forceContextLoss();
+      renderer.domElement.remove();
+    },
   };
 }
+
+export type TourEngine = ReturnType<typeof createTourEngine>;

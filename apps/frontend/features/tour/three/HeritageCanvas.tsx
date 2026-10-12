@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createTourEngine } from "./tour-engine";
+import { createTourEngine, type TourEngine } from "./tour-engine";
 import styles from "../styles.module.css";
 
 export default function HeritageCanvas({
@@ -9,7 +9,7 @@ export default function HeritageCanvas({
   onReady,
 }: {
   landing?: boolean;
-  onReady: () => void;
+  onReady: (engine: TourEngine) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<string | null>("Đang tải model 3D Tự Đức (111 MB)…");
@@ -22,10 +22,11 @@ export default function HeritageCanvas({
       setError(cause instanceof Error ? cause.message : "Không thể khởi tạo hoặc tải model 3D.");
     };
     try {
-      return createTourEngine(host, "/tour-assets/tuduc.glb", (message) => {
+      const engine = createTourEngine(host, "/tour-assets/tuduc.glb", (message) => {
         setStatus(message);
-        if (message === null) onReady();
+        if (message === null) onReady(engine);
       }, onError);
+      return () => engine.dispose();
     } catch (cause) {
       onError(cause);
     }

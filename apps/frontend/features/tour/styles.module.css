@@ -3201,3 +3201,55 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 .viewer:not(.no-hover) .stripControls .ssMiddleButton:hover .ssNavToolTip {
   display: block;
 }
+
+.exploreControls {
+  position: absolute;
+  top: 88px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.exploreControls button {
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  background: rgba(28, 27, 26, 0.85);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.exploreControls button[aria-pressed="true"] {
+  border-color: #ff9b2d;
+}
+
+.ssPlayButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hotspotPopup {
+  pointer-events: auto;
+}
+
+.playerError {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .exploreControls {
+    top: 140px;
+    right: 16px;
+    max-width: calc(100% - 32px);
+  }
+}
