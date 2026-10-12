@@ -5,8 +5,9 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from apps.backend.api import chat, graph, health, heritage, tour
-from apps.backend.core.config import validate_startup_config
+from apps.backend.api import chat, health, heritage
+from apps.backend.core.assets import configure_asset_policy
+from apps.backend.core.config import cors_origins, validate_startup_config
 from apps.backend.core.observability import (
     configure_logging,
     correlation_middleware,
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
     settings = validate_startup_config()
     configure_logging(settings.otel_service_name, settings.app_environment)
     engine = configure_database(settings.database_url)
+    configure_asset_policy(settings.r2_public_base_url, settings.r2_allowed_asset_hosts)
     tracing = setup_tracing(app, settings, engine)
     app.state.settings = settings
     try:
@@ -42,10 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,8 +54,6 @@ app.middleware("http")(correlation_middleware)
 
 app.include_router(health.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
-app.include_router(graph.router, prefix="/api")
-app.include_router(tour.router, prefix="/api")
 app.include_router(heritage.router, prefix="/api")
 
 
