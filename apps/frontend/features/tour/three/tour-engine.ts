@@ -25,6 +25,9 @@ export function createTourEngine(
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
+  // Giới hạn mặc định khi người dùng tự orbit. CameraController sẽ NỚI giá trị này
+  // khi áp preset tác giả nằm dưới mặt phẳng ngang (polar > 90°), nên đặt trước khi
+  // khởi tạo controller để controller lấy đây làm trần gốc.
   controls.maxPolarAngle = Math.PI / 2;
   const cameraController = createCameraController(camera, controls);
   const explore = createExploreController(cameraController, controls);
@@ -33,7 +36,19 @@ export function createTourEngine(
   let needsRender = true;
   const invalidate = () => { needsRender = true; };
   const timedHighlights = createSceneHighlights(scene, loader, invalidate);
+  /**
+   * Thời gian phát của narration (giây) mà engine tự tiến mỗi frame trong lúc
+   * audio đang chạy. React chỉ báo `currentTime` theo sự kiện `timeupdate` (~4Hz)
+   * nên nếu bám thẳng giá trị đó thì mọi thứ theo thời gian — camera, highlight —
+   * sẽ giật. Engine nội suy giữa hai lần React báo để mọi thứ mượt ở 60fps, và
+   * đồng bộ lại khi có giá trị mới (kể cả khi người dùng seek).
+   */
   let playbackTime = 0;
+  let playbackClock = 0;
+  let playbackSynced = 0;
+  let playbackPlaying = false;
+  /** Đồng bộ mốc thời gian từ React: đặt lại clock nội bộ. */
+  const syncPlayback = () => { playbackClock = playbackTime; playbackSynced = playbackTime; };
   let glbCameras: THREE.Camera[] = [];
   let disposed = false;
   const resize = () => {
@@ -61,10 +76,22 @@ export function createTourEngine(
     }
   }
   void load();
+  const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
-    const cameraChanged = controls.update();
-    const highlightsChanged = timedHighlights.update(playbackTime);
-    if (cameraChanged || highlightsChanged || needsRender) {
+    // Delta thời gian cho tween camera; kẹp lại tránh nhảy khi tab bị treo.
+    const delta = Math.min(clock.getDelta(), 0.1);
+    // Tiến đồng hồ phát nội bộ khi audio đang chạy, để camera/highlight mượt 60fps
+    // thay vì giật theo nhịp `timeupdate` (~4Hz) của thẻ audio.
+    if (playbackPlaying) playbackClock += delta;
+    const cameraFlying = cameraController.update(delta);
+    // Chuyển động bám timeline narration (chỉ chạy khi không có chuyến bay chuyển cảnh).
+    const timelineMoved = cameraController.updateTimeline(playbackClock);
+    // `controls.update()` là hàm nặng (dựng lại spherical + lookAt). Khi controller
+    // đang tự ghi pose thì nó không có gì để tính — bỏ hẳn, chỉ chạy lại lúc rảnh.
+    const cameraDriven = cameraFlying || timelineMoved;
+    const cameraChanged = cameraDriven ? false : controls.update();
+    const highlightsChanged = timedHighlights.update(playbackClock);
+    if (cameraDriven || cameraChanged || highlightsChanged || needsRender) {
       renderer.render(scene, camera);
       needsRender = false;
     }
@@ -95,6 +122,28 @@ export function createTourEngine(
       invalidate();
       return applied;
     },
+    /** Bay camera mượt tới preset trong `duration` giây (0 = đặt ngay). */
+    flyCameraPreset(preset: HeritageCamera, zoom = false, duration = 1.6) {
+      const applied = cameraController.flyToPreset(preset, zoom, duration);
+      invalidate();
+      return applied;
+    },
+    /**
+     * Bật camera bám timeline narration cho cảnh hiện tại: đặt về pose start rồi
+     * nội suy sang pose zoom theo tiến độ phát. `duration` là tổng thời lượng
+     * clip narration (giây).
+     */
+    startCameraTimeline(preset: HeritageCamera, duration: number) {
+      const started = cameraController.startTimeline(preset, duration);
+      invalidate();
+      return started;
+    },
+    /** Tắt camera bám timeline (chuyển cảnh, vào Explore, hoặc đặt pose thủ công). */
+    stopCameraTimeline() {
+      cameraController.stopTimeline();
+      invalidate();
+    },
+    isCameraFlying: cameraController.isFlying,
     useGLBCamera(name: string) {
       const source = glbCameras.find((camera) => camera.name === name);
       if (!(source instanceof THREE.PerspectiveCamera)) return false;
@@ -106,7 +155,17 @@ export function createTourEngine(
     selectHighlight(id: number | null) { highlights.select(id); invalidate(); },
     onHighlightSelect: highlights.subscribe,
     setSceneHighlights: (items: TimedSceneHighlight[]) => timedHighlights.set(items),
-    setPlaybackTime: (seconds: number) => { playbackTime = seconds; },
+    /**
+     * Đồng bộ thời gian phát từ React. `playing` quyết định đồng hồ nội bộ có tự
+     * tiến giữa các frame hay không; mọi lần gọi đều reset clock về đúng giá trị
+     * này nên seek/tua cũng được phản ánh ngay.
+     */
+    setPlaybackTime: (seconds: number, playing = false) => {
+      playbackTime = seconds;
+      playbackClock = seconds;
+      playbackSynced = seconds;
+      playbackPlaying = playing;
+    },
     dispose() {
       disposed = true;
       observer.disconnect();

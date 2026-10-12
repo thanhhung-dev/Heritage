@@ -33,8 +33,10 @@ import Play from "@/access/icons/play.svg"
 import { useTourPlayer } from "./player/useTourPlayer";
 import ExploreControls from "./components/ExploreControls";
 import HighlightPanel from "./components/HighlightPanel";
+import Replay from "@/access/icons/replay.svg"
+import skip_voicer from "@/access/icons/skip_voicer.svg"
 import styles from "./styles.module.css";
-
+import next_scene from "@/access/icons/next_scene.svg"
 export default function HeritageViewer() {
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
   const router = useRouter();
@@ -60,6 +62,90 @@ export default function HeritageViewer() {
   const scene = currentScene;
   const index = keys.indexOf(sceneKey);
 
+  // Vòng đời phát của scene hiện tại.
+  // "idle"  → vừa vào scene, chưa phát gì: hiện Replay + Skip Voiceover.
+  // "ended" → narration chạy hết (hoặc scene không có audio): hiện Prev + Next.
+  // Lưu kèm `key` = playbackKey để trạng thái cũ của scene trước KHÔNG thể rò rỉ:
+  // khi sang scene mới, `endedFor` khác key ⇒ tự động coi như "idle".
+  const playbackKey = `${slug}/${sceneKey}`;
+  const [endedScene, setEndedScene] = useState<string | null>(null);
+  // Scene này đã từng báo "chưa kết thúc" chưa — chặn cờ ended cũ lọt vào lúc mới vào.
+  const sceneSawNotEnded = useRef(false);
+  const lastPlaybackKey = useRef(playbackKey);
+  if (lastPlaybackKey.current !== playbackKey) {
+    lastPlaybackKey.current = playbackKey;
+    sceneSawNotEnded.current = false;
+  }
+
+  const hasAudio = player.hasAudio;
+  // Chỉ "ended" nếu trạng thái ended thuộc ĐÚNG scene hiện tại.
+  const isEnded = endedScene === playbackKey;
+
+  // Vừa vào scene: tạm hiện Prev Scene trong ~2 giây đầu, sau đó mới đổi sang
+  // Replay Scene. Cho người dùng thời gian ngắn để quay lại scene trước.
+  const ARRIVAL_PREV_MS = 2000;
+  const [showArrivalPrev, setShowArrivalPrev] = useState(true);
+
+  useEffect(() => {
+    // Vào scene mới: về "idle" ngay (bỏ trạng thái ended của scene trước).
+    setEndedScene(null);
+    sceneSawNotEnded.current = false;
+  }, [playbackKey]);
+
+  useEffect(() => {
+    // Chưa có audio (chưa gắn URL narration) thì coi như scene đã kết thúc.
+    if (!hasAudio) {
+      setEndedScene(playbackKey);
+      return;
+    }
+    // Bỏ qua cờ ended cũ của scene trước cho tới khi scene này tự báo chưa kết thúc.
+    if (!player.hasEnded) {
+      sceneSawNotEnded.current = true;
+      return;
+    }
+    if (sceneSawNotEnded.current) setEndedScene(playbackKey);
+  }, [hasAudio, player.hasEnded, playbackKey]);
+
+  // Đếm ngược 2 giây mỗi khi vào scene mới để tắt Prev tạm thời.
+  useEffect(() => {
+    setShowArrivalPrev(true);
+    const timer = window.setTimeout(() => setShowArrivalPrev(false), ARRIVAL_PREV_MS);
+    return () => window.clearTimeout(timer);
+  }, [playbackKey]);
+
+  // Tự động phát narration khi vào scene (overview s0 hoặc sau khi bấm Next/Prev).
+  // Trình duyệt chỉ cho autoplay sau một thao tác người dùng; ở đây người dùng đã
+  // bấm "Bắt đầu trải nghiệm" hoặc nút điều hướng nên thường đã có gesture.
+  // Nếu bị chặn, useNarration sẽ ghi lỗi — nuốt lỗi để không hiện cảnh báo.
+  const autoplayRef = useRef(player.play);
+  autoplayRef.current = player.play;
+  useEffect(() => {
+    if (!hasAudio) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (!cancelled) void autoplayRef.current().catch(() => {});
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [hasAudio, playbackKey]);
+
+  // Chuyển cảnh: màn đen mờ dần che lúc camera bay, rồi mở ra (kiểu CyArk Tapestry).
+  // Dùng CSS transition của .sceneFade qua thuộc tính opacity điều khiển bằng class.
+  const [sceneFading, setSceneFading] = useState(false);
+  useEffect(() => {
+    setSceneFading(true);
+    const timer = window.setTimeout(() => setSceneFading(false), 620);
+    return () => window.clearTimeout(timer);
+  }, [playbackKey]);
+
+  // Trong ~2s đầu ở scene mới: hiện Prev Scene. Sau đó (hoặc khi narration kết thúc
+  // và còn scene trước): hiện theo trạng thái ended.
+  const arrivalPrev = showArrivalPrev && index > 0 && !isEnded;
+  const showPrev = (isEnded && index > 0) || arrivalPrev;
+  const showNextScene = isEnded;
+
   const goPrev = () => {
     if (index > 0) router.push(`/content/${slug}/${keys[index - 1]}`);
   };
@@ -67,6 +153,22 @@ export default function HeritageViewer() {
     if (index >= 0 && index < keys.length - 1) {
       router.push(`/content/${slug}/${keys[index + 1]}`);
     }
+  };
+  // Replay = tua narration về đầu rồi phát lại, đồng thời đưa thanh điều khiển
+  // về lại pha "idle" (hiện Replay + Skip Voiceover + các nút 15s).
+  const handleReplay = () => {
+    // Chờ scene này báo chưa-kết-thúc trở lại rồi mới nhận tín hiệu ended mới.
+    sceneSawNotEnded.current = false;
+    setEndedScene(null);
+    // Replay xong thì nút phải là Replay, không phải Prev tạm thời.
+    setShowArrivalPrev(false);
+    player.restart();
+  };
+  // Skip Voiceover = nhảy narration tới cuối scene hiện tại (không chuyển scene).
+  // Đưa pha về "ended" để nút đổi thành Next Scene + hiện Prev.
+  const handleSkipVoiceover = () => {
+    setEndedScene(playbackKey);
+    player.skipVoiceover();
   };
 
   const sceneTitle = (key: string) =>
@@ -107,7 +209,6 @@ export default function HeritageViewer() {
     }
   };
 
-  const handleRestart = player.restart;
   const handleSeek = player.seekBy;
 
   const scrollCarousel = (ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) => {
@@ -184,7 +285,7 @@ export default function HeritageViewer() {
       </footer>
 
       {/* Scene-transition blackout */}
-      <div className={styles.sceneFade} aria-hidden="true" />
+      <div className={`${styles.sceneFade} ${sceneFading ? styles.sceneFadeActive : ""}`} aria-hidden="true" />
 
       {/* Bottom media strip */}
       <div
@@ -336,51 +437,33 @@ export default function HeritageViewer() {
 
             {/* Playback controls */}
             <div className={styles.playbackControls}>
-              {/* Previous scene */}
+              {/* Previous scene / Replay scene (cùng một nút) */}
               <button
-                tabIndex={0}
+                id="prev-replay"
                 className={`${styles.ssPrevButton} ${styles.ssButton} ${styles.ssButtonPC}`}
-                id="prev-o"
-                aria-label="Previous scene"
-                onClick={goPrev}
-                disabled={index <= 0}
-              >
-                <div className={styles.ssInnerButton} id="ssP-Prev">
-                  <LeftOutlined
-                    aria-hidden="true"
-                    className={styles.ssButtonImg}
-                  />
-                  <div className={styles.ssNavToolTip} id="ssPrevButtonTooltip">
-                    Previous Scene
-                  </div>
-                </div>
-              </button>
-
-              {/* Replay scene */}
-              <button
-                tabIndex={0}
-                className={`${styles.ssButton} ${styles.ssButtonPC}`}
-                id="ssP-Restart"
-                aria-label="Restart narration"
-                onClick={handleRestart}
+                aria-label={showPrev ? "Previous scene" : "Replay scene"}
+                onClick={showPrev ? goPrev : handleReplay}
               >
                 <div className={styles.ssInnerButton}>
-                  <ReloadOutlined
-                    aria-hidden="true"
-                    className={styles.ssButtonImg}
-                  />
-                  <div className={styles.ssNavToolTip} id="ssRestartTooltip">
-                    Replay Scene
+                  {showPrev ? (
+                    <LeftOutlined aria-hidden="true" className={styles.ssButtonImg} />
+                  ) : (
+                    <Image className={styles.ssButtonImg} src={Replay} alt="replay" aria-hidden="true" />
+                  )}
+                  <div className={styles.ssNavToolTip}>
+                    {showPrev ? "Previous Scene" : "Replay Scene"}
                   </div>
                 </div>
               </button>
 
-              {/* Back 15 */}
+              {/* Back 15 — làm mờ & khóa khi narration đã hết */}
               <button
                 tabIndex={0}
                 id="ssBack15"
-                className={`${styles.ssMiddleButton} ${styles.ssSeekButton}`}
+                className={`${styles.ssMiddleButton} ${styles.ssSeekButton} ${isEnded ? styles.ssControlDisabled : ""}`}
                 aria-label="Skip back 15 seconds"
+                aria-disabled={isEnded}
+                disabled={isEnded}
                 onClick={() => handleSeek(-15)}
               >
                 <svg
@@ -413,11 +496,12 @@ export default function HeritageViewer() {
                 <div className={styles.ssNavToolTip}>Back 15 seconds</div>
               </button>
 
-              {/* Play / Pause / Explore */}
+              {/* Play / Pause — làm mờ & khóa khi hết video */}
               <div
                 id="ssMiddleButtonPress"
-                className={styles.middleButtonGroup}
+                className={`${styles.middleButtonGroup} ${isEnded ? styles.ssControlDisabled : ""}`}
                 style={{ display: "flex" }}
+                aria-disabled={isEnded}
               >
                 <div
                   id="ssAudioButton"
@@ -464,12 +548,14 @@ export default function HeritageViewer() {
                 <div id="intButtonRing" />
               </div>
 
-              {/* Forward 15 */}
+              {/* Forward 15 — làm mờ & khóa khi narration đã hết */}
               <button
                 tabIndex={0}
                 id="ssForward15"
-                className={`${styles.ssMiddleButton} ${styles.ssSeekButton}`}
+                className={`${styles.ssMiddleButton} ${styles.ssSeekButton} ${isEnded ? styles.ssControlDisabled : ""}`}
                 aria-label="Skip forward 15 seconds"
+                aria-disabled={isEnded}
+                disabled={isEnded}
                 onClick={() => handleSeek(15)}
               >
                 <svg
@@ -506,33 +592,27 @@ export default function HeritageViewer() {
               <div className={styles.ringButtonGroup}>
                 <button
                   tabIndex={0}
-                  className={`${styles.ssNextButton} ${styles.ssButton} ${styles.ssButtonPC}`}
+                  className={`${styles.ssNextButton} ${styles.ssButton} ${styles.ssButtonPC} ${showNextScene ? styles.ssGlow : ""}`}
                   id="next-0"
-                  aria-label="Skip narration"
-                  onClick={goNext}
-                  disabled={index === -1 || index === keys.length - 1}
+                  aria-label={showNextScene ? "Next scene" : "Skip narration"}
+                  onClick={showNextScene ? goNext : handleSkipVoiceover}
+                  disabled={showNextScene && (index === -1 || index === keys.length - 1)}
                   style={{ filter: "brightness(1)", pointerEvents: "all" }}
                 >
                   <div
                     className={styles.ssInnerButton}
                     id="ssN-Next"
-                    style={{ display: "none" }}
+                    style={{ display: showNextScene ? "inline-flex" : "none" }}
                   >
-                    <RightOutlined
-                      aria-hidden="true"
-                      className={styles.ssButtonImg}
-                    />
+                    <Image src={next_scene} alt="next_scene" aria-hidden="true" className={styles.ssButtonImg} />
                     <div className={styles.ssNavToolTip}>Next Scene</div>
                   </div>
                   <div
                     className={styles.ssInnerButton}
                     id="ssN-Skip"
-                    style={{ display: "inline-flex" }}
+                    style={{ display: showNextScene ? "none" : "inline-flex" }}
                   >
-                    <StepForwardOutlined
-                      aria-hidden="true"
-                      className={styles.ssButtonImg}
-                    />
+                    <Image className={styles.ssButtonImg} src={skip_voicer} alt="skip_voicer" aria-hidden="true" />
                     <div className={styles.ssNavToolTip}>Skip Voiceover</div>
                   </div>
                 </button>

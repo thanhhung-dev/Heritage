@@ -43,6 +43,252 @@ test("camera giữ đúng preset dưới target và ngoài khoảng fit, kể c�
   }
 });
 
+test("bay camera tới preset: tiến dần rồi dừng đúng toạ độ, instant_move đặt ngay", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  const controller = createCameraController(camera, controls);
+  const preset = {
+    start_position: [10, 20, 30], start_target: [1, 2, 3],
+    zoom_position: [4, 5, 6], zoom_target: [0, 0, 0], node_name: null, instant_move: false,
+  } as Parameters<typeof controller.flyToPreset>[0];
+  try {
+    // Bay 1 giây: chưa tới đích sau nửa chặng.
+    assert.equal(controller.flyToPreset(preset, false, 1), true);
+    assert.equal(controller.isFlying(), true);
+    controller.update(0.5);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(10, 20, 30)) > 1e-6);
+    // Đi hết thời gian thì dừng đúng preset và hết bay.
+    controller.update(0.5);
+    assert.equal(controller.isFlying(), false);
+    camera.position.toArray().forEach((value, index) => assert.ok(Math.abs(value - [10, 20, 30][index]) < 1e-8));
+    assert.deepEqual(controls.target.toArray(), [1, 2, 3]);
+    // duration 0 (instant_move) đặt ngay, không bay.
+    assert.equal(controller.flyToPreset(preset, true, 0), true);
+    assert.equal(controller.isFlying(), false);
+    camera.position.toArray().forEach((value, index) => assert.ok(Math.abs(value - [4, 5, 6][index]) < 1e-6));
+    controls.target.toArray().forEach((value, index) => assert.ok(Math.abs(value - [0, 0, 0][index]) < 1e-6));
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("preset nằm DƯỚI mặt phẳng ngang (polar > 90°) không bị maxPolarAngle kẹp", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  // Mặc định engine: không cho camera xuống dưới target.
+  controls.maxPolarAngle = Math.PI / 2;
+  const controller = createCameraController(camera, controls);
+  // Camera thấp hơn target ⇒ polar ~96°, đúng kiểu 4/7 preset trong tour.json.
+  const position = [10, -2, 0];
+  const target = [0, 0, 0];
+  try {
+    assert.equal(
+      controller.applyPreset({ start_position: position, start_target: target } as Parameters<typeof controller.applyPreset>[0]),
+      true,
+    );
+    // Mô phỏng vòng lặp render: mỗi frame controls.update() chạy SAU khi áp pose.
+    for (let frame = 0; frame < 5; frame += 1) {
+      controls.update();
+      camera.position.toArray().forEach((value, index) => {
+        assert.ok(Math.abs(value - position[index]) < 1e-8, `frame ${frame}: trục ${index} = ${value}, mong đợi ${position[index]}`);
+      });
+    }
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("tween tiến đều từng frame dù controls.update() chạy giữa các frame (không đứng im)", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  controls.maxPolarAngle = Math.PI / 2;
+  const controller = createCameraController(camera, controls);
+  // Cả điểm đầu lẫn điểm cuối đều dưới mặt phẳng ngang.
+  const preset = {
+    start_position: [10, -2, 0], start_target: [0, 0, 0],
+    zoom_position: [0, -6, 8], zoom_target: [0, 0, 0], node_name: null, instant_move: false,
+  } as Parameters<typeof controller.flyToPreset>[0];
+  try {
+    assert.equal(controller.flyToPreset(preset, false, 1), true);
+    const seen: number[] = [];
+    // 12 frame × 0.1s = 1.2s > 1s ⇒ chuyến bay chắc chắn kết thúc (tránh sai số tích luỹ).
+    for (let frame = 0; frame < 12; frame += 1) {
+      controller.update(0.1);
+      controls.update();
+      seen.push(camera.position.y);
+    }
+    // Camera phải THỰC SỰ di chuyển: ít nhất một bước khác biệt đáng kể.
+    const distinct = new Set(seen.map((value) => value.toFixed(4)));
+    assert.ok(distinct.size > 3, `camera gần như đứng im, chỉ có ${distinct.size} vị trí khác nhau: ${seen.map((v) => v.toFixed(2)).join(", ")}`);
+    assert.equal(controller.isFlying(), false);
+    camera.position.toArray().forEach((value, index) => {
+      assert.ok(Math.abs(value - [10, -2, 0][index]) < 1e-8, `dừng sai toạ độ ở trục ${index}`);
+    });
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("camera bám timeline: đi từ start tới zoom rồi đứng yên, seek nhảy đúng vị trí", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  controls.maxPolarAngle = Math.PI / 2;
+  const controller = createCameraController(camera, controls);
+  const preset = {
+    start_position: [0, 0, 100], start_target: [0, 0, 0],
+    zoom_position: [0, 0, 10], zoom_target: [0, 0, 0],
+    node_name: null, instant_move: false,
+  } as Parameters<typeof controller.startTimeline>[0];
+  // Clip 20s ⇒ đoạn bay = 35% = 7s (lớn hơn mức sàn 4s).
+  try {
+    assert.equal(controller.startTimeline(preset, 20), true);
+    assert.equal(controller.hasTimeline(), true);
+    // Vào cảnh: đặt ngay tại pose start.
+    camera.position.toArray().forEach((value, index) => {
+      assert.ok(Math.abs(value - [0, 0, 100][index]) < 1e-8, "chưa đặt tại pose start");
+    });
+
+    // Nửa đoạn bay (3.5s) ⇒ camera phải ở khoảng giữa, không phải đầu cũng không phải cuối.
+    controller.updateTimeline(3.5);
+    const mid = camera.position.z;
+    assert.ok(mid < 100 - 1 && mid > 10 + 1, `giữa chặng z=${mid}, mong đợi trong khoảng (10, 100)`);
+
+    // Hết đoạn bay (>=7s) ⇒ tới hẳn pose zoom.
+    controller.updateTimeline(7);
+    assert.ok(Math.abs(camera.position.z - 10) < 1e-6, `hết đoạn bay z=${camera.position.z}, mong đợi 10`);
+    // Quá đoạn bay ⇒ giữ nguyên ở pose zoom, không vượt quá.
+    controller.updateTimeline(19);
+    assert.ok(Math.abs(camera.position.z - 10) < 1e-6, "vượt đoạn bay mà camera còn chạy tiếp");
+
+    // TUA VIDEO về giữa: camera phải nhảy tới đúng vị trí tương ứng (không chỉ tiến một chiều).
+    controller.updateTimeline(3.5);
+    assert.ok(Math.abs(camera.position.z - mid) < 1e-6, "seek ngược không đưa camera về đúng mốc cũ");
+    // Tua về 0 ⇒ về lại pose start.
+    controller.updateTimeline(0);
+    assert.ok(Math.abs(camera.position.z - 100) < 1e-6, "seek về 0 không đặt lại pose start");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("startTimeline: không có pose zoom thì trả false; thiếu thời lượng thì giữ pose start", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  controls.maxPolarAngle = Math.PI / 2;
+  const controller = createCameraController(camera, controls);
+  try {
+    // Không có zoom_position ⇒ không thể bật timeline, nhưng vẫn đặt pose start.
+    assert.equal(controller.startTimeline({
+      start_position: [0, 0, 50], start_target: [0, 0, 0], node_name: null, instant_move: false,
+    } as Parameters<typeof controller.startTimeline>[0], 12), false);
+    assert.equal(controller.hasTimeline(), false);
+    assert.ok(Math.abs(camera.position.z - 50) < 1e-8, "thiếu pose zoom mà không đặt pose start");
+
+    // Có đủ pose nhưng chưa biết thời lượng (0) ⇒ đứng yên ở start.
+    assert.equal(controller.startTimeline({
+      start_position: [0, 0, 50], start_target: [0, 0, 0],
+      zoom_position: [0, 0, 5], zoom_target: [0, 0, 0],
+      node_name: null, instant_move: false,
+    } as Parameters<typeof controller.startTimeline>[0], 0), false);
+    // Vẫn ở pose start dù ta có tiến thời gian.
+    controller.updateTimeline(10);
+    assert.ok(Math.abs(camera.position.z - 50) < 1e-8, "thời lượng chưa biết mà camera đã chạy");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("flyToPreset ghi đè timeline: bay chuyển cảnh không bị timeline kéo lại", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  controls.maxPolarAngle = Math.PI / 2;
+  const controller = createCameraController(camera, controls);
+  const timelinePreset = {
+    start_position: [0, 0, 100], start_target: [0, 0, 0],
+    zoom_position: [0, 0, 10], zoom_target: [0, 0, 0],
+    node_name: null, instant_move: false,
+  } as Parameters<typeof controller.startTimeline>[0];
+  try {
+    controller.startTimeline(timelinePreset, 20);
+    assert.equal(controller.hasTimeline(), true);
+    // Tua: timeline có tác dụng.
+    controller.updateTimeline(7);
+    assert.ok(Math.abs(camera.position.z - 10) < 1e-6);
+
+    // Bay tự do tới preset khác (mô phỏng focus marker) ⇒ timeline phải bị tắt.
+    controller.flyToPreset({
+      start_position: [0, 0, 300], start_target: [0, 0, 0],
+      node_name: null, instant_move: false,
+    } as Parameters<typeof controller.flyToPreset>[0], false, 0);
+    assert.equal(controller.hasTimeline(), false, "flyToPreset không tắt timeline");
+    // Timeline đã tắt ⇒ tiến thời gian không kéo camera đi nữa.
+    controller.updateTimeline(20);
+    assert.ok(Math.abs(camera.position.z - 300) < 1e-6, "timeline vẫn ghi đè sau khi bị thay bằng preset");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("không có aliasing vector tạm: bay tới đúng toạ độ preset, lệch 0", () => {
+  // Bug đã từng có: `allowPose` dùng chung một Vector3 tạm với tham số `position`
+  // đang truyền vào, nên nó ghi đè chính giá trị cần áp ⇒ camera dừng sai toạ độ
+  // (lệch đúng 10% quãng đường). Test này khoá hành vi đúng lại.
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  const controller = createCameraController(camera, controls);
+  const preset = {
+    start_position: [12.5, 34.25, -7.75], start_target: [-3.5, 8.125, 19.5],
+    zoom_position: [0, 0, 0], zoom_target: [0, 0, 0], node_name: null, instant_move: false,
+  } as Parameters<typeof controller.flyToPreset>[0];
+  try {
+    controller.flyToPreset(preset, false, 1);
+    controller.update(0.4);
+    controller.update(0.4);
+    controller.update(0.4);
+    assert.equal(controller.isFlying(), false);
+    // Sai số phải ở mức nhiễu số thực, KHÔNG được lệch theo tỉ lệ quãng đường.
+    camera.position.toArray().forEach((value, index) => {
+      assert.ok(
+        Math.abs(value - [12.5, 34.25, -7.75][index]) < 1e-9,
+        `trục ${index}: nhận ${value}, mong đợi ${[12.5, 34.25, -7.75][index]}`,
+      );
+    });
+    controls.target.toArray().forEach((value, index) => {
+      assert.ok(Math.abs(value - [-3.5, 8.125, 19.5][index]) < 1e-9, `target trục ${index} sai`);
+    });
+  } finally {
+    controls.dispose();
+  }
+});
+
 test("VTT đọc giờ/phút, cue ID, settings, nhiều dòng và bỏ cue sai", () => {
   assert.deepEqual(parseVtt(`WEBVTT\r\n\r\nNOTE ghi chú\r\nkhông phải cue\r\n\r\nintro\r\n00:01.250 --> 00:03.500 align:start\r\nDòng một\r\n<b>Dòng hai</b>\r\n\r\n01:02:03.004 --> 01:02:05.006\r\nCuối\r\n\r\n00:08.000 --> 00:07.000\r\nSai thứ tự`), [
     { start: 1.25, end: 3.5, text: "Dòng một\nDòng hai" },

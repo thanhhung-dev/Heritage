@@ -1430,13 +1430,11 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 .playbackControls {
-  display: grid;
-  /* Play/Pause occupies the fourth slot; the empty seventh balances Replay. */
-  grid-template-columns: repeat(7, 40px);
+  display: flex;
   align-items: center;
-  justify-items: center;
+  justify-content: center;
+  justify-self: center;
   gap: 6px;
-  width: max-content;
 }
 
 .playbackControls button {
@@ -2234,6 +2232,11 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   border-radius: 9px 13px 13px 9px;
 }
 
+/* Nhịp sáng nhấp nháy cho nút Next Scene (khi đã hết video / bấm Skip Voiceover). */
+.ssGlow {
+  animation: nextBtnGlow 2.5s ease-in-out infinite;
+}
+
 .ssPrevButton {
   width: 40px;
   height: 40px;
@@ -2297,6 +2300,25 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   outline: none;
   background-color: #302e2ce6;
   box-shadow: 0 0 0 1.2px rgba(255, 255, 255, .3);
+}
+
+/* Điều khiển phát (15s, Play/Pause) khi narration đã hết:
+   vẫn hiện nhưng mờ đi và không cho click. */
+.ssControlDisabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+
+.ssControlDisabled * {
+  pointer-events: none;
+}
+
+/* Giữ nguyên độ mờ khi hover, không nhấc sáng như nút thường. */
+.ssControlDisabled:hover,
+.ssControlDisabled.ssMiddleButton:hover {
+  background-color: #1c1b1acc;
+  box-shadow: none;
 }
 
 /* Slide in from left — for navbar tiles */
@@ -2977,6 +2999,14 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   pointer-events: none;
   opacity: 0;
   z-index: 40;
+  /* Mở ra chậm hơn một chút để lộ cảnh mới mượt. */
+  transition: opacity 420ms ease-out;
+}
+
+/* Che màn (fade in) nhanh hơn lúc mở. */
+.sceneFadeActive {
+  opacity: 1;
+  transition: opacity 260ms ease-in;
 }
 
 /* Media-strip controls with no data to back them in this demo. */
