@@ -87,7 +87,9 @@ export function createInteractiveHighlights(scene: THREE.Scene) {
     show: (visible: boolean) => { group.visible = visible; },
     pick(raycaster: THREE.Raycaster) {
       if (!group.visible) return;
-      const hit = raycaster.intersectObjects([...markers.values()])[0];
+      // Bỏ các góc quad trong suốt; chỉ vòng badge/glow nhận click.
+      const hit = raycaster.intersectObjects([...markers.values()]).find(({ uv }) =>
+        uv && Math.hypot(uv.x - 0.5, uv.y - 0.5) < 124 / 256);
       if (hit) select(hit.object.userData.highlightId as number);
     },
     subscribe(listener: (item: HeritageInteractiveHighlight | null) => void) {

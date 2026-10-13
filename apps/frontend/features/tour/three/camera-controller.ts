@@ -73,9 +73,16 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
    * hoặc timeline, KHÔNG gọi mỗi frame.
    */
   const syncControls = () => {
+    const position = camera.position.clone();
+    const target = controls.target.clone();
+    const rotation = camera.quaternion.clone();
     const damping = controls.enableDamping;
     controls.enableDamping = false;
     controls.update();
+    // update xóa quán tính cũ nhưng không được đẩy camera lệch khỏi pose vừa chốt.
+    camera.position.copy(position);
+    controls.target.copy(target);
+    camera.quaternion.copy(rotation);
     controls.enableDamping = damping;
   };
   /** Nới trần polar để pose chỉ định luôn nằm trong vùng orbit hợp lệ. */
