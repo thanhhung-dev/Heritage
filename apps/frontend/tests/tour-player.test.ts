@@ -141,7 +141,7 @@ test("tween tiến đều từng frame dù controls.update() chạy giữa các 
   }
 });
 
-test("camera bám timeline: đi từ start tới zoom rồi đứng yên, seek nhảy đúng vị trí", () => {
+test("camera bám toàn bộ audio 6s: tiến đều, pause giữ pose và seek nhảy đúng vị trí", () => {
   const document = new EventTarget();
   const element = Object.assign(new EventTarget(), {
     style: {}, ownerDocument: document, getRootNode: () => document,
@@ -155,33 +155,76 @@ test("camera bám timeline: đi từ start tới zoom rồi đứng yên, seek n
     zoom_position: [0, 0, 10], zoom_target: [0, 0, 0],
     node_name: null, instant_move: false,
   } as Parameters<typeof controller.startTimeline>[0];
-  // Clip 20s ⇒ đoạn bay = 35% = 7s (lớn hơn mức sàn 4s).
+  // Clip 6s: mỗi 1.5s phải đi thêm đúng một phần tư quãng đường.
   try {
-    assert.equal(controller.startTimeline(preset, 20), true);
+    assert.equal(controller.startTimeline(preset, 6), true);
     assert.equal(controller.hasTimeline(), true);
     // Vào cảnh: đặt ngay tại pose start.
     camera.position.toArray().forEach((value, index) => {
       assert.ok(Math.abs(value - [0, 0, 100][index]) < 1e-8, "chưa đặt tại pose start");
     });
 
-    // Nửa đoạn bay (3.5s) ⇒ camera phải ở khoảng giữa, không phải đầu cũng không phải cuối.
-    controller.updateTimeline(3.5);
+    controller.updateTimeline(1.5);
+    assert.ok(Math.abs(camera.position.z - 77.5) < 1e-8);
+    controller.updateTimeline(3);
     const mid = camera.position.z;
-    assert.ok(mid < 100 - 1 && mid > 10 + 1, `giữa chặng z=${mid}, mong đợi trong khoảng (10, 100)`);
+    assert.ok(Math.abs(mid - 55) < 1e-8, `giữa audio z=${mid}, mong đợi 55`);
+    controller.updateTimeline(3);
+    assert.equal(camera.position.z, mid, "pause không được làm camera tiến tiếp");
+    controller.updateTimeline(4.5);
+    assert.ok(Math.abs(camera.position.z - 32.5) < 1e-8, "camera đến đích trước khi audio hết");
 
-    // Hết đoạn bay (>=7s) ⇒ tới hẳn pose zoom.
-    controller.updateTimeline(7);
+    // Audio kết thúc ⇒ tới hẳn pose zoom.
+    controller.updateTimeline(6);
     assert.ok(Math.abs(camera.position.z - 10) < 1e-6, `hết đoạn bay z=${camera.position.z}, mong đợi 10`);
     // Quá đoạn bay ⇒ giữ nguyên ở pose zoom, không vượt quá.
     controller.updateTimeline(19);
     assert.ok(Math.abs(camera.position.z - 10) < 1e-6, "vượt đoạn bay mà camera còn chạy tiếp");
 
     // TUA VIDEO về giữa: camera phải nhảy tới đúng vị trí tương ứng (không chỉ tiến một chiều).
-    controller.updateTimeline(3.5);
+    controller.updateTimeline(3);
     assert.ok(Math.abs(camera.position.z - mid) < 1e-6, "seek ngược không đưa camera về đúng mốc cũ");
     // Tua về 0 ⇒ về lại pose start.
     controller.updateTimeline(0);
     assert.ok(Math.abs(camera.position.z - 100) < 1e-6, "seek về 0 không đặt lại pose start");
+    // Audio ngắn không được bị kéo dài tới sàn 4s cũ.
+    controller.startTimeline(preset, 2);
+    controller.updateTimeline(2);
+    assert.ok(Math.abs(camera.position.z - 10) < 1e-8);
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("metadata timeline đến khi đang chuyển cảnh không làm camera nhảy hoặc hủy chuyến bay", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  const controller = createCameraController(camera, controls);
+  const preset = {
+    start_position: [12, 8, 40], start_target: [2, 3, 4],
+    zoom_position: [6, 4, 10], zoom_target: [-2, 1, 3],
+    node_name: null, instant_move: false,
+  } as Parameters<typeof controller.startTimeline>[0];
+  try {
+    camera.position.set(-20, 15, 80);
+    controller.flyToPreset(preset, false, 1.6);
+    controller.update(0.4);
+    const beforeMetadata = controller.snapshot();
+    assert.equal(controller.startTimeline(preset, 6), true);
+    assert.deepEqual(camera.position.toArray(), beforeMetadata.position.toArray());
+    controller.updateTimeline(0);
+    assert.deepEqual(camera.position.toArray(), beforeMetadata.position.toArray());
+    controller.update(0.4);
+    assert.ok(camera.position.distanceTo(beforeMetadata.position) > 1);
+    controller.update(0.8);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(12, 8, 40)) < 1e-8);
+    controller.updateTimeline(3);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(9, 6, 25)) < 1e-8);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(0, 2, 3.5)) < 1e-8);
   } finally {
     controls.dispose();
   }
