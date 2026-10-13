@@ -114,9 +114,9 @@ export function createTourEngine(
   return {
     enterExplore(mode: ExploreMode) { explore.enter(mode); highlights.show(true); invalidate(); },
     resetExplore() { explore.reset(); invalidate(); },
-    exitExplore() { explore.exit(); highlights.show(false); highlights.select(null); invalidate(); },
+    exitExplore(duration = 0) { explore.exit(duration); highlights.show(false); highlights.select(null); invalidate(); },
     getCameraPose: cameraController.snapshot,
-    restoreCameraPose(pose: ReturnType<typeof cameraController.snapshot>) { cameraController.restore(pose); invalidate(); },
+    restoreCameraPose(pose: ReturnType<typeof cameraController.snapshot>, duration = 0) { cameraController.restore(pose, duration); invalidate(); },
     applyCameraPreset(preset: HeritageCamera, zoom = false) {
       const applied = cameraController.applyPreset(preset, zoom);
       invalidate();

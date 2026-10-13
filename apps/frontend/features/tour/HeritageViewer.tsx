@@ -162,6 +162,7 @@ export default function HeritageViewer() {
     setEndedScene(null);
     // Replay xong thì nút phải là Replay, không phải Prev tạm thời.
     setShowArrivalPrev(false);
+    if (player.exploreMode) player.exitExplore();
     player.restart();
   };
   // Skip Voiceover = nhảy narration tới cuối scene hiện tại (không chuyển scene).
@@ -787,10 +788,10 @@ export default function HeritageViewer() {
 
       {/* Transient toast */}
       <div className={styles.toast} role="status" aria-live="polite" />
-      <ExploreControls interactive={player.interactive} mode={player.exploreMode}
+      {isEnded && <ExploreControls interactive={player.interactive} mode={player.exploreMode}
         onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore}
         initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}
-        selectedHighlightId={player.selectedHighlight?.id} />
+        selectedHighlightId={player.selectedHighlight?.id} />}
       <HighlightPanel highlight={player.selectedHighlight} onClose={player.closeHighlight} />
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}
     </div>

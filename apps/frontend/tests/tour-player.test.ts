@@ -101,8 +101,8 @@ test("thoát Explore bay về góc trước đó, không nhảy và có thể h�
     explore.exit(1.2);
     assert.deepEqual(camera.position.toArray(), [-5, 6, 11]);
     controller.update(0.6);
-    assert.deepEqual(camera.position.toArray(), [7, 9, 2]);
-    assert.deepEqual(controls.target.toArray(), [0.5, 2.5, 1.5]);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(7, 9, 2)) < 1e-8);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(0.5, 2.5, 1.5)) < 1e-8);
     controller.update(0.6);
     assert.ok(camera.position.distanceTo(new THREE.Vector3(19, 12, -7)) < 1e-8);
     assert.ok(controls.target.distanceTo(new THREE.Vector3(2, 3, -1)) < 1e-8);
@@ -113,7 +113,7 @@ test("thoát Explore bay về góc trước đó, không nhảy và có thể h�
     const stopped = controller.snapshot();
     controller.stopTimeline();
     controller.update(2);
-    assert.deepEqual(camera.position.toArray(), stopped.position.toArray());
+    assert.ok(camera.position.distanceTo(stopped.position) < 1e-8);
   } finally {
     controls.dispose();
   }

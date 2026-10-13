@@ -22,9 +22,9 @@ export function createExploreController(camera: CameraController, controls: Orbi
     resize(ratio: number) {
       if (entry) entry.position.sub(entry.target).multiplyScalar(ratio).add(entry.target);
     },
-    exit() {
+    exit(duration = 0) {
       if (entry) {
-        camera.restore(entry);
+        camera.restore(entry, duration);
         controls.maxPolarAngle = entryMaxPolarAngle;
         entry = null;
       }

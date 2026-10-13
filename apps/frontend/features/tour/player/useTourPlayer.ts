@@ -54,7 +54,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       setSelectedHighlight(item);
       if (item && scenePlayback && currentScene && item.cam_pos && item.cam_target) {
         highlightEntry.current ??= engine.getCameraPose();
-        engine.applyCameraPreset({ ...currentScene.camera, start_position: item.cam_pos, start_target: item.cam_target });
+        engine.flyCameraPreset({ ...currentScene.camera, start_position: item.cam_pos, start_target: item.cam_target }, false, 1.2);
       }
       if (!item) highlightEntry.current = null;
     });
@@ -83,7 +83,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
 
   function applyInteractiveCamera() {
     if (interactive?.cam_pos && interactive.cam_target && currentScene) {
-      engine?.applyCameraPreset({ ...currentScene.camera, start_position: interactive.cam_pos, start_target: interactive.cam_target });
+      engine?.flyCameraPreset({ ...currentScene.camera, start_position: interactive.cam_pos, start_target: interactive.cam_target }, false, 1.2);
     }
   }
 
@@ -117,9 +117,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       if (exploreMode === null) applyInteractiveCamera();
       setExploreMode(mode);
     },
-    resetExplore() { engine?.selectHighlight(null); engine?.resetExplore(); applyInteractiveCamera(); },
+    resetExplore() { engine?.selectHighlight(null); applyInteractiveCamera(); },
     exitExplore() {
-      engine?.exitExplore();
+      engine?.exitExplore(1.2);
       setExploreMode(null);
       timelineSceneKey.current = null;
       // Trả quyền lại cho timeline khi rời Explore (bỏ qua cảnh instant_move và
@@ -134,7 +134,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
     closeHighlight() {
       const pose = highlightEntry.current;
       engine?.selectHighlight(null);
-      if (pose) engine?.restoreCameraPose(pose);
+      if (pose) engine?.restoreCameraPose(pose, 1.2);
     },
     selectHighlight(id: number) { engine?.selectHighlight(id); },
     restart() { void narration.replay(); },

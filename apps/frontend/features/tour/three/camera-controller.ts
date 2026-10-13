@@ -91,7 +91,20 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     }
     controls.maxPolarAngle = polarCeiling;
   };
-  const restore = (pose: ReturnType<typeof snapshot>) => {
+  const restore = (pose: ReturnType<typeof snapshot>, duration = 0) => {
+    timeline = null;
+    flight = null;
+    if (duration > 0) {
+      const current = snapshot();
+      flight = {
+        fromPosition: current.position, fromTarget: current.target, fromUp: current.up, fromFov: current.fov,
+        toPosition: pose.position.clone(), toTarget: pose.target.clone(), toUp: pose.up.clone(), toFov: pose.fov,
+        duration, elapsed: 0,
+      };
+      allowPose(current.position, current.target);
+      allowPose(pose.position, pose.target);
+      return;
+    }
     allowPose(pose.position, pose.target);
     camera.position.copy(pose.position);
     controls.target.copy(pose.target);
@@ -234,21 +247,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       const target = toVector3(zoom ? preset.zoom_target : preset.start_target);
       if (!position || !target) return false;
       const to = { position, target, up: new THREE.Vector3(0, 1, 0), fov: camera.fov };
-      if (duration <= 0) {
-        flight = null;
-        restore(to);
-        return true;
-      }
-      const current = snapshot();
-      flight = {
-        fromPosition: current.position, fromTarget: current.target, fromUp: current.up, fromFov: current.fov,
-        toPosition: to.position, toTarget: to.target, toUp: to.up, toFov: to.fov,
-        duration, elapsed: 0,
-      };
-      // Trần polar phải rộng đủ cho cả điểm xuất phát lẫn đích, nếu không
-      // `controls.update()` kẹp camera về mặt phẳng ngang giữa chuyến bay.
-      allowPose(current.position, current.target);
-      allowPose(to.position, to.target);
+      restore(to, duration);
       return true;
     },
     /**
