@@ -79,6 +79,7 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
     renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
       payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
       currentScene, status: "ready", error: null, isModelReady: true,
+      modelError: null,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
     } }, createElement(Probe)));
     return result;

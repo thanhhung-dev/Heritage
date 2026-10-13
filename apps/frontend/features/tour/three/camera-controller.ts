@@ -14,64 +14,24 @@ const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2
 export function createCameraController(camera: THREE.PerspectiveCamera, controls: OrbitControls) {
   const snapshot = () => ({ position: camera.position.clone(), target: controls.target.clone(), up: camera.up.clone(), fov: camera.fov });
   let home = snapshot();
-  // Trạng thái bay camera giữa hai preset. Khi đang bay, OrbitControls tạm khóa
-  // để người dùng không kéo lệch hướng; xong thì mở lại.
   let flight: {
     fromPosition: THREE.Vector3; fromTarget: THREE.Vector3; fromUp: THREE.Vector3; fromFov: number;
     toPosition: THREE.Vector3; toTarget: THREE.Vector3; toUp: THREE.Vector3; toFov: number;
     duration: number; elapsed: number;
   } | null = null;
-  /**
-   * Chuyển động camera BÁM THEO TIMELINE narration: camera nội suy giữa pose
-   * `start` và pose `zoom` theo tiến độ phát của clip, nên tua video (seek) là
-   * camera nhảy tới đúng vị trí tương ứng. `null` khi cảnh không bật chế độ này
-   * hoặc khi người dùng đang ở chế độ Explore (lúc đó trả quyền cho người dùng).
-   */
   let timeline: {
     from: ReturnType<typeof snapshot>;
     to: ReturnType<typeof snapshot>;
-    /** Giây: hết đoạn này camera đã tới hẳn pose `to`. */
     flySeconds: number;
-    /** Vị trí đã áp ở lần cập nhật trước, để bỏ qua frame không đổi. */
     lastTime: number;
-    /** Đã tới pose `to` chưa — khi rồi thì thôi áp pose mỗi frame. */
     settled: boolean;
   } | null = null;
-  /**
-   * Góc cực (polar) tối đa cho phép khi orbit. `OrbitControls` mặc định chặn
-   * `maxPolarAngle = π/2` (không cho camera xuống dưới mặt phẳng ngang của target),
-   * nhưng preset tác giả trong tour.json có cảnh đặt camera THẤP HƠN target
-   * (polar > 90°). Nếu để clamp đó bật, `controls.update()` sẽ ép camera về đúng
-   * mặt phẳng π/2 ở MỖI frame — camera "đứng im" dù tween vẫn chạy.
-   * Vì vậy controller phải tự nới giới hạn này theo preset đã áp.
-   */
   let polarCeiling = controls.maxPolarAngle;
-  /**
-   * Vector tạm dùng lại giữa các frame. Đường chạy mỗi frame (bay / timeline)
-   * không được cấp phát Vector3 mới — mỗi `.clone()` là một object cho GC dọn,
-   * ở 60fps sẽ tạo áp lực GC và làm khựng chuyển động.
-   *
-   * QUAN TRỌNG: mỗi mục đích phải có vector RIÊNG. Nếu `allowPose` dùng chung
-   * vector với tham số `position` đang truyền vào thì nó sẽ ghi đè chính giá trị
-   * đang cần dùng (aliasing), khiến pose áp sai.
-   */
   const scratch = new THREE.Vector3();
   const scratchTarget = new THREE.Vector3();
   const scratchUp = new THREE.Vector3();
-  /** Vector riêng cho `allowPose` — không được trùng với `scratch`/`scratchTarget`. */
   const scratchOffset = new THREE.Vector3();
-  /**
-   * Pose đang do controller tự quản (lúc bay / chạy timeline). Khi cờ này bật,
-   * vòng lặp render KHÔNG gọi `controls.update()` nữa — vì `applyPose` đã ghi
-   * thẳng position/target và OrbitControls không có gì để tính. Chỉ đồng bộ lại
-   * OrbitControls một lần khi kết thúc (xem `syncControls`).
-   */
   let drivingPose = false;
-  /**
-   * Đồng bộ trạng thái nội bộ của OrbitControls theo camera hiện tại rồi mới
-   * giao lại quyền điều khiển cho người dùng. Gọi một lần khi kết thúc chuyến bay
-   * hoặc timeline, KHÔNG gọi mỗi frame.
-   */
   const syncControls = () => {
     const position = camera.position.clone();
     const target = controls.target.clone();
@@ -79,13 +39,11 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     const damping = controls.enableDamping;
     controls.enableDamping = false;
     controls.update();
-    // update xóa quán tính cũ nhưng không được đẩy camera lệch khỏi pose vừa chốt.
     camera.position.copy(position);
     controls.target.copy(target);
     camera.quaternion.copy(rotation);
     controls.enableDamping = damping;
   };
-  /** Nới trần polar để pose chỉ định luôn nằm trong vùng orbit hợp lệ. */
   const allowPose = (position: THREE.Vector3, target: THREE.Vector3) => {
     const distance = position.distanceTo(target);
     controls.minDistance = Math.min(controls.minDistance, distance);
@@ -93,7 +51,6 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     scratchOffset.copy(position).sub(target);
     const length = scratchOffset.length();
     if (length > 1e-6) {
-      // Góc cực thực của pose = arccos(Δy / |offset|); cộng biên nhỏ tránh kẹp đúng rìa.
       const phi = Math.acos(THREE.MathUtils.clamp(scratchOffset.y / length, -1, 1));
       polarCeiling = Math.max(polarCeiling, phi + 0.02);
     }
@@ -123,17 +80,10 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     drivingPose = false;
     syncControls();
   };
-  /**
-   * Ghi pose ở đường nhanh: chỉ copy vị trí/target và `lookAt`, KHÔNG chạy
-   * `controls.update()` và KHÔNG cập nhật ma trận chiếu (fov không đổi giữa hai
-   * pose của cùng một cảnh). Đây là đường chạy mỗi frame nên phải thật rẻ.
-   */
   const applyPose = (position: THREE.Vector3, target: THREE.Vector3, fov: number, up: THREE.Vector3) => {
     allowPose(position, target);
     camera.position.copy(position);
     controls.target.copy(target);
-    // `lookAt` suy ra hướng nhìn từ `camera.up`; phải đặt lại up mỗi frame vì
-    // OrbitControls tự xoay up theo quỹ đạo. Bỏ bước này thì pose bị lệch.
     camera.up.copy(up);
     camera.lookAt(target);
     if (camera.fov !== fov) {
@@ -146,36 +96,21 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     snapshot,
     restore,
     reset: (duration = 0) => restore(home, duration),
-    /** Đang bay camera giữa hai stop hay không. */
     isFlying: () => flight !== null,
-    /**
-     * Bật chuyển động camera bám timeline narration cho cảnh hiện tại.
-     *
-     * Camera được đặt ngay tại pose `start`, rồi nội suy dần sang pose `zoom`
-     * theo tiến độ phát của clip (`updateTimeline`). `narrationSeconds` là tổng
-     * thời lượng clip; không có (0/không xác định) thì giữ nguyên pose start và
-     * trả về false. Trả về true nếu đã bật được chế độ timeline.
-     */
     startTimeline(preset: HeritageCamera, narrationSeconds: number) {
       const fromPosition = toVector3(preset.start_position);
       const fromTarget = toVector3(preset.start_target);
       const toPosition = toVector3(preset.zoom_position);
       const toTarget = toVector3(preset.zoom_target);
-      // Không có pose start thì không biết đặt camera ở đâu — bỏ qua hoàn toàn.
       if (!fromPosition || !fromTarget) return false;
       const from = { position: fromPosition, target: fromTarget, up: new THREE.Vector3(0, 1, 0), fov: camera.fov };
-      // Metadata có thể đến giữa chuyến bay chuyển cảnh: giữ chuyến bay đó,
-      // không nhảy thẳng về start. Khi không bay, đặt pose start như thường lệ.
       timeline = null;
       if (!flight) restore(from);
-      // Thiếu pose zoom, hoặc clip quá ngắn / chưa biết thời lượng ⇒ đứng yên ở start.
       if (!toPosition || !toTarget) return false;
       if (!Number.isFinite(narrationSeconds) || narrationSeconds <= 0) return false;
       const to = { position: toPosition, target: toTarget, up: new THREE.Vector3(0, 1, 0), fov: camera.fov };
       allowPose(to.position, to.target);
       if (flight) {
-        // Đổi đích từ start sang pose audio: lấy pose đang hiển thị làm gốc,
-        // giữ thời gian còn lại để metadata đến muộn không gây bước nhảy.
         const current = snapshot();
         flight.fromPosition = current.position;
         flight.fromTarget = current.target;
@@ -193,36 +128,19 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       };
       return true;
     },
-    /**
-     * Áp vị trí camera theo thời điểm phát hiện tại của narration.
-     *
-     * `seconds` là `currentTime` của audio — tua video là giá trị này nhảy nên
-     * camera theo tới đúng chỗ, không chỉ tiến một chiều. Trả về true khi pose
-     * thay đổi (cần vẽ lại). Caller gọi mỗi frame từ animation loop.
-     */
     updateTimeline(seconds: number) {
       if (!timeline) return false;
       if (!flight && seconds === timeline.lastTime) return false;
       const t = THREE.MathUtils.clamp(seconds / timeline.flySeconds, 0, 1);
-      // Đã tới đích VÀ thời gian không lùi lại ⇒ không cần áp lại pose mỗi frame,
-      // tiết kiệm một lần lookAt/allowPose suốt phần còn lại của clip. Nếu người
-      // dùng tua ngược về trong đoạn bay thì phải chạy lại, nếu không camera sẽ
-      // đứng nguyên ở góc zoom dù video đã về đầu.
       if (!flight && timeline.settled && t >= 1) return false;
       timeline.settled = !flight && t >= 1;
-      // Frame kết thúc chuyến bay vẫn phải áp timeline, kể cả audio đang pause.
       timeline.lastTime = flight ? Number.NaN : seconds;
-      // Timeline đi đều suốt audio; easing chỉ dành cho chuyến bay chuyển cảnh.
       const k = t;
-      // Tái dùng `scratch` cho vị trí/target để không cấp phát mỗi frame.
-      // (Giá trị được `applyPose` copy vào camera ngay sau đây nên dùng lại an toàn.)
       const position = scratch.copy(timeline.from.position).lerp(timeline.to.position, k);
       const target = scratchTarget.copy(timeline.from.target).lerp(timeline.to.target, k);
       const up = scratchUp.copy(timeline.from.up).lerp(timeline.to.up, k);
       let fov = timeline.from.fov + (timeline.to.fov - timeline.from.fov) * k;
       if (flight) {
-        // Nếu audio bắt đầu khi còn chuyển cảnh, hòa chuyến bay vào pose audio
-        // hiện tại để không bị nhảy khi chuyến bay kết thúc.
         const blend = easeInOutCubic(Math.min(1, flight.elapsed / flight.duration));
         position.lerp(flight.fromPosition, 1 - blend);
         target.lerp(flight.fromTarget, 1 - blend);
@@ -230,14 +148,12 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
         fov = flight.fromFov + (fov - flight.fromFov) * blend;
       }
       applyPose(position, target, fov, up);
-      // Vừa chốt pose cuối ⇒ trả quyền lại cho OrbitControls một lần duy nhất.
       if (timeline.settled) {
         drivingPose = false;
         syncControls();
       }
       return true;
     },
-    /** Nhường quyền camera khi chuyển cảnh, chọn góc hoặc vào Explore. */
     stopTimeline() {
       timeline = null;
       flight = null;

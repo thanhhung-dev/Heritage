@@ -30,36 +30,22 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
   }, [mode]);
 
   if (!interactive) return null;
-  if (mode) return (
-    <nav className={styles.exploreControls} aria-label="3D exploration" data-explore-mode={mode}>
-      <span className={styles.exploreModeLabel}>{mode === "free" ? "Free orbit" : "Explore in 3D"}</span>
-      <div className={styles.exploreActions}>
-        <button type="button" onClick={onReset}>Reset view</button>
-        <button ref={exitRef} type="button" onClick={() => { focusAfterAction.current = true; onExit(); }}>Exit 3D Mode</button>
-      </div>
-      {interactive.highlights.length > 0 && (
-        <ul className={styles.exploreHighlights} aria-label="Points of interest">
-          {[...interactive.highlights].sort((a, b) => a.sort_order - b.sort_order).map((highlight) => (
-            <li key={highlight.id}>
-              <button type="button" aria-pressed={selectedHighlightId === highlight.id}
-                aria-controls={selectedHighlightId === highlight.id ? "hotspot-popup" : undefined}
-                onClick={() => onSelectHighlight(highlight.id)}>
-                <span className={styles.exploreThumbnail} aria-hidden="true">
-                  {highlight.thumb_url && failedThumbnails[highlight.id] !== highlight.thumb_url ? (
-                    <Image src={highlight.thumb_url} alt="" fill sizes="64px" unoptimized
-                      onError={() => setFailedThumbnails((previous) => ({ ...previous, [highlight.id]: highlight.thumb_url }))} />
-                  ) : (
-                    <Image src={`${ICONS}/explore_lens.svg`} alt="" width={28} height={28} unoptimized />
-                  )}
-                </span>
-                <span className={styles.explorePointTitle}>{highlight.popup_title ?? "Highlight"}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </nav>
-  );
+  if (mode) {
+    return (
+      <nav className={styles.exploreControls} aria-label="3D exploration">
+        <button
+          ref={exitRef}
+          type="button"
+          onClick={() => {
+            focusAfterAction.current = true;
+            onExit();
+          }}
+        >
+          Exit 3D Mode
+        </button>
+      </nav>
+    );
+  }
 
   return (
     <div className={`${styles.exploreCorner} ${styles.active} ${initialMode === "free" ? styles["free-explore"] : ""}`} id="exploreCorner">

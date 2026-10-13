@@ -75,7 +75,7 @@ function formatPublishDate(value: string | null | undefined): string | null {
 
 export default function ContentLoadingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { payload } = useHeritageTour();
+  const { payload, isModelReady, modelError } = useHeritageTour();
   const heritage = payload.heritage;
   const splashImageUrl = heritage.splash_image_url ?? "";
   const splashImageRef = useRef<HTMLImageElement>(null);
@@ -83,7 +83,7 @@ export default function ContentLoadingPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<PageLocale | null>(
     null,
   );
-  const isReady = !splashImageUrl || loadedSplashUrl === splashImageUrl;
+  const isReady = (!splashImageUrl || loadedSplashUrl === splashImageUrl) && isModelReady;
   const sourceLanguage: PageLocale = heritage.language1?.code
     .toLowerCase()
     .startsWith("vi")
@@ -259,6 +259,10 @@ export default function ContentLoadingPage() {
               </span>
             </span>
           </Link>
+
+          {modelError ? (
+            <p className={styles.loadingError} role="alert">{modelError}</p>
+          ) : null}
         </div>
       </div>
     </main>

@@ -21,6 +21,7 @@ export interface HeritageTourContextValue {
   status: "demo" | "ready";
   error: string | null;
   isModelReady: boolean;
+  modelError: string | null;
   engine: TourEngine | null;
   scenePlayback: ScenePlayback | null;
 }
@@ -36,6 +37,7 @@ interface HeritageTourProviderProps {
   status: "demo" | "ready";
   error: string | null;
   engine: TourEngine | null;
+  modelError: string | null;
   playback?: Record<string, ScenePlayback>;
   children: ReactNode;
 }
@@ -47,6 +49,7 @@ export function HeritageTourProvider({
   status,
   error,
   engine,
+  modelError,
   playback,
   children,
 }: HeritageTourProviderProps) {
@@ -64,10 +67,11 @@ export function HeritageTourProvider({
       status,
       error,
       isModelReady: engine !== null,
+      modelError,
       engine,
       scenePlayback: playback?.[currentSceneKey] ?? null,
     }),
-    [payload, heritageSlug, currentSceneKey, currentScene, status, error, engine, playback]
+    [payload, heritageSlug, currentSceneKey, currentScene, status, error, engine, modelError, playback]
   );
 
   return (

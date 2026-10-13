@@ -42,6 +42,7 @@ export default function HeritageContentLayout({
   const slug = params.slug;
   const fixture = slug === "tapestry-test" ? TEST_TOUR : null;
   const [engine, setEngine] = useState<TourEngine | null>(null);
+  const [modelError, setModelError] = useState<string | null>(null);
   const isModelReady = engine !== null;
 
   useEffect(() => {
@@ -98,9 +99,14 @@ export default function HeritageContentLayout({
         status={fixture ? "ready" : state.status}
         error={fixture ? null : state.error}
         engine={engine}
+        modelError={modelError}
         playback={fixture?.playback}
       >
-        <HeritageCanvas landing={!params.sceneKey} onReady={setEngine} modelUrl={fixture?.modelUrl} />
+        <HeritageCanvas
+          onReady={setEngine}
+          onError={setModelError}
+          modelUrl={fixture?.modelUrl}
+        />
         {params.sceneKey && isModelReady ? <HeritageViewer /> : null}
         {children}
       </HeritageTourProvider>

@@ -4,7 +4,6 @@ import type { HeritageSceneHighlight } from "@/types/heritage";
 import { toVector3 } from "./camera-controller";
 import type { ModelLoader } from "./model-loader";
 
-// Payload hiện chưa có mốc thời gian: adapter phải cung cấp chúng, không tự đoán.
 export type TimedSceneHighlight = HeritageSceneHighlight & { startSeconds: number; endSeconds: number | null };
 
 export function createSceneHighlights(scene: THREE.Scene, loader: ModelLoader, invalidate: () => void) {

@@ -2,7 +2,7 @@
 
 ## Luồng đang chạy
 
-`content/[slug]/layout.tsx` giữ một `HeritageCanvas` xuyên suốt landing và các scene. F5/link scene mới quay về loading; chỉ mở Start sau khi GLB giải mã thành công. `HeritageViewer` ghép **điều khiển 3D + giao diện**, không tạo canvas thứ hai.
+`content/[slug]/layout.tsx` giữ một `HeritageCanvas` xuyên suốt landing và các scene. F5/link scene mới quay về loading; chỉ mở Start sau khi GLB giải mã thành công. Thanh loading của trang content luôn hiện "Loading…" cho tới khi model xong (không hiện tiến độ chi tiết); lỗi tải model đi từ canvas lên layout qua `useHeritageTour().modelError` và hiện trong trang content. `HeritageViewer` ghép **điều khiển 3D + giao diện**, không tạo canvas thứ hai.
 
 Three.js và types đã cài. Model Tự Đức dùng `/tour-assets/tuduc.glb` rewrite đến R2 vì URL R2 hiện chưa trả CORS cho trình duyệt. Decoder KTX2/Basis ở `public/three/basis/`, Draco glTF ở `public/three/draco/` (kèm license).
 
