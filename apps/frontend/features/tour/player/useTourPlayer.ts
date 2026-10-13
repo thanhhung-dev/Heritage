@@ -83,8 +83,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
 
   function applyInteractiveCamera() {
     if (interactive?.cam_pos && interactive.cam_target && currentScene) {
-      engine?.flyCameraPreset({ ...currentScene.camera, start_position: interactive.cam_pos, start_target: interactive.cam_target }, false, 1.2);
+      return engine?.flyCameraPreset({ ...currentScene.camera, start_position: interactive.cam_pos, start_target: interactive.cam_target }, false, 1.2);
     }
+    return false;
   }
 
   return {
@@ -117,7 +118,10 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       if (exploreMode === null) applyInteractiveCamera();
       setExploreMode(mode);
     },
-    resetExplore() { engine?.selectHighlight(null); applyInteractiveCamera(); },
+    resetExplore() {
+      engine?.selectHighlight(null);
+      if (!applyInteractiveCamera()) engine?.resetExplore(1.2);
+    },
     exitExplore() {
       engine?.exitExplore(1.2);
       setExploreMode(null);

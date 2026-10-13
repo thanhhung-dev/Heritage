@@ -15,9 +15,9 @@ export function createExploreController(camera: CameraController, controls: Orbi
       }
       controls.maxPolarAngle = mode === "free" ? Math.PI : Math.max(Math.PI / 2, controls.getPolarAngle());
     },
-    reset() {
-      if (entry) camera.restore(entry);
-      else camera.reset();
+    reset(duration = 0) {
+      if (entry) camera.restore(entry, duration);
+      else camera.reset(duration);
     },
     resize(ratio: number) {
       if (entry) entry.position.sub(entry.target).multiplyScalar(ratio).add(entry.target);

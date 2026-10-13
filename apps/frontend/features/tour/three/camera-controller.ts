@@ -57,6 +57,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
    */
   const scratch = new THREE.Vector3();
   const scratchTarget = new THREE.Vector3();
+  const scratchUp = new THREE.Vector3();
   /** Vector riêng cho `allowPose` — không được trùng với `scratch`/`scratchTarget`. */
   const scratchOffset = new THREE.Vector3();
   /**
@@ -120,13 +121,13 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
    * `controls.update()` và KHÔNG cập nhật ma trận chiếu (fov không đổi giữa hai
    * pose của cùng một cảnh). Đây là đường chạy mỗi frame nên phải thật rẻ.
    */
-  const applyPose = (position: THREE.Vector3, target: THREE.Vector3, fov: number) => {
+  const applyPose = (position: THREE.Vector3, target: THREE.Vector3, fov: number, up: THREE.Vector3) => {
     allowPose(position, target);
     camera.position.copy(position);
     controls.target.copy(target);
     // `lookAt` suy ra hướng nhìn từ `camera.up`; phải đặt lại up mỗi frame vì
     // OrbitControls tự xoay up theo quỹ đạo. Bỏ bước này thì pose bị lệch.
-    camera.up.set(0, 1, 0);
+    camera.up.copy(up);
     camera.lookAt(target);
     if (camera.fov !== fov) {
       camera.fov = fov;
@@ -137,7 +138,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
   return {
     snapshot,
     restore,
-    reset: () => restore(home),
+    reset: (duration = 0) => restore(home, duration),
     /** Đang bay camera giữa hai stop hay không. */
     isFlying: () => flight !== null,
     /**
@@ -210,6 +211,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       // (Giá trị được `applyPose` copy vào camera ngay sau đây nên dùng lại an toàn.)
       const position = scratch.copy(timeline.from.position).lerp(timeline.to.position, k);
       const target = scratchTarget.copy(timeline.from.target).lerp(timeline.to.target, k);
+      const up = scratchUp.copy(timeline.from.up).lerp(timeline.to.up, k);
       let fov = timeline.from.fov + (timeline.to.fov - timeline.from.fov) * k;
       if (flight) {
         // Nếu audio bắt đầu khi còn chuyển cảnh, hòa chuyến bay vào pose audio
@@ -217,9 +219,10 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
         const blend = easeInOutCubic(Math.min(1, flight.elapsed / flight.duration));
         position.lerp(flight.fromPosition, 1 - blend);
         target.lerp(flight.fromTarget, 1 - blend);
+        up.lerp(flight.fromUp, 1 - blend);
         fov = flight.fromFov + (fov - flight.fromFov) * blend;
       }
-      applyPose(position, target, fov);
+      applyPose(position, target, fov, up);
       // Vừa chốt pose cuối ⇒ trả quyền lại cho OrbitControls một lần duy nhất.
       if (timeline.settled) {
         drivingPose = false;
@@ -262,8 +265,9 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       // Tái dùng vector tạm: đường này chạy mỗi frame nên không được cấp phát mới.
       const position = scratch.copy(flight.fromPosition).lerp(flight.toPosition, k);
       const target = scratchTarget.copy(flight.fromTarget).lerp(flight.toTarget, k);
+      const up = scratchUp.copy(flight.fromUp).lerp(flight.toUp, k);
       const fov = flight.fromFov + (flight.toFov - flight.fromFov) * k;
-      applyPose(position, target, fov);
+      applyPose(position, target, fov, up);
       if (t >= 1) {
         flight = null;
         // Hết chuyến: trả quyền cho OrbitControls, đồng bộ một lần duy nhất.

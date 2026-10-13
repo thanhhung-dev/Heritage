@@ -113,7 +113,7 @@ export function createTourEngine(
 
   return {
     enterExplore(mode: ExploreMode) { explore.enter(mode); highlights.show(true); invalidate(); },
-    resetExplore() { explore.reset(); invalidate(); },
+    resetExplore(duration = 0) { explore.reset(duration); invalidate(); },
     exitExplore(duration = 0) { explore.exit(duration); highlights.show(false); highlights.select(null); invalidate(); },
     getCameraPose: cameraController.snapshot,
     restoreCameraPose(pose: ReturnType<typeof cameraController.snapshot>, duration = 0) { cameraController.restore(pose, duration); invalidate(); },

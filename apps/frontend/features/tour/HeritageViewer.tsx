@@ -159,7 +159,7 @@ export default function HeritageViewer() {
   const handleReplay = () => {
     // Chờ scene này báo chưa-kết-thúc trở lại rồi mới nhận tín hiệu ended mới.
     sceneSawNotEnded.current = false;
-    setEndedScene(null);
+    setEndedScene(hasAudio ? null : playbackKey);
     // Replay xong thì nút phải là Replay, không phải Prev tạm thời.
     setShowArrivalPrev(false);
     if (player.exploreMode) player.exitExplore();
