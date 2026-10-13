@@ -19,7 +19,7 @@ test("trích đúng model, thứ tự scene, camera và highlight từ các bả
     interactives: [{ interactive_id: 88, camera_position: "3,7,-2", camera_target: "0,2,1", explore_area: JSON.stringify({ center: [1, 2, 3], extents: [4, 5, 6], rotation: [0, 0, 0, 1] }) }],
     interactiveHighlights: [
       { interactive_id: 89, interactive_highlight_id: 777, popup_title: "Không thuộc scene này", highlight_thumbnail: "/wrong.webp" },
-      { interactive_id: 88, interactive_highlight_id: 778, popup_title: "Niches", highlight_thumbnail: "/niches.webp", highlight_order: 2, camera_position: "2,3,4", camera_target: "-1,5,7" },
+      { interactive_id: 88, interactive_highlight_id: 778, popup_title: "Niches", highlight_thumbnail: "/niches.webp", popup_media_link: "/asset", popup_media_type: "image", popup_media_alt_desc: "Niche drawing", popup_media_credit: "Museum", popup_audio_link: "/detail.mp3", popup_video_cc_1: "/detail.vtt", highlight_order: 2, camera_position: "2,3,4", camera_target: "-1,5,7" },
     ],
     threeJS_int_highlights: { 778: { lens_position: "-6.343,25.314,7.299", lens_scale: "25,25,25" } },
   };
@@ -34,6 +34,12 @@ test("trích đúng model, thứ tự scene, camera và highlight từ các bả
   assert.equal(interactive.highlights[0].id, 778);
   assert.equal(interactive.highlights[0].thumb_url, "/niches.webp");
   assert.equal(interactive.highlights[0].sort_order, 2);
+  assert.equal(interactive.highlights[0].media_url, "/asset");
+  assert.equal(interactive.highlights[0].media_type, "image");
+  assert.equal(interactive.highlights[0].media_alt, "Niche drawing");
+  assert.equal(interactive.highlights[0].media_credit, "Museum");
+  assert.equal(interactive.highlights[0].audio_url, "/detail.mp3");
+  assert.equal(interactive.highlights[0].captions_url, "/detail.vtt");
   assert.deepEqual(interactive.highlights[0].lens_pos, [-6.343, 25.314, 7.299]);
   assert.deepEqual(interactive.highlights[0].cam_target, [-1, 5, 7]);
   assert.equal(tour.playback.s2.timedHighlights[0].model_url, "/detail.glb");
@@ -44,6 +50,12 @@ test("trích đúng model, thứ tự scene, camera và highlight từ các bả
   assert.equal(tour.playback.s0.captionsUrl, "/intro.vtt");
   delete t.interactiveHighlights[1].highlight_thumbnail;
   assert.equal(extractTour(html()).payload.scenes[1].interactive[0].highlights[0].thumb_url, null);
+  t.interactiveHighlights[1].popup_media_type = "video";
+  assert.equal(extractTour(html()).payload.scenes[1].interactive[0].highlights[0].media_type, "video");
+  delete t.interactiveHighlights[1].popup_media_type;
+  delete t.interactiveHighlights[1].popup_audio_link;
+  assert.equal(extractTour(html()).payload.scenes[1].interactive[0].highlights[0].media_type, null);
+  assert.equal(extractTour(html()).payload.scenes[1].interactive[0].highlights[0].audio_url, null);
   t.scenes[0].start_camera_position = "NaN,2,3";
   assert.throws(() => extractTour(html()), /Tọa độ không hợp lệ/);
 });
