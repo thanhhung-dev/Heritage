@@ -14,7 +14,8 @@ Mở `/content/tapestry-test`, chờ tải rồi Bắt đầu trải nghiệm. T
 - `payload`: 1 overview, 7 scene; camera start/zoom, interactive camera và 10 marker/popup join theo ID nguồn.
 - `playback`: narration/VTT tiếng Anh (`*_1`), 14 GLB highlight theo timeline. `endSeconds: null` giữ hiện đến khi đổi scene. OBB `exploreArea` được giữ để phát triển tiếp, chưa áp collision.
 - Nút góc **Dive Deeper** chỉ hiện sau khi narration của scene kết thúc (hoặc Skip Voiceover), và scene có `interactive` (s2–s6). Đổi scene hoặc Replay narration sẽ ẩn lại; scene không có audio được coi là đã kết thúc. Bấm để tạm dừng audio và bay tới camera khu vực trong JSON; `free_explore`/`free` mở free orbit và hiện dấu chân, không phải chế độ đi bộ/FPS.
-- Trong Explore, chọn marker hoặc nút trong danh sách điểm để mở nội dung và focus camera theo JSON. Close hoặc Escape trả về góc Explore và focus bàn phím; **Reset view** về camera interactive, **Exit 3D Mode** về camera scene. Không đưa lại hàng nút Zoom/Start/Standard/Free cũ.
+- Trong Explore, các ô điểm có thumbnail + tên, sắp theo `sort_order`; ô đang chọn có viền/nền cam. Chọn ô bằng chuột hoặc Enter/Space để mở nội dung và focus camera theo JSON; marker 3D vẫn chọn được. Thumbnail lấy từ nguồn Tapestry qua `thumb_url`; thiếu/lỗi ảnh dùng lens icon. Backend hiện chưa trả thumbnail, payload cũ vẫn hoạt động với icon thay thế.
+- Close hoặc Escape trả về góc Explore và focus bàn phím; **Reset view** về camera interactive, **Exit 3D Mode** về camera scene. Không đưa lại hàng nút Zoom/Start/Standard/Free cũ.
 - Vào/thoát Explore, Reset và focus/đóng điểm dùng camera transition 1.2 giây (mặc định viewer, không phải thời lượng trong JSON). Nếu khu vực không có camera riêng, Reset bay về góc đã lưu khi vào Explore.
 - Scene s3: Play hoặc skip +15 giây để thấy các model lạc đà. Đổi scene không tải lại model chính.
 
