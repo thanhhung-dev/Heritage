@@ -27,7 +27,7 @@ node scripts/extract-tapestry-tour.mjs
 
 Giữ nguyên file HTML đầu vào. Script chỉ parse block JSON, không chạy JavaScript của trang. JSON đã chuẩn hóa, không sao chép các bảng index trùng lặp. Chỉ dùng dữ liệu/asset bên thứ ba này để thử, không coi là dữ liệu di sản sở hữu để phát hành.
 
-Đây vẫn là viewer cơ bản: marker cầu thay lens shader; popup mở link media; chưa có sky/fog theo nguồn. Camera chuyển cảnh bay trong 1.6 giây (instant_move đặt ngay), rồi bám thời lượng narration. Góc focus “Niches for statues” hiện khá tối trên model này; tọa độ được giữ nguyên nguồn, chưa xử lý collision.
+Đây vẫn là viewer cơ bản: lens badge là quad có texture glow + số trong suốt, billboard theo camera; chưa sao chép shader gốc Tapestry. Popup mở link media; chưa có sky/fog theo nguồn. Camera chuyển cảnh bay trong 1.6 giây (instant_move đặt ngay), rồi bám thời lượng narration. Góc focus “Niches for statues” hiện khá tối trên model này; tọa độ được giữ nguyên nguồn, chưa xử lý collision. Badge số 2 ở s2 có thể bị tiêu đề che một phần; không tự dời lens_pos nguồn.
 
 ## Nơi phát triển tiếp
 
@@ -48,7 +48,7 @@ Giữ nguyên file HTML đầu vào. Script chỉ parse block JSON, không chạ
     - `updateTimeline` có cờ `settled`: tới đích rồi thì thôi áp pose mỗi frame, nhưng **tự bật lại khi thời gian lùi về trong đoạn bay** (nếu không, tua ngược sẽ không kéo camera về).
     - Đo được trong 60 frame bay: `updateProjectionMatrix = 0`, `controls.update = 0` (do `drivingPose`), `lookAt = 60`.
 - `three/explore-controller.ts`: Standard/Free orbit, reset về góc lúc vào và exit. Free orbit **chưa phải FPS/đi bộ**, chưa có collision/giới hạn `explore_area`.
-- `three/interactive-highlights.ts`: marker cầu, raycast chọn và callback. Thay marker bằng lens/icon/model tương tác tại đây.
+- `three/interactive-highlights.ts`: Group tại `lens_pos`, mesh `lens_badge` ở local zero; quad 0.1 × 0.1 gồm glow (vòng chính đường kính khoảng 0.05), nhân `lens_scale`. Số theo `sort_order`, MeshBasicMaterial không chịu ánh sáng, NormalBlending, depthTest/depthWrite=false. Billboard mỗi frame; raycast bỏ góc quad trong suốt, chọn đúng ID và callback. Texture/material được dispose khi thay điểm; geometry chung được dispose cùng engine. Khi focus sau orbit, controller xóa quán tính damping nhưng giữ đúng pose đích JSON.
 - `three/scene-highlights.ts`: GLB phụ, transform, hiện theo `[startSeconds,endSeconds)` (end null không tắt) và animation `rotate`/GLB clips `LoopRepeat` theo timeline; clone skeleton riêng để không chia sẻ bones.
 - `components/ExploreControls.tsx`, `HighlightPanel.tsx`: UI cơ bản. Panel hiện title/text và link media; cần contract MIME/type để nhúng ảnh/video/audio đúng loại.
 
