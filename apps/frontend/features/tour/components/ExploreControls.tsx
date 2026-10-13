@@ -20,11 +20,11 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
 }) {
   const enterRef = useRef<HTMLButtonElement>(null);
   const exitRef = useRef<HTMLButtonElement>(null);
-  const previousMode = useRef(mode);
+  const focusAfterAction = useRef(false);
   useEffect(() => {
-    if (previousMode.current !== mode) {
+    if (focusAfterAction.current) {
       (mode ? exitRef : enterRef).current?.focus();
-      previousMode.current = mode;
+      focusAfterAction.current = false;
     }
   }, [mode]);
 
@@ -34,13 +34,15 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
       <span className={styles.exploreModeLabel}>{mode === "free" ? "Free orbit" : "Explore in 3D"}</span>
       <div className={styles.exploreActions}>
         <button type="button" onClick={onReset}>Reset view</button>
-        <button ref={exitRef} type="button" onClick={onExit}>Exit 3D Mode</button>
+        <button ref={exitRef} type="button" onClick={() => { focusAfterAction.current = true; onExit(); }}>Exit 3D Mode</button>
       </div>
       {interactive.highlights.length > 0 && (
         <ul className={styles.exploreHighlights} aria-label="Points of interest">
           {interactive.highlights.map((highlight) => (
             <li key={highlight.id}>
-              <button type="button" aria-pressed={selectedHighlightId === highlight.id} onClick={() => onSelectHighlight(highlight.id)}>
+              <button type="button" aria-pressed={selectedHighlightId === highlight.id}
+                aria-controls={selectedHighlightId === highlight.id ? "hotspot-popup" : undefined}
+                onClick={() => onSelectHighlight(highlight.id)}>
                 {highlight.popup_title ?? "Highlight"}
               </button>
             </li>
@@ -57,7 +59,8 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
       <div className={`${styles["exploreCorner-glow"]} ${styles.reveal}`} aria-hidden="true" />
       <div className={styles["exploreCorner-tiltWrap"]} id="exploreCornerTilt">
         <button ref={enterRef} className={`${styles["exploreCorner-btn"]} ${styles.pop}`} id="exploreCornerBtn" type="button"
-          aria-label="Explore Area in 3D" aria-describedby="dive-deeper-label" data-interactive-id={interactive.id} onClick={() => onEnter(initialMode)}>
+          aria-label="Dive Deeper — Explore Area in 3D" data-interactive-id={interactive.id}
+          onClick={() => { focusAfterAction.current = true; onEnter(initialMode); }}>
           <div className={styles["exploreCorner-iconWrap"]}>
             <Image className={styles["exploreCorner-icon"]} src={`${ICONS}/explore_lens.svg`} width={72} height={72} alt="" unoptimized />
           </div>

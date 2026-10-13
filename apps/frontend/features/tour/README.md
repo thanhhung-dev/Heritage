@@ -13,7 +13,8 @@ Mở `/content/tapestry-test`, chờ tải rồi Bắt đầu trải nghiệm. T
 - `modelUrl`: GLB Petra từ `threeJS_sets` trong HTML, vẫn tải trực tiếp CDN nguồn (hiện có CORS). Không sao chép asset sang R2 hoặc public.
 - `payload`: 1 overview, 7 scene; camera start/zoom, interactive camera và 10 marker/popup join theo ID nguồn.
 - `playback`: narration/VTT tiếng Anh (`*_1`), 14 GLB highlight theo timeline. `endSeconds: null` giữ hiện đến khi đổi scene. OBB `exploreArea` được giữ để phát triển tiếp, chưa áp collision.
-- Nút **Zoom view / Start view** thử hai preset. Vào scene s2 rồi **Explore in 3D**, click marker để mở nội dung và focus camera; Close trả về góc Explore, Reset về camera interactive, Exit về camera scene.
+- Nút góc **Dive Deeper** chỉ hiện ở scene có `interactive` (s2–s6). Bấm để tạm dừng audio và vào camera của khu vực trong JSON; `free_explore`/`free` mở free orbit và hiện dấu chân, không phải chế độ đi bộ/FPS.
+- Trong Explore, chọn marker hoặc nút trong danh sách điểm để mở nội dung và focus camera theo JSON. Close hoặc Escape trả về góc Explore và focus bàn phím; **Reset view** về camera interactive, **Exit 3D Mode** về camera scene. Không đưa lại hàng nút Zoom/Start/Standard/Free cũ.
 - Scene s3: Play hoặc skip +15 giây để thấy các model lạc đà. Đổi scene không tải lại model chính.
 
 Tạo lại JSON từ source HTML tại máy bạn:

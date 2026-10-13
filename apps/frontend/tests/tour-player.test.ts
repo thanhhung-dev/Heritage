@@ -12,6 +12,7 @@ import type { ModelLoader } from "../features/tour/three/model-loader";
 import { HeritageTourContext } from "../context/heritage-tour";
 import { useTourPlayer } from "../features/tour/player/useTourPlayer";
 import { TEST_TOUR } from "../features/tour/tour-data";
+import type { HeritageScene } from "../types/heritage";
 
 test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tour JSON", () => {
   let result: { id: number | null; mode: string; highlights: number[] } | null = null;
@@ -24,8 +25,8 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
     };
     return null;
   }
-  function readScene(key: string) {
-    const currentScene = [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
+  function readScene(key: string, override?: HeritageScene) {
+    const currentScene = override ?? [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
     renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
       payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
       currentScene, status: "ready", error: null, isModelReady: true,
@@ -37,9 +38,15 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
   const standard = readScene("s2");
   assert.equal(standard?.id, 332);
   assert.equal(standard?.mode, "standard");
-  assert.equal(standard?.highlights.length, 3);
+  assert.deepEqual(standard?.highlights, [639, 640, 651]);
   assert.deepEqual(readScene("s6"), { id: 428, mode: "free", highlights: [] });
   assert.deepEqual(readScene("s7"), { id: null, mode: "standard", highlights: [] });
+  // Cùng scene key nhưng thay dữ liệu: không được special-case ID hoặc mode.
+  const scene = TEST_TOUR.payload.scenes[1];
+  const area = scene.interactive[0];
+  assert.deepEqual(readScene("s2", { ...scene, interactive: [{ ...area, id: 901, mode: "free",
+    highlights: [{ ...area.highlights[0], id: 987 }],
+  }] }), { id: 901, mode: "free", highlights: [987] });
 });
 
 test("camera giữ đúng preset dưới target và ngoài khoảng fit, kể cả reset/exit Explore", () => {
