@@ -220,8 +220,14 @@ test("metadata timeline đến khi đang chuyển cảnh không làm camera nh�
     assert.deepEqual(camera.position.toArray(), beforeMetadata.position.toArray());
     controller.update(0.4);
     assert.ok(camera.position.distanceTo(beforeMetadata.position) > 1);
+    controller.updateTimeline(1.5);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(-4.75, 11, 56.25)) < 1e-8,
+      "audio phát sớm phải hòa liên tục vào chuyến bay chuyển cảnh");
     controller.update(0.8);
     assert.ok(camera.position.distanceTo(new THREE.Vector3(12, 8, 40)) < 1e-8);
+    // Audio pause ở mốc 1.5s: frame cuối chuyến bay vẫn phải về đúng pose này.
+    controller.updateTimeline(1.5);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(10.5, 7, 32.5)) < 1e-8);
     controller.updateTimeline(3);
     assert.ok(camera.position.distanceTo(new THREE.Vector3(9, 6, 25)) < 1e-8);
     assert.ok(controls.target.distanceTo(new THREE.Vector3(0, 2, 3.5)) < 1e-8);
@@ -279,7 +285,7 @@ test("flyToPreset ghi đè timeline: bay chuyển cảnh không bị timeline k�
     controller.startTimeline(timelinePreset, 20);
     assert.equal(controller.hasTimeline(), true);
     // Tua: timeline có tác dụng.
-    controller.updateTimeline(7);
+    controller.updateTimeline(20);
     assert.ok(Math.abs(camera.position.z - 10) < 1e-6);
 
     // Bay tự do tới preset khác (mô phỏng focus marker) ⇒ timeline phải bị tắt.

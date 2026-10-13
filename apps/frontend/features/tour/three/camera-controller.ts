@@ -11,15 +11,6 @@ export function toVector3(value: number[] | Record<string, number> | null) {
 /** Ease-in-out mượt cho chuyển động camera giữa hai stop (kiểu CyArk Tapestry). */
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-/**
- * Phần đầu của narration dùng để camera bay từ `start` tới `zoom`.
- * Hết đoạn này camera đứng yên ở góc zoom để ngắm cảnh cho tới hết clip.
- * `0.35` = 35% thời lượng clip đầu dành cho chuyển động.
- */
-const TIMELINE_FLY_FRACTION = 0.35;
-/** Thời gian bay tối thiểu (giây) để cảnh narration cực ngắn vẫn có chuyển động thấy được. */
-const TIMELINE_FLY_MIN_SECONDS = 4;
-
 export function createCameraController(camera: THREE.PerspectiveCamera, controls: OrbitControls) {
   const snapshot = () => ({ position: camera.position.clone(), target: controls.target.clone(), up: camera.up.clone(), fov: camera.fov });
   let home = snapshot();
@@ -152,12 +143,10 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       // Không có pose start thì không biết đặt camera ở đâu — bỏ qua hoàn toàn.
       if (!fromPosition || !fromTarget) return false;
       const from = { position: fromPosition, target: fromTarget, up: new THREE.Vector3(0, 1, 0), fov: camera.fov };
-      // Bắt đầu cảnh: đặt thẳng về pose start (không bay từ vị trí cảnh trước).
-      // Làm việc này TRƯỚC mọi nhánh thoát sớm, nếu không camera sẽ đứng nguyên
-      // ở góc cảnh trước khi cảnh mới thiếu dữ liệu zoom.
-      flight = null;
+      // Metadata có thể đến giữa chuyến bay chuyển cảnh: giữ chuyến bay đó,
+      // không nhảy thẳng về start. Khi không bay, đặt pose start như thường lệ.
       timeline = null;
-      restore(from);
+      if (!flight) restore(from);
       // Thiếu pose zoom, hoặc clip quá ngắn / chưa biết thời lượng ⇒ đứng yên ở start.
       if (!toPosition || !toTarget) return false;
       if (!Number.isFinite(narrationSeconds) || narrationSeconds <= 0) return false;
@@ -166,7 +155,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       timeline = {
         from,
         to,
-        flySeconds: Math.max(narrationSeconds * TIMELINE_FLY_FRACTION, TIMELINE_FLY_MIN_SECONDS),
+        flySeconds: narrationSeconds,
         lastTime: Number.NaN,
         settled: false,
       };
@@ -180,23 +169,32 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
      * thay đổi (cần vẽ lại). Caller gọi mỗi frame từ animation loop.
      */
     updateTimeline(seconds: number) {
-      // Trong lúc đang bay chuyển cảnh thì nhường cho `flight`.
-      if (!timeline || flight) return false;
-      if (seconds === timeline.lastTime) return false;
+      if (!timeline) return false;
+      if (!flight && seconds === timeline.lastTime) return false;
       const t = THREE.MathUtils.clamp(seconds / timeline.flySeconds, 0, 1);
       // Đã tới đích VÀ thời gian không lùi lại ⇒ không cần áp lại pose mỗi frame,
       // tiết kiệm một lần lookAt/allowPose suốt phần còn lại của clip. Nếu người
       // dùng tua ngược về trong đoạn bay thì phải chạy lại, nếu không camera sẽ
       // đứng nguyên ở góc zoom dù video đã về đầu.
-      if (timeline.settled && t >= 1) return false;
-      timeline.settled = t >= 1;
-      timeline.lastTime = seconds;
-      const k = easeInOutCubic(t);
+      if (!flight && timeline.settled && t >= 1) return false;
+      timeline.settled = !flight && t >= 1;
+      // Frame kết thúc chuyến bay vẫn phải áp timeline, kể cả audio đang pause.
+      timeline.lastTime = flight ? Number.NaN : seconds;
+      // Timeline đi đều suốt audio; easing chỉ dành cho chuyến bay chuyển cảnh.
+      const k = t;
       // Tái dùng `scratch` cho vị trí/target để không cấp phát mỗi frame.
       // (Giá trị được `applyPose` copy vào camera ngay sau đây nên dùng lại an toàn.)
       const position = scratch.copy(timeline.from.position).lerp(timeline.to.position, k);
       const target = scratchTarget.copy(timeline.from.target).lerp(timeline.to.target, k);
-      const fov = timeline.from.fov + (timeline.to.fov - timeline.from.fov) * k;
+      let fov = timeline.from.fov + (timeline.to.fov - timeline.from.fov) * k;
+      if (flight) {
+        // Nếu audio bắt đầu khi còn chuyển cảnh, hòa chuyến bay vào pose audio
+        // hiện tại để không bị nhảy khi chuyến bay kết thúc.
+        const blend = easeInOutCubic(Math.min(1, flight.elapsed / flight.duration));
+        position.lerp(flight.fromPosition, 1 - blend);
+        target.lerp(flight.fromTarget, 1 - blend);
+        fov = flight.fromFov + (fov - flight.fromFov) * blend;
+      }
       applyPose(position, target, fov);
       // Vừa chốt pose cuối ⇒ trả quyền lại cho OrbitControls một lần duy nhất.
       if (timeline.settled) {

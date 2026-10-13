@@ -20,6 +20,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
   const highlightEntry = useRef<ReturnType<TourEngine["getCameraPose"]> | null>(null);
+  const timelineSceneKey = useRef<string | null>(null);
   const narration = useNarration(narrationUrl ?? scenePlayback?.narrationUrl ?? null, isMuted);
   const captions = useCaptions(captionsUrl ?? scenePlayback?.captionsUrl ?? null, narration.currentTime, ccOn);
   const { pause, seek } = narration;
@@ -28,15 +29,15 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
     pause();
     seek(0);
     engine?.exitExplore();
+    timelineSceneKey.current = null;
+    engine?.setPlaybackTime(0, false);
     let cancelled = false;
     setSceneError(null);
-    // Vào scene: đặt camera về pose mở đầu. Chuyển động bám timeline (start → zoom
-    // theo tiến độ clip) do effect bên dưới bật, vì lúc này `narration.duration`
-    // còn 0 — audio vừa mới đổi URL, metadata chưa tải xong. Cảnh đặt
-    // `instant_move` thì đứng yên, không bao giờ bật timeline.
+    // Bay từ góc hiện tại tới góc mở đầu; chỉ instant_move mới đặt ngay.
+    // Metadata audio đến sau sẽ bật timeline mà không hủy chuyến bay này.
     if (scenePlayback && currentScene) {
       engine?.stopCameraTimeline();
-      engine?.flyCameraPreset(currentScene.camera, false, 0);
+      engine?.flyCameraPreset(currentScene.camera, false, currentScene.camera.instant_move ? 0 : 1.6);
     } else {
       engine?.stopCameraTimeline();
     }
@@ -68,7 +69,6 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
   // mỗi cảnh: nếu bật lại mỗi khi `duration` đổi, `restore(start)` bên trong sẽ
   // kéo camera giật về đầu cảnh giữa lúc đang bay.
   const hasAudio = narration.hasAudio;
-  const timelineSceneKey = useRef<string | null>(null);
   useEffect(() => {
     if (!hasAudio || !currentScene || !scenePlayback) return;
     if (currentScene.camera.instant_move) return;
@@ -79,11 +79,6 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       timelineSceneKey.current = currentSceneKey;
     }
   }, [engine, hasAudio, narration.duration, currentScene, scenePlayback, currentSceneKey]);
-  // Sang cảnh khác thì cho phép bật timeline trở lại.
-  useEffect(() => {
-    timelineSceneKey.current = null;
-    return () => { timelineSceneKey.current = null; };
-  }, [currentSceneKey]);
 
   function applyInteractiveCamera() {
     const interactive = scenePlayback ? currentScene?.interactive[0] : null;

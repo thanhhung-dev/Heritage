@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+const EMPTY_PLAYBACK = { isPlaying: false, currentTime: 0, duration: 0, hasEnded: false, error: null as string | null };
+
 /** Audio thật; không giả lập đồng hồ khi chưa có URL narration. */
 export function useNarration(url: string | null, muted = false) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [state, setState] = useState({ isPlaying: false, currentTime: 0, duration: 0, hasEnded: false, error: null as string | null });
+  const [state, setState] = useState({ ...EMPTY_PLAYBACK, url });
   useEffect(() => {
-    setState({ isPlaying: false, currentTime: 0, duration: 0, hasEnded: false, error: null });
+    setState({ ...EMPTY_PLAYBACK, url });
     if (!url) return;
     const audio = new Audio(url);
     audio.preload = "metadata";
@@ -70,5 +72,8 @@ export function useNarration(url: string | null, muted = false) {
     audio.currentTime = audio.duration;
     audio.pause();
   }, []);
-  return { ...state, hasAudio: !!url, play, pause, seek, replay, skipToEnd };
+  // Render đầu khi URL đổi vẫn giữ state cũ trước khi effect reset chạy.
+  // Không để camera cảnh mới dùng nhầm duration/currentTime của audio cũ.
+  const playback = state.url === url ? state : EMPTY_PLAYBACK;
+  return { ...playback, hasAudio: !!url, play, pause, seek, replay, skipToEnd };
 }
