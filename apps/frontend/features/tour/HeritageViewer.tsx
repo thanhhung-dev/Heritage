@@ -787,9 +787,10 @@ export default function HeritageViewer() {
 
       {/* Transient toast */}
       <div className={styles.toast} role="status" aria-live="polite" />
-
-      <ExploreControls mode={player.exploreMode} onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore}
-        initialMode={player.initialExploreMode} onCameraView={player.hasSceneData ? player.toggleCameraView : undefined} zoomed={player.zoomed} />
+      <ExploreControls interactive={player.interactive} mode={player.exploreMode}
+        onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore}
+        initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}
+        selectedHighlightId={player.selectedHighlight?.id} />
       <HighlightPanel highlight={player.selectedHighlight} onClose={player.closeHighlight} />
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}
     </div>

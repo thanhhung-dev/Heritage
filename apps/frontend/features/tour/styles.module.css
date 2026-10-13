@@ -2090,6 +2090,70 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   pointer-events: auto;
 }
 
+.exploreCorner-rays {
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 700px;
+  height: 700px;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(215deg, rgba(254, 240, 215, 0.45), rgba(254, 240, 215, 0.12) 30%, transparent 60%),
+    linear-gradient(225deg, rgba(254, 240, 215, 0.3), rgba(254, 240, 215, 0.06) 35%, transparent 55%),
+    linear-gradient(205deg, rgba(254, 240, 215, 0.2), transparent 50%),
+    linear-gradient(235deg, rgba(254, 240, 215, 0.1), transparent 40%);
+}
+
+.exploreCorner-glowSvg {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 700px;
+  height: auto;
+  pointer-events: none;
+  opacity: 0;
+  z-index: -2;
+}
+
+.exploreCorner-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(254, 240, 215, 0.15), rgba(254, 240, 215, 0.04) 50%, transparent 70%);
+  z-index: -1;
+}
+
+.exploreCorner-rays.reveal,
+.exploreCorner-glowSvg.reveal,
+.exploreCorner-glow.reveal {
+  opacity: 1;
+}
+
+.exploreCorner-glowSvg.reveal,
+.exploreCorner-glow.reveal {
+  animation: exploreGlowPulse 3.5s ease-in-out 1.6s infinite;
+}
+
+.exploreCorner-tiltWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) {
+  .exploreCorner.active:hover .exploreCorner-tiltWrap {
+    transform: scale(1.1);
+  }
+}
+
 .exploreCorner-btn {
   display: flex;
   align-items: center;
@@ -2125,6 +2189,107 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 .exploreCorner-btn.pop {
   opacity: 1;
   transform: scale(1);
+}
+
+.exploreCorner-btn:hover {
+  border-color: rgba(240, 232, 221, 0.5);
+  filter: brightness(1.15);
+  box-shadow: 0 0 40px 6px rgba(240, 232, 221, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.exploreCorner-iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: exploreIconZoom 3s ease-in-out infinite;
+}
+
+.exploreCorner-shineClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.exploreCorner-shine {
+  position: absolute;
+  top: -20%;
+  left: 0;
+  width: 45%;
+  height: 140%;
+  background: linear-gradient(105deg, transparent 35%, rgba(254, 240, 215, 0.5) 50%, transparent 65%);
+  transform: skewX(-18deg);
+  translate: -100% 0;
+  opacity: 0;
+  animation: exploreShineSwipe 3s ease-in-out infinite;
+}
+
+.exploreCorner-footsteps {
+  display: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: rotate(45deg);
+}
+
+.exploreCorner.free-explore .exploreCorner-iconWrap { visibility: hidden; }
+.exploreCorner.free-explore .exploreCorner-shineClip { display: none; }
+.exploreCorner.free-explore .exploreCorner-footsteps { display: block; }
+
+.footstepStrip {
+  position: absolute;
+  left: 50%;
+  top: -11px;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 180px;
+}
+
+.footstep {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+  animation: footstepAppear 6s linear infinite;
+}
+
+.footstep-l { left: 1px; }
+.footstep-r { right: 1px; }
+.footstep:nth-child(1) { top: 0; animation-delay: -0.75s; }
+.footstep:nth-child(2) { top: 20px; animation-delay: -1.5s; }
+.footstep:nth-child(3) { top: 40px; animation-delay: -2.25s; }
+.footstep:nth-child(4) { top: 60px; animation-delay: -3s; }
+.footstep:nth-child(5) { top: 80px; animation-delay: -3.75s; }
+.footstep:nth-child(6) { top: 100px; animation-delay: -4.5s; }
+.footstep:nth-child(7) { top: 120px; animation-delay: -5.25s; }
+.footstep:nth-child(8) { top: 140px; animation-delay: 0s; }
+
+@keyframes exploreGlowPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes exploreIconZoom {
+  0%, 65%, 100% { transform: scale(1); }
+  75%, 90% { transform: scale(1.18); }
+}
+
+@keyframes exploreShineSwipe {
+  0%, 68% { translate: -100% 0; opacity: 0; }
+  72%, 90% { opacity: 1; }
+  96%, 100% { translate: 200% 0; opacity: 0; }
+}
+
+@keyframes footstepAppear {
+  0% { opacity: 0; transform: scale(0.3); }
+  4% { opacity: 1; transform: scale(1.08); }
+  7% { opacity: 1; transform: scale(1); }
+  42% { opacity: 0.85; transform: scale(1); }
+  58%, 100% { opacity: 0; }
 }
 
 .exploreCorner-icon {
@@ -3234,14 +3399,27 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 
 .exploreControls {
   position: absolute;
-  top: 88px;
-  right: 20px;
+  top: 30px;
+  right: 30px;
   z-index: 1000;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 12px;
+  width: 240px;
+  max-height: calc(100dvh - 260px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  border-radius: 16px;
+  background: rgba(28, 27, 26, 0.88);
+  backdrop-filter: blur(10px);
   pointer-events: auto;
 }
+
+.exploreModeLabel { font-size: 14px; font-weight: 500; }
+.exploreActions { display: flex; gap: 8px; }
+.exploreHighlights { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.exploreHighlights button { width: 100%; box-sizing: border-box; text-align: left; }
 
 .exploreControls button {
   padding: 9px 12px;
@@ -3277,9 +3455,31 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 @media (max-width: 640px) {
-  .exploreControls {
-    top: 140px;
+  .exploreCorner {
+    top: 128px;
     right: 16px;
-    max-width: calc(100% - 32px);
   }
+
+  .exploreCorner-btn { padding: 18px; }
+  .exploreCorner-icon { width: 36px; height: 36px; }
+  .exploreCorner-label { font-size: 12px; }
+  .exploreCorner-rays { width: 350px; height: 350px; top: -100px; right: -100px; }
+  .exploreCorner-glowSvg { width: 350px; top: -40px; right: -40px; }
+  .exploreCorner-glow { width: 80px; height: 80px; }
+  .footstepStrip { scale: 0.6; transform-origin: top center; }
+
+  .exploreControls {
+    top: 128px;
+    right: 16px;
+    width: 220px;
+    max-width: calc(100% - 64px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exploreCorner *, .exploreCorner *::before, .exploreCorner *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .exploreCorner .footstep { opacity: 0.8; }
 }

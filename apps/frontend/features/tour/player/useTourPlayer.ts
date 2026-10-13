@@ -13,6 +13,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
   captionsUrl?: string | null;
 } = {}) {
   const { engine, currentSceneKey, currentScene, scenePlayback } = useHeritageTour();
+  const interactive = scenePlayback ? currentScene?.interactive[0] ?? null : null;
   const [isMuted, setIsMuted] = useState(false);
   const [ccOn, setCcOn] = useState(true);
   const [exploreMode, setExploreMode] = useState<ExploreMode | null>(null);
@@ -41,7 +42,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
     } else {
       engine?.stopCameraTimeline();
     }
-    engine?.setInteractiveHighlights(scenePlayback ? currentScene?.interactive.flatMap((i) => i.highlights) ?? [] : []);
+    engine?.setInteractiveHighlights(interactive?.highlights ?? []);
     void engine?.setSceneHighlights(scenePlayback?.timedHighlights ?? []).catch((error: unknown) => {
       if (!cancelled) setSceneError(error instanceof Error ? error.message : "Không tải được highlight.");
     });
@@ -58,7 +59,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       if (!item) highlightEntry.current = null;
     });
     return () => { cancelled = true; unsubscribe?.(); };
-  }, [engine, currentSceneKey, currentScene, scenePlayback, pause, seek]);
+  }, [engine, currentSceneKey, currentScene, scenePlayback, interactive, pause, seek]);
   useEffect(() => {
     // Truyền cả trạng thái phát: engine cần biết để tự tiến đồng hồ nội bộ giữa
     // các lần React báo thời gian (mượt 60fps thay vì giật theo `timeupdate`).
@@ -81,7 +82,6 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
   }, [engine, hasAudio, narration.duration, currentScene, scenePlayback, currentSceneKey]);
 
   function applyInteractiveCamera() {
-    const interactive = scenePlayback ? currentScene?.interactive[0] : null;
     if (interactive?.cam_pos && interactive.cam_target && currentScene) {
       engine?.applyCameraPreset({ ...currentScene.camera, start_position: interactive.cam_pos, start_target: interactive.cam_target });
     }
@@ -93,9 +93,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
     isMuted, setIsMuted, ccOn, setCcOn,
     captionText: captions.text,
     captionsError: captions.error,
-    exploreMode, selectedHighlight, zoomed,
+    exploreMode, selectedHighlight, zoomed, interactive,
     hasSceneData: scenePlayback !== null,
-    initialExploreMode: currentScene?.interactive[0]?.mode === "free" ? "free" as const : "standard" as const,
+    initialExploreMode: interactive?.mode === "free" || interactive?.mode === "free_explore" ? "free" as const : "standard" as const,
     toggleCameraView() {
       // Chuyển giữa góc Start và góc Zoom cũng bay mượt. Người dùng chủ động
       // chọn góc thì timeline dừng, tránh bị kéo về quỹ đạo tự động.
@@ -106,6 +106,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       }
     },
     enterExplore(mode: ExploreMode) {
+      if (!interactive || !engine) return;
       pause();
       // Explore là để người dùng tự do xoay — timeline phải nhường quyền,
       // nếu không camera sẽ bị kéo về quỹ đạo mỗi frame.
@@ -135,6 +136,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       engine?.selectHighlight(null);
       if (pose) engine?.restoreCameraPose(pose);
     },
+    selectHighlight(id: number) { engine?.selectHighlight(id); },
     restart() { void narration.replay(); },
     skipVoiceover: narration.skipToEnd,
     seekBy: (seconds: number) => seek(narration.currentTime + seconds),

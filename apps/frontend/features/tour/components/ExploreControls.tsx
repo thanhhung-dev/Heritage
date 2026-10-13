@@ -1,28 +1,78 @@
 "use client";
 
+import Image from "next/image";
+import { useEffect, useRef } from "react";
+import type { HeritageInteractive } from "@/types/heritage";
 import type { ExploreMode } from "../three/explore-controller";
 import styles from "../styles.module.css";
 
-export default function ExploreControls({ mode, onEnter, onReset, onExit, initialMode = "standard", onCameraView, zoomed = false }: {
+const ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/icons";
+
+export default function ExploreControls({ interactive, mode, onEnter, onReset, onExit, initialMode, onSelectHighlight, selectedHighlightId }: {
+  interactive: HeritageInteractive | null;
   mode: ExploreMode | null;
   onEnter: (mode: ExploreMode) => void;
   onReset: () => void;
   onExit: () => void;
-  initialMode?: ExploreMode;
-  onCameraView?: () => void;
-  zoomed?: boolean;
+  initialMode: ExploreMode;
+  onSelectHighlight: (id: number) => void;
+  selectedHighlightId?: number;
 }) {
-  return (
-    <nav className={styles.exploreControls} aria-label="3D exploration">
-      {!mode ? <>
-        <button type="button" onClick={() => onEnter(initialMode)}>Explore in 3D</button>
-        {onCameraView && <button type="button" onClick={onCameraView}>{zoomed ? "Start view" : "Zoom view"}</button>}
-      </> : <>
-        <button type="button" aria-pressed={mode === "standard"} onClick={() => onEnter("standard")}>Standard</button>
-        <button type="button" aria-pressed={mode === "free"} onClick={() => onEnter("free")}>Free orbit</button>
-        <button type="button" onClick={onReset}>Reset</button>
-        <button type="button" onClick={onExit}>Exit</button>
-      </>}
+  const enterRef = useRef<HTMLButtonElement>(null);
+  const exitRef = useRef<HTMLButtonElement>(null);
+  const previousMode = useRef(mode);
+  useEffect(() => {
+    if (previousMode.current !== mode) {
+      (mode ? exitRef : enterRef).current?.focus();
+      previousMode.current = mode;
+    }
+  }, [mode]);
+
+  if (!interactive) return null;
+  if (mode) return (
+    <nav className={styles.exploreControls} aria-label="3D exploration" data-explore-mode={mode}>
+      <span className={styles.exploreModeLabel}>{mode === "free" ? "Free orbit" : "Explore in 3D"}</span>
+      <div className={styles.exploreActions}>
+        <button type="button" onClick={onReset}>Reset view</button>
+        <button ref={exitRef} type="button" onClick={onExit}>Exit 3D Mode</button>
+      </div>
+      {interactive.highlights.length > 0 && (
+        <ul className={styles.exploreHighlights} aria-label="Points of interest">
+          {interactive.highlights.map((highlight) => (
+            <li key={highlight.id}>
+              <button type="button" aria-pressed={selectedHighlightId === highlight.id} onClick={() => onSelectHighlight(highlight.id)}>
+                {highlight.popup_title ?? "Highlight"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </nav>
+  );
+
+  return (
+    <div className={`${styles.exploreCorner} ${styles.active} ${initialMode === "free" ? styles["free-explore"] : ""}`} id="exploreCorner">
+      <div className={`${styles["exploreCorner-rays"]} ${styles.reveal}`} aria-hidden="true" />
+      <Image className={`${styles["exploreCorner-glowSvg"]} ${styles.reveal}`} src="/images/glow_top_right.png" width={700} height={700} alt="" aria-hidden="true" unoptimized />
+      <div className={`${styles["exploreCorner-glow"]} ${styles.reveal}`} aria-hidden="true" />
+      <div className={styles["exploreCorner-tiltWrap"]} id="exploreCornerTilt">
+        <button ref={enterRef} className={`${styles["exploreCorner-btn"]} ${styles.pop}`} id="exploreCornerBtn" type="button"
+          aria-label="Explore Area in 3D" aria-describedby="dive-deeper-label" data-interactive-id={interactive.id} onClick={() => onEnter(initialMode)}>
+          <div className={styles["exploreCorner-iconWrap"]}>
+            <Image className={styles["exploreCorner-icon"]} src={`${ICONS}/explore_lens.svg`} width={72} height={72} alt="" unoptimized />
+          </div>
+          <div className={styles["exploreCorner-shineClip"]} aria-hidden="true"><span className={styles["exploreCorner-shine"]} /></div>
+          <div className={styles["exploreCorner-footsteps"]} aria-hidden="true">
+            <div className={styles.footstepStrip}>
+              {Array.from({ length: 8 }, (_, index) => (
+                <Image key={index} className={`${styles.footstep} ${styles[index % 2 === 0 ? "footstep-l" : "footstep-r"]}`}
+                  src={`${ICONS}/icon_footstep_${index % 2 === 0 ? "l" : "r"}.svg`} width={26} height={26} alt="" unoptimized />
+              ))}
+            </div>
+          </div>
+        </button>
+        <span className={`${styles["exploreCorner-label"]} ${styles.show}`} id="dive-deeper-label">Dive Deeper</span>
+      </div>
+    </div>
   );
 }
