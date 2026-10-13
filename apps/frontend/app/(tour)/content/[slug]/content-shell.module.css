@@ -1,13 +1,3 @@
-/* ─────────────────────────────────────────────────────────────
-   Heritage splash / loading page  →  /content/{slug}
-
-   Visual system ported from the Tapestry splash reference:
-   fixed full-viewport stage, cover background, glass info card
-   anchored bottom-centre, glass "loading bar" start button,
-   corner badges and an explore-more affordance.
-   ───────────────────────────────────────────────────────────── */
-
-/* Route shell — wraps every /content/{slug}/* view. */
 .shell {
   position: fixed;
   inset: 0;
@@ -16,7 +6,6 @@
   color: #fff;
 }
 
-/* ── Page frame (ref: .splashPage) ── */
 
 .loading {
   width: 100%;
@@ -33,7 +22,6 @@
   font-family: "Poppins", "Avenir Next", Avenir, sans-serif;
 }
 
-/* ── Background image (ref: .sBackgroundImage) ── */
 
 .splashWrap {
   position: absolute;
@@ -42,24 +30,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  gap: 1rem;
-  text-align: center;
-  padding: 2rem;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 3px solid rgba(245, 241, 232, 0.2);
-  border-top-color: #d9a441;
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  background-color: #fff;
+  z-index: 0;
 }
 
 .splash {
@@ -237,23 +209,102 @@
   width: auto;
 }
 
-.startButton:hover {
-  background: #e6b85c;
+.exploreMoreLabel {
+  margin: 0;
+  font-size: var(--font-size-12);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.5px;
 }
 
-.startButton:active {
-  transform: scale(0.98);
+/* ── Bottom-centre content column (ref: .sPageGroup) ── */
+
+.pageGroup {
+  display: flex;
+  position: absolute;
+  margin: auto;
+  width: 100%;
+  left: 0;
+  right: 0;
+  background: none;
+  border-radius: 0;
+  max-width: none;
+  pointer-events: none;
+  box-sizing: border-box;
+  bottom: 80px;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 20;
 }
 
-.errorTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
+/* ── Glass info card (ref: .splash-top) ── */
+
+.infoCard {
+  width: 100%;
+  max-width: min(52rem, 80vw);
+  border-radius: 20px;
+  background-color: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: #fff;
+  padding: 24px 48px 22px;
+  pointer-events: auto;
+  box-sizing: border-box;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+  margin: 0 0 14px;
 }
 
-.errorMessage {
-  color: rgba(245, 241, 232, 0.7);
-  max-width: 50ch;
-  font-size: 0.9rem;
+/* ── Region (ref: .sLocationGroup) ── */
+
+.region {
+  margin: 0 0 6px;
+  font-size: var(--font-size-9);
+  font-weight: 400;
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 2px;
+  line-height: normal;
+  text-transform: uppercase;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Title (ref: .sTitle) ── */
+
+.title {
+  margin: 0;
+  font-size: clamp(28px, 3.1944vw, 46px);
+  line-height: 1.12;
+  font-weight: 500;
+  padding-top: 0;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+  text-wrap: balance;
+}
+
+/* ── Tagline (ref: .sTagline) ── */
+
+.subtitle {
+  margin: 0;
+  padding-top: 8px;
+  font-size: clamp(14px, 1.1111vw, 16px);
+  line-height: 24px;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+  max-width: 46rem;
+}
+
+/* ── Long description (ref: .sAboutTour) ── */
+
+.aboutTour {
+  width: 100%;
+  max-width: 40rem;
+  padding-top: 16px;
 }
 
 .aboutTourDesc {
@@ -366,6 +417,282 @@
   cursor: pointer;
 }
 
-.backButton:hover {
-  border-color: #f5f1e8;
+.bottomNav:focus-visible {
+  outline: 2px solid #fef0d7;
+  outline-offset: 4px;
+  border-radius: 30px;
+}
+
+/* ── Glass loading bar (ref: .t_loadingBarMain) ── */
+
+.loadingBarMain {
+  position: relative;
+  width: 100%;
+  display: flex;
+  height: 48px;
+  border-radius: 30px;
+  align-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(240, 232, 221, 0.08) 40%,
+      rgba(240, 232, 221, 0.04) 60%,
+      rgba(200, 195, 188, 0.06) 100%);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  box-shadow:
+    0 0 30px 4px rgba(240, 232, 221, 0.1),
+    0 0 60px 8px rgba(240, 232, 221, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.bottomNav:hover .loadingBarMain {
+  border-color: rgba(254, 240, 215, 0.52);
+  box-shadow:
+    0 0 12px 4px rgba(240, 232, 221, 0.5),
+    0 0 24px 8px rgba(240, 232, 221, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  /* Let the explicit hover shadow win over the idle glow animation. */
+  animation: none;
+}
+
+.loadingBar {
+  background-color: rgba(80, 65, 45, 0.35);
+  height: inherit;
+  border-radius: inherit;
+  width: 100%;
+}
+
+.loadingBarFill {
+  background: linear-gradient(90deg,
+      rgba(254, 240, 215, 0.3) 0%,
+      rgba(254, 240, 215, 0.5) 100%);
+  height: inherit;
+  border-radius: inherit;
+  width: 0;
+  min-width: 48px;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transition: width 0.4s ease;
+}
+
+.loadingBarFillLoading {
+  width: 36%;
+  animation: loading-progress 1.8s ease-in-out infinite alternate;
+}
+
+.loadingBarFillReady {
+  width: 100%;
+}
+
+/* Loaded: a light sweep travels along the filled bar. */
+.loadingBarFillReady::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(100deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 80%);
+  animation: loadingBarSweep 2.4s ease-in-out infinite;
+}
+
+.loadingBarText {
+  position: absolute;
+  width: 100%;
+  font-size: var(--font-size-12);
+  font-weight: 600;
+  color: #fef0d7;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+/* "START" settles in with the tracking relaxing into place. */
+.loadingBarTextReady {
+  animation: startLabelIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Ready-state glow: the button pulses to invite the tap. */
+.loadingBarMainReady {
+  animation: startBtnGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes startBtnGlow {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px 1px rgba(240, 232, 221, 0.2),
+      0 0 14px 3px rgba(240, 232, 221, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  50% {
+    box-shadow:
+      0 0 10px 3px rgba(240, 232, 221, 0.5),
+      0 0 18px 6px rgba(240, 232, 221, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+}
+
+@keyframes startLabelIn {
+  from {
+    opacity: 0;
+    letter-spacing: 6px;
+  }
+
+  to {
+    opacity: 1;
+    letter-spacing: 2px;
+  }
+}
+
+@keyframes loadingBarSweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes loading-progress {
+  from {
+    width: 30%;
+  }
+
+  to {
+    width: 42%;
+  }
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 780px) {
+  .infoCard {
+    max-width: min(52rem, calc(100% - 24px));
+    padding: 22px clamp(20px, 5vw, 48px) 20px;
+  }
+
+  .title {
+    font-size: clamp(26px, 5vw, 40px);
+  }
+
+  .aboutTourDesc {
+    font-size: 14px;
+    line-height: 22px;
+    max-height: 66px;
+  }
+
+  .languages {
+    height: 44px;
+  }
+
+  .presentedBy {
+    right: 16px;
+  }
+
+  .presentedByLogo {
+    width: 112px;
+  }
+}
+
+@media (max-height: 780px) {
+  .pageGroup {
+    bottom: 56px;
+  }
+
+  .infoCard {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  .region {
+    margin-bottom: 4px;
+  }
+
+  .aboutTour {
+    padding-top: 12px;
+  }
+
+  .aboutTourDesc {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 48px;
+    line-height: 24px;
+  }
+
+  .languages {
+    height: 42px;
+    margin-top: 12px;
+  }
+
+  .publishDate {
+    padding-top: 10px;
+  }
+}
+
+@media (max-width: 540px) {
+  .pageGroup {
+    bottom: 64px;
+  }
+
+  .infoCard {
+    padding: 18px 20px 18px;
+  }
+
+  .title {
+    font-size: clamp(24px, 7vw, 34px);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    line-height: 21px;
+  }
+
+  .aboutTourDesc {
+    font-size: 13px;
+    line-height: 21px;
+    max-height: 63px;
+  }
+
+  .language,
+  .languageActive {
+    font-size: 12px;
+  }
+
+  .exploreMoreImg {
+    height: 40px;
+  }
+
+  .communityMadeHover {
+    width: 180px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .loadingBarFillLoading,
+  .glow,
+  .loadingBarMainReady,
+  .loadingBarTextReady,
+  .loadingBarFillReady::after {
+    animation: none;
+  }
+
+  .exploreMore {
+    transition: none;
+  }
 }
