@@ -42,6 +42,9 @@ test("lens badge chọn đúng ID sau khi camera quay và không chọn khi ẩn
     const ray = new THREE.Raycaster(new THREE.Vector3(5, 0.2, 0.1), new THREE.Vector3(-1, 0, 0));
     highlights.pick(ray);
     assert.equal(selected, 901);
+    highlights.select(null);
+    highlights.pick(new THREE.Raycaster(new THREE.Vector3(5, 0.9, 0.9), new THREE.Vector3(-1, 0, 0)));
+    assert.equal(selected, null);
     highlights.show(false);
     highlights.select(null);
     highlights.pick(ray);
@@ -163,6 +166,32 @@ test("thoát Explore bay về góc trước đó, không nhảy và có thể h�
     controller.stopTimeline();
     controller.update(2);
     assert.ok(camera.position.distanceTo(stopped.position) < 1e-8);
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("camera focus tới đúng preset dù orbit còn quán tính damping", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  controls.enableDamping = true;
+  const controller = createCameraController(camera, controls);
+  const preset = { start_position: [19, 12, -7], start_target: [2, 3, -1] } as Parameters<typeof controller.applyPreset>[0];
+  try {
+    controller.applyPreset(preset);
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 8;
+    controls.update(0.1);
+    controls.autoRotate = false;
+    controller.flyToPreset(preset, false, 1.2);
+    controller.update(1.2);
+    controls.update();
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(19, 12, -7)) < 1e-8);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(2, 3, -1)) < 1e-8);
   } finally {
     controls.dispose();
   }
