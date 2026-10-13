@@ -84,6 +84,41 @@ test("camera giữ đúng preset dưới target và ngoài khoảng fit, kể c�
   }
 });
 
+test("thoát Explore bay về góc trước đó, không nhảy và có thể hủy khi đổi cảnh", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  const controller = createCameraController(camera, controls);
+  const explore = createExploreController(controller, controls);
+  const preset = { start_position: [19, 12, -7], start_target: [2, 3, -1] } as Parameters<typeof controller.applyPreset>[0];
+  try {
+    controller.applyPreset(preset);
+    explore.enter("standard");
+    controller.applyPreset({ ...preset, start_position: [-5, 6, 11], start_target: [-1, 2, 4] });
+    explore.exit(1.2);
+    assert.deepEqual(camera.position.toArray(), [-5, 6, 11]);
+    controller.update(0.6);
+    assert.deepEqual(camera.position.toArray(), [7, 9, 2]);
+    assert.deepEqual(controls.target.toArray(), [0.5, 2.5, 1.5]);
+    controller.update(0.6);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(19, 12, -7)) < 1e-8);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(2, 3, -1)) < 1e-8);
+    explore.enter("free");
+    controller.applyPreset({ ...preset, start_position: [-5, 6, 11] });
+    explore.exit(1.2);
+    controller.update(0.2);
+    const stopped = controller.snapshot();
+    controller.stopTimeline();
+    controller.update(2);
+    assert.deepEqual(camera.position.toArray(), stopped.position.toArray());
+  } finally {
+    controls.dispose();
+  }
+});
+
 test("bay camera tới preset: tiến dần rồi dừng đúng toạ độ, instant_move đặt ngay", () => {
   const document = new EventTarget();
   const element = Object.assign(new EventTarget(), {
