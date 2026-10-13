@@ -3,9 +3,17 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
 import { useHeritageTour } from "@/context/heritage-tour";
+import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
 import styles from "./content-shell.module.css";
+import { LogoText } from "@/components/LogoText";
+
+/**
+ * Light wordmark (175×29) — rendered as a plain `<img>` so `.sHeritageLogo`
+ * alone controls its size, exactly like the Tapestry reference markup.
+ */
+const SPLASH_LOGO_URL =
+  "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/logos/logo_type_light.svg";
 
 type PageLocale = "en" | "vi";
 
@@ -41,10 +49,40 @@ const LOCALIZED_COPY: Record<string, Record<PageLocale, LocalizedPageCopy>> = {
   "tu-duc-tomb": TU_DUC_COPY,
 };
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/**
+ * Deterministic `YYYY-MM-DD` → `D Mon YYYY` formatting.
+ *
+ * Deliberately avoids `toLocaleDateString` so the server-rendered markup and
+ * the hydrated client markup can never disagree.
+ */
+function formatPublishDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const [year, month, day] = value.slice(0, 10).split("-");
+  const monthLabel = MONTHS[Number(month) - 1];
+  if (!year || !day || !monthLabel) return value;
+  return `${Number(day)} ${monthLabel} ${year}`;
+}
+
 /**
  * `/content/{slug}` — fullscreen heritage loading screen.
+ *
  * The background and copy are rendered from the heritage payload while the
- * tour scene prepares; activating the loading bar opens the first scene.
+ * tour scene prepares; activating the glass loading bar opens the first scene.
  */
 export default function ContentLoadingPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -73,6 +111,11 @@ export default function ContentLoadingPage() {
   const displayTagline = translatedCopy?.tagline ?? heritage.tagline;
   const displayDescription =
     translatedCopy?.description ?? heritage.description;
+  const publishDate = formatPublishDate(heritage.publish_date);
+  const durationLabel = heritage.duration_seconds
+    ? `${Math.round(heritage.duration_seconds / 60)} min tour`
+    : null;
+  const presentedByLogoUrl = heritage.presented_by_logo_url;
   const availableLanguages = [heritage.language1, heritage.language2];
   const englishLanguage = availableLanguages.find((language) =>
     language?.code.toLowerCase().startsWith("en")
@@ -102,76 +145,130 @@ export default function ContentLoadingPage() {
   };
 
   return (
-    <main className={styles.loading}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={splashImageRef}
-        className={styles.splash}
-        src={splashImageUrl || undefined}
-        alt=""
-        onLoad={finishSplashLoading}
-        onError={finishSplashLoading}
-      />
-      <div className={styles.scrim} aria-hidden="true" />
-
-      <div className={styles.brand} role="img" aria-label="Heritage">
-        <span className={styles.brandMark} aria-hidden="true" />
-        <span className={styles.brandName}>HERITAGE</span>
+    <main className={styles.loading} style={tapestryTourVarsStyle}>
+      <div className={styles.splashWrap}>
+        <img
+          ref={splashImageRef}
+          className={styles.splash}
+          src={splashImageUrl || undefined}
+          alt=""
+          onLoad={finishSplashLoading}
+          onError={finishSplashLoading}
+        />
       </div>
 
-      <section className={styles.infoCard} aria-labelledby="heritage-title">
-        {displayRegion ? (
-          <p className={styles.region}>{displayRegion}</p>
-        ) : null}
-        <h1 className={styles.title} id="heritage-title">
-          {displayTitle}
-        </h1>
-        {displayTagline ? (
-          <p className={styles.subtitle}>{displayTagline}</p>
-        ) : null}
-        {displayDescription ? (
-          <p className={styles.description}>{displayDescription}</p>
-        ) : null}
+      <LogoText className={styles.sHeritageLogo} size={100} />
 
-        <div className={styles.languages} aria-label="Available languages">
-          {languages.map((language) => (
-            <button
-              className={
-              language.code === displayLanguage
-                  ? styles.languageActive
-                  : styles.language
-              }
-              key={language.code}
-              type="button"
-              aria-pressed={language.code === displayLanguage}
-              onClick={() => setSelectedLanguage(language.code)}
-            >
-              {language.name}
-            </button>
-          ))}
+      <div className={styles.glow} aria-hidden="true" />
+
+      {/* Top-right badge — the sponsor logo wins over the community flag. */}
+      {presentedByLogoUrl ? (
+        <div className={styles.presentedBy}>
+          <div className={styles.presentedByGroup}>
+            <span className={styles.presentedByText}>Presented by</span>
+            <img
+              className={styles.presentedByLogo}
+              src={presentedByLogoUrl}
+              alt="Presented by"
+            />
+          </div>
         </div>
-      </section>
+      ) : heritage.community_made ? (
+        <div className={styles.communityMade}>
+          <span className={styles.communityMadeBadge}>Community made</span>
+          <span className={styles.communityMadeHover}>
+            This tour was created together with the local community.
+          </span>
+        </div>
+      ) : null}
 
-      <Link
-        className={`${styles.action} ${
-          isReady ? styles.startAction : styles.loadingAction
-        }`}
-        href={`/content/${slug}/s0`}
-        aria-label={
-          isReady ? "Start the heritage experience" : "Loading heritage assets"
-        }
-        aria-disabled={!isReady}
-        onClick={(event) => {
-          if (!isReady) event.preventDefault();
-        }}
-      >
-        {!isReady ? (
-          <span className={styles.loadingProgress} aria-hidden="true" />
-        ) : null}
-        <span className={styles.actionLabel}>
-          {isReady ? "START" : "LOADING..."}
-        </span>
-      </Link>
+      <div className={styles.pageGroup}>
+        <section className={styles.infoCard} aria-labelledby="heritage-title">
+          {displayRegion ? (
+            <p className={styles.region}>{displayRegion}</p>
+          ) : null}
+          <h1 className={styles.title} id="heritage-title">
+            {displayTitle}
+          </h1>
+          {displayTagline ? (
+            <p className={styles.subtitle}>{displayTagline}</p>
+          ) : null}
+          {displayDescription ? (
+            <div className={styles.aboutTour}>
+              <p className={styles.aboutTourDesc}>{displayDescription}</p>
+            </div>
+          ) : null}
+
+          <div className={styles.languages} aria-label="Available languages">
+            {languages.map((language) => (
+              <button
+                className={
+                  language.code === displayLanguage
+                    ? styles.languageActive
+                    : styles.language
+                }
+                key={language.code}
+                type="button"
+                aria-pressed={language.code === displayLanguage}
+                onClick={() => setSelectedLanguage(language.code)}
+              >
+                {language.name}
+              </button>
+            ))}
+          </div>
+
+          {publishDate || durationLabel ? (
+            <p className={styles.publishDate}>
+              {publishDate ? <span>Published {publishDate}</span> : null}
+              {publishDate && durationLabel ? (
+                <span className={styles.metaSep} aria-hidden="true">
+                  ·
+                </span>
+              ) : null}
+              {durationLabel ? (
+                <span className={styles.manifestVersion}>{durationLabel}</span>
+              ) : null}
+            </p>
+          ) : null}
+        </section>
+
+        <div className={styles.enterButtonGroup}>
+          <Link
+            className={styles.bottomNav}
+            href={`/content/${slug}/s0`}
+            aria-label={
+              isReady ? "Start the heritage experience" : "Loading heritage assets"
+            }
+            aria-disabled={!isReady}
+            onClick={(event) => {
+              if (!isReady) event.preventDefault();
+            }}
+          >
+            <span
+              className={`${styles.loadingBarMain} ${
+                isReady ? styles.loadingBarMainReady : ""
+              }`}
+            >
+              <span className={styles.loadingBar} aria-hidden="true" />
+              <span
+                className={`${styles.loadingBarFill} ${
+                  isReady
+                    ? styles.loadingBarFillReady
+                    : styles.loadingBarFillLoading
+                }`}
+                aria-hidden="true"
+              />
+              <span
+                className={`${styles.loadingBarText} ${
+                  isReady ? styles.loadingBarTextReady : ""
+                }`}
+              >
+                {isReady ? "Start" : "Loading…"}
+              </span>
+            </span>
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }
