@@ -216,13 +216,16 @@ test("metadata timeline đến khi đang chuyển cảnh không làm camera nh�
     const beforeMetadata = controller.snapshot();
     assert.equal(controller.startTimeline(preset, 6), true);
     assert.deepEqual(camera.position.toArray(), beforeMetadata.position.toArray());
+    controller.updateTimeline(1.5);
+    assert.ok(camera.position.distanceTo(beforeMetadata.position) < 1e-8,
+      "metadata đến khi audio đã phát không được làm camera nhảy ở frame kế tiếp");
     controller.updateTimeline(0);
     assert.deepEqual(camera.position.toArray(), beforeMetadata.position.toArray());
     controller.update(0.4);
     assert.ok(camera.position.distanceTo(beforeMetadata.position) > 1);
     controller.updateTimeline(1.5);
-    assert.ok(camera.position.distanceTo(new THREE.Vector3(-4.75, 11, 56.25)) < 1e-8,
-      "audio phát sớm phải hòa liên tục vào chuyến bay chuyển cảnh");
+    assert.ok(camera.position.distanceTo(beforeMetadata.position) > 1,
+      "audio phát sớm phải hòa vào chuyến bay chuyển cảnh");
     controller.update(0.8);
     assert.ok(camera.position.distanceTo(new THREE.Vector3(12, 8, 40)) < 1e-8);
     // Audio pause ở mốc 1.5s: frame cuối chuyến bay vẫn phải về đúng pose này.
@@ -231,6 +234,13 @@ test("metadata timeline đến khi đang chuyển cảnh không làm camera nh�
     controller.updateTimeline(3);
     assert.ok(camera.position.distanceTo(new THREE.Vector3(9, 6, 25)) < 1e-8);
     assert.ok(controls.target.distanceTo(new THREE.Vector3(0, 2, 3.5)) < 1e-8);
+    controller.flyToPreset(preset, false, 1.6);
+    controller.update(0.2);
+    controller.stopTimeline();
+    const stopped = controller.snapshot();
+    controller.update(2);
+    assert.deepEqual(camera.position.toArray(), stopped.position.toArray(),
+      "dừng camera khi rời cảnh/vào Explore phải dừng cả chuyến bay đang chạy");
   } finally {
     controls.dispose();
   }
