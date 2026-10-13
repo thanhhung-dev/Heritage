@@ -62,6 +62,7 @@ export function extractTour(html) {
           const lens = t.threeJS_int_highlights[h.interactive_highlight_id];
           return {
             id: h.interactive_highlight_id, popup_title: h.popup_title, popup_text: h.popup_text,
+            thumb_url: h.highlight_thumbnail ?? null,
             media_url: h.popup_media_link, cam_pos: vector(h.camera_position), cam_target: vector(h.camera_target),
             lens_pos: vector(lens?.lens_position), lens_rot: vector(lens?.lens_rotation), lens_scale: vector(lens?.lens_scale),
             sort_order: h.highlight_order,

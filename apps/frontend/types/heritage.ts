@@ -79,6 +79,7 @@ export interface HeritageInteractiveHighlight {
   id: number;
   popup_title: string | null;
   popup_text: string | null;
+  thumb_url?: string | null;
   media_url: string | null;
   cam_pos: number[] | Record<string, number> | null;
   cam_target: number[] | Record<string, number> | null;

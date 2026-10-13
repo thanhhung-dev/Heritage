@@ -3420,8 +3420,30 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 
 .exploreModeLabel { font-size: 14px; font-weight: 500; }
 .exploreActions { display: flex; gap: 8px; }
-.exploreHighlights { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
-.exploreHighlights button { width: 100%; box-sizing: border-box; text-align: left; }
+.exploreHighlights { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.exploreControls .exploreHighlights button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  text-align: left;
+}
+.exploreThumbnail {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 64px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #35312b;
+}
+.exploreThumbnail img { object-fit: cover; }
+.explorePointTitle { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
+.exploreHighlights button:hover { border-color: #f0e8dd; }
+.exploreControls button:focus-visible { outline: 2px solid #ff9b2d; outline-offset: 3px; }
 
 .exploreControls button {
   padding: 9px 12px;
@@ -3435,6 +3457,7 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 
 .exploreControls button[aria-pressed="true"] {
   border-color: #ff9b2d;
+  background: #493321;
 }
 
 .ssPlayButton:disabled {

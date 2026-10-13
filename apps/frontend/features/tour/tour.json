@@ -541,6 +541,7 @@
                 "id": 639,
                 "popup_title": "Niches for statues",
                 "popup_text": "On either side of the doorway and between the columns above, you’ll see deep niches carved into the rock. These may have once held carved statues of important figures or deities like we see at the al-Khaznah or treasury building.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Niche_drawing-256x176.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Niche_drawing.JPG",
                 "cam_pos": [
                   2.4526704078726045,
@@ -573,6 +574,7 @@
                 "id": 640,
                 "popup_title": "Urn",
                 "popup_text": "The freestanding urn sitting on top of the monument is especially eye-catching, it’s over 9 meters tall and carved from the same mountain rock.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/URN-255x158.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/INTMamoun_urn.mp4",
                 "cam_pos": [
                   3.48,
@@ -605,6 +607,7 @@
                 "id": 651,
                 "popup_title": "Distinct columns and capitals",
                 "popup_text": "The columns on both levels use unique Nabataean-style capitals (tops of columns). The lower ones are \"cupped\" and the upper ones are \"reverse-frustum\", shaped like upside-down cones.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/columns-256x209.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/columns.jpg",
                 "cam_pos": [
                   -1.571,
@@ -759,6 +762,7 @@
                 "id": 557,
                 "popup_title": "Camel Caravans",
                 "popup_text": "Petra was a vital trade hub in the ancient world, linking Arabia with the Mediterranean. Its location along caravan routes made it a center for exchanging spices, textiles, and incense, with camels essential for carrying heavy loads across the desert.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Camel%20Trade-256x187.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/INTmamoun_camel_caravans.mp4",
                 "cam_pos": [
                   23.51660817718836,
@@ -969,6 +973,7 @@
                 "id": 642,
                 "popup_title": "Ceremonial space",
                 "popup_text": "At the back wall stands a deep niche with carved steps leading up to it and a roof-like feature above. This niche may have served a ceremonial or religious purpose.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/niche_ad_deir-256x160.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/niche_ad_deir.JPG",
                 "cam_pos": [
                   -12.465,
@@ -1001,6 +1006,7 @@
                 "id": 643,
                 "popup_title": "Graffiti",
                 "popup_text": "Inside the room of Ad-Deir, traces of modern graffiti can be seen where visitors have carved or written their names into the stone. These markings damage the ancient surfaces and detract from the monument’s cultural and historical value.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/graffitti-256x171.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/graffitti.jpg",
                 "cam_pos": [
                   -9.088,
@@ -1033,6 +1039,7 @@
                 "id": 644,
                 "popup_title": "Raised platforms",
                 "popup_text": "On each side of the room in Ad-Deir, raised platforms are carved directly from the rock. These may have been used for seating, offerings, or other ceremonial functions.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/platform-256x143.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/platform.JPG",
                 "cam_pos": [
                   -9.56,
@@ -1212,6 +1219,7 @@
                 "id": 645,
                 "popup_title": "Cistern",
                 "popup_text": "In Petra, the Nabataeans engineered an advanced water management system. Cisterns collected and stored rainwater, ensuring a reliable supply for residents, agriculture, and trade in the arid desert environment.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/cistern%20copy_thumb-256x192.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Beduins_still_using_cistern.mp4",
                 "cam_pos": [
                   85.669,
@@ -1244,6 +1252,7 @@
                 "id": 648,
                 "popup_title": "Flash flooding",
                 "popup_text": "Petra is highly vulnerable to flash floods due to its location in a narrow valley surrounded by steep cliffs. Sudden heavy rains can send torrents of water rushing through the Siq and into the city, threatening monuments and visitors alike.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/flooding_thumb-256x144.jpg",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/INTMamoun_flooding.mp4",
                 "cam_pos": [
                   75.863,
@@ -1276,6 +1285,7 @@
                 "id": 649,
                 "popup_title": "Water channel",
                 "popup_text": "In Petra, the Nabataeans carved intricate water channels directly into the sandstone cliffs. These channels carried rainwater from the surrounding mountains and guided it through the city, supplying cisterns, reservoirs, and households.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/channel-256x171.webp",
                 "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/channel.jpg",
                 "cam_pos": [
                   58.665,

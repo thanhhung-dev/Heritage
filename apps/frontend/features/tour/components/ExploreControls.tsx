@@ -38,12 +38,19 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
       </div>
       {interactive.highlights.length > 0 && (
         <ul className={styles.exploreHighlights} aria-label="Points of interest">
-          {interactive.highlights.map((highlight) => (
+          {[...interactive.highlights].sort((a, b) => a.sort_order - b.sort_order).map((highlight) => (
             <li key={highlight.id}>
               <button type="button" aria-pressed={selectedHighlightId === highlight.id}
                 aria-controls={selectedHighlightId === highlight.id ? "hotspot-popup" : undefined}
                 onClick={() => onSelectHighlight(highlight.id)}>
-                {highlight.popup_title ?? "Highlight"}
+                <span className={styles.exploreThumbnail} aria-hidden="true">
+                  {highlight.thumb_url ? (
+                    <Image src={highlight.thumb_url} alt="" fill sizes="64px" unoptimized />
+                  ) : (
+                    <Image src={`${ICONS}/explore_lens.svg`} alt="" width={28} height={28} unoptimized />
+                  )}
+                </span>
+                <span className={styles.explorePointTitle}>{highlight.popup_title ?? "Highlight"}</span>
               </button>
             </li>
           ))}
