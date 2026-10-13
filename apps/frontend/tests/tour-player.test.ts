@@ -8,11 +8,57 @@ import { createCameraController } from "../features/tour/three/camera-controller
 import { createExploreController } from "../features/tour/three/explore-controller";
 import { parseVtt } from "../features/tour/player/useCaptions";
 import { createSceneHighlights, type TimedSceneHighlight } from "../features/tour/three/scene-highlights";
+import { createInteractiveHighlights } from "../features/tour/three/interactive-highlights";
 import type { ModelLoader } from "../features/tour/three/model-loader";
 import { HeritageTourContext } from "../context/heritage-tour";
 import { useTourPlayer } from "../features/tour/player/useTourPlayer";
 import { TEST_TOUR } from "../features/tour/tour-data";
 import type { HeritageScene } from "../types/heritage";
+
+test("lens badge chọn đúng ID sau khi camera quay và không chọn khi ẩn hoặc thay scene", () => {
+  const originalDocument = globalThis.document;
+  // Canvas2D chỉ tạo texture; raycast không cần GPU. Render thật kiểm tra bằng Chrome.
+  const context = {
+    createRadialGradient: () => ({ addColorStop() {} }),
+    fillRect() {}, beginPath() {}, arc() {}, fill() {}, stroke() {}, fillText() {},
+  };
+  globalThis.document = { createElement: () => ({ width: 256, height: 256, getContext: () => context }) } as unknown as Document;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera();
+  const highlights = createInteractiveHighlights(scene);
+  let selected: number | null = null;
+  highlights.subscribe((item) => { selected = item?.id ?? null; });
+  const base = TEST_TOUR.payload.scenes[1].interactive[0].highlights[0];
+  try {
+    highlights.set([
+      { ...base, id: 987, sort_order: 2, lens_pos: [0, 3, 0], lens_scale: [20, 20, 20] },
+      { ...base, id: 901, sort_order: 1, lens_pos: [0, 0, 0], lens_scale: [20, 20, 20] },
+    ]);
+    camera.position.set(5, 0, 0);
+    camera.lookAt(0, 0, 0);
+    highlights.show(true);
+    highlights.update(camera);
+    scene.updateMatrixWorld(true);
+    const ray = new THREE.Raycaster(new THREE.Vector3(5, 0.2, 0.1), new THREE.Vector3(-1, 0, 0));
+    highlights.pick(ray);
+    assert.equal(selected, 901);
+    highlights.show(false);
+    highlights.select(null);
+    highlights.pick(ray);
+    assert.equal(selected, null);
+    highlights.set([{ ...base, id: 432, lens_pos: [0, 0, 0], lens_scale: [20, 20, 20] }]);
+    highlights.show(true);
+    camera.position.set(0, 0, -5);
+    camera.lookAt(0, 0, 0);
+    highlights.update(camera);
+    scene.updateMatrixWorld(true);
+    highlights.pick(new THREE.Raycaster(new THREE.Vector3(0.1, 0.2, -5), new THREE.Vector3(0, 0, 1)));
+    assert.equal(selected, 432);
+  } finally {
+    highlights.dispose();
+    globalThis.document = originalDocument;
+  }
+});
 
 test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tour JSON", () => {
   let result: { id: number | null; mode: string; highlights: number[] } | null = null;
