@@ -96,6 +96,7 @@ test("thoát Explore bay về góc trước đó, không nhảy và có thể h�
   const preset = { start_position: [19, 12, -7], start_target: [2, 3, -1] } as Parameters<typeof controller.applyPreset>[0];
   try {
     controller.applyPreset(preset);
+    camera.up.set(0, 0, 1);
     explore.enter("standard");
     controller.applyPreset({ ...preset, start_position: [-5, 6, 11], start_target: [-1, 2, 4] });
     explore.exit(1.2);
@@ -103,9 +104,11 @@ test("thoát Explore bay về góc trước đó, không nhảy và có thể h�
     controller.update(0.6);
     assert.ok(camera.position.distanceTo(new THREE.Vector3(7, 9, 2)) < 1e-8);
     assert.ok(controls.target.distanceTo(new THREE.Vector3(0.5, 2.5, 1.5)) < 1e-8);
+    assert.ok(camera.up.distanceTo(new THREE.Vector3(0, 0.5, 0.5)) < 1e-8);
     controller.update(0.6);
     assert.ok(camera.position.distanceTo(new THREE.Vector3(19, 12, -7)) < 1e-8);
     assert.ok(controls.target.distanceTo(new THREE.Vector3(2, 3, -1)) < 1e-8);
+    assert.deepEqual(camera.up.toArray(), [0, 0, 1]);
     explore.enter("free");
     controller.applyPreset({ ...preset, start_position: [-5, 6, 11] });
     explore.exit(1.2);
