@@ -792,7 +792,8 @@ export default function HeritageViewer() {
         onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore}
         initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}
         selectedHighlightId={player.selectedHighlight?.id} />}
-      <HighlightPanel highlight={player.selectedHighlight} onClose={player.closeHighlight} />
+      <HighlightPanel key={player.interactive?.id} highlight={player.selectedHighlight}
+        highlights={player.interactive?.highlights} onClose={player.closeHighlight} />
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}
     </div>
   );

@@ -82,6 +82,12 @@ export interface HeritageInteractiveHighlight {
   /** Thumbnail từ tour nguồn; API backend hiện chưa trả trường này. */
   thumb_url?: string | null;
   media_url: string | null;
+  /** Metadata popup từ tour nguồn; optional để tương thích API backend cũ. */
+  media_type?: string | null;
+  media_alt?: string | null;
+  media_credit?: string | null;
+  captions_url?: string | null;
+  audio_url?: string | null;
   cam_pos: number[] | Record<string, number> | null;
   cam_target: number[] | Record<string, number> | null;
   lens_pos: number[] | Record<string, number> | null;
