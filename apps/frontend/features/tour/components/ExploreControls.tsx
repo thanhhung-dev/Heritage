@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HeritageInteractive } from "@/types/heritage";
 import type { ExploreMode } from "../three/explore-controller";
 import styles from "../styles.module.css";
@@ -20,6 +20,7 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
 }) {
   const enterRef = useRef<HTMLButtonElement>(null);
   const exitRef = useRef<HTMLButtonElement>(null);
+  const [failedThumbnails, setFailedThumbnails] = useState<Record<number, string | null | undefined>>({});
   const focusAfterAction = useRef(false);
   useEffect(() => {
     if (focusAfterAction.current) {
@@ -44,8 +45,9 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
                 aria-controls={selectedHighlightId === highlight.id ? "hotspot-popup" : undefined}
                 onClick={() => onSelectHighlight(highlight.id)}>
                 <span className={styles.exploreThumbnail} aria-hidden="true">
-                  {highlight.thumb_url ? (
-                    <Image src={highlight.thumb_url} alt="" fill sizes="64px" unoptimized />
+                  {highlight.thumb_url && failedThumbnails[highlight.id] !== highlight.thumb_url ? (
+                    <Image src={highlight.thumb_url} alt="" fill sizes="64px" unoptimized
+                      onError={() => setFailedThumbnails((previous) => ({ ...previous, [highlight.id]: highlight.thumb_url }))} />
                   ) : (
                     <Image src={`${ICONS}/explore_lens.svg`} alt="" width={28} height={28} unoptimized />
                   )}
