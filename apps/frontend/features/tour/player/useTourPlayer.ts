@@ -100,13 +100,18 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
       // Chuyển giữa góc Start và góc Zoom cũng bay mượt. Người dùng chủ động
       // chọn góc thì timeline dừng, tránh bị kéo về quỹ đạo tự động.
       engine?.stopCameraTimeline();
-      if (currentScene && engine?.flyCameraPreset(currentScene.camera, !zoomed, 1.2)) setZoomed(!zoomed);
+      if (currentScene && engine?.flyCameraPreset(currentScene.camera, !zoomed, 1.2)) {
+        timelineSceneKey.current = currentSceneKey;
+        setZoomed(!zoomed);
+      }
     },
     enterExplore(mode: ExploreMode) {
       pause();
       // Explore là để người dùng tự do xoay — timeline phải nhường quyền,
       // nếu không camera sẽ bị kéo về quỹ đạo mỗi frame.
       engine?.stopCameraTimeline();
+      // Metadata tải trễ không được giành camera từ thao tác chủ động này.
+      timelineSceneKey.current = currentSceneKey;
       engine?.enterExplore(mode);
       if (exploreMode === null) applyInteractiveCamera();
       setExploreMode(mode);
@@ -115,6 +120,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
     exitExplore() {
       engine?.exitExplore();
       setExploreMode(null);
+      timelineSceneKey.current = null;
       // Trả quyền lại cho timeline khi rời Explore (bỏ qua cảnh instant_move và
       // cảnh chưa biết thời lượng clip). Đánh dấu cảnh đã bật để effect bên trên
       // không bật lại lần nữa và kéo camera giật về pose start.

@@ -152,6 +152,17 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       if (!Number.isFinite(narrationSeconds) || narrationSeconds <= 0) return false;
       const to = { position: toPosition, target: toTarget, up: new THREE.Vector3(0, 1, 0), fov: camera.fov };
       allowPose(to.position, to.target);
+      if (flight) {
+        // Đổi đích từ start sang pose audio: lấy pose đang hiển thị làm gốc,
+        // giữ thời gian còn lại để metadata đến muộn không gây bước nhảy.
+        const current = snapshot();
+        flight.fromPosition = current.position;
+        flight.fromTarget = current.target;
+        flight.fromUp = current.up;
+        flight.fromFov = current.fov;
+        flight.duration -= flight.elapsed;
+        flight.elapsed = 0;
+      }
       timeline = {
         from,
         to,
@@ -203,9 +214,12 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       }
       return true;
     },
-    /** Tắt chuyển động theo timeline (khi chuyển cảnh hoặc vào Explore). */
+    /** Nhường quyền camera khi chuyển cảnh, chọn góc hoặc vào Explore. */
     stopTimeline() {
       timeline = null;
+      flight = null;
+      drivingPose = false;
+      syncControls();
     },
     /** Có đang chạy chế độ camera bám timeline hay không. */
     hasTimeline: () => timeline !== null,
