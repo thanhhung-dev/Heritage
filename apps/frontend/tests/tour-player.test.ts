@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createCameraController } from "../features/tour/three/camera-controller";
@@ -7,6 +9,38 @@ import { createExploreController } from "../features/tour/three/explore-controll
 import { parseVtt } from "../features/tour/player/useCaptions";
 import { createSceneHighlights, type TimedSceneHighlight } from "../features/tour/three/scene-highlights";
 import type { ModelLoader } from "../features/tour/three/model-loader";
+import { HeritageTourContext } from "../context/heritage-tour";
+import { useTourPlayer } from "../features/tour/player/useTourPlayer";
+import { TEST_TOUR } from "../features/tour/tour-data";
+
+test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tour JSON", () => {
+  let result: { id: number | null; mode: string; highlights: number[] } | null = null;
+  function Probe() {
+    const player = useTourPlayer();
+    result = {
+      id: player.interactive?.id ?? null,
+      mode: player.initialExploreMode,
+      highlights: player.interactive?.highlights.map((item) => item.id) ?? [],
+    };
+    return null;
+  }
+  function readScene(key: string) {
+    const currentScene = [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
+    renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
+      payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
+      currentScene, status: "ready", error: null, isModelReady: true,
+      engine: null, scenePlayback: TEST_TOUR.playback[key],
+    } }, createElement(Probe)));
+    return result;
+  }
+  assert.deepEqual(readScene("s0"), { id: null, mode: "standard", highlights: [] });
+  const standard = readScene("s2");
+  assert.equal(standard?.id, 332);
+  assert.equal(standard?.mode, "standard");
+  assert.equal(standard?.highlights.length, 3);
+  assert.deepEqual(readScene("s6"), { id: 428, mode: "free", highlights: [] });
+  assert.deepEqual(readScene("s7"), { id: null, mode: "standard", highlights: [] });
+});
 
 test("camera giữ đúng preset dưới target và ngoài khoảng fit, kể cả reset/exit Explore", () => {
   const document = new EventTarget();
