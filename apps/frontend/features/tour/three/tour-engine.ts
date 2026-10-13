@@ -92,6 +92,7 @@ export function createTourEngine(
     const cameraChanged = cameraDriven ? false : controls.update();
     const highlightsChanged = timedHighlights.update(playbackClock);
     if (cameraDriven || cameraChanged || highlightsChanged || needsRender) {
+      highlights.update(camera);
       renderer.render(scene, camera);
       needsRender = false;
     }
