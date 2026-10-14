@@ -1,13 +1,20 @@
 import hashlib
+import io
 import json
 import tempfile
+import threading
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 
 import httpx
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from apps.backend.db.import_structured import validate_package
-from pipelines.ingestion.ingest_r2 import IngestionError, run_ingestion
+from pipelines.ingestion.ingest_r2 import IngestionError, main, run_ingestion
 
 
 class R2IngestionTests(unittest.TestCase):
@@ -120,6 +127,80 @@ class R2IngestionTests(unittest.TestCase):
             with self.assertRaisesRegex(IngestionError, "corpus_version"):
                 run_ingestion(self.config, self.output, client=client)
         self.assertEqual(path.read_bytes(), original)
+
+    def test_pdf_text_extraction_and_scan_requires_ocr(self):
+        writer = PdfWriter()
+        page = writer.add_blank_page(width=300, height=300)
+        self.config["documents"][0]["format"] = "pdf"
+        blank = io.BytesIO()
+        writer.write(blank)
+        with self.client(blank.getvalue()) as client:
+            with self.assertRaisesRegex(IngestionError, "OCR"):
+                run_ingestion(self.config, self.output, client=client)
+        font = DictionaryObject({NameObject("/Type"): NameObject("/Font"),
+                                 NameObject("/Subtype"): NameObject("/Type1"),
+                                 NameObject("/BaseFont"): NameObject("/Helvetica")})
+        page[NameObject("/Resources")] = DictionaryObject({
+            NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})})
+        stream = DecodedStreamObject()
+        stream.set_data(b"BT /F1 12 Tf 20 200 Td (Built in 1601.) Tj ET")
+        page[NameObject("/Contents")] = stream
+        pdf = io.BytesIO()
+        writer.write(pdf)
+        with self.client(pdf.getvalue()) as client:
+            path = run_ingestion(self.config, self.output, client=client)
+        self.assertEqual(json.loads(path.read_text())["documents"][0]["raw_text"], "Built in 1601.")
+
+    def test_cli_over_real_http_and_invalid_config_is_controlled(self):
+        text = self.text.encode()
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200)
+                self.send_header("Content-Type", "text/markdown")
+                self.end_headers()
+                self.wfile.write(text)
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        config_path = Path(self.temp.name) / "config.json"
+        self.config["documents"][0]["url"] = f"http://127.0.0.1:{server.server_port}/document.md"
+        config_path.write_text(json.dumps(self.config))
+        arguments = ["ingest_r2", "--config", str(config_path), "--output", str(self.output)]
+        try:
+            with patch("sys.argv", arguments), redirect_stdout(io.StringIO()) as stdout:
+                self.assertEqual(main(), 0)
+            self.assertIn("1 documents", stdout.getvalue())
+            self.assertTrue((self.output / "package.json").exists())
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+        config_path.write_text("[]")
+        with patch("sys.argv", arguments[:3]), redirect_stderr(io.StringIO()) as stderr:
+            self.assertEqual(main(), 1)
+        self.assertIn("Config", stderr.getvalue())
+
+    def test_timeout_unsupported_format_and_invalid_metadata_leave_no_output(self):
+        def timeout(request):
+            raise httpx.ReadTimeout("SECRET", request=request)
+
+        with httpx.Client(transport=httpx.MockTransport(timeout)) as client:
+            with self.assertRaises(IngestionError) as error:
+                run_ingestion(self.config, self.output, client=client)
+        self.assertNotIn("SECRET", str(error.exception))
+        self.config["documents"][0]["format"] = "docx"
+        with self.client() as client, self.assertRaisesRegex(IngestionError, "hỗ trợ"):
+            run_ingestion(self.config, self.output, client=client)
+        self.config["documents"][0]["format"] = "txt"
+        self.config["documents"][0]["region"] = "unknown"
+        with self.client() as client, self.assertRaisesRegex(IngestionError, "region"):
+            run_ingestion(self.config, self.output, client=client)
+        self.assertFalse(self.output.exists())
 
 
 if __name__ == "__main__":
