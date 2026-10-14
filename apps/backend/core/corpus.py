@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import urllib.parse
 from pathlib import Path
 
@@ -121,6 +122,47 @@ def chunk_document(text: str) -> list[dict]:
             if sum(len(x) for x in buf) >= int(MAX_CHUNK_CHARS * 0.7):
                 flush()
     flush()
+    return chunks
+
+
+def chunk_text_spans(
+    text: str, max_chars: int = 2400, overlap_chars: int = 300,
+) -> list[dict]:
+    """Chunk extracted text without losing headings or exact source offsets.
+
+    Prefer paragraph, sentence, then word boundaries. Character limits are not
+    token limits; runtime must still enforce the model's token budget.
+    """
+    if max_chars < 32 or not 0 <= overlap_chars < max_chars // 2:
+        raise ValueError("max_chars >= 32; 0 <= overlap_chars < max_chars / 2")
+    chunks: list[dict] = []
+    start = 0
+    while start < len(text):
+        limit = min(start + max_chars, len(text))
+        end = limit
+        if limit < len(text):
+            window = text[start + max_chars // 2:limit]
+            for pattern in (r"\n\s*\n", r"[.!?][\s]+", r"\s+"):
+                boundaries = list(re.finditer(pattern, window))
+                if boundaries:
+                    end = start + max_chars // 2 + boundaries[-1].end()
+                    break
+        while start < end and text[start].isspace():
+            start += 1
+        trimmed_end = end
+        while trimmed_end > start and text[trimmed_end - 1].isspace():
+            trimmed_end -= 1
+        if trimmed_end > start:
+            chunks.append({"text": text[start:trimmed_end],
+                           "char_start": start, "char_end": trimmed_end})
+        if end == len(text):
+            break
+        next_start = max(start + 1, end - overlap_chars)
+        # Start overlap at a word boundary without leaving a coverage gap.
+        if overlap_chars:
+            while next_start > start + 1 and not text[next_start - 1].isspace():
+                next_start -= 1
+        start = next_start
     return chunks
 
 
