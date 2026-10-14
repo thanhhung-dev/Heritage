@@ -202,6 +202,15 @@ class R2IngestionTests(unittest.TestCase):
             run_ingestion(self.config, self.output, client=client)
         self.assertFalse(self.output.exists())
 
+    def test_long_unbroken_word_does_not_create_one_chunk_per_character(self):
+        with self.client(b"x" * 1000) as client:
+            path = run_ingestion(self.config, self.output, client=client)
+        passages = json.loads(path.read_text())["passages"]
+        self.assertLessEqual(len(passages), 8)
+        self.assertEqual(passages[0]["char_start"], 0)
+        self.assertEqual(passages[-1]["char_end"], 1000)
+        self.assertTrue(all(len(p["text"]) <= 180 for p in passages))
+
 
 if __name__ == "__main__":
     unittest.main()
