@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createCameraController } from "../features/tour/three/camera-controller";
+import { shouldEvaluateHover } from "../features/tour/three/tour-engine";
 import { createExploreController } from "../features/tour/three/explore-controller";
 import { parseVtt } from "../features/tour/player/useCaptions";
 import { createSceneHighlights, type TimedSceneHighlight } from "../features/tour/three/scene-highlights";
@@ -577,4 +578,435 @@ test("highlight không có end_time giữ hiện, LoopRepeat seek theo thời gi
   assert.equal(scene.getObjectByName("animated")!.position.x, 6);
   assert.equal(controller.update(100), false);
   controller.dispose();
+});
+
+// ── Bay tới badge khi hover, bay về khi rời ──────────────────────────────────
+
+function createDollyHarness() {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  controls.maxPolarAngle = Math.PI / 2;
+  const controller = createCameraController(camera, controls);
+  return { camera, controls, controller };
+}
+
+/** Chạy animation loop giống tour-engine, để phát hiện giật do pose bị ghi đè. */
+function runFrames(
+  harness: ReturnType<typeof createDollyHarness>,
+  seconds: number,
+  frames = 60,
+) {
+  const delta = seconds / frames;
+  for (let frame = 0; frame < frames; frame += 1) {
+    // Giống tour-engine: cả hai đường cùng chạy, KHÔNG short-circuit. Nếu viết
+    // `update() || updateDolly()` thì lúc có chuyến bay chuyển cảnh, `updateDolly()`
+    // không bao giờ chạy và test không phát hiện được hai nguồn cùng ghi pose.
+    const flying = harness.controller.update(delta);
+    const dollyMoved = harness.controller.updateDolly(delta);
+    if (!flying && !dollyMoved) harness.controls.update();
+    harness.controller.syncPose();
+  }
+}
+
+test("hover badge: camera bay tới trước badge rồi bay về đúng pose cũ khi rời", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  try {
+    controller.applyPreset({ start_position: [0, 0, 10], start_target: [0, 0, -10] } as Parameters<typeof controller.applyPreset>[0]);
+    const origin = camera.position.clone();
+    const targetBefore = controls.target.clone();
+
+    assert.equal(controller.setDollyTarget({ point: badge, approach: 0.3 }), true);
+    // Nửa hành trình: đã lại gần nhưng chưa tới đích.
+    runFrames(harness, 0.3);
+    const middle = camera.position.distanceTo(badge);
+    assert.ok(middle < origin.length() && middle > 3, `giữa hành trình ở ${middle}`);
+
+    runFrames(harness, 0.7);
+    // Đích: gần đúng tỉ lệ yêu cầu (10 × 0.3) và đang "đối mặt" badge.
+    assert.ok(Math.abs(camera.position.distanceTo(badge) - 3) < 1e-6,
+      `dừng ở ${camera.position.distanceTo(badge)}, mong đợi 3`);
+    assert.ok(camera.position.y > 0, "góc máy phải ở phía trên badge để không bị địa hình che");
+    const forward = camera.getWorldDirection(new THREE.Vector3());
+    const toBadge = badge.clone().sub(camera.position).normalize();
+    assert.ok(forward.dot(toBadge) > 0.999, "camera không hướng về badge");
+    // Phải là mặt phẳng đứng (không nghiêng đầu): hướng lên gần như vuông góc trục ngang.
+    assert.ok(Math.abs(camera.up.y) > 0.9, `up bị nghiêng: ${camera.up.toArray()}`);
+
+    // Rời badge: bay VỀ đúng pose ban đầu.
+    controller.setDollyTarget(null);
+    runFrames(harness, 0.9);
+    assert.ok(camera.position.distanceTo(origin) < 1e-8,
+      `không về đúng pose cũ: ${camera.position.toArray()}`);
+    assert.ok(controls.target.distanceTo(targetBefore) < 1e-8, "target không trở lại pose cũ");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("hover rồi buông chuột: pose sau hover là góc mới, reset không kéo về preset xa", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  try {
+    controller.applyPreset({ start_position: [0, 0, 10], start_target: [0, 0, -10] } as Parameters<typeof controller.applyPreset>[0]);
+    controller.setDollyTarget({ point: badge, approach: 0.3 });
+    runFrames(harness, 1);
+    const near = camera.position.clone();
+    assert.ok(Math.abs(near.distanceTo(badge) - 3) < 1e-6, `pose gần sai: ${near.toArray()}`);
+
+    // Đổi cảnh: chốt pose đang thấy để cảnh mới bay tiếp từ đó.
+    controller.releaseDolly();
+    assert.ok(camera.position.distanceTo(near) < 1e-8, "releaseDolly làm camera nhảy");
+    controller.reset(0);
+    assert.ok(camera.position.distanceTo(near) < 1e-8, "reset kéo camera về preset xa badge");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("kéo chuột giữa chừng: chuyến bay hover nhường quyền và không bay về nữa", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  try {
+    controller.applyPreset({ start_position: [0, 0, 10], start_target: [0, 0, -10] } as Parameters<typeof controller.applyPreset>[0]);
+    controller.setDollyTarget({ point: badge, approach: 0.3 });
+    runFrames(harness, 0.2);
+    // Người dùng kéo chuột: pose do controls ghi ⇒ chuyến bay hover phải nhường.
+    controller.setPointerActive(true);
+    camera.position.set(4, 3, 8);
+    controller.syncPose();
+    assert.equal(controller.hasDolly(), false, "kéo chuột không hủy chuyến bay hover");
+    controller.setPointerActive(false);
+    // Rời badge sau đó cũng không được bay về pose cũ (pose hiện tại là góc mới).
+    const manual = camera.position.clone();
+    controller.setDollyTarget(null);
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(manual) < 1e-8, "camera bị kéo về sau khi người dùng quay tay");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("rời hover trên nền timeline đã chạy xong: về đúng pose lúc bắt đầu hover", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  const preset = {
+    start_position: [0, 0, 20],
+    start_target: [0, 0, -20],
+    zoom_position: [0, 4, 12],
+    zoom_target: [0, 0, 0],
+  } as Parameters<typeof controller.startTimeline>[0];
+  try {
+    // Timeline chạy hết ⇒ camera nghỉ ở zoom_position/zoom_target.
+    assert.equal(controller.startTimeline(preset, 10), true);
+    for (let frame = 0; frame < 200; frame += 1) {
+      controller.updateTimeline(10);
+    }
+    runFrames(harness, 0.5);
+    const entry = camera.position.clone();
+    const entryTarget = controls.target.clone();
+    assert.ok(entry.distanceTo(new THREE.Vector3(0, 4, 12)) < 1e-6,
+      `chưa nghỉ ở điểm cuối timeline: ${entry.toArray()}`);
+
+    // Hover badge rồi rời: "camera cũ" chính là pose lúc bắt đầu hover.
+    assert.equal(controller.setDollyTarget({ point: badge, approach: 0.3 }), true);
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(entry) > 1, "hover không đưa camera tới gần badge");
+
+    controller.setDollyTarget(null);
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(entry) < 1e-6,
+      `rời hover không về pose lúc bắt đầu hover: ${camera.position.toArray()} vs ${entry.toArray()}`);
+    assert.ok(controls.target.distanceTo(entryTarget) < 1e-6, "target không về pose lúc bắt đầu hover");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("rời hover giữa timeline: về pose lúc bắt đầu hover (như exit mode), không nhảy về preset", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  const preset = {
+    start_position: [0, 0, 20],
+    start_target: [0, 0, -20],
+    zoom_position: [6, 5, 10],
+    zoom_target: [1, 1, 0],
+  } as Parameters<typeof controller.startTimeline>[0];
+  try {
+    // Camera đang ở giữa timeline (chưa tới điểm cuối) — đây là "camera cũ".
+    controller.startTimeline(preset, 10);
+    controller.updateTimeline(0.5);
+    controller.stopTimeline();
+    const entry = camera.position.clone();
+    const entryTarget = controls.target.clone();
+
+    controller.setDollyTarget({ point: badge, approach: 0.3 });
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(entry) > 1, "hover không đưa camera tới gần badge");
+
+    controller.setDollyTarget(null);
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(entry) < 1e-6,
+      `không về đúng pose lúc bắt đầu hover: ${camera.position.toArray()} vs ${entry.toArray()}`);
+    assert.ok(controls.target.distanceTo(entryTarget) < 1e-6, "target không về pose lúc bắt đầu hover");
+    // Không được nhảy về điểm cuối timeline (hành vi cũ, đã bỏ).
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(6, 5, 10)) > 1,
+      "lại nhảy về điểm cuối timeline thay vì pose lúc bắt đầu hover");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("hover bắt đầu GIỮA chuyến bay chuyển cảnh: camera cũ là ĐÍCH của chuyến bay", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  const deepLive = new THREE.Vector3(4, 3, 12);
+  try {
+    controller.applyPreset({
+      start_position: [0, 0, 40],
+      start_target: [0, 0, -40],
+    } as Parameters<typeof controller.applyPreset>[0]);
+    // Bật deep live: camera bay 1.6s từ góc cũ tới góc mặc định của chế độ này.
+    assert.equal(
+      controller.flyToPreset(
+        {
+          start_position: [deepLive.x, deepLive.y, deepLive.z],
+          start_target: [0, 0, 0],
+        } as Parameters<typeof controller.flyToPreset>[0],
+        false,
+        1.6,
+      ),
+      true,
+    );
+    // Mới đi được một đoạn: pose hiện tại KHÔNG phải góc mặc định của deep live.
+    runFrames(harness, 0.4);
+    const midFlight = camera.position.clone();
+    assert.ok(midFlight.distanceTo(deepLive) > 1, `chưa tới đích chuyến bay: ${midFlight.toArray()}`);
+    assert.equal(controller.isFlying(), true, "chuyến bay chuyển cảnh phải còn đang chạy");
+
+    // Người dùng hover badge ngay giữa chuyến bay.
+    assert.equal(controller.setDollyTarget({ point: badge, approach: 0.3 }), true);
+    // Chuyến bay phải nhường quyền, không cùng ghi pose với dolly mỗi frame.
+    // (Nếu không nhường thì "camera cũ" cũng bị chụp sai thành điểm giữa đường.)
+    assert.equal(controller.isFlying(), false,
+      "chuyến bay chuyển cảnh không nhường hover ⇒ hai nguồn cùng ghi pose mỗi frame");
+
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(badge) < midFlight.distanceTo(badge),
+      "hover không đưa camera lại gần badge");
+
+    // Rời badge ⇒ về ĐÍCH của chuyến bay (góc mặc định deep live), KHÔNG phải điểm giữa đường.
+    controller.setDollyTarget(null);
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(deepLive) < 1e-6,
+      `không về góc mặc định của deep live: ${camera.position.toArray()} vs ${deepLive.toArray()}`);
+    assert.ok(camera.position.distanceTo(midFlight) > 1,
+      "lại quay về điểm giữa đường của chuyến bay chuyển cảnh");
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(0, 0, 0)) < 1e-6,
+      `target không về góc mặc định: ${controls.target.toArray()}`);
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("hover liên tiếp nhiều badge: không cộng dồn zoom, rời ra về đúng góc gốc", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge2 = new THREE.Vector3(0, 0, 0);
+  const badge3 = new THREE.Vector3(8, 0, 6);
+  const approach = 0.3;
+  try {
+    controller.applyPreset({
+      start_position: [0, 0, 40],
+      start_target: [0, 0, -40],
+    } as Parameters<typeof controller.applyPreset>[0]);
+    const origin = camera.position.clone();
+    const target0 = controls.target.clone();
+    // Cự ly dừng kỳ vọng neo vào GÓC GỐC, không phải vị trí camera lúc bấy giờ.
+    const expect = (badge: THREE.Vector3) => origin.distanceTo(badge) * approach;
+
+    // Lần 1: badge 2.
+    controller.setDollyTarget({ point: badge2, approach });
+    runFrames(harness, 1);
+    const first = camera.position.distanceTo(badge2);
+    assert.ok(Math.abs(first - expect(badge2)) < 1e-6,
+      `lần 1 dừng ở ${first}, mong đợi ${expect(badge2)}`);
+
+    // Chuyển thẳng sang badge 3 (hai badge sát nhau, con trỏ không đi qua khoảng trống).
+    controller.setDollyTarget({ point: badge3, approach });
+    runFrames(harness, 1);
+    const second = camera.position.distanceTo(badge3);
+    assert.ok(Math.abs(second - expect(badge3)) < 1e-6,
+      `lần 2 cộng dồn zoom: dừng ở ${second}, mong đợi ${expect(badge3)}`);
+    assert.ok(second > first * 0.5, `zoom bị cộng dồn: ${first} → ${second}`);
+
+    // Rời badge 3 rồi vào lại badge 2 NGAY (chuyến bay về còn đang chạy giữa chừng).
+    controller.setDollyTarget(null);
+    runFrames(harness, 0.3);
+    controller.setDollyTarget({ point: badge2, approach });
+    runFrames(harness, 1);
+    const back = camera.position.distanceTo(badge2);
+    assert.ok(Math.abs(back - first) < 1e-6,
+      `quay lại badge 2 bị cộng dồn zoom: ${first} → ${back}`);
+
+    // Rời hẳn ⇒ về đúng góc gốc ban đầu, không trôi dần theo từng lần hover.
+    controller.setDollyTarget(null);
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(origin) < 1e-6,
+      `không về góc gốc: ${camera.position.toArray()} vs ${origin.toArray()}`);
+    assert.ok(controls.target.distanceTo(target0) < 1e-6, "target trôi khỏi góc gốc");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("sàn khoảng cách hover không để badge lọt vào trong mặt phẳng cắt gần", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  try {
+    // near lớn là tình huống thật: model có địa hình xa làm bán kính bounding sphere phình to.
+    camera.near = 5;
+    controller.applyPreset({
+      start_position: [0, 0, 40],
+      start_target: [0, 0, -40],
+    } as Parameters<typeof controller.applyPreset>[0]);
+    // approach rất nhỏ ⇒ khoảng cách đích 2, tức nằm sâu trong `near`.
+    controller.setDollyTarget({ point: badge, approach: 0.05, minDistance: 0.6 });
+    runFrames(harness, 1);
+    const distance = camera.position.distanceTo(badge);
+    assert.ok(distance > camera.near,
+      `badge lọt vào trong near (${distance} ≤ ${camera.near}) ⇒ bị xén mất khỏi màn hình`);
+    assert.ok(distance >= camera.near * 2 - 1e-6, `không áp sàn near: ${distance}`);
+  } finally {
+    controls.dispose();
+  }
+});
+
+// ── Chống dao động hover (camera tự bay làm badge trượt khỏi con trỏ) ─────────
+
+test("shouldEvaluateHover: bỏ raycast khi đang bay tới badge và khi chuột chỉ rung", () => {
+  const still = { x: 0, y: 0 };
+  // Chưa có mốc con trỏ ⇒ phải đánh giá.
+  assert.equal(shouldEvaluateHover(still, { x: NaN, y: NaN }, false), true);
+  // Con trỏ đứng yên ⇒ không đổi trạng thái hover.
+  assert.equal(shouldEvaluateHover(still, still, false), false);
+  // Rung vài pixel (dưới ngưỡng) ⇒ vẫn coi như đứng yên.
+  assert.equal(shouldEvaluateHover({ x: 0.005, y: -0.008 }, still, false), false);
+  // Di chuyển thật ⇒ đánh giá lại.
+  assert.equal(shouldEvaluateHover({ x: 0.3, y: 0 }, still, false), true);
+  // Đang bay tới badge ⇒ luôn bỏ qua, dù con trỏ có di chuyển xa.
+  assert.equal(shouldEvaluateHover({ x: 0.9, y: 0.9 }, still, true), false);
+});
+
+test("isApproaching: chỉ true khi đang trên đường bay TỚI badge, không phải lúc bay về", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  try {
+    controller.applyPreset({ start_position: [0, 0, 10], start_target: [0, 0, -10] } as Parameters<typeof controller.applyPreset>[0]);
+    assert.equal(controller.isApproaching(), false, "chưa hover mà đã báo đang bay tới");
+    controller.setDollyTarget({ point: badge, approach: 0.3 });
+    assert.equal(controller.isApproaching(), true, "đang bay tới badge mà không báo");
+    runFrames(harness, 1);
+    assert.equal(controller.isApproaching(), false, "đã chốt pose ở badge mà vẫn báo đang bay");
+    // Rời badge ⇒ đang bay VỀ, phải cho phép raycast lại để người dùng hover tiếp.
+    controller.setDollyTarget(null);
+    assert.equal(controller.isApproaching(), false, "chuyến bay về bị coi là bay tới");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("dao động hover: con trỏ đứng yên + camera bay vào ⇒ hover không lật liên tục", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  try {
+    controller.applyPreset({ start_position: [0, 0, 20], start_target: [0, 0, -20] } as Parameters<typeof controller.applyPreset>[0]);
+    const startDist = camera.position.distanceTo(badge);
+
+    // Mô phỏng onPointerMove: con trỏ đứng yên nên sau lần đầu không đánh giá lại,
+    // và trong lúc camera bay tới badge thì bỏ qua hẳn.
+    const last = new THREE.Vector2(NaN, NaN);
+    const pointer = new THREE.Vector2(0.1, 0.1);
+    let flips = 0;
+    let hovered = false;
+    for (let frame = 0; frame < 180; frame += 1) {
+      if (shouldEvaluateHover(pointer, last, controller.isApproaching())) {
+        last.copy(pointer);
+        // Raycast "trượt" sau khi camera đã bay vào (badge trượt khỏi con trỏ).
+        const nowOnBadge = frame < 5;
+        if (nowOnBadge !== hovered) {
+          hovered = nowOnBadge;
+          flips += 1;
+          controller.setDollyTarget(nowOnBadge ? { point: badge, approach: 0.3 } : null);
+        }
+      }
+      const driven = controller.update(1 / 60) || controller.updateDolly(1 / 60);
+      if (!driven) controls.update();
+      controller.syncPose();
+    }
+
+    assert.equal(flips, 1, `hover lật ${flips} lần (phải 1 lần duy nhất)`);
+    // Camera phải bay vào tới đích, không bị kẹt giữa đường vì hover bị hủy.
+    assert.ok(Math.abs(camera.position.distanceTo(badge) - startDist * 0.3) < 1e-6,
+      `camera kẹt ở ${camera.position.distanceTo(badge)}, mong đợi ${startDist * 0.3}`);
+  } finally {
+    controls.dispose();
+  }
+});
+
+// ── Sàn minDistance không được kéo camera vọt ra xa ──────────────────────────
+
+test("model lớn: sàn minDistance suy từ pose tác giả, không kéo camera vọt ra xa", () => {
+  const harness = createDollyHarness();
+  const { camera, controls, controller } = harness;
+  const badge = new THREE.Vector3(0, 0, 0);
+  try {
+    // Model rất lớn (địa hình xa) ⇒ bán kính model lớn hơn nhiều so với pose tác giả.
+    // Đây đúng là điều kiện model Petra: sàn từ bán kính model sẽ là ~hàng nghìn.
+    controller.fit(new THREE.Mesh(new THREE.BoxGeometry(50000, 50000, 50000)));
+    const modelFloor = controls.minDistance;
+    assert.ok(modelFloor > 1000, `sàn từ model phải rất lớn để tái hiện lỗi: ${modelFloor}`);
+
+    controller.applyPreset({
+      start_position: [20, 10, 0],
+      start_target: [0, 0, 0],
+    } as Parameters<typeof controller.applyPreset>[0]);
+    const entry = camera.position.clone();
+    const entryDistance = entry.distanceTo(badge);
+    // Sàn phải được suy lại từ pose tác giả (nửa khoảng cách pose).
+    assert.ok(controls.minDistance < entryDistance,
+      `sàn chưa suy từ pose tác giả: ${controls.minDistance} vs pose ${entryDistance}`);
+
+    controller.setDollyTarget({ point: badge, approach: 0.3, minDistance: 0.6 });
+    runFrames(harness, 1);
+    const near = camera.position.clone();
+    assert.ok(Math.abs(near.distanceTo(badge) - entryDistance * 0.3) < 1e-6,
+      `không tới đúng đích: ${near.distanceTo(badge)} thay vì ${entryDistance * 0.3}`);
+
+    // Lỗi cũ: frame rảnh sau khi chuyến hover kết thúc bị OrbitControls kéo vọt ra xa.
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(near) < 1e-6,
+      `camera bị kéo vọt ra xa sau hover: ${camera.position.toArray()}`);
+
+    // Và rời badge cũng phải về đúng "camera cũ", không qua chỗ xa.
+    controller.setDollyTarget(null);
+    runFrames(harness, 1);
+    assert.ok(camera.position.distanceTo(entry) < 1e-6,
+      `không về đúng camera cũ: ${camera.position.toArray()} vs ${entry.toArray()}`);
+  } finally {
+    controls.dispose();
+  }
 });

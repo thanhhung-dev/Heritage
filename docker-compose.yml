@@ -294,20 +294,6 @@ services:
       retries: 20
     networks: [heritage-network]
 
-  frontend:
-    build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - heritage-network
 
   trainer:
     profiles: ["training"]

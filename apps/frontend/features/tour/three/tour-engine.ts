@@ -12,10 +12,33 @@ import {
   type ExploreMode,
 } from "./explore-controller";
 import { createInteractiveHighlights } from "./interactive-highlights";
+import { camLog, camWarn, cameraDebugEnabled, fmtVec } from "./camera-debug";
 import {
   createSceneHighlights,
   type TimedSceneHighlight,
 } from "./scene-highlights";
+
+/** Ngưỡng di chuyển con trỏ (NDC) để coi là "di chuyển thật", không phải rung. */
+export const HOVER_POINTER_EPSILON = 0.02;
+
+/**
+ * Có nên đánh giá lại hover theo con trỏ ở frame này không.
+ *
+ * Hai lý do phải chặn:
+ * - Camera đang bay tới badge ⇒ badge trượt trên màn hình, raycast không đáng tin;
+ *   đánh giá lúc này sẽ hủy chuyến bay giữa chừng và gây dao động vào/ra liên tục.
+ * - Con trỏ chỉ rung vài pixel ⇒ coi như đứng yên, không đổi trạng thái hover.
+ */
+export function shouldEvaluateHover(
+  pointer: { x: number; y: number },
+  lastPointer: { x: number; y: number },
+  approaching: boolean,
+  epsilon = HOVER_POINTER_EPSILON,
+) {
+  if (approaching) return false;
+  if (Number.isNaN(lastPointer.x)) return true;
+  return Math.hypot(pointer.x - lastPointer.x, pointer.y - lastPointer.y) >= epsilon;
+}
 
 export function createTourEngine(
   host: HTMLDivElement,
@@ -42,7 +65,14 @@ export function createTourEngine(
   const cameraController = createCameraController(camera, controls);
   const explore = createExploreController(cameraController, controls);
   const loader = createModelLoader(renderer);
-  const highlights = createInteractiveHighlights(scene, renderer.domElement);
+  const highlights = createInteractiveHighlights(
+    scene,
+    renderer.domElement,
+    // Con trỏ vào badge ⇒ bay tới đứng trước badge; rời ra ⇒ bay về đúng pose cũ.
+    (target) => cameraController.setDollyTarget(target),
+  );
+  // Chuyến bay hover phải nhường ngay khi người dùng kéo chuột.
+  const detachPointerState = cameraController.attachPointerListeners(renderer.domElement);
 
   let needsRender = true;
   const invalidate = () => {
@@ -95,6 +125,20 @@ export function createTourEngine(
   void load();
 
   const clock = new THREE.Clock();
+  let lastDebugAt = 0;
+  let lastWriter = "";
+
+  if (typeof window !== "undefined" && cameraDebugEnabled()) {
+    (window as unknown as { __tourCameraDump?: () => unknown }).__tourCameraDump = () => {
+      const state = { ...cameraController.debugState(), hoveredBadge: highlights.hoveredId() };
+      console.log("%c[cam:dump]%c trạng thái camera hiện tại", "color:#185FA5;font-weight:600", "", state);
+      return state;
+    };
+    camLog(
+      "ready",
+      'log chẩn đoán BẬT · tắt: window.__tourCameraDebug = false · dump: window.__tourCameraDump()',
+    );
+  }
 
   renderer.setAnimationLoop(() => {
     const delta = Math.min(clock.getDelta(), 0.1);
@@ -102,13 +146,43 @@ export function createTourEngine(
     if (playbackPlaying) playbackClock += delta;
 
     const cameraFlying = cameraController.update(delta);
+    const dollyMoved = cameraController.updateDolly(delta);
     const timelineMoved = cameraController.updateTimeline(playbackClock);
-    const cameraDriven = cameraFlying || timelineMoved;
+    const cameraDriven = cameraFlying || dollyMoved || timelineMoved;
+    // `dollyMoved` cũng là pose do controller ghi: bỏ `controls.update()` trong frame
+    // đó, nếu không OrbitControls chạy chồng lên chuyến bay hover.
     const cameraChanged = cameraDriven ? false : controls.update();
+    // Ăn pose mà OrbitControls vừa tính (damping, quay tay) để frame sau không giật
+    // về pose cũ khi camera đang/đã dí gần badge.
+    cameraController.syncPose();
     const highlightsChanged = timedHighlights.update(playbackClock);
 
+    if (cameraDebugEnabled() && (cameraDriven || cameraChanged)) {
+      // Hai nguồn cùng ghi pose trong một frame ⇒ chắc chắn giật.
+      if (dollyMoved && timelineMoved) {
+        camWarn("conflict", "dolly VÀ timeline cùng ghi pose trong một frame");
+      }
+      if (cameraFlying && dollyMoved) {
+        camWarn("conflict", "flight VÀ dolly cùng ghi pose trong một frame (chuyến bay chuyển cảnh chưa nhường hover)");
+      }
+      // Thứ tự áp pose trong frame là flight → dolly → timeline, nên nguồn ghi CUỐI
+      // CÙNG mới là cái đang điều khiển camera. Log phải phản ánh đúng thứ tự đó.
+      const writer = timelineMoved ? "timeline" : dollyMoved ? "dolly" : cameraFlying ? "flight" : "controls";
+      const now = performance.now();
+      // Log mỗi 250ms, hoặc ngay khi đổi nguồn ghi để thấy rõ lúc bàn giao.
+      if (writer !== lastWriter || now - lastDebugAt > 250) {
+        lastWriter = writer;
+        lastDebugAt = now;
+        const state = cameraController.debugState();
+        camLog(
+          "frame",
+          `writer=${writer} · pos=${fmtVec(camera.position)} · tgt=${fmtVec(controls.target)} · up=${fmtVec(camera.up)} · dist=${camera.position.distanceTo(controls.target).toFixed(2)} · hovered=${highlights.hoveredId()} · approaching=${state.approaching} · dolly=${state.hasDolly} · timeline=${state.hasTimeline} · mouse=${state.mouseActive}`,
+        );
+      }
+    }
+
     if (cameraDriven || cameraChanged || highlightsChanged || needsRender) {
-      highlights.update(camera);
+      highlights.update(camera, delta);
       renderer.render(scene, camera);
       needsRender = false;
     }
@@ -117,6 +191,13 @@ export function createTourEngine(
   const pointerStart = new THREE.Vector2();
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
+  /**
+   * Vị trí con trỏ (NDC) tại lần raycast hover gần nhất. Rung chuột vài pixel
+   * không tính là "di chuyển": nếu tính, camera vừa bay vào badge (badge trượt
+   * khỏi con trỏ) sẽ bị raycast trượt và đảo chiều bay vào/ra liên tục.
+   */
+  const lastHoverPointer = new THREE.Vector2(Number.NaN, Number.NaN);
+  let lastSkipLogAt = 0;
 
   const updateRaycaster = (event: PointerEvent) => {
     const rect = renderer.domElement.getBoundingClientRect();
@@ -129,7 +210,17 @@ export function createTourEngine(
 
   const onPointerMove = (event: PointerEvent) => {
     updateRaycaster(event);
-    highlights.hover(raycaster);
+    // Chỉ đánh giá lại hover khi con trỏ THỰC SỰ di chuyển, và không đánh giá khi
+    // camera đang bay tới badge — badge trượt trên màn hình nên raycast không đáng
+    // tin, đánh giá lúc này sẽ hủy chuyến bay giữa chừng.
+    const approaching = cameraController.isApproaching();
+    if (shouldEvaluateHover(pointer, lastHoverPointer, approaching)) {
+      lastHoverPointer.copy(pointer);
+      highlights.hover(raycaster);
+    } else if (approaching && performance.now() - lastSkipLogAt > 500) {
+      lastSkipLogAt = performance.now();
+      camLog("hover", "bỏ qua đánh giá hover: camera đang bay tới badge");
+    }
     invalidate();
   };
 
@@ -154,18 +245,34 @@ export function createTourEngine(
 
   return {
     enterExplore(mode: ExploreMode) {
+      // Pose trước khi vào Explore là "góc về" khi người dùng bấm Reset.
+      cameraController.adoptCurrentPose();
       explore.enter(mode);
       highlights.show(true);
       invalidate();
     },
     resetExplore(duration = 0) {
+      cameraController.clearDollyTarget();
       explore.reset(duration);
       invalidate();
     },
     exitExplore(duration = 0) {
+      // Không giữ chuyến dí đang dở: `explore.exit` cần toàn quyền ghi pose.
+      cameraController.clearDollyTarget();
       explore.exit(duration);
       highlights.show(false);
       highlights.select(null);
+      invalidate();
+    },
+    /** Ẩn/hiện badge; ẩn thì nhả luôn chuyến dí để không tiếp tục tiến sát. */
+    showHighlights(visible: boolean) {
+      highlights.show(visible);
+      if (!visible) cameraController.clearDollyTarget();
+      invalidate();
+    },
+    /** Bỏ chuyến dí gần và lấy pose hiện tại làm góc mới (trước khi đổi cảnh). */
+    releaseHighlightDolly() {
+      cameraController.releaseDolly();
       invalidate();
     },
     getCameraPose: cameraController.snapshot,
@@ -204,6 +311,8 @@ export function createTourEngine(
       return true;
     },
     setInteractiveHighlights(items: HeritageInteractiveHighlight[]) {
+      // Danh sách điểm đổi ⇒ chuyến dí cũ (nếu có) hết hiệu lực.
+      cameraController.clearDollyTarget();
       highlights.set(items);
       invalidate();
     },
@@ -227,6 +336,7 @@ export function createTourEngine(
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      detachPointerState();
       highlights.dispose();
       timedHighlights.dispose();
       controls.dispose();

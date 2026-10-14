@@ -29,6 +29,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null }: {
   useEffect(() => {
     pause();
     seek(0);
+    // Trước khi đổi cảnh: chốt pose người dùng đang thấy (có thể đang dí gần một
+    // badge) để cảnh mới bay tiếp từ đó, không nhảy về preset cũ.
+    engine?.releaseHighlightDolly();
     engine?.exitExplore();
     timelineSceneKey.current = null;
     engine?.setPlaybackTime(0, false);

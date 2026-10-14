@@ -1224,7 +1224,7 @@
     box-shadow 0.3s;
 }
 
-.orbTracker-circle.visited {
+.orbTracker-circle.orbVisited {
   border-color: #f5f5e7;
   background: #f2f2e4;
   box-shadow: 0 0 10px #f9eec1;
@@ -1970,7 +1970,9 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   position: fixed;
   top: 30px;
   right: 30px;
-  z-index: 9;
+  /* Bản gốc dùng 9; ở app này canvas là z-index 0 và nút "Dive Deeper"
+     cùng góc là 70 nên lấy 70 cho hai CTA cùng tầng. */
+  z-index: 70;
   flex-direction: column;
   align-items: center;
   pointer-events: none;
@@ -2014,6 +2016,39 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
     border-color 0.3s ease,
     background 0.3s ease,
     filter 0.3s ease;
+}
+
+/* Hai lớp sáng tạo cảm giác thuỷ tinh: quầng sáng lệch trên-trái và
+   vệt phản chiếu ellipse ở nửa trên. */
+.exitCorner-btn::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 30% 20%,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.06) 25%,
+      transparent 50%);
+  pointer-events: none;
+}
+
+.exitCorner-btn::after {
+  content: "";
+  position: absolute;
+  top: 6%;
+  left: 18%;
+  width: 55%;
+  height: 35%;
+  border-radius: 50%;
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.04) 100%);
+  filter: blur(2px);
+  pointer-events: none;
+  transform: rotate(-15deg);
 }
 
 .exitCorner-btn:hover {
@@ -2214,9 +2249,17 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   transform: rotate(45deg);
 }
 
-.exploreCorner.free-explore .exploreCorner-iconWrap { visibility: hidden; }
-.exploreCorner.free-explore .exploreCorner-shineClip { display: none; }
-.exploreCorner.free-explore .exploreCorner-footsteps { display: block; }
+.exploreCorner.free-explore .exploreCorner-iconWrap {
+  visibility: hidden;
+}
+
+.exploreCorner.free-explore .exploreCorner-shineClip {
+  display: none;
+}
+
+.exploreCorner.free-explore .exploreCorner-footsteps {
+  display: block;
+}
 
 .footstepStrip {
   position: absolute;
@@ -2236,39 +2279,125 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   animation: footstepAppear 6s linear infinite;
 }
 
-.footstep-l { left: 1px; }
-.footstep-r { right: 1px; }
-.footstep:nth-child(1) { top: 0; animation-delay: -0.75s; }
-.footstep:nth-child(2) { top: 20px; animation-delay: -1.5s; }
-.footstep:nth-child(3) { top: 40px; animation-delay: -2.25s; }
-.footstep:nth-child(4) { top: 60px; animation-delay: -3s; }
-.footstep:nth-child(5) { top: 80px; animation-delay: -3.75s; }
-.footstep:nth-child(6) { top: 100px; animation-delay: -4.5s; }
-.footstep:nth-child(7) { top: 120px; animation-delay: -5.25s; }
-.footstep:nth-child(8) { top: 140px; animation-delay: 0s; }
+.footstep-l {
+  left: 1px;
+}
+
+.footstep-r {
+  right: 1px;
+}
+
+.footstep:nth-child(1) {
+  top: 0;
+  animation-delay: -0.75s;
+}
+
+.footstep:nth-child(2) {
+  top: 20px;
+  animation-delay: -1.5s;
+}
+
+.footstep:nth-child(3) {
+  top: 40px;
+  animation-delay: -2.25s;
+}
+
+.footstep:nth-child(4) {
+  top: 60px;
+  animation-delay: -3s;
+}
+
+.footstep:nth-child(5) {
+  top: 80px;
+  animation-delay: -3.75s;
+}
+
+.footstep:nth-child(6) {
+  top: 100px;
+  animation-delay: -4.5s;
+}
+
+.footstep:nth-child(7) {
+  top: 120px;
+  animation-delay: -5.25s;
+}
+
+.footstep:nth-child(8) {
+  top: 140px;
+  animation-delay: 0s;
+}
 
 @keyframes exploreGlowPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes exploreIconZoom {
-  0%, 65%, 100% { transform: scale(1); }
-  75%, 90% { transform: scale(1.18); }
+
+  0%,
+  65%,
+  100% {
+    transform: scale(1);
+  }
+
+  75%,
+  90% {
+    transform: scale(1.18);
+  }
 }
 
 @keyframes exploreShineSwipe {
-  0%, 68% { translate: -100% 0; opacity: 0; }
-  72%, 90% { opacity: 1; }
-  96%, 100% { translate: 200% 0; opacity: 0; }
+
+  0%,
+  68% {
+    translate: -100% 0;
+    opacity: 0;
+  }
+
+  72%,
+  90% {
+    opacity: 1;
+  }
+
+  96%,
+  100% {
+    translate: 200% 0;
+    opacity: 0;
+  }
 }
 
 @keyframes footstepAppear {
-  0% { opacity: 0; transform: scale(0.3); }
-  4% { opacity: 1; transform: scale(1.08); }
-  7% { opacity: 1; transform: scale(1); }
-  42% { opacity: 0.85; transform: scale(1); }
-  58%, 100% { opacity: 0; }
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+
+  4% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  7% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  42% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  58%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .exploreCorner-icon {
@@ -3376,39 +3505,24 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   display: block;
 }
 
-.exploreControls {
-  --explore-top: 30px;
-  position: absolute;
-  top: var(--explore-top);
-  right: 30px;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 240px;
-  box-sizing: border-box;
-  max-height: calc(100dvh - var(--explore-top) - 120px);
-  overflow-y: auto;
-  padding: 16px;
-  border: 1px solid rgba(240, 232, 221, 0.22);
-  border-radius: 16px;
-  background: rgba(28, 27, 26, 0.88);
-  backdrop-filter: blur(10px);
-  pointer-events: auto;
+/* Nút Exit 3D Mode giờ là viên kính `.exitCorner-btn`; khối
+   `.exploreControls` cũ (panel tối 240px + hàng nút Zoom/Start/Standard/Free)
+   đã bị gỡ khỏi component nên xoá luôn cho khỏi CSS chết. */
+.exitCorner-btn:focus-visible {
+  outline: 2px solid #ff9b2d;
+  outline-offset: 3px;
 }
 
-.exploreModeLabel { font-size: 14px; font-weight: 500; }
-.exploreActions { display: flex; gap: 8px; }
-.exploreHighlights { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.exploreControls .exploreHighlights button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px;
-  text-align: left;
+/* Danh sách điểm của Dive Deeper — hiện chưa component nào render (đã chuyển
+   sang marker 3D), giữ lại vì README còn mô tả và dễ bật lại. */
+.exploreHighlights {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
 }
+
 .exploreThumbnail {
   position: relative;
   display: grid;
@@ -3419,24 +3533,15 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   overflow: hidden;
   background: #35312b;
 }
-.exploreThumbnail img { object-fit: cover; }
-.explorePointTitle { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
-.exploreHighlights button:hover { border-color: #f0e8dd; }
-.exploreControls button:focus-visible { outline: 2px solid #ff9b2d; outline-offset: 3px; }
 
-.exploreControls button {
-  padding: 9px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
-  background: rgba(28, 27, 26, 0.85);
-  color: #fff;
-  font-size: 12px;
-  cursor: pointer;
+.exploreThumbnail img {
+  object-fit: cover;
 }
 
-.exploreControls button[aria-pressed="true"] {
-  border-color: #ff9b2d;
-  background: #493321;
+.explorePointTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 
 .ssPlayButton:disabled {
@@ -3459,8 +3564,13 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 @media (max-width: 900px) {
-  .exploreCorner { top: 128px; }
-  .exploreControls { --explore-top: 128px; }
+  .exploreCorner {
+    top: 128px;
+  }
+
+  .exitCorner {
+    top: 128px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -3469,23 +3579,66 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
     right: 16px;
   }
 
-  .exploreCorner-btn { padding: 18px; }
-  .exploreCorner-icon { width: 36px; height: 36px; }
-  .exploreCorner-label { font-size: 12px; }
-  .exploreCorner-rays { width: 350px; height: 350px; top: -100px; right: -100px; }
-  .exploreCorner-glowSvg { width: 350px; top: -40px; right: -40px; }
-  .exploreCorner-glow { width: 80px; height: 80px; }
-  .footstepStrip { scale: 0.6; transform-origin: top center; }
+  .exploreCorner-btn {
+    padding: 18px;
+  }
 
-  .exploreControls {
+  .exploreCorner-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .exploreCorner-label {
+    font-size: 12px;
+  }
+
+  .exploreCorner-rays {
+    width: 350px;
+    height: 350px;
+    top: -100px;
+    right: -100px;
+  }
+
+  .exploreCorner-glowSvg {
+    width: 350px;
+    top: -40px;
+    right: -40px;
+  }
+
+  .exploreCorner-glow {
+    width: 80px;
+    height: 80px;
+  }
+
+  .footstepStrip {
+    scale: 0.6;
+    transform-origin: top center;
+  }
+
+  .exitCorner {
+    top: 128px;
     right: 16px;
-    width: 220px;
-    max-width: calc(100% - 64px);
+  }
+
+  .exitCorner-btn {
+    padding: 18px;
+  }
+
+  .exitCorner-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .exitCorner-label {
+    font-size: 12px;
   }
 }
 
 @media (max-height: 600px) {
-  .viewer:has(.hotspotPopup) .exploreControls { visibility: hidden; }
+  .viewer:has(.hotspotPopup) .exitCorner {
+    visibility: hidden;
+  }
+
   .hotspotPopup {
     top: 128px;
     bottom: auto;
@@ -3496,136 +3649,498 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .exploreCorner *, .exploreCorner *::before, .exploreCorner *::after {
+
+  .exploreCorner *,
+  .exploreCorner *::before,
+  .exploreCorner *::after {
     animation: none !important;
     transition: none !important;
   }
-  .exploreCorner.active:hover .exploreCorner-tiltWrap { transform: none; }
-  .exploreCorner .footstep { opacity: 0.8; }
+
+  .exploreCorner.active:hover .exploreCorner-tiltWrap {
+    transform: none;
+  }
+
+  .exploreCorner .footstep {
+    opacity: 0.8;
+  }
 }
 
-/* Panel điểm: dùng surface kính playpen, giữ khoảng trống cho thanh playback. */
+/* ─────────────────────────────────────────────────────────────
+   Panel điểm tương tác (hotspot) — surface kính playpen.
+
+   Giá trị dưới đây bám sát CSS của panel gốc. Khối `.hotspotPopup`
+   ở trên (dòng ~784) chỉ còn giữ vai trò định vị/z-index; mọi thứ
+   về nền, viền, bo góc, padding do `.playpenInfoParent` quyết định.
+
+   LƯU Ý độ ưu tiên: `.hotspotPopup h2` / `.hotspotPopup p` /
+   `.hotspotPopupMedia` đều là (0,1,1) hoặc (0,1,0) và có thể thắng
+   `.playpenInfo-Title` / `.playpenInfo-Desc` (0,1,0), nên các rule
+   dưới đây phải nêu lại giá trị gốc với selector đủ mạnh.
+   ───────────────────────────────────────────────────────────── */
+
 .hotspotPopup.playpenInfoParent {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(380px, calc(100vw - 48px));
-  min-width: 0;
-  max-height: none;
-  padding: 110px 24px 118px 44px;
+  z-index: 1300;
   opacity: 1;
   pointer-events: auto;
-  justify-content: center;
-  overflow: visible;
-  border-radius: 36px 0 0 36px;
-  background-color: rgba(28, 27, 26, 0.72);
+  /* `.hotspotPopup` vẽ viền cam 1px cả 4 cạnh; surface playpen chỉ có
+     viền trái nên phải xoá hẳn rồi vẽ lại đúng một cạnh. */
+  border: 0;
+  border-left: 1px solid rgba(240, 232, 221, 0.12);
 }
 
-.hotspotPopup.playpenInfoParent.collapsed {
-  transform: translateX(calc(100% - 36px));
-}
-
-.viewer:has(.hotspotPopup[data-collapsed="false"]) .exploreControls {
+/* Panel điểm đang mở thì nhường chỗ cho nút Exit 3D Mode ở góc trên phải. */
+.viewer:has(.hotspotPopup[data-collapsed="false"]) .exitCorner {
   visibility: hidden;
 }
 
-.hotspotPopup.playpenInfoParent .hotspotPopupClose {
-  top: 75px;
-  right: 18px;
-  width: 40px;
-  height: 40px;
+/* Nhắc nhẹ khi panel đang thu gọn (khớp `@keyframes nudgeLeft` của bản gốc). */
+@keyframes nudgeLeft {
+
+  0%,
+  100% {
+    transform: translateX(calc(100% - 36px));
+  }
+
+  25% {
+    transform: translateX(calc(100% - 48px));
+  }
+
+  50% {
+    transform: translateX(calc(100% - 36px));
+  }
+
+  75% {
+    transform: translateX(calc(100% - 44px));
+  }
 }
+
+.playpenInfoParent.collapsed.nudge {
+  animation: nudgeLeft 0.5s ease-in-out;
+}
+
+/* ── Tiêu đề ──────────────────────────────────────────────────── */
 
 .hotspotPopup.playpenInfoParent h2 {
   flex-shrink: 0;
-  width: auto;
-  margin: 0 0 18px;
-  font-size: 22px;
-  line-height: 1.3;
+  width: 100%;
+  margin: 0 0 16px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  text-align: left;
 }
+
+/* ── Nút thu gọn: nằm NGOÀI panel, lơ lửng bên trái ───────────── */
 
 .infoCollapse {
   position: absolute;
-  left: 0;
-  top: calc(50% - 24px);
-  width: 36px;
-  height: 48px;
-  border: 0;
-  border-radius: 10px 0 0 10px;
-  background: rgba(0, 0, 0, 0.25);
+  top: 50%;
+  transform: translateY(-50%);
+  left: -48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
   cursor: pointer;
+  z-index: 3;
+  opacity: 0.8;
+  pointer-events: all;
+  transition: opacity 0.25s ease, filter 0.25s ease;
 }
 
+.infoCollapse:hover {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 8px rgba(240, 232, 221, 0.6)) drop-shadow(0 0 20px rgba(240, 232, 221, 0.3));
+}
+
+.infoCollapseIcon {
+  width: 40px;
+  height: 40px;
+  /* Icon gốc là SVG đen → lọc thành trắng ngà cho khớp tông panel. */
+  filter: brightness(0) invert(0.93);
+}
+
+.infoCollapseIcon.collapseOut {
+  display: none;
+}
+
+.playpenInfoParent.collapsed .infoCollapseIcon.collapseIn {
+  display: none;
+}
+
+.playpenInfoParent.collapsed .infoCollapseIcon.collapseOut {
+  display: block;
+}
+
+/* ── Nút đóng: viên kính tròn ở góc trên trái panel ───────────── */
+
+.hotspotPopupClose {
+  position: absolute;
+  top: 20px;
+  left: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(240, 232, 221, 0.08) 40%,
+      rgba(240, 232, 221, 0.04) 60%,
+      rgba(200, 195, 188, 0.06) 100%);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  box-shadow:
+    0 0 12px 1px rgba(240, 232, 221, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* `display: flex` ở trên đè mất `[hidden]` của UA nên phải chặn lại. */
+.hotspotPopupClose[hidden] {
+  display: none;
+}
+
+.hotspotPopupClose img {
+  width: 18px;
+  height: 18px;
+  filter: brightness(0) invert(0.93);
+}
+
+.hotspotPopupClose:hover {
+  transform: scale(1.1);
+  border-color: rgba(240, 232, 221, 0.45);
+  box-shadow:
+    0 0 20px 3px rgba(240, 232, 221, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ── Vùng cuộn ────────────────────────────────────────────────── */
+
 .infoInner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   width: 100%;
-  min-height: 0;
+  max-height: calc(100vh - 160px);
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow-x: hidden;
   scrollbar-width: thin;
 }
 
-.infoInner[hidden] { display: none; }
-
-.infoImageButton {
-  display: block;
-  position: relative;
-  width: 100%;
-  padding: 0;
-  margin-bottom: 18px;
-  border: 0;
-  background: transparent;
-  cursor: zoom-in;
+.infoInner[hidden] {
+  display: none;
 }
 
-.infoInner .hotspotPopupMedia {
+.infoInner::-webkit-scrollbar {
+  width: 3px;
+}
+
+.infoInner::-webkit-scrollbar-thumb {
+  background: rgba(240, 232, 221, 0.15);
+  border-radius: 2px;
+}
+
+.infoInner::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0);
+}
+
+/* ── Media: ảnh & video ───────────────────────────────────────── */
+
+/* Nêu lại toàn bộ thuộc tính: `.hotspotPopupMedia` gốc còn sót
+   `max-height: 160px` + `margin-bottom: 12px` + `object-fit: cover`. */
+.hotspotPopupMedia {
+  display: block;
   width: 100%;
   height: auto;
-  max-height: min(32dvh, 250px);
-  margin: 0 0 18px;
+  max-height: none;
+  margin: 0;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 12px;
+  filter: drop-shadow(0px 2px 6px rgba(0, 0, 0, 0.35));
 }
 
-.infoImageButton .hotspotPopupMedia { margin: 0; }
-
-.infoExpandIcon {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.65);
-  border-radius: 4px;
+.infoInner .playpenInfo-Vid {
+  max-height: 35vh;
+  background: #000;
 }
 
-.infoInner audio { width: 100%; margin-bottom: 16px; }
+/* Bản gốc ẩn cue gốc của trình duyệt; caption do UI của tour lo. */
+.infoInner .playpenInfo-Vid::cue {
+  opacity: 0;
+  line-height: 30;
+}
 
-.infoDescription {
-  display: -webkit-box;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
+.infoInner .playpenInfo-Img {
+  max-height: 35vh;
+  object-fit: cover;
+}
+
+/* ── Nhóm ảnh: icon mở rộng chỉ hiện khi hover ────────────────── */
+
+.infoImgGroup {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
   overflow: hidden;
 }
 
-.infoInner p { font-size: 14px; line-height: 1.6; }
-.infoInner .infoCredit { margin-top: 12px; font-size: 11px; opacity: 0.7; }
-.infoReadMore { margin-top: 10px; padding: 6px 0; border: 0; background: none; color: #ffb45c; cursor: pointer; }
-.infoTracker { display: grid; justify-content: center; gap: 12px; margin-top: 24px; text-align: center; font-size: 11px; }
+.infoImageButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.infoImgGroup:hover .hotspotPopupMedia {
+  filter: brightness(0.6);
+}
+
+/* Icon đặt absolute KHÔNG kèm offset ⇒ neo theo vị trí tĩnh, mà vị trí
+   tĩnh trong flex-center chính là giữa ảnh — đúng như bản gốc. */
+.infoExpandIcon {
+  display: none;
+  position: absolute;
+  width: 32px;
+  pointer-events: none;
+  filter: brightness(0) invert(0.9);
+}
+
+.infoImgGroup:hover .infoExpandIcon {
+  display: flex;
+}
+
+/* ── Thanh tiến trình media (bấm để tua) ──────────────────────── */
+
+.infoProgressBar {
+  width: 100%;
+  margin-top: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* `margin-bottom: -4px` để thanh fill trượt lên đè đúng lên track. */
+.infoProgressFilled {
+  width: 100%;
+  height: 4px;
+  margin-bottom: -4px;
+  border-radius: 3px;
+  background-color: rgba(240, 232, 221, 0.2);
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.infoProgressFill {
+  width: 0;
+  height: 4px;
+  border-radius: 3px;
+  background-color: #f0e8dd;
+  box-shadow: 0 0 6px 1px rgba(240, 232, 221, 0.3);
+  pointer-events: none;
+}
+
+.infoInner audio {
+  width: 100%;
+  margin-top: 12px;
+  border-radius: 12px;
+}
+
+/* ── Nhóm mô tả ───────────────────────────────────────────────── */
+
+.infoDescGroup {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* `.hotspotPopup p` (0,1,1) thắng `.playpenInfo-Desc` (0,1,0) nên phải
+   nêu lại giá trị gốc: 14px/20px, lề trên 16px, clamp 7 dòng. */
+.infoInner .playpenInfo-Desc {
+  flex-shrink: 0;
+  width: 100%;
+  margin: 16px 0 0;
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  text-align: left;
+  color: rgba(240, 232, 221, 0.82);
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+  line-clamp: 7;
+  overflow: hidden;
+}
+
+.infoInner .playpenInfo-Desc:hover {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+
+.infoCredit {
+  padding-top: 6px;
+  width: 100%;
+  font-size: var(--font-size-8);
+  font-style: italic;
+  color: rgba(240, 232, 221, 0.6);
+  text-align: right;
+}
+
+/* ── Nhóm nút Read More / Read Less ───────────────────────────── */
+
+.infoDescButtons {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.infoReadMore {
+  padding: 6px 16px;
+  border: 1px solid rgba(240, 232, 221, 0.3);
+  border-radius: 999px;
+  background: rgba(240, 232, 221, 0.06);
+  color: #f0e8dd;
+  font: inherit;
+  font-size: var(--font-size-12);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.infoReadMore:hover {
+  box-shadow: 0 0 0 1.5px rgba(240, 232, 221, 0.6);
+  background: rgba(240, 232, 221, 0.14);
+}
+
+.infoReadLess {
+  color: rgba(240, 232, 221, 0.7);
+  border-color: rgba(240, 232, 221, 0.18);
+  background: none;
+}
+
+.infoButtonHidden {
+  display: none;
+}
+
+/* ── Orb tracker: ghim đáy panel, ngoài vùng cuộn ─────────────── */
+
+.infoTracker {
+  position: absolute;
+  left: 19px;
+  right: 0;
+  bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.orbTracker-allfound {
+  font-size: var(--font-size-10);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--title);
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(249, 238, 193, 0.6);
+  animation: orbPulse 2s ease-in-out infinite;
+}
+
 
 .infoImageDialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+
   width: min(1100px, 90vw);
   max-height: 90dvh;
   padding: 48px 16px 16px;
+
   border: 1px solid rgba(240, 232, 221, 0.25);
   border-radius: 12px;
   background: #1c1b1a;
   color: #f0e8dd;
 }
 
-.infoImageDialog::backdrop { background: rgba(0, 0, 0, 0.85); }
-.infoImageDialog img { display: block; width: 100%; height: auto; max-height: calc(90dvh - 80px); object-fit: contain; }
-.infoImageDialog button { position: absolute; top: 4px; right: 8px; width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 28px; cursor: pointer; }
-.infoCollapse:focus-visible, .infoImageButton:focus-visible, .infoReadMore:focus-visible { outline: 2px solid #ff9b2d; outline-offset: 2px; }
+.infoImageDialog::backdrop {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.infoImageDialog img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(90dvh - 80px);
+  object-fit: contain;
+}
+
+.infoImageDialog button {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.infoCollapse:focus-visible,
+.infoImageButton:focus-visible,
+.infoReadMore:focus-visible,
+.hotspotPopupClose:focus-visible {
+  outline: 2px solid #ff9b2d;
+  outline-offset: 2px;
+}
+
+/* Màn hình thấp: nới trần vùng cuộn để panel còn chỗ thở. */
+@media (max-height: 600px) {
+  .infoInner {
+    max-height: calc(100vh - 120px);
+  }
+
+  .infoTracker {
+    bottom: 8px;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .hotspotPopup.playpenInfoParent { transition: none; }
+  .playpenInfoParent.collapsed.nudge {
+    animation: none;
+  }
+
+  .orbTracker-allfound {
+    animation: none;
+  }
+
+  .infoCollapse,
+  .hotspotPopupClose {
+    transition: none;
+  }
 }

@@ -107,9 +107,7 @@ CREATE TABLE scene (
     title TEXT NOT NULL,
     description TEXT,
     sky_preset_id BIGINT REFERENCES sky_preset(id) ON DELETE SET NULL,
-    -- Camera nằm trong GLB (NULL = dùng camera mặc định của GLB)
     camera_node_name TEXT,
-    -- Hoặc khai báo camera trực tiếp trong DB
     cam_start_pos JSONB,
     cam_start_target JSONB,
     cam_zoom_pos JSONB,
@@ -117,7 +115,6 @@ CREATE TABLE scene (
     instant_move BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_scene_heritage_sequence UNIQUE (heritage_id, sequence),
-    -- -1 = overview (intro) scene; >= 0 = regular scenes
     CONSTRAINT chk_scene_sequence CHECK (sequence >= -1)
 );
 

@@ -7,6 +7,7 @@ import type { ExploreMode } from "../three/explore-controller";
 import styles from "../styles.module.css";
 
 const ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/icons";
+const EXIT_ICON = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/nav_bar_new/playpen_exit_ow.svg";
 
 export default function ExploreControls({ interactive, mode, onEnter, onReset, onExit, initialMode, onSelectHighlight, selectedHighlightId }: {
   interactive: HeritageInteractive | null;
@@ -22,6 +23,15 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
   const exitRef = useRef<HTMLButtonElement>(null);
   const [failedThumbnails, setFailedThumbnails] = useState<Record<number, string | null | undefined>>({});
   const focusAfterAction = useRef(false);
+  // `.exitCorner` vào bằng opacity 0 → 1 + scale .85 → 1, nên phải mount ở
+  // trạng thái chưa active rồi bật ở frame sau, nếu không transition bị bỏ qua.
+  const [exitCornerReady, setExitCornerReady] = useState(false);
+  useEffect(() => {
+    if (!mode) { setExitCornerReady(false); return; }
+    let inner = 0;
+    const outer = requestAnimationFrame(() => { inner = requestAnimationFrame(() => setExitCornerReady(true)); });
+    return () => { cancelAnimationFrame(outer); cancelAnimationFrame(inner); };
+  }, [mode]);
   useEffect(() => {
     if (focusAfterAction.current) {
       (mode ? exitRef : enterRef).current?.focus();
@@ -31,19 +41,24 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
 
   if (!interactive) return null;
   if (mode) {
+    // Cùng cấu trúc với nút "Dive Deeper" ở góc: một viên kính tròn + nhãn.
     return (
-      <nav className={styles.exploreControls} aria-label="3D exploration">
+      <div className={`${styles.exitCorner} ${exitCornerReady ? styles.active : ""}`} id="exitCorner">
         <button
           ref={exitRef}
+          className={styles["exitCorner-btn"]}
+          id="exitCornerBtn"
           type="button"
+          aria-label="Exit 3D Mode"
           onClick={() => {
             focusAfterAction.current = true;
             onExit();
           }}
         >
-          Exit 3D Mode
+          <Image className={styles["exitCorner-icon"]} src={EXIT_ICON} width={42} height={42} alt="" unoptimized />
         </button>
-      </nav>
+        <span className={styles["exitCorner-label"]}>Exit 3D Mode</span>
+      </div>
     );
   }
 

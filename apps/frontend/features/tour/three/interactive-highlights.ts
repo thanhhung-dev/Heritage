@@ -1,10 +1,14 @@
 import * as THREE from "three";
 import type { HeritageInteractiveHighlight } from "@/types/heritage";
-import { toVector3 } from "./camera-controller";
+import { toVector3, type DollyTarget } from "./camera-controller";
+import { camLog } from "./camera-debug";
 
 const BADGE_SIZE = 0.37;
 const HOVER_SCALE = 1.12;
 const ANIM_SPEED = 12;
+
+const HOVER_APPROACH = 0.9;
+const HOVER_MIN_DISTANCE = 0.6;
 
 function createBadgeTexture(number: number, hovered = false) {
   const SIZE = 1024;
@@ -17,7 +21,7 @@ function createBadgeTexture(number: number, hovered = false) {
     throw new Error("Không tạo được texture lens badge.");
   }
 
-  const GLOW_RADIUS = 350;
+  const GLOW_RADIUS = 490;
 
   const glow = context.createRadialGradient(
     C,
@@ -30,17 +34,21 @@ function createBadgeTexture(number: number, hovered = false) {
 
   if (hovered) {
     glow.addColorStop(0, "rgba(255, 220, 80, 0)");
-    glow.addColorStop(0.3, "rgba(255, 210, 70, 0.06)");
+    glow.addColorStop(0.3, "rgba(255, 210, 70, 0)");
+    glow.addColorStop(0.4, "rgba(255, 200, 50, 0.1)");
     glow.addColorStop(0.5, "rgba(255, 200, 50, 0.4)");
-    glow.addColorStop(1, "rgba(255, 180, 30, 0.06)");
+    glow.addColorStop(0.6, "rgba(255, 180, 30, 0.1)");
+    glow.addColorStop(0.7, "rgba(255, 160, 0, 0)");
     glow.addColorStop(1, "rgba(255, 160, 0, 0)");
 
   } else {
-    glow.addColorStop(0, "rgba(255,255,255,0)");
-    glow.addColorStop(1, "rgba(255,255,255,0.08)");
-    glow.addColorStop(0.5, "rgba(255,255,255,0.4)");
-    glow.addColorStop(0.7, "rgba(255,255,255,0.25)");
-    glow.addColorStop(1, "rgba(255,255,255,0)");
+       glow.addColorStop(0, "rgba(255, 220, 80, 0)");
+    glow.addColorStop(0.3, "rgba(255, 210, 70, 0)");
+    glow.addColorStop(0.4, "rgba(252, 252, 252, 0.1)");
+    glow.addColorStop(0.5, "rgba(255, 255, 255, 0.61)");
+    glow.addColorStop(0.6, "rgba(249, 249, 249, 0.1)");
+    glow.addColorStop(0.7, "rgba(252, 252, 251, 0)");
+    glow.addColorStop(1, "rgba(253, 253, 253, 0)");
   }
 
   context.fillStyle = glow;
@@ -67,10 +75,10 @@ function createBadgeTexture(number: number, hovered = false) {
   return texture;
 }
 
-/** Badge số/glow tại vị trí hotspot của tour. */
 export function createInteractiveHighlights(
   scene: THREE.Scene,
   canvas?: HTMLCanvasElement,
+  onHoverTarget?: (target: DollyTarget | null) => void,
 ) {
   const group = new THREE.Group();
   group.name = "interactive_hotspots";
@@ -93,6 +101,7 @@ export function createInteractiveHighlights(
 
   let items: HeritageInteractiveHighlight[] = [];
   let hoveredId: number | null = null;
+  let hoveredPoint: THREE.Vector3 | null = null;
 
   function getItem(id: number | null) {
     return items.find((item) => item.id === id) ?? null;
@@ -106,6 +115,7 @@ export function createInteractiveHighlights(
   function setHovered(id: number | null) {
     if (hoveredId === id) return;
     hoveredId = id;
+    camLog("badge", `hovered = ${id === null ? "null (rời badge)" : `id=${id}`}`);
     canvas?.style.setProperty("cursor", id === null ? "default" : "pointer");
 
     markers.forEach((marker, key) => {
@@ -125,6 +135,29 @@ export function createInteractiveHighlights(
 
       material.map = isHovered ? hoverTexture : normalTexture;
       material.needsUpdate = true;
+    });
+
+    if (!onHoverTarget) return;
+
+    if (id === null) {
+      hoveredPoint = null;
+      onHoverTarget(null);
+      return;
+    }
+
+    const marker = markers.get(id);
+    if (!marker) {
+      onHoverTarget(null);
+      return;
+    }
+
+    marker.updateWorldMatrix(true, false);
+    const point = hoveredPoint ?? (hoveredPoint = new THREE.Vector3());
+    marker.getWorldPosition(point);
+    onHoverTarget({
+      point,
+      approach: HOVER_APPROACH,
+      minDistance: HOVER_MIN_DISTANCE,
     });
   }
 
@@ -153,8 +186,10 @@ export function createInteractiveHighlights(
     group.clear();
     items = [];
     hoveredId = null;
+    hoveredPoint = null;
 
     canvas?.style.setProperty("cursor", "default");
+    onHoverTarget?.(null);
     select(null);
   }
 
@@ -259,6 +294,9 @@ export function createInteractiveHighlights(
         listeners.delete(listener);
       };
     },
+
+    /** ID badge đang được trỏ tới (chỉ dùng cho test/telemetry). */
+    hoveredId: () => hoveredId,
 
     dispose() {
       listeners.clear();
