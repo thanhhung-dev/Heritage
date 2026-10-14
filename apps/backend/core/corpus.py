@@ -160,8 +160,11 @@ def chunk_text_spans(
         next_start = max(start + 1, end - overlap_chars)
         # Start overlap at a word boundary without leaving a coverage gap.
         if overlap_chars:
-            while next_start > start + 1 and not text[next_start - 1].isspace():
-                next_start -= 1
+            boundary = next_start
+            while boundary < end and not text[boundary - 1].isspace():
+                boundary += 1
+            if boundary < end:
+                next_start = boundary
         start = next_start
     return chunks
 

@@ -14,6 +14,7 @@ import shutil
 import sys
 import tempfile
 import unicodedata
+from importlib.metadata import version as dependency_version
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -137,8 +138,8 @@ def run_ingestion(
             return run_ingestion(config, output, client=owned_client, max_bytes=max_bytes)
 
     processing = {"version": PROCESSOR_VERSION, "chunking": chunking,
-                  "beautifulsoup4": __import__("bs4").__version__,
-                  "pypdf": __import__("pypdf").__version__}
+                  "beautifulsoup4": dependency_version("beautifulsoup4"),
+                  "pypdf": dependency_version("pypdf")}
     digest = _hash(_json_bytes(processing))
     package = {"corpus_version": version, "release_status": "draft",
                "documents": [], "passages": [], "entities": [], "aliases": []}
@@ -230,11 +231,12 @@ def main() -> int:
     args = parser.parse_args()
     try:
         config = json.loads(args.config.read_text(encoding="utf-8"))
+        if not isinstance(config, dict):
+            raise IngestionError("Config phải là JSON object có documents.")
         output = args.output or Path("data/ingestion") / f"corpus-v{config.get('corpus_version')}"
         path = run_ingestion(config, output, max_bytes=args.max_bytes)
-    except (IngestionError, OSError, ValueError):
+    except (IngestionError, OSError, ValueError) as error:
         # JSON/parser errors can contain user input; never echo download URLs.
-        error = sys.exc_info()[1]
         message = str(error) if isinstance(error, IngestionError) else "Không đọc/ghi được config hoặc output; kiểm tra JSON và đường dẫn."
         print(f"Ingestion thất bại: {message}", file=sys.stderr)
         return 1
