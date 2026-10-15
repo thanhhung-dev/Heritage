@@ -7,6 +7,16 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createCameraController } from "../features/tour/three/camera-controller";
 import { shouldEvaluateHover } from "../features/tour/three/tour-engine";
 import { createExploreController } from "../features/tour/three/explore-controller";
+import {
+  clampPointToExploreArea,
+  parseExploreArea,
+} from "../features/tour/three/explore-area";
+import {
+  createWalkInput,
+  DRAG_RADIUS,
+  INPUT_DEAD_ZONE,
+  WALK_SPEED,
+} from "../features/tour/three/walk-controls";
 import { parseVtt } from "../features/tour/player/useCaptions";
 import { createSceneHighlights, type TimedSceneHighlight } from "../features/tour/three/scene-highlights";
 import { createInteractiveHighlights } from "../features/tour/three/interactive-highlights";
@@ -14,7 +24,8 @@ import type { ModelLoader } from "../features/tour/three/model-loader";
 import { HeritageTourContext } from "../context/heritage-tour";
 import { useTourPlayer } from "../features/tour/player/useTourPlayer";
 import { TEST_TOUR } from "../features/tour/tour-data";
-import type { HeritageScene } from "../types/heritage";
+import { interactiveUrl, isInteractivePath, sceneUrl } from "../lib/tour-routes";
+import type { ExploreArea, HeritageScene } from "../types/heritage";
 
 test("lens badge chọn đúng ID sau khi camera quay và không chọn khi ẩn hoặc thay scene", () => {
   const originalDocument = globalThis.document;
@@ -64,14 +75,77 @@ test("lens badge chọn đúng ID sau khi camera quay và không chọn khi ẩn
   }
 });
 
+test("mở panel điểm ⇒ TẤT CẢ lens badge thu về 0, không chỉ badge vừa bấm", () => {
+  const originalDocument = globalThis.document;
+  const context = {
+    createRadialGradient: () => ({ addColorStop() {} }),
+    fillRect() {}, beginPath() {}, arc() {}, fill() {}, stroke() {}, fillText() {},
+  };
+  globalThis.document = { createElement: () => ({ width: 256, height: 256, getContext: () => context }) } as unknown as Document;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera();
+  const highlights = createInteractiveHighlights(scene);
+  const base = TEST_TOUR.payload.scenes[1].interactive[0].highlights[0];
+  /** Tỉ lệ hiện tại của marker, đọc thẳng từ scene graph. */
+  const scaleOf = (id: number) => {
+    const marker = scene.getObjectByName(`hotspot_${id}`)?.children[0];
+    assert.ok(marker, `thiếu marker hotspot_${id}`);
+    return marker.scale.x;
+  };
+  const settle = (frames = 240) => {
+    let animating = true;
+    for (let i = 0; i < frames && animating; i += 1) animating = highlights.update(camera, 1 / 60);
+    return animating;
+  };
+  const close = (actual: number, expected: number) =>
+    assert.ok(Math.abs(actual - expected) < 1e-3, `mong ${expected}, nhận ${actual}`);
+  try {
+    highlights.set([
+      { ...base, id: 11, sort_order: 1, lens_pos: [0, 0, 0], lens_scale: [1, 1, 1] },
+      { ...base, id: 22, sort_order: 2, lens_pos: [0, 3, 0], lens_scale: [2, 2, 2] },
+      { ...base, id: 33, sort_order: 3, lens_pos: [0, -3, 0], lens_scale: [3, 3, 3] },
+    ]);
+    highlights.show(true);
+    assert.equal(settle(), false, "chưa chọn gì thì không có animation");
+    close(scaleOf(11), 1);
+    close(scaleOf(22), 2);
+    close(scaleOf(33), 3);
+
+    // Chọn badge 22: cả ba phải cùng teo, kể cả hai badge không liên quan.
+    highlights.select(22);
+    assert.equal(settle(), false, "badge phải dừng animation sau khi thu hết cỡ");
+    close(scaleOf(11), 0);
+    close(scaleOf(22), 0);
+    close(scaleOf(33), 0);
+
+    // Đóng panel: mọi badge phình lại đúng tỉ lệ gốc, không dính HOVER_SCALE.
+    highlights.select(null);
+    settle();
+    close(scaleOf(11), 1);
+    close(scaleOf(22), 2);
+    close(scaleOf(33), 3);
+  } finally {
+    highlights.dispose();
+    globalThis.document = originalDocument;
+  }
+});
+
 test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tour JSON", () => {
-  let result: { id: number | null; mode: string; highlights: number[] } | null = null;
+  let result: {
+    id: number | null;
+    mode: string;
+    highlights: number[];
+    area: ExploreArea | null;
+    title: string | null;
+  } | null = null;
   function Probe() {
     const player = useTourPlayer();
     result = {
       id: player.interactive?.id ?? null,
       mode: player.initialExploreMode,
       highlights: player.interactive?.highlights.map((item) => item.id) ?? [],
+      area: player.exploreArea,
+      title: player.exploreTitle,
     };
     return null;
   }
@@ -85,19 +159,86 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
     } }, createElement(Probe)));
     return result;
   }
-  assert.deepEqual(readScene("s0"), { id: null, mode: "standard", highlights: [] });
+  assert.deepEqual(readScene("s0"), { id: null, mode: "standard", highlights: [], area: null, title: null });
   const standard = readScene("s2");
   assert.equal(standard?.id, 332);
   assert.equal(standard?.mode, "standard");
   assert.deepEqual(standard?.highlights, [639, 640, 651]);
-  assert.deepEqual(readScene("s6"), { id: 428, mode: "free", highlights: [] });
-  assert.deepEqual(readScene("s7"), { id: null, mode: "standard", highlights: [] });
+  // Cảnh không phải chế độ đi bộ ⇒ không có vùng kẹp, không có tiêu đề.
+  assert.equal(standard?.area, null);
+  assert.equal(standard?.title, null);
+  // `free_explore` = đi bộ dưới đất, KHÔNG phải orbit tự do.
+  const walk = readScene("s6");
+  assert.equal(walk?.id, 428);
+  assert.equal(walk?.mode, "walk");
+  assert.deepEqual(walk?.highlights, []);
+  assert.deepEqual(walk?.area?.extents, [21.64741446885839, 5.202717165968831, 18.27377018855391]);
+  assert.deepEqual(walk?.area?.center, [11.64311165921454, 2.539100054773748, -2.11787469883124]);
+  // Tiêu đề chỉ có nghĩa khi ĐANG ở trong chế độ ⇒ không `/int` thì phải là null.
+  assert.equal(walk?.title, null);
+  assert.deepEqual(readScene("s7"), { id: null, mode: "standard", highlights: [], area: null, title: null });
   // Cùng scene key nhưng thay dữ liệu: không được special-case ID hoặc mode.
   const scene = TEST_TOUR.payload.scenes[1];
   const area = scene.interactive[0];
-  assert.deepEqual(readScene("s2", { ...scene, interactive: [{ ...area, id: 901, mode: "free",
+  const overridden = readScene("s2", { ...scene, interactive: [{ ...area, id: 901, mode: "free",
     highlights: [{ ...area.highlights[0], id: 987 }],
-  }] }), { id: 901, mode: "free", highlights: [987] });
+  }] });
+  assert.equal(overridden?.id, 901);
+  assert.equal(overridden?.mode, "free");
+  assert.deepEqual(overridden?.highlights, [987]);
+});
+
+test("chế độ điểm tương tác suy ra từ URL /int, không giữ state riêng", () => {
+  let result: {
+    exploreMode: string | null;
+    initialExploreMode: string;
+    title: string | null;
+    description: string | null;
+  } | null = null;
+  function Probe({ interactiveRoute }: { interactiveRoute: boolean }) {
+    const player = useTourPlayer({ interactiveRoute });
+    result = {
+      exploreMode: player.exploreMode,
+      initialExploreMode: player.initialExploreMode,
+      title: player.exploreTitle,
+      description: player.exploreDescription,
+    };
+    return null;
+  }
+  function readScene(key: string, interactiveRoute: boolean) {
+    const currentScene = [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
+    renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
+      payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
+      currentScene, status: "ready", error: null, isModelReady: true,
+      modelError: null,
+      engine: null, scenePlayback: TEST_TOUR.playback[key],
+    } }, createElement(Probe, { interactiveRoute })));
+    return result;
+  }
+  // Không có `/int` thì không bao giờ ở chế độ điểm tương tác, kể cả cảnh có dữ liệu.
+  assert.deepEqual(readScene("s2", false), { exploreMode: null, initialExploreMode: "standard", title: null, description: null });
+  // Có `/int` ⇒ mode lấy từ chính dữ liệu cảnh, không hard-code.
+  assert.deepEqual(readScene("s2", true), { exploreMode: "standard", initialExploreMode: "standard", title: null, description: null });
+  assert.deepEqual(readScene("s6", true), {
+    exploreMode: "walk", initialExploreMode: "walk",
+    title: "Explore the Forecourt",
+    description: TEST_TOUR.playback.s6.exploreDescription,
+  });
+  // Cảnh không có `interactive` ⇒ `/int` cũng không mở được chế độ nào.
+  assert.deepEqual(readScene("s0", true), { exploreMode: null, initialExploreMode: "standard", title: null, description: null });
+});
+
+test("nhận diện route /int theo cấu trúc path, không nhầm cảnh tên 'int'", () => {
+  assert.equal(isInteractivePath("/content/petra/s2/int"), true);
+  assert.equal(isInteractivePath("/content/petra/s2"), false);
+  assert.equal(isInteractivePath("/content/petra"), false);
+  assert.equal(isInteractivePath("/content/petra/s2/int/"), true);
+  // Cảnh có sceneKey đúng bằng "int": chỉ 3 đoạn ⇒ KHÔNG phải route điểm tương tác.
+  assert.equal(isInteractivePath("/content/petra/int"), false);
+  assert.equal(isInteractivePath("/admin/int"), false);
+  assert.equal(isInteractivePath(null), false);
+  assert.equal(interactiveUrl("petra", "s2"), "/content/petra/s2/int");
+  assert.equal(sceneUrl("petra", "s2"), "/content/petra/s2");
 });
 
 test("camera giữ đúng preset dưới target và ngoài khoảng fit, kể cả reset/exit Explore", () => {
@@ -1008,5 +1149,325 @@ test("model lớn: sàn minDistance suy từ pose tác giả, không kéo camera
       `không về đúng camera cũ: ${camera.position.toArray()} vs ${entry.toArray()}`);
   } finally {
     controls.dispose();
+  }
+});
+
+// ── Chế độ đi bộ (`free_explore`): OBB, độ cao mắt, cần gạt ảo ───────────────
+
+/** Hộp thẳng trục cho dễ đọc toạ độ trong assertion. */
+const FLAT_AREA: ExploreArea = {
+  center: [0, 0, 0],
+  extents: [10, 5, 10],
+  rotation: [0, 0, 0, 1],
+};
+
+/** Hộp xoay 90° quanh Y: trục X cục bộ trỏ về −Z thế giới. */
+const YAWED_AREA: ExploreArea = {
+  center: [0, 0, 0],
+  extents: [2, 1, 5],
+  rotation: [0, Math.SQRT1_2, 0, Math.SQRT1_2],
+};
+
+/**
+ * `createWalkInput` và `OrbitControls` chạm vào `window` / `HTMLElement` — Node
+ * không có hai thứ đó. Cài bản tối thiểu quanh mỗi test rồi gỡ ra.
+ */
+function installDomGlobals() {
+  const globals = globalThis as unknown as Record<string, unknown>;
+  const previous = {
+    window: globals.window,
+    document: globals.document,
+    HTMLElement: globals.HTMLElement,
+  };
+
+  class StubHTMLElement extends EventTarget {
+    style: Record<string, string> = {};
+    ownerDocument: EventTarget = new EventTarget();
+    getRootNode() { return this.ownerDocument; }
+  }
+
+  globals.HTMLElement = StubHTMLElement;
+  globals.window = new EventTarget();
+  globals.document = new EventTarget();
+
+  return {
+    window: globals.window as EventTarget,
+    createElement: () => new StubHTMLElement() as unknown as HTMLElement,
+    restore() {
+      globals.window = previous.window;
+      globals.document = previous.document;
+      globals.HTMLElement = previous.HTMLElement;
+    },
+  };
+}
+
+/** Phát một sự kiện có thuộc tính tuỳ biến (`key`, `pointerId`, `clientX`…). */
+function emit(target: EventTarget, type: string, init: Record<string, unknown>) {
+  const event = new Event(type);
+  Object.assign(event, init);
+  target.dispatchEvent(event);
+}
+
+function createWalkHarness(area: ExploreArea | null) {
+  const dom = installDomGlobals();
+  const canvas = dom.createElement();
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, canvas);
+  controls.maxPolarAngle = Math.PI / 2;
+  // Giống `fit()` trên model Petra: sàn lớn hơn hẳn điểm neo 1 đơn vị — đây
+  // chính là lý do chế độ đi bộ phải tự ghi pose thay vì gọi `controls.update()`.
+  controls.minDistance = 1.23;
+  controls.maxDistance = 400;
+  const controller = createCameraController(camera, controls);
+
+  /** Mọi lần tường biên được cập nhật, để kiểm tra nó chạy cả khi đứng yên. */
+  const boundaryCalls: (ExploreArea | null)[] = [];
+  const boundary = {
+    update: (_camera: THREE.Camera, next: ExploreArea | null) => {
+      boundaryCalls.push(next);
+      return false;
+    },
+    show: (_visible: boolean) => {},
+    dispose: () => {},
+  };
+
+  const explore = createExploreController(controller, controls, { camera, canvas, boundary });
+  // Biên đi bộ là state của CẢNH, không phải tham số lúc dựng: engine nhận nó
+  // qua `setExploreArea` khi cảnh đổi.
+  explore.setArea(area);
+  return { ...dom, canvas, camera, controls, controller, explore, boundaryCalls };
+}
+
+test("parseExploreArea nhận chuỗi JSON lẫn object, chối dữ liệu hỏng", () => {
+  const area: ExploreArea = { center: [1, 2, 3], extents: [4, 5, 6], rotation: [0, 0, 0, 1] };
+  // Bản gốc lưu CHUỖI JSON; cột JSONB của backend trả OBJECT đã tách sẵn.
+  assert.deepEqual(parseExploreArea(JSON.stringify(area)), area);
+  assert.deepEqual(parseExploreArea(area), area);
+
+  assert.equal(parseExploreArea(null), null);
+  assert.equal(parseExploreArea(undefined), null);
+  assert.equal(parseExploreArea(""), null);
+  assert.equal(parseExploreArea("{không phải json"), null);
+  assert.equal(parseExploreArea(42), null);
+  assert.equal(parseExploreArea({ ...area, center: [1, 2] }), null);
+  assert.equal(parseExploreArea({ ...area, rotation: [0, 0, 0] }), null);
+  // Cạnh suy biến làm hộp mất chiều ⇒ coi như dữ liệu hỏng.
+  assert.equal(parseExploreArea({ ...area, extents: [4, 0, 6] }), null);
+  assert.equal(parseExploreArea({ ...area, extents: [4, -5, 6] }), null);
+  assert.equal(parseExploreArea({ ...area, center: [1, 2, Number.NaN] }), null);
+});
+
+test("kẹp OBB: trong hộp giữ nguyên, ngoài hộp kéo về mặt gần nhất, tôn trọng xoay", () => {
+  // Trong hộp (kể cả đúng trên mặt) ⇒ không đụng tới.
+  const inside = new THREE.Vector3(9.5, 4.5, -9.5);
+  assert.equal(clampPointToExploreArea(inside, FLAT_AREA), false);
+  assert.deepEqual(inside.toArray(), [9.5, 4.5, -9.5]);
+
+  const onFace = new THREE.Vector3(10, 5, 10);
+  assert.equal(clampPointToExploreArea(onFace, FLAT_AREA), false);
+  assert.deepEqual(onFace.toArray(), [10, 5, 10]);
+
+  // `extents` là NỬA cạnh: (50, 40, −50) phải về đúng (±10, ±5, ∓10).
+  const outside = new THREE.Vector3(50, 40, -50);
+  assert.equal(clampPointToExploreArea(outside, FLAT_AREA), true);
+  assert.deepEqual(outside.toArray(), [10, 5, -10]);
+
+  // Hộp xoay 90° quanh Y: X cục bộ → −Z thế giới, Z cục bộ → +X thế giới.
+  // Nửa cạnh (2, 1, 5) ⇒ hộp thế giới là x ∈ [−5, 5], y ∈ [−1, 1], z ∈ [−2, 2].
+  const sideways = new THREE.Vector3(0, 0, -4);
+  assert.equal(clampPointToExploreArea(sideways, YAWED_AREA), true);
+  assert.ok(sideways.distanceTo(new THREE.Vector3(0, 0, -2)) < 1e-12,
+    `kẹp theo trục cục bộ sai: ${sideways.toArray()}`);
+
+  const along = new THREE.Vector3(9, 0, 0);
+  assert.equal(clampPointToExploreArea(along, YAWED_AREA), true);
+  assert.ok(along.distanceTo(new THREE.Vector3(5, 0, 0)) < 1e-12,
+    `kẹp theo trục cục bộ sai: ${along.toArray()}`);
+
+  // Điểm trong hộp xoay vẫn phải giữ nguyên.
+  const insideYawed = new THREE.Vector3(4, 0.5, 1.5);
+  assert.equal(clampPointToExploreArea(insideYawed, YAWED_AREA), false);
+});
+
+test("cần gạt ảo: chỉ tính khi kéo quá vùng chết, kéo xuống là lùi, kéo ngang là quay", () => {
+  const dom = installDomGlobals();
+  const canvas = dom.createElement();
+  const input = createWalkInput(canvas);
+  try {
+    input.attach();
+    assert.deepEqual(input.read(), { forward: 0, strafe: 0, turn: 0 });
+
+    emit(canvas, "pointerdown", { pointerId: 1, clientX: 0, clientY: 0 });
+    // Trong vùng chết ⇒ coi như đứng yên (nếu không, rung tay vài pixel đã quay).
+    emit(canvas, "pointermove", {
+      pointerId: 1,
+      clientX: INPUT_DEAD_ZONE * DRAG_RADIUS - 1,
+      clientY: 0,
+    });
+    assert.deepEqual(input.read(), { forward: 0, strafe: 0, turn: 0 });
+
+    // Kéo đủ xa sang phải + xuống dưới: quay phải, đi lùi.
+    emit(canvas, "pointermove", { pointerId: 1, clientX: DRAG_RADIUS, clientY: DRAG_RADIUS });
+    assert.deepEqual(input.read(), { forward: -1, strafe: 0, turn: 1 });
+
+    // Nhả tay ⇒ về 0 ngay, không giữ lại đà.
+    emit(canvas, "pointerup", { pointerId: 1, clientX: DRAG_RADIUS, clientY: DRAG_RADIUS });
+    assert.deepEqual(input.read(), { forward: 0, strafe: 0, turn: 0 });
+
+    // WASD cộng dồn với cần gạt.
+    emit(dom.window, "keydown", { key: "w" });
+    emit(dom.window, "keydown", { key: "d" });
+    assert.deepEqual(input.read(), { forward: 1, strafe: 1, turn: 0 });
+    // Mất focus giữa chừng không được để kẹt phím.
+    emit(dom.window, "blur", {});
+    assert.deepEqual(input.read(), { forward: 0, strafe: 0, turn: 0 });
+  } finally {
+    input.detach();
+    dom.restore();
+  }
+});
+
+test("chế độ đi bộ: khoá độ cao mắt, kẹp biên, tắt orbit và trả lại khi thoát", () => {
+  const harness = createWalkHarness(FLAT_AREA);
+  const { camera, controls, explore, boundaryCalls } = harness;
+  try {
+    camera.position.set(10, 40, -3);
+    camera.lookAt(10, 40, -13);
+    camera.updateMatrixWorld(true);
+
+    assert.equal(explore.isWalking(), false);
+    explore.enter("walk", 4.775);
+
+    assert.equal(explore.isWalking(), true);
+    // OrbitControls phải nhường hẳn: nó kẹp khoảng cách về [minDistance, maxDistance]
+    // và điểm neo chỉ cách 1 đơn vị, nên nếu còn chạy sẽ đẩy camera mỗi frame.
+    assert.equal(controls.enableRotate, false);
+    assert.equal(controls.enablePan, false);
+    assert.equal(controls.enableZoom, false);
+    assert.equal(controls.maxPolarAngle, Math.PI);
+
+    // Frame đầu: mắt tụt xuống đúng độ cao của điểm tương tác.
+    assert.equal(explore.updateWalk(1 / 60), true);
+    assert.equal(camera.position.y, 4.775);
+    assert.deepEqual(camera.position.toArray(), [10, 4.775, -3]);
+
+    // Ra ngoài hộp ⇒ kéo về mặt gần nhất rồi mới ép độ cao.
+    camera.position.set(50, 40, -50);
+    explore.updateWalk(1 / 60);
+    assert.deepEqual(camera.position.toArray(), [10, 4.775, -10]);
+
+    // Đứng yên thì không ghi pose, nhưng tường biên vẫn phải được cập nhật.
+    const callsBefore = boundaryCalls.length;
+    assert.equal(explore.updateWalk(1 / 60), false);
+    assert.equal(boundaryCalls.length, callsBefore + 1);
+    assert.equal(boundaryCalls.at(-1), FLAT_AREA);
+
+    // Giữ W: đi đúng theo hướng nhìn, luôn nằm ngang, và điểm neo cách 1 đơn vị.
+    camera.position.set(0, 4.775, 0);
+    camera.lookAt(0, 4.775, -10);
+    camera.updateMatrixWorld(true);
+    emit(harness.window, "keydown", { key: "w" });
+    explore.updateWalk(0.1);
+    assert.ok(Math.abs(camera.position.z + WALK_SPEED * 0.1) < 1e-9,
+      `đi sai quãng đường: ${camera.position.toArray()}`);
+    assert.equal(camera.position.x, 0);
+    assert.equal(camera.position.y, 4.775);
+    assert.ok(Math.abs(controls.target.z - (camera.position.z - 1)) < 1e-9);
+    assert.equal(controls.target.y, 4.775);
+
+    // Thoát ⇒ nhả phím, trả lại orbit và ẩn tường.
+    explore.exit();
+    assert.equal(explore.isWalking(), false);
+    assert.equal(controls.enableRotate, true);
+    assert.equal(controls.enablePan, true);
+    assert.equal(controls.enableZoom, true);
+    assert.equal(controls.maxPolarAngle, Math.PI / 2);
+    assert.equal(explore.updateWalk(1 / 60), false);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("Reset trong chế độ đi bộ không nhấc mắt lên theo pose trước khi vào", () => {
+  const harness = createWalkHarness(FLAT_AREA);
+  const { camera, explore } = harness;
+  try {
+    camera.position.set(0, 80, 0);
+    camera.lookAt(0, 80, -10);
+    camera.updateMatrixWorld(true);
+
+    explore.enter("walk", 4.775);
+    explore.updateWalk(1 / 60);
+    assert.equal(camera.position.y, 4.775);
+
+    camera.position.set(3, 4.775, -2);
+    explore.reset();
+
+    // `reset` về pose lúc vào (y = 80) — nhưng mắt phải được kéo lại 4,775 ngay
+    // frame sau, không thì người đi bộ bị nhấc lơ lửng trên không.
+    explore.updateWalk(1 / 60);
+    assert.equal(camera.position.y, 4.775);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("đi bộ nhường quyền cho chuyến bay vào chế độ, chỉ khoá mắt sau khi tới", () => {
+  const harness = createWalkHarness(FLAT_AREA);
+  const { camera, controller, explore } = harness;
+  try {
+    camera.position.set(0, 60, 0);
+    camera.lookAt(0, 60, -10);
+    camera.updateMatrixWorld(true);
+
+    explore.enter("walk", 4.775);
+    // Bay 1,2s tới điểm xuất phát — giống `applyInteractiveCamera` của player.
+    controller.flyToPreset(
+      { start_position: [3, 4.775, -2], start_target: [3, 4.775, -3] } as Parameters<typeof controller.flyToPreset>[0],
+      false,
+      1.2,
+    );
+
+    // Đang bay: đi bộ KHÔNG ghi pose, nên camera còn ở trên cao chứ không nhảy
+    // phóc về 4,775 giữa chừng.
+    assert.equal(explore.updateWalk(0.3), false);
+    assert.ok(camera.position.y > 4.775, `mắt bị khoá sớm: y=${camera.position.y}`);
+
+    controller.update(1.2);
+    assert.equal(controller.isFlying(), false);
+    assert.ok(Math.abs(camera.position.y - 4.775) < 1e-9);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(3, 4.775, -2)) < 1e-9);
+
+    // Tới nơi rồi thì đi bộ nhận quyền trở lại.
+    emit(harness.window, "keydown", { key: "w" });
+    assert.equal(explore.updateWalk(0.1), true);
+    assert.equal(camera.position.y, 4.775);
+  } finally {
+    harness.restore();
+  }
+});
+
+test("đổi vùng đi bộ giữa chừng thì frame sau đã kẹp theo biên mới", () => {
+  const harness = createWalkHarness(null);
+  const { camera, explore, boundaryCalls } = harness;
+  try {
+    camera.position.set(0, 4.775, 0);
+    camera.lookAt(0, 4.775, -10);
+    camera.updateMatrixWorld(true);
+
+    explore.enter("walk", 4.775);
+    explore.updateWalk(1 / 60);
+    // Chưa biết biên ⇒ chỉ khoá độ cao, không kẹp gì.
+    assert.equal(boundaryCalls.at(-1), null);
+    assert.equal(camera.position.y, 4.775);
+
+    explore.setArea(YAWED_AREA);
+    camera.position.set(0, 4.775, -40);
+    explore.updateWalk(1 / 60);
+    assert.equal(boundaryCalls.at(-1), YAWED_AREA);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(0, 4.775, -2)) < 1e-12,
+      `chưa kẹp theo biên mới: ${camera.position.toArray()}`);
+  } finally {
+    harness.restore();
   }
 });

@@ -1,9 +1,10 @@
 """Initialize the PostgreSQL schema directly from the ORM models.
 
 This replaces Alembic. On startup we create only the tables that are missing
-(``checkfirst``) and seed a few reference rows. Nothing is ever dropped or
-altered, so existing data is always preserved. The resulting schema mirrors
-``schema.sql`` for the objects the application actually uses.
+(``checkfirst``), add only the columns that are missing, and seed a few
+reference rows. Nothing is ever dropped, retyped or narrowed, so existing data
+is always preserved. The resulting schema mirrors ``schema.sql`` for the objects
+the application actually uses.
 """
 
 from __future__ import annotations
@@ -33,6 +34,49 @@ PREDICATE_SEED = (
 )
 
 
+def _add_missing_columns(engine) -> None:
+    """Bù những cột có trong ORM mà bảng đã tồn tại còn thiếu.
+
+    ``create_all(checkfirst=True)`` chỉ tạo bảng THIẾU — nó không bao giờ sửa
+    bảng đã có, nên thêm một cột vào model (ví dụ ``interactive.explore_title``)
+    sẽ không bao giờ tới được database đang chạy và API sẽ chết với
+    "column does not exist". Ở đây chỉ THÊM cột còn thiếu
+    (``ADD COLUMN IF NOT EXISTS``): không xoá, không đổi kiểu, không siết ràng
+    buộc của cột đã có.
+    """
+    from sqlalchemy import inspect, text
+
+    from apps.backend.models import Base
+
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+        present = {column["name"] for column in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in present:
+                continue
+            # Cột NOT NULL không mặc định sẽ làm `ALTER TABLE` thất bại trên bảng
+            # đang có dữ liệu — bỏ qua kèm cảnh báo thay vì làm sập khởi động.
+            if not column.nullable and column.server_default is None and column.default is None:
+                print(
+                    f"[init_db] bỏ qua {table.name}.{column.name}: "
+                    "NOT NULL không mặc định, cần backfill thủ công"
+                )
+                continue
+            ddl_type = column.type.compile(dialect=engine.dialect)
+            with engine.begin() as connection:
+                connection.execute(
+                    text(
+                        f'ALTER TABLE "{table.name}" '
+                        f'ADD COLUMN IF NOT EXISTS "{column.name}" {ddl_type}'
+                    )
+                )
+            print(f"[init_db] đã thêm cột {table.name}.{column.name} ({ddl_type})")
+
+
 def ensure_schema(database_url: str) -> None:
     """Create missing tables and reference rows. Safe to run repeatedly."""
     from sqlalchemy import create_engine, pool, text
@@ -47,6 +91,7 @@ def ensure_schema(database_url: str) -> None:
                 )
 
         Base.metadata.create_all(engine, checkfirst=True)
+        _add_missing_columns(engine)
 
         with engine.begin() as connection:
             for statement in SEED_STATEMENTS:

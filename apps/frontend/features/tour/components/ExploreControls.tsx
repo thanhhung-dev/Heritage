@@ -12,7 +12,12 @@ const EXIT_ICON = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-
 export default function ExploreControls({ interactive, mode, onEnter, onReset, onExit, initialMode, onSelectHighlight, selectedHighlightId }: {
   interactive: HeritageInteractive | null;
   mode: ExploreMode | null;
-  onEnter: (mode: ExploreMode) => void;
+  /**
+   * Bấm "Dive Deeper" — chỉ ĐIỀU HƯỚNG tới `/content/{slug}/{sceneKey}/int`.
+   * Mode không truyền qua đây: nó là thuộc tính của cảnh (`interactive.mode`) và
+   * được `useTourPlayer` suy ra từ URL, nên không có hai nguồn nói khác nhau.
+   */
+  onEnter: () => void;
   onReset: () => void;
   onExit: () => void;
   initialMode: ExploreMode;
@@ -63,14 +68,14 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
   }
 
   return (
-    <div className={`${styles.exploreCorner} ${styles.active} ${initialMode === "free" ? styles["free-explore"] : ""}`} id="exploreCorner">
+    <div className={`${styles.exploreCorner} ${styles.active} ${initialMode === "walk" ? styles["free-explore"] : ""}`} id="exploreCorner">
       <div className={`${styles["exploreCorner-rays"]} ${styles.reveal}`} aria-hidden="true" />
       <Image className={`${styles["exploreCorner-glowSvg"]} ${styles.reveal}`} src="/images/glow_top_right.png" width={700} height={700} alt="" aria-hidden="true" unoptimized />
       <div className={`${styles["exploreCorner-glow"]} ${styles.reveal}`} aria-hidden="true" />
       <div className={styles["exploreCorner-tiltWrap"]} id="exploreCornerTilt">
         <button ref={enterRef} className={`${styles["exploreCorner-btn"]} ${styles.pop}`} id="exploreCornerBtn" type="button"
-          aria-label="Dive Deeper — Explore Area in 3D" data-interactive-id={interactive.id}
-          onClick={() => { focusAfterAction.current = true; onEnter(initialMode); }}>
+          aria-label={initialMode === "walk" ? "Explore in 3D — walk the site" : "Dive Deeper — Explore Area in 3D"} data-interactive-id={interactive.id}
+          onClick={() => { focusAfterAction.current = true; onEnter(); }}>
           <div className={styles["exploreCorner-iconWrap"]}>
             <Image className={styles["exploreCorner-icon"]} src={`${ICONS}/explore_lens.svg`} width={72} height={72} alt="" unoptimized />
           </div>
@@ -84,7 +89,10 @@ export default function ExploreControls({ interactive, mode, onEnter, onReset, o
             </div>
           </div>
         </button>
-        <span className={`${styles["exploreCorner-label"]} ${styles.show}`} id="dive-deeper-label">Dive Deeper</span>
+        {/* `free_explore` là đi bộ dưới đất nên nhãn phải nói đúng việc nó làm. */}
+        <span className={`${styles["exploreCorner-label"]} ${styles.show}`} id="dive-deeper-label">
+          {initialMode === "walk" ? "Explore in 3D" : "Dive Deeper"}
+        </span>
       </div>
     </div>
   );

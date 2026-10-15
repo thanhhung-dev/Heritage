@@ -6,6 +6,7 @@ import { camLog } from "./camera-debug";
 const BADGE_SIZE = 0.37;
 const HOVER_SCALE = 1.12;
 const ANIM_SPEED = 12;
+const SCALE_EPSILON_SQ = 1e-6;
 
 const HOVER_APPROACH = 0.9;
 const HOVER_MIN_DISTANCE = 0.6;
@@ -102,13 +103,48 @@ export function createInteractiveHighlights(
   let items: HeritageInteractiveHighlight[] = [];
   let hoveredId: number | null = null;
   let hoveredPoint: THREE.Vector3 | null = null;
+  let selectedId: number | null = null;
 
   function getItem(id: number | null) {
     return items.find((item) => item.id === id) ?? null;
   }
 
+  function refreshTargets() {
+    const panelOpen = selectedId !== null;
+
+    markers.forEach((_, key) => {
+      const baseScale = baseScales.get(key);
+      const target = targetScales.get(key);
+      if (!baseScale || !target) return;
+
+      if (panelOpen) {
+        target.set(0, 0, 0);
+        return;
+      }
+
+      target.copy(baseScale).multiplyScalar(key === hoveredId ? HOVER_SCALE : 1);
+    });
+  }
+
+  function applyHoverTextures(id: number | null) {
+    markers.forEach((marker, key) => {
+      const material = marker.material;
+      material.map =
+        key === id ? (hoverTextures.get(key) ?? null) : (normalTextures.get(key) ?? null);
+      material.needsUpdate = true;
+    });
+  }
+
   function select(id: number | null) {
     const item = getItem(id);
+    selectedId = item ? item.id : null;
+
+    if (!item && hoveredId !== null) {
+      hoveredId = null;
+      applyHoverTextures(null);
+    }
+
+    refreshTargets();
     listeners.forEach((listener) => listener(item));
   }
 
@@ -118,24 +154,9 @@ export function createInteractiveHighlights(
     camLog("badge", `hovered = ${id === null ? "null (rời badge)" : `id=${id}`}`);
     canvas?.style.setProperty("cursor", id === null ? "default" : "pointer");
 
-    markers.forEach((marker, key) => {
-      const baseScale = baseScales.get(key);
-      if (!baseScale) return;
+    refreshTargets();
 
-      const target = targetScales.get(key);
-      if (!target) return;
-
-      const isHovered = key === id;
-
-      target.copy(baseScale).multiplyScalar(isHovered ? HOVER_SCALE : 1);
-
-      const material = marker.material;
-      const hoverTexture = hoverTextures.get(key) ?? null;
-      const normalTexture = normalTextures.get(key) ?? null;
-
-      material.map = isHovered ? hoverTexture : normalTexture;
-      material.needsUpdate = true;
-    });
+    applyHoverTextures(id);
 
     if (!onHoverTarget) return;
 
@@ -162,6 +183,10 @@ export function createInteractiveHighlights(
   }
 
   function hitTest(raycaster: THREE.Raycaster) {
+    // Panel đang mở ⇒ mọi badge đang thu về 0: chặn raycast hẳn, nếu không con
+    // trỏ vẫn "dính" vào các badge sắp biến mất và camera tiếp tục dí theo chúng.
+    if (selectedId !== null) return undefined;
+
     return raycaster
       .intersectObjects([...markers.values()])
       .find(
@@ -187,6 +212,7 @@ export function createInteractiveHighlights(
     items = [];
     hoveredId = null;
     hoveredPoint = null;
+    selectedId = null;
 
     canvas?.style.setProperty("cursor", "default");
     onHoverTarget?.(null);
@@ -241,10 +267,17 @@ export function createInteractiveHighlights(
       }
     },
 
+    /**
+     * Lerp tỉ lệ badge về đích. Trả về `true` khi còn badge đang chạy animation
+     * — vòng render chỉ vẽ khi có gì đó đổi, nên phải báo lại để badge thu nhỏ
+     * được vẽ liên tục thay vì đứng hình sau frame đầu.
+     */
     update(camera: THREE.Camera, delta = 0.016) {
-      if (!group.visible) return;
+      if (!group.visible) return false;
 
       camera.getWorldQuaternion(cameraRotation);
+
+      let animating = false;
 
       markers.forEach((marker, key) => {
         marker.quaternion.copy(cameraRotation);
@@ -253,17 +286,27 @@ export function createInteractiveHighlights(
         if (!target) return;
 
         marker.scale.lerp(target, Math.min(1, delta * ANIM_SPEED));
+
+        if (marker.scale.distanceToSquared(target) > SCALE_EPSILON_SQ) {
+          animating = true;
+        }
       });
+
+      return animating;
     },
 
     select,
 
-    /** Gọi hàm này khi pointer di chuyển để cập nhật hover. */
     hover(raycaster: THREE.Raycaster) {
       if (!group.visible) {
         setHovered(null);
         return;
       }
+
+      // Panel đang mở ⇒ badge đang ẩn dần. Bỏ qua hẳn thay vì gọi
+      // `setHovered(null)`: nhả hover lúc này sẽ đẩy `onHoverTarget(null)` và
+      // camera bay ngược về pose cũ ngay sau cú bấm.
+      if (selectedId !== null) return;
 
       const hit = hitTest(raycaster);
       const id = hit ? (hit.object.userData.highlightId as number) : null;
@@ -295,8 +338,9 @@ export function createInteractiveHighlights(
       };
     },
 
-    /** ID badge đang được trỏ tới (chỉ dùng cho test/telemetry). */
     hoveredId: () => hoveredId,
+
+    selectedId: () => selectedId,
 
     dispose() {
       listeners.clear();

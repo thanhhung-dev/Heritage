@@ -1,12 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type {
+  ExploreArea,
   HeritageCamera,
   HeritageInteractiveHighlight,
 } from "@/types/heritage";
 import { setupEnvironment } from "./environment";
 import { createModelLoader } from "./model-loader";
 import { createCameraController } from "./camera-controller";
+import { createExploreBoundary } from "./explore-area";
 import {
   createExploreController,
   type ExploreMode,
@@ -18,17 +20,9 @@ import {
   type TimedSceneHighlight,
 } from "./scene-highlights";
 
-/** Ngưỡng di chuyển con trỏ (NDC) để coi là "di chuyển thật", không phải rung. */
 export const HOVER_POINTER_EPSILON = 0.02;
 
-/**
- * Có nên đánh giá lại hover theo con trỏ ở frame này không.
- *
- * Hai lý do phải chặn:
- * - Camera đang bay tới badge ⇒ badge trượt trên màn hình, raycast không đáng tin;
- *   đánh giá lúc này sẽ hủy chuyến bay giữa chừng và gây dao động vào/ra liên tục.
- * - Con trỏ chỉ rung vài pixel ⇒ coi như đứng yên, không đổi trạng thái hover.
- */
+
 export function shouldEvaluateHover(
   pointer: { x: number; y: number },
   lastPointer: { x: number; y: number },
@@ -63,15 +57,18 @@ export function createTourEngine(
   controls.maxPolarAngle = Math.PI / 2;
 
   const cameraController = createCameraController(camera, controls);
-  const explore = createExploreController(cameraController, controls);
+  const boundary = createExploreBoundary(scene);
+  const explore = createExploreController(cameraController, controls, {
+    camera,
+    canvas: renderer.domElement,
+    boundary,
+  });
   const loader = createModelLoader(renderer);
   const highlights = createInteractiveHighlights(
     scene,
     renderer.domElement,
-    // Con trỏ vào badge ⇒ bay tới đứng trước badge; rời ra ⇒ bay về đúng pose cũ.
     (target) => cameraController.setDollyTarget(target),
   );
-  // Chuyến bay hover phải nhường ngay khi người dùng kéo chuột.
   const detachPointerState = cameraController.attachPointerListeners(renderer.domElement);
 
   let needsRender = true;
@@ -149,9 +146,11 @@ export function createTourEngine(
     const dollyMoved = cameraController.updateDolly(delta);
     const timelineMoved = cameraController.updateTimeline(playbackClock);
     const cameraDriven = cameraFlying || dollyMoved || timelineMoved;
-    // `dollyMoved` cũng là pose do controller ghi: bỏ `controls.update()` trong frame
-    // đó, nếu không OrbitControls chạy chồng lên chuyến bay hover.
-    const cameraChanged = cameraDriven ? false : controls.update();
+
+ 
+    const walking = explore.isWalking();
+    const walkMoved = walking ? explore.updateWalk(delta) : false;
+    const cameraChanged = cameraDriven || walking ? false : controls.update();
     // Ăn pose mà OrbitControls vừa tính (damping, quay tay) để frame sau không giật
     // về pose cũ khi camera đang/đã dí gần badge.
     cameraController.syncPose();
@@ -165,9 +164,8 @@ export function createTourEngine(
       if (cameraFlying && dollyMoved) {
         camWarn("conflict", "flight VÀ dolly cùng ghi pose trong một frame (chuyến bay chuyển cảnh chưa nhường hover)");
       }
-      // Thứ tự áp pose trong frame là flight → dolly → timeline, nên nguồn ghi CUỐI
-      // CÙNG mới là cái đang điều khiển camera. Log phải phản ánh đúng thứ tự đó.
-      const writer = timelineMoved ? "timeline" : dollyMoved ? "dolly" : cameraFlying ? "flight" : "controls";
+     
+      const writer = walking ? "walk" : timelineMoved ? "timeline" : dollyMoved ? "dolly" : cameraFlying ? "flight" : "controls";
       const now = performance.now();
       // Log mỗi 250ms, hoặc ngay khi đổi nguồn ghi để thấy rõ lúc bàn giao.
       if (writer !== lastWriter || now - lastDebugAt > 250) {
@@ -181,8 +179,15 @@ export function createTourEngine(
       }
     }
 
-    if (cameraDriven || cameraChanged || highlightsChanged || needsRender) {
-      highlights.update(camera, delta);
+    // Lerp tỉ lệ badge chạy mỗi frame (rẻ) để biết còn animation hay không:
+    // badge đang thu nhỏ/phình ra phải kéo theo việc vẽ tiếp, nếu không nó đứng
+    // hình sau frame đầu vì vòng lặp này chỉ vẽ khi có gì đó thay đổi.
+    const badgesAnimating = highlights.update(camera, delta);
+
+    // `walkMoved` phải có mặt ở đây: khi đi bộ ta đã BỎ `controls.update()` nên
+    // `cameraChanged` luôn false, và bước đi không tự sinh frame nào khác — thiếu
+    // nó thì người dùng bấm W mà hình đứng im.
+    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating) {
       renderer.render(scene, camera);
       needsRender = false;
     }
@@ -244,11 +249,17 @@ export function createTourEngine(
   renderer.domElement.addEventListener("pointerup", onPointerUp);
 
   return {
-    enterExplore(mode: ExploreMode) {
+ 
+    enterExplore(mode: ExploreMode, eyeHeight?: number) {
       // Pose trước khi vào Explore là "góc về" khi người dùng bấm Reset.
       cameraController.adoptCurrentPose();
-      explore.enter(mode);
+      explore.enter(mode, eyeHeight);
       highlights.show(true);
+      invalidate();
+    },
+
+    setExploreArea(area: ExploreArea | null) {
+      explore.setArea(area);
       invalidate();
     },
     resetExplore(duration = 0) {
@@ -257,20 +268,17 @@ export function createTourEngine(
       invalidate();
     },
     exitExplore(duration = 0) {
-      // Không giữ chuyến dí đang dở: `explore.exit` cần toàn quyền ghi pose.
       cameraController.clearDollyTarget();
       explore.exit(duration);
       highlights.show(false);
       highlights.select(null);
       invalidate();
     },
-    /** Ẩn/hiện badge; ẩn thì nhả luôn chuyến dí để không tiếp tục tiến sát. */
     showHighlights(visible: boolean) {
       highlights.show(visible);
       if (!visible) cameraController.clearDollyTarget();
       invalidate();
     },
-    /** Bỏ chuyến dí gần và lấy pose hiện tại làm góc mới (trước khi đổi cảnh). */
     releaseHighlightDolly() {
       cameraController.releaseDolly();
       invalidate();
@@ -339,6 +347,7 @@ export function createTourEngine(
       detachPointerState();
       highlights.dispose();
       timedHighlights.dispose();
+      boundary.dispose();
       controls.dispose();
       loader.dispose();
       renderer.dispose();

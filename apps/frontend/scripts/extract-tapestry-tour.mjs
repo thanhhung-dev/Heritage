@@ -34,9 +34,17 @@ export function extractTour(html) {
       };
     });
     const interactives = overview ? [] : t.interactives.filter((i) => i.interactive_id === s.interactive_id);
+    // `explore_area` nguồn là CHUỖI JSON; hỏng thì trả null thay vì ném lỗi, để một
+    // điểm tương tác lỗi không làm sập cả bộ fixture.
+    const area = (i) => {
+      if (!i?.explore_area) return null;
+      try { return JSON.parse(i.explore_area); } catch { return null; }
+    };
     playback[slug] = {
       narrationUrl: s.audio_narration_1, captionsUrl: s.narration_cc_1, timedHighlights: highlights,
-      exploreArea: interactives[0]?.explore_area ? JSON.parse(interactives[0].explore_area) : null,
+      exploreArea: area(interactives[0]),
+      exploreTitle: interactives[0]?.explore_title ?? null,
+      exploreDescription: interactives[0]?.explore_description ?? null,
     };
     return {
       id, slug, title: overview ? s.title : s.scene_title,
@@ -57,7 +65,10 @@ export function extractTour(html) {
       })),
       interactive: interactives.map((i) => ({
         id: i.interactive_id, mode: i.interactive_mode, cam_pos: vector(i.camera_position), cam_target: vector(i.camera_target),
-        explore_area: null, // OBB nguồn được giữ trong playback.exploreArea; controller chưa áp collision.
+        // OBB của chế độ đi bộ. Bản gốc lưu dạng chuỗi JSON; tách sẵn ở đây để
+        // `explore-controller` dùng trực tiếp, không phải parse lại mỗi lần vào.
+        explore_area: area(i),
+        explore_title: i.explore_title ?? null, explore_description: i.explore_description ?? null,
         highlights: t.interactiveHighlights.filter((h) => h.interactive_id === i.interactive_id).map((h) => {
           const lens = t.threeJS_int_highlights[h.interactive_highlight_id];
           return {

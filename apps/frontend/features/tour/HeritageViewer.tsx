@@ -22,6 +22,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import logoText from "@/access/icons/logo-text.svg";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
+import { interactiveUrl, sceneUrl } from "@/lib/tour-routes";
 import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
 import Fullscreen from "@/access/icons/full_screen.png";
 import FullScreenExit from "@/access/icons/full_screen_exit.png"
@@ -32,18 +33,23 @@ import Pause from "@/access/icons/pause.svg"
 import Play from "@/access/icons/play.svg"
 import { useTourPlayer } from "./player/useTourPlayer";
 import ExploreControls from "./components/ExploreControls";
+import ExploreInfoPanel from "./components/ExploreInfoPanel";
+import ExploreTooltip from "./components/ExploreTooltip";
 import HighlightPanel from "./components/HighlightPanel";
 import Replay from "@/access/icons/replay.svg"
 import skip_voicer from "@/access/icons/skip_voicer.svg"
 import styles from "./styles.module.css";
 import next_scene from "@/access/icons/next_scene.svg"
-export default function HeritageViewer() {
+
+const INTERACTIVE_ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/nav_bar";
+
+export default function HeritageViewer({ interactiveRoute = false }: { interactiveRoute?: boolean }) {
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
   const router = useRouter();
   const { payload, currentScene } = useHeritageTour();
 
   // Trang thử dùng narration/VTT từ tour.json; payload backend chưa có các URL này.
-  const player = useTourPlayer();
+  const player = useTourPlayer({ interactiveRoute });
   const { isPlaying, isMuted, setIsMuted, ccOn, setCcOn } = player;
   const progress = player.duration > 0 ? player.currentTime / player.duration * 100 : 0;
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
@@ -146,6 +152,16 @@ export default function HeritageViewer() {
   const showPrev = (isEnded && index > 0) || arrivalPrev;
   const showNextScene = isEnded;
 
+  // Vào/ra chế độ điểm tương tác là ĐỔI URL, không phải đổi state: đuôi `/int` là
+  // nguồn sự thật duy nhất cho trạng thái đó (`lib/tour-routes.ts`). `useTourPlayer`
+  // đọc lại URL rồi mới điều khiển engine, nên chỉ có một chiều dữ liệu.
+  const enterExplore = () => {
+    if (sceneKey) router.push(interactiveUrl(slug, sceneKey));
+  };
+  const exitExplore = () => {
+    if (sceneKey) router.push(sceneUrl(slug, sceneKey));
+  };
+
   const goPrev = () => {
     if (index > 0) router.push(`/content/${slug}/${keys[index - 1]}`);
   };
@@ -162,7 +178,7 @@ export default function HeritageViewer() {
     setEndedScene(hasAudio ? null : playbackKey);
     // Replay xong thì nút phải là Replay, không phải Prev tạm thời.
     setShowArrivalPrev(false);
-    if (player.exploreMode) player.exitExplore();
+    if (player.exploreMode) exitExplore();
     player.restart();
   };
   // Skip Voiceover = nhảy narration tới cuối scene hiện tại (không chuyển scene).
@@ -211,6 +227,7 @@ export default function HeritageViewer() {
   };
 
   const handleSeek = player.seekBy;
+  const hotspotPlayback = player.exploreMode !== null && player.selectedHighlight !== null;
 
   const scrollCarousel = (ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) => {
     ref.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
@@ -437,7 +454,48 @@ export default function HeritageViewer() {
             </div>
 
             {/* Playback controls */}
-            <div className={styles.playbackControls}>
+            <div
+              className={`${styles.playbackControls} ${hotspotPlayback ? styles.interactivePlaybackControls : ""}`}
+              data-playback-mode={hotspotPlayback ? "interactive" : "scene"}
+            >
+              {hotspotPlayback ? (
+                <>
+                  <button
+                    aria-label="Reset camera"
+                    className={`${styles.intResetButton} ${styles.intButton} ${styles.ssButton} ${styles["intBtn--scene"]}`}
+                    id="intResetButton"
+                    type="button"
+                    onClick={player.resetExplore}
+                  >
+                    <Image
+                      className={styles.intButtonImg}
+                      src={`${INTERACTIVE_ICONS}/playpen_restart.svg`}
+                      alt="Reset camera"
+                      width={24}
+                      height={24}
+                      unoptimized
+                    />
+                    <div className={styles.intNavToolTip}>Reset camera</div>
+                  </button>
+                  <button
+                    aria-label="Go back"
+                    className={`${styles.intExitButton} ${styles.intButton} ${styles.ssButton} ${styles["intBtn--scene"]}`}
+                    id="intExitButton"
+                    type="button"
+                    onClick={exitExplore}
+                  >
+                    <Image
+                      className={styles.intButtonImg}
+                      src={`${INTERACTIVE_ICONS}/playpen_exit.svg`}
+                      alt="Go back"
+                      width={24}
+                      height={24}
+                      unoptimized
+                    />
+                    <div className={styles.intNavToolTip}>Go back</div>
+                  </button>
+                </>
+              ) : <>
               {/* Previous scene / Replay scene (cùng một nút) */}
               <button
                 id="prev-replay"
@@ -623,6 +681,7 @@ export default function HeritageViewer() {
                   style={{ display: "none" }}
                 />
               </div>
+              </>}
             </div>
 
             {/* System controls */}
@@ -789,9 +848,14 @@ export default function HeritageViewer() {
       {/* Transient toast */}
       <div className={styles.toast} role="status" aria-live="polite" />
       {isEnded && <ExploreControls interactive={player.interactive} mode={player.exploreMode}
-        onEnter={player.enterExplore} onReset={player.resetExplore} onExit={player.exitExplore}
+        onEnter={enterExplore} onReset={player.resetExplore} onExit={exitExplore}
         initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}
         selectedHighlightId={player.selectedHighlight?.id} />}
+      {/* Chế độ đi bộ: gợi ý điều khiển giữa màn hình + panel giới thiệu bên phải.
+          Bản gốc cũng bật hai thứ này cùng lúc với việc vào `free_explore`. */}
+      {player.exploreMode === "walk" && <ExploreTooltip key={`tip-${playbackKey}`} />}
+      {player.exploreMode === "walk" && <ExploreInfoPanel key={`info-${playbackKey}`}
+        title={player.exploreTitle} description={player.exploreDescription} />}
       <HighlightPanel key={player.interactive?.id} highlight={player.selectedHighlight}
         highlights={player.interactive?.highlights} onClose={player.closeHighlight} />
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}

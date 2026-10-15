@@ -536,6 +536,8 @@
               3.801
             ],
             "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
             "highlights": [
               {
                 "id": 639,
@@ -772,6 +774,8 @@
               7.04
             ],
             "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
             "highlights": [
               {
                 "id": 557,
@@ -988,6 +992,8 @@
               14.817
             ],
             "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
             "highlights": [
               {
                 "id": 642,
@@ -1249,6 +1255,8 @@
               72.212
             ],
             "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
             "highlights": [
               {
                 "id": 645,
@@ -1494,7 +1502,26 @@
               4.746574739667308,
               6.850369714740939
             ],
-            "explore_area": null,
+            "explore_area": {
+              "center": [
+                11.64311165921454,
+                2.539100054773748,
+                -2.11787469883124
+              ],
+              "extents": [
+                21.64741446885839,
+                5.202717165968831,
+                18.27377018855391
+              ],
+              "rotation": [
+                0,
+                -0.485726615362517,
+                0,
+                0.8741107796660978
+              ]
+            },
+            "explore_title": "Explore the Forecourt",
+            "explore_description": "Explore the forecourt in front of the Monastery and notice how the open space shapes your approach to the façade. Archaeologists believe this area was designed for gathering, likely in connection with ceremonies or other communal activity, making it an important part of the monument rather than simply the space before it. As you move through the forecourt, look at how the cleared ground and the scale of the setting frame the Monastery as a place of arrival and assembly.",
             "highlights": []
           }
         ],
@@ -1601,7 +1628,9 @@
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/Overview_revised_optimized.mp3",
       "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/Overview_revised_optimized_cc.vtt",
       "timedHighlights": [],
-      "exploreArea": null
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
     },
     "s1": {
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/1_revised-final_sound.mp3",
@@ -1828,13 +1857,17 @@
           "endSeconds": null
         }
       ],
-      "exploreArea": null
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
     },
     "s2": {
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/2_revised-finalsound.mp3",
       "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/2%20revised-finalsound.vtt",
       "timedHighlights": [],
-      "exploreArea": null
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
     },
     "s3": {
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/3_revised_finalsound.mp3",
@@ -1929,19 +1962,25 @@
           "endSeconds": null
         }
       ],
-      "exploreArea": null
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
     },
     "s4": {
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/4-revised.mp3",
       "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/4-revised.vtt",
       "timedHighlights": [],
-      "exploreArea": null
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
     },
     "s5": {
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/5-revised.mp3",
       "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/5-revised.vtt",
       "timedHighlights": [],
-      "exploreArea": null
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
     },
     "s6": {
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/6-revised.mp3",
@@ -1964,13 +2003,17 @@
           0,
           0.8741107796660978
         ]
-      }
+      },
+      "exploreTitle": "Explore the Forecourt",
+      "exploreDescription": "Explore the forecourt in front of the Monastery and notice how the open space shapes your approach to the façade. Archaeologists believe this area was designed for gathering, likely in connection with ceremonies or other communal activity, making it an important part of the monument rather than simply the space before it. As you move through the forecourt, look at how the cleared ground and the scale of the setting frame the Monastery as a place of arrival and assembly."
     },
     "s7": {
       "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/7-revised.mp3",
       "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/7-revised.vtt",
       "timedHighlights": [],
-      "exploreArea": null
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
     }
   }
 }

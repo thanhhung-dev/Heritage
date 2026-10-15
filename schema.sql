@@ -214,6 +214,8 @@ CREATE TABLE interactive (
     cam_pos JSONB,
     cam_target JSONB,
     explore_area JSONB,
+    explore_title TEXT,
+    explore_description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_interactive_scene_mode UNIQUE (scene_id, mode)
 );

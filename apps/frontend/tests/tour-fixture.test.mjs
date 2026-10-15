@@ -16,7 +16,7 @@ test("trích đúng model, thứ tự scene, camera và highlight từ các bả
     sceneHighlights_overview: {}, threeJS_scene_highlights_overview: {},
     sceneHighlights: { 616: [{ scene_highlight_id: 77, start_time: 5, end_time: null }] },
     threeJS_scene_highlights: { 616: { 77: { highlight_model_url: "/detail.glb", highlight_position: "1,2,-3", highlight_rotation: "0,0.5,0", highlight_scale: "1,2,1", animation_type: "LoopRepeat" } } },
-    interactives: [{ interactive_id: 88, camera_position: "3,7,-2", camera_target: "0,2,1", explore_area: JSON.stringify({ center: [1, 2, 3], extents: [4, 5, 6], rotation: [0, 0, 0, 1] }) }],
+    interactives: [{ interactive_id: 88, camera_position: "3,7,-2", camera_target: "0,2,1", explore_area: JSON.stringify({ center: [1, 2, 3], extents: [4, 5, 6], rotation: [0, 0, 0, 1] }), explore_title: "Explore the Forecourt", explore_description: "Đi bộ quanh sân trước." }],
     interactiveHighlights: [
       { interactive_id: 89, interactive_highlight_id: 777, popup_title: "Không thuộc scene này", highlight_thumbnail: "/wrong.webp" },
       { interactive_id: 88, interactive_highlight_id: 778, popup_title: "Niches", highlight_thumbnail: "/niches.webp", popup_media_link: "/asset", popup_media_type: "image", popup_media_alt_desc: "Niche drawing", popup_media_credit: "Museum", popup_audio_link: "/detail.mp3", popup_video_cc_1: "/detail.vtt", highlight_order: 2, camera_position: "2,3,4", camera_target: "-1,5,7" },
@@ -46,6 +46,21 @@ test("trích đúng model, thứ tự scene, camera và highlight từ các bả
   assert.equal(tour.playback.s2.timedHighlights[0].startSeconds, 5);
   assert.equal(tour.playback.s2.timedHighlights[0].endSeconds, null);
   assert.deepEqual(tour.playback.s2.exploreArea.extents, [4, 5, 6]);
+  // OBB đi bộ phải có mặt ở CẢ hai chỗ: `interactive.explore_area` (controller
+  // đọc trực tiếp) và `playback.exploreArea` (bản sao cho đường fixture).
+  assert.deepEqual(interactive.explore_area, { center: [1, 2, 3], extents: [4, 5, 6], rotation: [0, 0, 0, 1] });
+  assert.equal(interactive.explore_title, "Explore the Forecourt");
+  assert.equal(interactive.explore_description, "Đi bộ quanh sân trước.");
+  assert.equal(tour.playback.s2.exploreTitle, "Explore the Forecourt");
+  assert.equal(tour.playback.s2.exploreDescription, "Đi bộ quanh sân trước.");
+  // Cảnh không có điểm tương tác ⇒ không có vùng đi bộ, không có tiêu đề.
+  assert.equal(tour.playback.s1.exploreArea, null);
+  assert.equal(tour.playback.s1.exploreTitle, null);
+  // `explore_area` hỏng không được làm sập cả bộ fixture.
+  t.interactives[0].explore_area = "{không phải json";
+  assert.equal(extractTour(html()).payload.scenes[1].interactive[0].explore_area, null);
+  assert.equal(extractTour(html()).playback.s2.exploreArea, null);
+  t.interactives[0].explore_area = JSON.stringify({ center: [1, 2, 3], extents: [4, 5, 6], rotation: [0, 0, 0, 1] });
   assert.equal(tour.playback.s0.narrationUrl, "/intro.mp3");
   assert.equal(tour.playback.s0.captionsUrl, "/intro.vtt");
   delete t.interactiveHighlights[1].highlight_thumbnail;

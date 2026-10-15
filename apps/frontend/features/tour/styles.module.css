@@ -1164,6 +1164,90 @@
   border-radius: 30px;
 }
 
+.exploreTooltipIcon-wrap {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+
+.exploreTooltipIcon {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+}
+
+/* Bản gốc xếp hai ảnh WASD chồng nhau rồi cho ảnh viền sáng nhấp nháy ⇒ bàn phím
+   như đang tự gõ. */
+.exploreTooltipIcon--glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  filter: drop-shadow(0 0 16px rgb(255, 255, 255)) drop-shadow(0 0 14px rgba(200, 180, 140, 0.9));
+  animation: wasdGlow 2s ease-in-out infinite;
+}
+
+.exploreTooltipIcon--mouse {
+  width: 76px;
+  animation: mouseDrag 2.5s ease-in-out infinite;
+}
+
+@keyframes wasdGlow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes mouseDrag {
+  0%,
+  100% {
+    transform: translateX(-8px);
+  }
+
+  50% {
+    transform: translateX(8px);
+  }
+}
+
+/* Lớp phủ giữa màn hình của chế độ đi bộ. `pointer-events: none` để người dùng
+   vẫn kéo được canvas xuyên qua lớp này. */
+.centerUI {
+  position: absolute;
+  top: 0;
+  z-index: 300;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
+}
+
+@media (max-width: 1000px) {
+  .exploreTooltip {
+    position: absolute;
+    left: 30.7692307692%;
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 768px) {
+  .exploreTooltip {
+    position: static;
+    left: auto;
+    transform: none;
+  }
+
+  .exploreTooltipIcons {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
    Orb Tracker (bottom-left discovery circles)
    ───────────────────────────────────────────────────────────── */
@@ -1913,6 +1997,43 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   transition:
     box-shadow 0.2s ease,
     transform 0.2s ease;
+}
+
+/* Controls shown while a lens hotspot is open. They replace the narration
+   controls, matching the playpen's reset/back controls from the source UI. */
+.interactivePlaybackControls {
+  gap: 6px;
+}
+
+.intButtonImg {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.intNavToolTip {
+  display: none;
+  position: absolute;
+  bottom: 41px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  padding: 0 9px;
+  border-radius: 8px;
+  background-color: #00000099;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 22px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.viewer:not(.no-hover) .intButton:hover .intNavToolTip {
+  display: block;
 }
 
 .intButton:hover {
@@ -3687,6 +3808,13 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
      viền trái nên phải xoá hẳn rồi vẽ lại đúng một cạnh. */
   border: 0;
   border-left: 1px solid rgba(240, 232, 221, 0.12);
+}
+
+/* Panel giới thiệu của chế độ đi bộ dùng chung surface kính trên, chỉ khác là
+   không có media nào — nên vùng cuộn không cần cao bằng cả panel. */
+.exploreInfoPanel .infoInner {
+  max-height: none;
+  overflow-y: visible;
 }
 
 /* Panel điểm đang mở thì nhường chỗ cho nút Exit 3D Mode ở góc trên phải. */
