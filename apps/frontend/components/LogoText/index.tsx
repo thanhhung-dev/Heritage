@@ -1,10 +1,12 @@
 interface HeritageLogoProps {
     size?: number;
+    className?: string;
 }
-export function LogoText({ size = 68 }: HeritageLogoProps) {
+export function LogoText({ size = 68, className, }: HeritageLogoProps) {
     const height = Math.round((size * 70) / 63);
     return (
         <svg
+            className={className}
             width={size}
             height={height}
             viewBox="0 0 282 64"
