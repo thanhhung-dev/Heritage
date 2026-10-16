@@ -71,6 +71,18 @@ const globalStyle = (token: Theme) => css`
     --danger: #ea3241;
     --muted: rgba(240, 232, 221, 0.5);
 
+    --auth-background: #f6f5f4;
+    --auth-field: #edece8;
+    --auth-field-hover: #e3e1dc;
+    --auth-field-border: #b4b2ad;
+    --auth-text: #37383c;
+    --auth-label: #18191b;
+    --auth-provider-text: #2c2e31;
+    --auth-link: #7e2a01;
+    --auth-on-accent: #fff9f7;
+    --auth-error: #a32424;
+    --auth-accent-hover: #ffb04f;
+
     --glass-surface: #8a8a8a4d;
     --glass-surface-hover: #8a8a8a66;
     --glass-surface-strong: #00000080;
