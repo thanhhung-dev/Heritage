@@ -64,13 +64,18 @@ export const PUBLIC_ROUTES = [
   },
 ] as const satisfies readonly PublicRoute[];
 
-export const PUBLIC_NAVIGATION_ITEMS = [
-  { key: "home", href: "/", label: "Home" },
-  { key: "map", href: "/map", label: "Map" },
-  { key: "library", href: "/library", label: "Library" },
-  { key: "faq", href: "/faq", label: "FAQ" },
-] as const;
-
 export const PUBLIC_ROUTE_BY_KEY = Object.fromEntries(
   PUBLIC_ROUTES.map((route) => [route.key, route]),
 ) as Record<PublicRouteKey, PublicRoute>;
+
+export const PUBLIC_NAVIGATION_ITEMS = ([
+  { key: "home", label: "Home" },
+  { key: "map", label: "Map" },
+  { key: "library", label: "Library" },
+  { key: "faq", label: "FAQ" },
+] as const).map((item) => ({
+  ...item,
+  href: PUBLIC_ROUTE_BY_KEY[item.key].href,
+}));
+
+export const PUBLIC_SHELL_PATHS = PUBLIC_NAVIGATION_ITEMS.map((item) => item.href);

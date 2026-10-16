@@ -73,11 +73,20 @@ const globalStyle = (token: Theme) => css`
 
     --public-footer-border: rgba(255, 155, 45, 0.18);
     --public-footer-background:
-      radial-gradient(ellipse at 50% 0%, rgba(255, 155, 45, 0.1), rgba(255, 130, 50, 0.04) 40%, transparent 65%),
+      /* Figma 261:3124: 997 x 143.81 glow radii within a 1962 x 283 footer. */
+      radial-gradient(ellipse 50.82% 50.82% at 49.18% 0%, rgba(255, 155, 45, 0.1) 0%, rgba(255, 130, 50, 0.04) 40%, rgba(255, 130, 50, 0) 65%),
       #060504;
     --public-header-glass: rgba(255, 255, 255, 0.12);
+    --account-menu-background: rgba(255, 255, 255, 0.14);
+    --account-menu-text: var(--zinc-00);
+    --account-menu-border: #c4c4c4;
+    --account-menu-divider: rgba(190, 223, 255, 0.15);
     --public-active-background: rgba(255, 155, 45, 0.12);
     --public-accent-hover: #ffb04f;
+    --public-navigation-active: #ffb366;
+    --public-navigation-hover: #ffd6ab;
+    --shadow-navigation: 0 12px 40px rgba(0, 0, 0, 0.4);
+    --shadow-logo: 0 2px 8px rgba(0, 0, 0, 0.4);
 
     --glass-surface: #8a8a8a4d;
     --glass-surface-hover: #8a8a8a66;

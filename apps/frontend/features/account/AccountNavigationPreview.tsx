@@ -8,7 +8,7 @@ import { PublicAccountProvider, usePublicAccount } from "./PublicAccountProvider
 import type { PublicAccount } from "./types";
 import styles from "./account.module.css";
 
-const PREVIEW_ACCOUNT: PublicAccount = { displayName: "Bảo Ngọc" };
+const PREVIEW_ACCOUNT: PublicAccount = { displayName: "Bảo Ngọc", email: "bao.ngoc@example.com" };
 const LONG_NAME_ACCOUNT: PublicAccount = { displayName: "Bảo Ngọc — Người yêu di sản văn hóa Đà Nẵng và Huế" };
 
 function PreviewStatus() {
