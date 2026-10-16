@@ -82,6 +82,7 @@ const globalStyle = (token: Theme) => css`
     --auth-on-accent: #fff9f7;
     --auth-error: #a32424;
     --auth-accent-hover: #ffb04f;
+    --auth-navigation-text: #ffb366;
 
     --glass-surface: #8a8a8a4d;
     --glass-surface-hover: #8a8a8a66;

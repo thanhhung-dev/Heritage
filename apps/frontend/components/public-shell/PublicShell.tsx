@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { PublicNavigation } from "./PublicNavigation";
+import { AuthNavigation } from "@/features/auth/AuthNavigation";
 import styles from "./public-shell.module.css";
 import { LogoText } from "../LogoText";
 
@@ -40,6 +41,7 @@ export function PublicShell({ children }: PublicShellProps) {
             />
           </div>
           <PublicNavigation />
+          <AuthNavigation />
         </div>
       </header>
 

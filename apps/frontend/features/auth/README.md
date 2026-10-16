@@ -5,18 +5,18 @@
 - Story: HER-170, "Login And Register In Heritages" (Epic HER-7).
 - Branch: `story/HER-170-login-and-register-in-heritages`, created from `origin/develop` at `494b9e2`.
 - UI originally committed under HER-119 at `3cc6efb` and preserved in `8ef7a94`; this Story owns the standalone auth pages, local validation, auth configuration, palette and assets. HER-119 retains the public shell, account dropdown and Guest button styling.
-- HER-119 header integration is pending: after both Stories are integrated, Guest actions should use `PUBLIC_AUTH_ROUTES` when `onAuthRequest` is absent. This branch deliberately does not import account components or session code from HER-119.
+- `AuthNavigation` connects the existing develop public header to both forms with glass Sign In/Sign Up links. This branch does not import account components or session code from HER-119. When integrating HER-119, reuse these links for Guest state (or wire its existing buttons to `PUBLIC_AUTH_ROUTES`), preserving callback precedence and avoiding duplicate actions beside `AccountNavigation`.
 
 ## Design and route ownership
 
 - Sign In: Figma `742:222` (Login), including populated state `744:496`.
 - Sign Up: Figma `743:1054`, which contains four social buttons and no email registration form.
 - `/sign-in` and `/sign-up` use the existing standalone route group, without the public navbar/footer. Thin page files compose the shared server-rendered `AuthScreen`.
-- Routes, social providers and nullable Heritage policy destinations live in `config/public-auth.ts`. Both standalone pages are directly accessible; public header integration is owned jointly with HER-119 as described above.
+- Routes, social providers and nullable Heritage policy destinations live in `config/public-auth.ts`. Both standalone pages are accessible directly and from the public header. The header keeps the current develop navigation; its responsive auth links remain visible on mobile, and the search field hides when space is limited.
 
-The desktop layout follows the 1920 x 1200 reference: equal 952px columns separated by 16px, a centered 470px card with a 398px control column, a light background, Inter text, and the cave image on the right. Below 1024px the form takes the full viewport and the decorative image is hidden. Short viewports scroll instead of cropping the form. Phone action buttons have at least 44px height.
+The desktop composition follows the 1920 x 1200 reference: equal columns separated by 16px, a centered card, a light background, Inter text, and the cave image on the right. Following reviewer feedback, the shared Sign In/Sign Up card is reduced from 470px to 420px, with a 356px control column instead of 398px. Inputs are 44px high and desktop social buttons are 36px high; heading size, card padding and vertical gaps are reduced without scaling the SVG assets or changing validation behavior. Below 1024px the form takes the full viewport and the decorative image is hidden. Short viewports scroll instead of cropping the form. Phone action buttons have at least 44px height.
 
-On desktop viewports up to 900px high, the card uses compact vertical spacing, removes unused footer height and collapses empty validation slots. Validation text still takes its natural space when shown. The form container does not shrink, so all content remains reachable from the top when the viewport is too short or browser zoom requires scrolling. Larger viewports retain the Figma reference spacing.
+On desktop viewports up to 900px high, the card uses compact vertical spacing, removes unused footer height and collapses empty validation slots. Validation text still takes its natural space when shown. The form container does not shrink, so all content remains reachable from the top when the viewport is too short or browser zoom requires scrolling. Larger viewports retain the Figma composition with the reviewer-approved smaller card and spacing.
 
 ## Assets and theme
 
