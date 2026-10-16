@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Avatar, Button, Dropdown, type MenuProps } from "antd";
 import { UserOutlined } from "@ant-design/icons";
 import { PUBLIC_ACCOUNT_LINKS } from "@/config/public-account";
-import { PUBLIC_AUTH_ROUTES } from "@/config/public-auth";
 import type { AuthMode, PublicAccount } from "./types";
 import { usePublicAccount } from "./PublicAccountProvider";
 import styles from "./account.module.css";
@@ -70,10 +69,10 @@ export function AccountNavigation({
   if (!account) {
     return (
       <div className={[styles.guest, className].filter(Boolean).join(" ")}>
-        <Button ref={loginRef} className={styles.loginButton} href={onAuthRequest ? undefined : PUBLIC_AUTH_ROUTES.login} onClick={onAuthRequest ? () => onAuthRequest("login") : undefined}>
+        <Button ref={loginRef} className={styles.loginButton} onClick={onAuthRequest ? () => onAuthRequest("login") : undefined}>
           Sign In
         </Button>
-        <Button className={styles.registerButton} href={onAuthRequest ? undefined : PUBLIC_AUTH_ROUTES.register} onClick={onAuthRequest ? () => onAuthRequest("register") : undefined}>
+        <Button className={styles.registerButton} onClick={onAuthRequest ? () => onAuthRequest("register") : undefined}>
           Sign Up
         </Button>
       </div>
