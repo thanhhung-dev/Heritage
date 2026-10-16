@@ -102,10 +102,10 @@
 
 .searchField,
 .navigation {
-  border: 1px solid var(--public-header-glass);
-  background: var(--public-header-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-surface);
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
   box-shadow: var(--shadow-glass-inset);
 }
 
@@ -284,4 +284,5 @@
 
 @media (max-width: 420px) {
   .header { padding-inline: 16px; }
+  .brand { width: 120px; }
 }
