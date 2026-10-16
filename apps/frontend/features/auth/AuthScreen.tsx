@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import authLogo from "@/access/icons/auth-logo.svg";
+import authCave from "@/access/images/auth-cave.png";
 import { PUBLIC_AUTH_POLICIES, PUBLIC_AUTH_ROUTES } from "@/config/public-auth";
 import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
 import type { AuthMode } from "./types";
@@ -15,7 +17,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
       <div className={styles.main}>
         <header className={styles.brandRow}>
           <Link href={PUBLIC_ROUTE_BY_KEY.home.href} aria-label="Heritage home" className={styles.brand}>
-            <Image src="/figma/auth-logo.svg" alt="Heritage" width={103} height={20} priority />
+            <Image src={authLogo} alt="Heritage" width={103} height={20} priority />
           </Link>
         </header>
         <div className={styles.center}>
@@ -47,7 +49,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         </div>
       </div>
       <aside className={styles.aside} aria-hidden="true">
-        <Image src="/figma/auth-cave.png" alt="" fill priority sizes="(min-width: 1024px) 50vw, 1px" className={styles.cave} />
+        <Image src={authCave} alt="" fill priority sizes="(min-width: 1024px) 50vw, 1px" className={styles.cave} />
       </aside>
     </main>
   );

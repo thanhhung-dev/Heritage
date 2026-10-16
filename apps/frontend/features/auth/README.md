@@ -20,7 +20,7 @@ On desktop viewports up to 900px high, the card uses compact vertical spacing, r
 
 ## Assets and theme
 
-The cave PNG, four 20px provider SVGs and 24px eye SVG are downloaded directly from the Figma design-context response. `auth-logo.svg` is exported intact from node `743:1058`, with outlined wordmark text, so the 103 x 20 light logo does not depend on a locally available Jano font. Assets are local under `public/figma/auth-*`; no temporary Figma URLs are used at runtime. Existing logos and other files remain unchanged.
+The cave PNG, four 20px provider SVGs and 24px eye SVG are downloaded directly from the Figma design-context response. `auth-logo.svg` is exported intact from node `743:1058`, with outlined wordmark text, so the 103 x 20 light logo does not depend on a locally available Jano font. SVG assets are stored under `access/icons/` and the cave image under `access/images/`, imported statically for Next.js to resolve their URLs. The shared search icon and legacy logo assets were also moved out of `public/figma/`; CSS mask URLs use relative module paths. Asset contents and dimensions are unchanged; no temporary Figma URLs are used at runtime.
 
 The light auth palette uses semantic `--auth-*` tokens in `components/ThemeProvider/GlobalStyle/global.ts`, scoped to the auth screen through CSS Modules. The shared dark public shell tokens are not changed by this feature.
 

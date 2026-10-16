@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, type FormEvent } from "react";
 import Image from "next/image";
+import authEye from "@/access/icons/auth-eye.svg";
 import { Button, Input, type InputRef } from "antd";
 import styles from "./auth.module.css";
 
@@ -44,7 +45,7 @@ export function SignInForm() {
         <div className={styles.passwordField}>
           <Input ref={passwordRef} id={`${id}-password`} name="password" type={visible ? "text" : "password"} autoComplete="current-password" required className={styles.input} value={password} aria-invalid={Boolean(passwordError)} aria-describedby={`${id}-password-error`} onChange={event => { setPassword(event.target.value); setNotice(""); }} onBlur={() => setTouched(previous => ({ ...previous, password: true }))} />
           <button type="button" className={styles.eye} aria-label={visible ? "Hide password" : "Show password"} aria-pressed={visible} onClick={() => setVisible(previous => !previous)}>
-            <Image src="/figma/auth-eye.svg" alt="" aria-hidden="true" width={24} height={24} />
+            <Image src={authEye} alt="" aria-hidden="true" width={24} height={24} />
           </button>
         </div>
         <p className={styles.error} id={`${id}-password-error`} aria-live="polite">{passwordError}</p>
