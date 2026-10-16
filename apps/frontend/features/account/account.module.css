@@ -135,8 +135,16 @@
 .preview h2 { margin-bottom: 12px; font-size: var(--text-xl); color: var(--text); }
 .preview > p { margin-bottom: 20px; color: var(--text-secondary); font-size: var(--text-sm); }
 .previewActions.previewActions { display: flex; margin-bottom: 20px; }
+.previewStatus { margin-bottom: 16px; color: var(--text-secondary); font-size: var(--text-sm); }
+.previewHeader { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; min-width: 0; }
+.previewAccount { margin-top: 24px; }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
+  .dropdownPanel { height: auto; }
+  .dropdown.dropdown .dropdownPanel :global(.ant-dropdown-menu .ant-dropdown-menu-item) { height: auto; min-height: 44px; }
+}
+
+@media (max-width: 767px) {
   .guest { flex-wrap: wrap; }
   .loginButton.loginButton,
   .registerButton.registerButton { min-height: 44px; }

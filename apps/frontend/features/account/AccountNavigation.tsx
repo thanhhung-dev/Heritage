@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Avatar, Button, Dropdown, type MenuProps } from "antd";
@@ -8,6 +8,7 @@ import { UserOutlined } from "@ant-design/icons";
 import { PUBLIC_ACCOUNT_LINKS } from "@/config/public-account";
 import { PUBLIC_AUTH_ROUTES } from "@/config/public-auth";
 import type { AuthMode, PublicAccount } from "./types";
+import { usePublicAccount } from "./PublicAccountProvider";
 import styles from "./account.module.css";
 
 interface AccountNavigationProps {
@@ -15,22 +16,61 @@ interface AccountNavigationProps {
   onAuthRequest?: (mode: AuthMode) => void;
   onSignOut?: () => void;
   className?: string;
+  triggerButtonRef?: RefObject<HTMLButtonElement>;
+  onResponsiveClose?: () => void;
 }
 
 export function AccountNavigation({
-  account,
+  account: suppliedAccount,
   onAuthRequest,
-  onSignOut,
+  onSignOut: suppliedSignOut,
   className,
+  triggerButtonRef,
+  onResponsiveClose,
 }: AccountNavigationProps) {
+  const session = usePublicAccount();
+  const account = suppliedAccount === undefined ? session.account : suppliedAccount;
+  const onSignOut = suppliedSignOut ?? (suppliedAccount === undefined ? session.onSignOut : undefined);
   const [open, setOpen] = useState(false);
   const menuId = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const internalTriggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = triggerButtonRef ?? internalTriggerRef;
+  const loginRef = useRef<HTMLButtonElement>(null);
+  const restoreGuestFocus = useRef(false);
+  const previousAccount = useRef(account);
+
+  useEffect(() => {
+    if (previousAccount.current !== account) {
+      setOpen(false);
+      previousAccount.current = account;
+    }
+    if (!account && restoreGuestFocus.current) {
+      loginRef.current?.focus();
+      restoreGuestFocus.current = false;
+    }
+  }, [account]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const closeOnBreakpointChange = () => {
+      setOpen(false);
+      if (onResponsiveClose) {
+        onResponsiveClose();
+      } else {
+        triggerRef.current?.focus();
+      }
+    };
+
+    desktop.addEventListener("change", closeOnBreakpointChange);
+    return () => desktop.removeEventListener("change", closeOnBreakpointChange);
+  }, [open, onResponsiveClose, triggerRef]);
 
   if (!account) {
     return (
       <div className={[styles.guest, className].filter(Boolean).join(" ")}>
-        <Button className={styles.loginButton} href={onAuthRequest ? undefined : PUBLIC_AUTH_ROUTES.login} onClick={onAuthRequest ? () => onAuthRequest("login") : undefined}>
+        <Button ref={loginRef} className={styles.loginButton} href={onAuthRequest ? undefined : PUBLIC_AUTH_ROUTES.login} onClick={onAuthRequest ? () => onAuthRequest("login") : undefined}>
           Sign In
         </Button>
         <Button className={styles.registerButton} href={onAuthRequest ? undefined : PUBLIC_AUTH_ROUTES.register} onClick={onAuthRequest ? () => onAuthRequest("register") : undefined}>
@@ -53,7 +93,10 @@ export function AccountNavigation({
       icon: <span aria-hidden="true" className={`${styles.menuIcon} ${styles.logout}`} />,
       label: "Logout",
       disabled: !onSignOut,
-      onClick: onSignOut,
+      onClick: onSignOut ? () => {
+        restoreGuestFocus.current = true;
+        onSignOut();
+      } : undefined,
     },
   ];
 
