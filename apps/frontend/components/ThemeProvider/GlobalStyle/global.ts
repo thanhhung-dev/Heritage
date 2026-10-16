@@ -76,6 +76,21 @@ const globalStyle = (token: Theme) => css`
       radial-gradient(ellipse at 50% 0%, rgba(255, 155, 45, 0.1), rgba(255, 130, 50, 0.04) 40%, transparent 65%),
       #060504;
     --public-header-glass: rgba(255, 255, 255, 0.12);
+    --public-auth-action-text: #ffb366;
+    --account-menu-background: rgba(255, 255, 255, 0.14);
+    --account-menu-text: var(--zinc-00);
+    --account-menu-border: #c4c4c4;
+    --account-menu-divider: rgba(190, 223, 255, 0.15);
+    --auth-background: #f6f5f4;
+    --auth-field: #edece8;
+    --auth-field-hover: #e3e1dc;
+    --auth-field-border: #b4b2ad;
+    --auth-text: #37383c;
+    --auth-label: #18191b;
+    --auth-provider-text: #2c2e31;
+    --auth-link: #7e2a01;
+    --auth-on-accent: #fff9f7;
+    --auth-error: #a32424;
     --public-active-background: rgba(255, 155, 45, 0.12);
     --public-accent-hover: #ffb04f;
 

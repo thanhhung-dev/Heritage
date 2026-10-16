@@ -6,7 +6,7 @@ import { AccountNavigation } from "./AccountNavigation";
 import type { PublicAccount } from "./types";
 import styles from "./account.module.css";
 
-const PREVIEW_ACCOUNT: PublicAccount = { displayName: "Bảo Ngọc" };
+const PREVIEW_ACCOUNT: PublicAccount = { displayName: "Bảo Ngọc", email: "bao.ngoc@example.com" };
 
 export function AccountNavigationPreview() {
   const [account, setAccount] = useState<PublicAccount | null>(PREVIEW_ACCOUNT);

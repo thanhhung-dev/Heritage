@@ -284,4 +284,5 @@
 
 @media (max-width: 420px) {
   .header { padding-inline: 16px; }
+  .brand { width: 120px; }
 }
