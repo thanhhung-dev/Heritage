@@ -1,7 +1,12 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
 from apps.backend.api.chat import ChatRequest, chat
+from apps.backend.api import chat as chat_api
 
 
 class ChatLangfuseTests(unittest.IsolatedAsyncioTestCase):
@@ -62,6 +67,53 @@ class ChatLangfuseTests(unittest.IsolatedAsyncioTestCase):
             response = await chat(ChatRequest(message="Câu hỏi"), AsyncMock())
 
         self.assertEqual(response.answer, "Không đổi")
+
+
+class R2ChatApiTests(unittest.TestCase):
+    def setUp(self):
+        app = FastAPI()
+        app.include_router(chat_api.router, prefix="/api")
+        app.dependency_overrides[chat_api.get_db] = lambda: AsyncMock()
+        self.client = TestClient(app)
+        self.query = SimpleNamespace(
+            ambiguous=False, corrections=[], subject="Chùa Thiên Mụ",
+            intent=frozenset({"time"}), search_text="Chùa Thiên Mụ xây năm nào?",
+        )
+        source = {"passage_id": 42, "doc": "Thiên Mụ", "object_key": "processed/passages/hash.json"}
+        self.evidence = SimpleNamespace(
+            id=42, text="Chùa Thiên Mụ được dựng năm 1601.",
+            location_note="Thiên Mụ", to_source=lambda: source,
+        )
+        self.search = AsyncMock(return_value=SimpleNamespace(query=self.query, evidence=[self.evidence]))
+        self.repository = self.enterContext(patch.object(chat_api, "PassageRepository", create=True))
+        self.repository.return_value.search_evidence = self.search
+
+    def test_returns_answer_with_r2_citation(self):
+        with patch.object(chat_api, "generate_response", return_value="Chùa được dựng năm 1601."):
+            response = self.client.post("/api/chat", json={"message": "Chùa Thiên Mụ xây năm nào?"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["answer"], "Chùa được dựng năm 1601.")
+        self.assertEqual(data["sources"][0]["passage_id"], 42)
+        self.assertEqual(data["answer_type"], "answered")
+        self.assertEqual(data["resolution_status"], "resolved")
+
+    def test_no_evidence_refuses_without_generation(self):
+        self.search.return_value.evidence = []
+        with patch.object(chat_api, "generate_response", side_effect=AssertionError("must not invent")):
+            response = self.client.post("/api/chat", json={"message": "Chùa Sao Hỏa ở đâu?"})
+        self.assertEqual(response.json()["resolution_status"], "not_found")
+        self.assertEqual(response.json()["sources"], [])
+
+    def test_blank_message_is_rejected(self):
+        response = self.client.post("/api/chat", json={"message": "  "})
+        self.assertEqual(response.status_code, 400)
+
+    def test_storage_failure_is_not_reported_as_an_answer(self):
+        self.search.side_effect = ValueError("checksum mismatch")
+        response = self.client.post("/api/chat", json={"message": "Chùa Thiên Mụ"})
+        self.assertEqual(response.json()["resolution_status"], "unavailable")
+        self.assertEqual(response.json()["sources"], [])
 
 
 if __name__ == "__main__":
