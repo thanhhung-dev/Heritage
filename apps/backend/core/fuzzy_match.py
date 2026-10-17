@@ -39,7 +39,7 @@ def _build_name_index(graph) -> tuple[list[str], list[str], list[str]]:
     # Chỉ gợi ý bài có nguồn để sau khi sửa tên luôn có thể trả lời. Alias dùng
     # để khớp nhưng kết quả hiển thị vẫn là tên bài chuẩn.
     for _, data in graph.nodes(data=True):
-        if data.get("kind") != "doc":
+        if data.get("kind") != "doc" and not data.get("passage_ids"):
             continue
         canonical = data["label"]
         for matched in (canonical, *data.get("aliases", ())):

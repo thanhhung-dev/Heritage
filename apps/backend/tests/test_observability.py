@@ -3,7 +3,8 @@ import json
 import logging
 import unittest
 import uuid
-from unittest.mock import Mock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 from fastapi import FastAPI
@@ -236,13 +237,15 @@ class ObservabilityTests(unittest.TestCase):
         "apps.backend.api.chat.generate_response",
         side_effect=RuntimeError("token=private-dependency-secret"),
     )
-    @patch(
-        "apps.backend.api.chat.retrieve_context",
-        return_value=("safe context", [{"doc": "safe source"}], []),
-    )
+    @patch("apps.backend.api.chat.PassageRepository")
     def test_chat_dependency_error_response_is_sanitized(
         self, _retrieve: Mock, _generate: Mock
     ) -> None:
+        _retrieve.return_value.search_evidence = AsyncMock(return_value=SimpleNamespace(
+            query=SimpleNamespace(ambiguous=False, intent=frozenset(),
+                                  search_text="Giới thiệu di sản"),
+            evidence=[SimpleNamespace(text="safe context")],
+        ))
         async def fake_db():
             yield Mock()
 
@@ -253,8 +256,8 @@ class ObservabilityTests(unittest.TestCase):
             )
         finally:
             app.dependency_overrides.pop(chat_api.get_db, None)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json(), {"detail": "LLM unavailable"})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"detail": "Model trả lời hiện không khả dụng."})
         self.assertNotIn("private-dependency-secret", response.text)
 
     @patch("apps.backend.core.llm.httpx.post")

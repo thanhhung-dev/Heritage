@@ -28,9 +28,9 @@ CLASSIFIERS = (
     "vương triều", "triều", "nhà", "thời", "kinh thành", "hoàng thành",
 )
 NAME_RE = re.compile(
-    r"(?<!\w)("
+    r"(?<!\w)((?i:"
     + "|".join(sorted(CLASSIFIERS, key=len, reverse=True))
-    + r")\s+((?:[" + U + r"][" + L + r"]+\s?){1,3})"
+    + r"))\s+((?:[" + U + r"][" + L + r"]+\s?){1,3})"
 )
 YEAR_RE = re.compile(r"(?<!\d)(1[0-9]{3}|20[0-2][0-9])(?!\d)")
 
@@ -109,11 +109,15 @@ def load_aliases() -> dict[str, tuple[str, ...]]:
     }
 
 
-def build_graph(docs: list[dict]) -> nx.Graph:
+def build_graph(
+    docs: list[dict], *, entities: list[dict] | None = None,
+    aliases: dict | None = None,
+) -> nx.Graph:
     G = nx.Graph()
-    aliases = load_aliases()
+    aliases = load_aliases() if aliases is None else aliases
+    entities = curated_entities() if entities is None else entities
 
-    for ent in curated_entities():
+    for ent in entities:
         G.add_node(f"entity:{ent['name']}", kind="entity", label=ent["name"], curated=True)
         for kind, val in (("region", ent["region"]), ("category", ent["category"])):
             if val:
@@ -141,7 +145,7 @@ def build_graph(docs: list[dict]) -> nx.Graph:
         plain = strip_accents(full)
         mentions: Counter = Counter()
 
-        for ent in curated_entities():
+        for ent in entities:
             if ent["name"] != doc["name"] and contains_name(plain, ent["name"]):
                 mentions[f"entity:{ent['name']}"] += 1
 

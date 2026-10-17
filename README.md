@@ -144,6 +144,24 @@ Terminal 1, từ project root và với Python virtual environment đã activate
 python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --reload
 ```
 
+Chat hiện đọc nội dung passage từ R2, không đọc `passage.text` trong DB.
+Trong `.env`, đặt `R2_BUCKET` đúng bucket đã ingest cùng `R2_ENDPOINT_URL`,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`. PostgreSQL phải có mapping/hash và
+embedding BGE-M3 tương ứng; không chạy lại schema hoặc xoá DB đã ingest.
+
+Trên macOS có thể chạy llama.cpp native để dùng Metal, thay cho service `llm`
+trong Docker. Nếu chưa có model fine-tune, có thể dùng bản Qwen GGUF đã tải
+(đây là model gốc, không tương đương model fine-tune):
+
+```bash
+llama-server --model models/Qwen3-4B-Q4_K_M.gguf --host 127.0.0.1 --port 8080 \
+  --ctx-size 4096 --parallel 1 --n-gpu-layers 99 \
+  --chat-template-kwargs '{"enable_thinking":false}'
+```
+
+Khi dùng cách này, giữ `LLAMA_SERVER_URL=http://localhost:8080` và không chạy
+đồng thời backend/LLM Docker trên cùng cổng với các tiến trình native.
+
 Terminal 2:
 
 ```bash

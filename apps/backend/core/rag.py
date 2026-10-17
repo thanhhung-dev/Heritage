@@ -10,7 +10,14 @@ sự thay vì bịa. Đây là hành vi mong muốn, không phải lỗi.
 """
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass, field
+
+from apps.backend.core.fuzzy_match import suggest_corrections
+from apps.backend.core.kg import extract_names, find_seeds, is_admin_name
 from apps.backend.core.retriever import get_retriever, is_admin_chunk, is_lead
+from apps.backend.core.retriever import query_intent, subject_and_claims, YEAR_IN_CHUNK_RE
+from apps.backend.core.textutil import contains_name, name_span, strip_accents
 REQUIRE_GRAPH_ANCHOR = True
 MIN_COVERAGE = 0.25   # chốt phụ; câu trong phạm vi thấp nhất đo được là 0.36
 
@@ -26,6 +33,106 @@ MAX_CONTEXT_CHUNKS = 2
 SECOND_DOC_RATIO = 0.75
 
 SNIPPET_CHARS = 240
+
+
+@dataclass
+class RetrievalQuery:
+    search_text: str
+    subject: str = ""
+    aliases: tuple[str, ...] = ()
+    intent: frozenset[str] = frozenset()
+    anchored: bool = False
+    foreign_admin: tuple[str, ...] = ()
+    corrections: list[dict] = field(default_factory=list)
+    ambiguous: bool = False
+
+
+def resolve_query(question: str, graph) -> RetrievalQuery:
+    query = RetrievalQuery(question)
+    seeds = find_seeds(graph, question)
+    exact = any(contains_name(strip_accents(question), graph.nodes[s]['label'])
+                for s in seeds if graph.nodes[s].get('kind') == 'entity')
+    if not exact:
+        query.corrections = [c for c in suggest_corrections(question, graph) if c['score'] >= 0.7]
+        if query.corrections:
+            best = query.corrections[0]
+            query.ambiguous = best['score'] < 0.9
+            query.search_text = question.replace(best['original'], best['suggested'])
+            seeds = find_seeds(graph, query.search_text)
+    intent_text = re.sub(r'\blien quan\b', '', strip_accents(query.search_text))
+    query.intent = query_intent(intent_text)
+    if YEAR_IN_CHUNK_RE.search(question):
+        query.intent = query.intent | {'time'}
+    # A year verification is not automatically a location question.
+    if 'time' in query.intent and 'verify' in query.intent:
+        query.intent = query.intent - {'location'}
+    if re.search(r'\b(lien quan|quan he)\b', strip_accents(question)):
+        query.intent = query.intent | {'relation'}
+    query.anchored = bool(seeds)
+    names = list(dict.fromkeys(graph.nodes[s]['label'] for s in seeds
+                              if graph.nodes[s].get('kind') == 'entity'))
+    query.subject, _ = subject_and_claims(query.search_text, names)
+    if not query.subject and names:
+        plain = strip_accents(query.search_text)
+        positions = {}
+        for name in names:
+            data = next(graph.nodes[s] for s in seeds if graph.nodes[s]['label'] == name)
+            positions[name] = min((name_span(plain, alias) or (len(plain),))[0]
+                                  for alias in [name, *data.get('aliases', [])])
+        query.subject = min(names, key=positions.get)
+    if query.subject:
+        node = next((graph.nodes[s] for s in seeds if graph.nodes[s]['label'] == query.subject), {})
+        query.aliases = tuple(dict.fromkeys([query.subject, *node.get('aliases', [])]))
+        if not query.intent:
+            query.intent = frozenset({'general'})
+    known_admin = {strip_accents(d['label']) for _, d in graph.nodes(data=True)
+                   if is_admin_name(d.get('label', ''))}
+    query.foreign_admin = tuple(n for n in extract_names(question)
+                                if is_admin_name(n) and strip_accents(n) not in known_admin)
+    return query
+
+
+def location_sentences(text: str, query: RetrievalQuery) -> list[str]:
+    result = []
+    for sentence in re.split(r'(?<=[.!?])\s+|\n+', text):
+        plain = strip_accents(sentence)
+        if not any(contains_name(plain, alias) for alias in query.aliases):
+            continue
+        if 'ward' in query.intent:
+            matches = re.search(r'\b(phuong|xa|quan|huyen|thon|thi tran)\b', plain)
+        else:
+            matches = re.search(r'\b(nam o|toa lac|thuoc|dia chi|tai|o)\b', plain)
+        if matches:
+            result.append(sentence)
+    return result
+
+
+def has_subject_intro(text: str, query: RetrievalQuery) -> bool:
+    opening = re.split(r'(?<=[.!?])\s+|\n+', text.strip())[0]
+    plain = strip_accents(opening)
+    return any(contains_name(plain, alias) for alias in query.aliases) and bool(
+        re.search(r'\bla\b', plain)
+    )
+
+
+def evidence_context(evidence, query: RetrievalQuery) -> str:
+    parts = []
+    for item in evidence:
+        content = item.text
+        if 'location' in query.intent and query.subject:
+            content = ' '.join(location_sentences(content, query))
+        elif 'relation' in query.intent:
+            sentences = re.split(r'(?<=[.!?])\s+|\n+', content)
+            relevant = [s for s in sentences if any(
+                contains_name(strip_accents(s), alias) for alias in query.aliases
+            )]
+            content = ' '.join(relevant) or content
+            if item.location_note and any(
+                contains_name(strip_accents(item.location_note), alias) for alias in query.aliases
+            ):
+                content = f'{item.location_note}: {content}'
+        parts.append(content)
+    return ' '.join(parts)
 
 
 def _snippet(text: str) -> str:

@@ -5,68 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from apps.backend.api.chat import ChatRequest, chat
 from apps.backend.api import chat as chat_api
-
-
-class ChatLangfuseTests(unittest.IsolatedAsyncioTestCase):
-    async def test_grounded_qa_emits_metadata_without_changing_response(self) -> None:
-        source = {"doc": "Nguồn", "chunk_id": "chunk-7"}
-        with (
-            patch(
-                "apps.backend.api.chat._try_db_location_answer",
-                AsyncMock(return_value=None),
-            ),
-            patch(
-                "apps.backend.api.chat.retrieve_context",
-                return_value=("Bằng chứng riêng", [source], []),
-            ),
-            patch(
-                "apps.backend.api.chat.generate_response",
-                return_value="Câu trả lời",
-            ),
-            patch(
-                "apps.backend.api.chat.get_generation_details",
-                return_value=Mock(model="qwen", token_usage=21),
-            ),
-            patch("apps.backend.api.chat.observe_grounded_qa") as observe,
-        ):
-            response = await chat(ChatRequest(message="Câu hỏi"), AsyncMock())
-
-        self.assertEqual(response.answer, "Câu trả lời")
-        observation = observe.call_args.kwargs
-        self.assertEqual(observation["model"], "qwen")
-        self.assertEqual(observation["token_usage"], 21)
-        self.assertEqual(observation["evidence_ids"], ["chunk-7"])
-        self.assertTrue(observation["grounded"])
-        self.assertEqual(observation["prompt"], "Câu hỏi")
-        self.assertEqual(observation["evidence"], "Bằng chứng riêng")
-
-    async def test_sdk_exception_does_not_change_business_response(self) -> None:
-        failing_client = Mock()
-        failing_client.start_as_current_observation.side_effect = RuntimeError(
-            "telemetry down"
-        )
-        with (
-            patch(
-                "apps.backend.api.chat._try_db_location_answer",
-                AsyncMock(return_value=None),
-            ),
-            patch(
-                "apps.backend.api.chat.retrieve_context",
-                return_value=("Nguồn", [{"doc": "Nguồn", "chunk_id": 1}], []),
-            ),
-            patch(
-                "apps.backend.api.chat.generate_response", return_value="Không đổi"
-            ),
-            patch(
-                "apps.backend.core.observability._langfuse_client",
-                return_value=failing_client,
-            ),
-        ):
-            response = await chat(ChatRequest(message="Câu hỏi"), AsyncMock())
-
-        self.assertEqual(response.answer, "Không đổi")
 
 
 class R2ChatApiTests(unittest.TestCase):
@@ -85,8 +24,34 @@ class R2ChatApiTests(unittest.TestCase):
             location_note="Thiên Mụ", to_source=lambda: source,
         )
         self.search = AsyncMock(return_value=SimpleNamespace(query=self.query, evidence=[self.evidence]))
-        self.repository = self.enterContext(patch.object(chat_api, "PassageRepository", create=True))
+        self.repository = self.enterContext(patch.object(chat_api, "PassageRepository"))
         self.repository.return_value.search_evidence = self.search
+
+    def test_grounded_qa_emits_metadata_without_changing_response(self):
+        with (
+            patch.object(chat_api, "generate_response", return_value="Câu trả lời"),
+            patch.object(chat_api, "get_generation_details", return_value=Mock(model="qwen", token_usage=21)),
+            patch.object(chat_api, "observe_grounded_qa") as observe,
+        ):
+            response = self.client.post("/api/chat", json={"message": "Câu hỏi"})
+        self.assertEqual(response.json()["answer"], "Câu trả lời")
+        observation = observe.call_args.kwargs
+        self.assertEqual(observation["model"], "qwen")
+        self.assertEqual(observation["token_usage"], 21)
+        self.assertEqual(observation["evidence_ids"], ["42"])
+        self.assertTrue(observation["grounded"])
+        self.assertEqual(observation["prompt"], "Câu hỏi")
+        self.assertEqual(observation["evidence"], self.evidence.text)
+
+    def test_sdk_exception_does_not_change_business_response(self):
+        failing_client = Mock()
+        failing_client.start_as_current_observation.side_effect = RuntimeError("telemetry down")
+        with (
+            patch.object(chat_api, "generate_response", return_value="Không đổi"),
+            patch("apps.backend.core.observability._langfuse_client", return_value=failing_client),
+        ):
+            response = self.client.post("/api/chat", json={"message": "Câu hỏi"})
+        self.assertEqual(response.json()["answer"], "Không đổi")
 
     def test_returns_answer_with_r2_citation(self):
         with patch.object(chat_api, "generate_response", return_value="Chùa được dựng năm 1601."):
@@ -109,11 +74,28 @@ class R2ChatApiTests(unittest.TestCase):
         response = self.client.post("/api/chat", json={"message": "  "})
         self.assertEqual(response.status_code, 400)
 
+    def test_ambiguous_name_requests_a_choice_without_generation(self):
+        self.query.ambiguous = True
+        self.query.corrections = [{"original": "cung an", "suggested": "Cung An Định", "score": 0.8}]
+        self.search.return_value.evidence = []
+        with patch.object(chat_api, "generate_response", side_effect=AssertionError("must ask first")):
+            response = self.client.post("/api/chat", json={"message": "cung an ở đâu?"})
+        data = response.json()
+        self.assertTrue(data["needs_user_choice"])
+        self.assertEqual(data["suggestions"][0]["suggested"], "Cung An Định")
+        self.assertEqual(data["answer_type"], "suggestion")
+
     def test_storage_failure_is_not_reported_as_an_answer(self):
         self.search.side_effect = ValueError("checksum mismatch")
         response = self.client.post("/api/chat", json={"message": "Chùa Thiên Mụ"})
         self.assertEqual(response.json()["resolution_status"], "unavailable")
         self.assertEqual(response.json()["sources"], [])
+
+    def test_model_failure_returns_service_unavailable_without_leaking_details(self):
+        with patch.object(chat_api, "generate_response", side_effect=RuntimeError("private dependency URL")):
+            response = self.client.post("/api/chat", json={"message": "Chùa Thiên Mụ"})
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn("private", response.text)
 
 
 if __name__ == "__main__":

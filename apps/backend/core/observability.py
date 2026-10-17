@@ -11,6 +11,7 @@ import re
 import time
 import uuid
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -62,6 +63,13 @@ DURATION = Histogram(
 DEPENDENCY_HEALTH = Gauge(
     "heritage_dependency_health", "Dependency health", ["dependency"]
 )
+
+
+@contextmanager
+def retrieval_stage(name: str):
+    """Trace retrieval work without recording questions or source content."""
+    with trace.get_tracer(__name__).start_as_current_span(f"retrieval.{name}"):
+        yield
 
 
 def redact(value: Any) -> Any:

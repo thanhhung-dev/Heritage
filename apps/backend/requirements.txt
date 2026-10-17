@@ -8,6 +8,10 @@ python-dotenv==1.2.3
 # Graph processing
 networkx==3.7
 
+# R2 passage retrieval and relevance models
+boto3==1.43.113
+sentence-transformers==6.1.0
+
 # Database
 SQLAlchemy==2.0.54
 psycopg[binary]==3.3.6
