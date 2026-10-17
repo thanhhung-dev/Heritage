@@ -1,15 +1,16 @@
 from typing import AsyncGenerator, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.backend.db.session import AsyncSessionLocal
-from apps.backend.models.user import UserProfile, UserConsent
+from apps.backend.db.base import AsyncSessionLocal
+from apps.backend.models.user import UserConsent, UserProfile
 from apps.backend.schemas.user import (
-    UserProfileResponse,
-    UserProfileUpdate,
     UserConsentResponse,
     UserConsentUpdate,
+    UserProfileResponse,
+    UserProfileUpdate,
 )
 
 router = APIRouter(prefix="/api/profile", tags=["Profile & Personalization Consent"])

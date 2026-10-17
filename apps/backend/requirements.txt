@@ -6,7 +6,7 @@ httpx==0.28.1
 python-dotenv==1.2.3
 
 # Graph processing
-networkx==3.7
+networkx==3.6.1
 
 # Database and migrations
 SQLAlchemy==2.0.54
