@@ -52,6 +52,7 @@ app.add_middleware(
 )
 app.middleware("http")(correlation_middleware)
 
+app.include_router(auth.router)  # prefix already in router
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")

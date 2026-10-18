@@ -31,10 +31,11 @@ from apps.backend.schemas.auth import (
 
 log = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+security = HTTPBearer()
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncSession:
     """Database session dependency."""
     async with AsyncSessionLocal() as session:
         yield session

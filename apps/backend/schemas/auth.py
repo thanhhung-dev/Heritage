@@ -17,7 +17,7 @@ class RegisterRequest(BaseModel):
     def validate_username(cls, v: str) -> str:
         """Validate username format."""
         if not v.replace("_", "").replace("-", "").isalnum():
-            raise ValueError("Username chỉ được chứa chữ cái, số, dấu gạch dưới và dấu gạch ngang")
+            raise ValueError("Username can only contain letters, numbers, underscores, and hyphens")
         return v
 
 
