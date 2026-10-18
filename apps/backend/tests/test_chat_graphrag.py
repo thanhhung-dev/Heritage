@@ -85,6 +85,39 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
         result = await self.repo.search_evidence('Chùa Thiên Mụ xây năm nào?', limit=1)
         self.assertEqual([item.id for item in result.evidence], [self.rows[1]['id']])
 
+    async def test_graph_relationships_reach_llm_with_all_supporting_original_passages(self):
+        self.repo.reranker = lambda q, texts: [0.95] * len(texts)
+        source = self.graph_result['sources'][0]
+        self.graph_result['sources'].append({
+            **{k: self.rows[1][k] for k in ('object_key', 'content_hash')},
+            'passage_id': self.rows[1]['id'], 'bucket': 'knowledge',
+        })
+        relation = {'kind': 'relationship', 'id': 'renovation', 'source': 'Chùa Thiên Mụ',
+                    'target': 'Trùng tu', 'description': 'RENOVATION_CONTEXT',
+                    'source_passage_ids': [row['id'] for row in self.rows[:2]]}
+        self.graph_result['graph_context'] = [relation]
+        for variant in ('valid', 'stale', 'not_selected', 'oversize'):
+            with self.subTest(variant=variant):
+                self.graph_result['sources'][0] = {**source, 'content_hash': (
+                    'outdated' if variant == 'stale' else source['content_hash'])}
+                relation['description'] = 'RENOVATION_CONTEXT' + ('x' * 5000 if variant == 'oversize' else '')
+                self.repo.reranker = lambda q, texts: [
+                    0.01 if variant == 'not_selected' and '1601' in t else 0.95 for t in texts]
+                with (
+                    patch.object(chat_api, 'PassageRepository', return_value=self.repo),
+                    patch.object(chat_api, 'generate_response', side_effect=lambda question, context: context),
+                ):
+                    response = await chat_api.chat(
+                        chat_api.ChatRequest(message='Chùa Thiên Mụ xây năm nào?'), db=self.session)
+                self.assertEqual('RENOVATION_CONTEXT' in response.answer, variant == 'valid')
+                self.assertIn('1714', response.answer)
+                self.assertNotIn('UNTRUSTED', response.answer)
+                self.assertLessEqual(len(response.answer), 4800)
+                if variant == 'valid':
+                    self.assertIn(f"Passage {self.rows[0]['id']}", response.answer)
+                    self.assertIn('chưa xác minh', response.answer)
+                    self.assertIn('1601', response.answer)
+
     async def test_stale_unknown_or_wrong_bucket_graph_sources_cannot_enter_context(self):
         source = self.graph_result['sources'][0]
         for change in ({'content_hash': 'outdated'}, {'object_key': 'replaced'},

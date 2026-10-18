@@ -93,6 +93,39 @@ class MicrosoftGraphRagTests(unittest.TestCase):
             build_global_response('answer', [{'id': '404'}], reports, communities,
                                   units, documents, manifest)
 
+    def test_graph_context_has_item_level_lineage_not_just_community_sources(self):
+        manifest = {'snapshot_id': 'sample', 'documents': {
+            f'passage-{i}.txt': {'passage_id': i, 'object_key': f'key{i}', 'content_hash': f'h{i}',
+                               'bucket': 'knowledge', 'doc': str(i)} for i in (42, 91)
+        }}
+        reports = [{'community': 7, 'level': 0, 'title': 'Huế'}]
+        communities = [{'community': 7, 'level': 0, 'text_unit_ids': ['tu-a'],
+                        'entity_ids': ['temple', 'mixed'], 'relationship_ids': ['gate-link']}]
+        units = [{'id': 'tu-a', 'document_id': 'doc-a'}, {'id': 'tu-b', 'document_id': 'doc-b'}]
+        documents = [{'id': 'doc-a', 'title': 'passage-42.txt'},
+                     {'id': 'doc-b', 'title': 'passage-91.txt'}]
+        entities = [
+            {'id': 'temple', 'title': 'Chùa Thiên Mụ', 'description': 'Ngôi chùa ở Huế.',
+             'text_unit_ids': ['tu-a']},
+            {'id': 'mixed', 'title': 'MIXED', 'description': 'Needs an unselected source.',
+             'text_unit_ids': ['tu-a', 'tu-b']},
+            {'id': 'unselected', 'title': 'OTHER', 'description': 'Not a community member.',
+             'text_unit_ids': ['tu-a']},
+        ]
+        relationships = [{'id': 'gate-link', 'source': 'Cổng Tam Quan', 'target': 'Chùa Thiên Mụ',
+                          'description': 'Cổng nằm trong khuôn viên chùa.',
+                          'text_unit_ids': ['tu-a', 'tu-a']}]
+        result = build_global_response('UNTRUSTED ANSWER', [{'id': '7'}], reports, communities,
+                                       units, documents, manifest, entities=entities,
+                                       relationships=relationships)
+        self.assertEqual({item['id'] for item in result['graph_context']}, {'temple', 'gate-link'})
+        for item in result['graph_context']:
+            self.assertEqual(item['source_passage_ids'], [42])
+        self.assertNotIn('UNTRUSTED ANSWER', json.dumps(result['graph_context']))
+        self.assertEqual(build_global_response('', [], reports, communities, units, documents,
+                                               manifest, entities=entities,
+                                               relationships=relationships)['graph_context'], [])
+
     def test_optional_endpoint_is_disabled_by_default_and_validates_request(self):
         with patch.dict(os.environ, {'GRAPHRAG_ENABLED': 'false'}):
             client = TestClient(app)
