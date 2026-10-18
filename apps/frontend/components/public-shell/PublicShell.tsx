@@ -3,6 +3,8 @@ import Image from "next/image";
 import searchIcon from "@/access/icons/search.svg";
 import type { ReactNode } from "react";
 import { PublicNavigation } from "./PublicNavigation";
+import { PublicFooter } from "./PublicFooter";
+import { PublicFooterSlot } from "./PublicFooterSlot";
 import { AuthNavigation } from "@/features/auth/AuthNavigation";
 import styles from "./public-shell.module.css";
 import { LogoText } from "../LogoText";
@@ -49,6 +51,7 @@ export function PublicShell({ children }: PublicShellProps) {
       <main className={styles.main} id="public-content" tabIndex={-1}>
         {children}
       </main>
+      <PublicFooterSlot><PublicFooter /></PublicFooterSlot>
     </div>
   );
 }
