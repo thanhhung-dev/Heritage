@@ -63,6 +63,32 @@ class R2ChatApiTests(unittest.TestCase):
         self.assertEqual(data["answer_type"], "answered")
         self.assertEqual(data["resolution_status"], "resolved")
 
+    def test_relationship_context_keeps_events_that_refer_back_to_the_subject(self):
+        cases = [
+            ("Chùa Thiên Mụ", "Vì sao chùa Thiên Mụ còn gọi là Linh Mụ, vua Tự Đức liên quan thế nào?",
+             "Chùa Thiên Mụ còn được gọi là chùa Linh Mụ.\n\n"
+             "Năm 1862, vua Tự Đức đã đổi tên thành Linh Mụ. "
+             "Năm 1869, nhà vua cho dùng lại tên Thiên Mụ.", "1862", "1869"),
+            ("Nguyễn Phúc Chu", "Nguyễn Phúc Chu liên quan thế nào đến việc sửa chùa Thiên Mụ?",
+             "Nguyễn Phúc Chu có công phát triển Phật giáo.\n\n"
+             "Năm 1714, Chúa giao Chưởng cơ Tống Đức Đạt sửa sang chùa Thiên Mụ.",
+             "1714", "Tống Đức Đạt"),
+        ]
+        for subject, question, source, *facts in cases:
+            with self.subTest(subject=subject):
+                self.query.subject = subject
+                self.query.aliases = (subject,)
+                self.query.intent = frozenset({"relation"})
+                self.query.search_text = question
+                self.evidence.text = source
+                # Echo the model's input to expose the API evidence contract,
+                # without depending on a model's ability to interpret that input.
+                with patch.object(chat_api, "generate_response", side_effect=lambda question, context: context):
+                    response = self.client.post("/api/chat", json={"message": question})
+                self.assertEqual(response.status_code, 200)
+                for fact in facts:
+                    self.assertIn(fact, response.json()["answer"])
+
     def test_no_evidence_refuses_without_generation(self):
         self.search.return_value.evidence = []
         with patch.object(chat_api, "generate_response", side_effect=AssertionError("must not invent")):
