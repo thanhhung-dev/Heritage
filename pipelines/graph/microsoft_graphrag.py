@@ -127,7 +127,7 @@ async def index_snapshot(root):
     from graphrag.api import build_index
 
     results = await build_index(config=config)
-    if not results or any(result.errors for result in results):
+    if not results or any(result.error for result in results):
         raise RuntimeError('GraphRAG indexing failed; snapshot not published.')
     tables = load_tables(root)
     # Check every report's R2 lineage before the snapshot becomes queryable.
