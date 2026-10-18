@@ -6,6 +6,7 @@ import { PUBLIC_AUTH_POLICIES, PUBLIC_AUTH_ROUTES } from "@/config/public-auth";
 import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
 import type { AuthMode } from "./types";
 import { SignInForm } from "./SignInForm";
+import { SignUpForm } from "./SignUpForm";
 import { SocialAuthButtons } from "./SocialAuthButtons";
 import styles from "./auth.module.css";
 
@@ -22,9 +23,9 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         </header>
         <div className={styles.center}>
           <section className={styles.card} aria-labelledby="auth-heading">
-            <h1 id="auth-heading" className={styles.heading}>{signIn ? "Log in to your account" : "Create a Heritage account"}</h1>
+            <h1 id="auth-heading" className={styles.heading}>{signIn ? "Đăng nhập vào tài khoản của bạn" : "Tạo tài khoản Heritage"}</h1>
             <div className={styles.cardBody}>
-              {signIn ? <SignInForm /> : null}
+              {signIn ? <SignInForm /> : <SignUpForm />}
               <SocialAuthButtons />
               <div className={styles.footer}>
                 {!signIn ? (
