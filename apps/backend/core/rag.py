@@ -16,7 +16,9 @@ from dataclasses import dataclass, field
 from apps.backend.core.fuzzy_match import suggest_corrections
 from apps.backend.core.kg import extract_names, find_seeds, is_admin_name
 from apps.backend.core.retriever import get_retriever, is_admin_chunk, is_lead
-from apps.backend.core.retriever import query_intent, subject_and_claims, YEAR_IN_CHUNK_RE
+from apps.backend.core.retriever import (
+    LOCATION_RE, query_intent, query_scope, subject_and_claims, YEAR_IN_CHUNK_RE,
+)
 from apps.backend.core.textutil import contains_name, name_span, strip_accents
 REQUIRE_GRAPH_ANCHOR = True
 MIN_COVERAGE = 0.25   # chốt phụ; câu trong phạm vi thấp nhất đo được là 0.36
@@ -27,7 +29,7 @@ REQUIRE_EVIDENCE_FOR_NAMED = True
 REQUIRE_SUBJECT_EVIDENCE = True
 REQUIRE_KNOWN_ADMIN = True
 
-CONTEXT_MAX_CHARS = 4800
+CONTEXT_MAX_CHARS = 2200
 MAX_CONTEXT_CHUNKS = 2
 
 SECOND_DOC_RATIO = 0.75
@@ -61,6 +63,10 @@ def resolve_query(question: str, graph) -> RetrievalQuery:
             seeds = find_seeds(graph, query.search_text)
     intent_text = re.sub(r'\blien quan\b', '', strip_accents(query.search_text))
     query.intent = query_intent(intent_text)
+    # Verification may concern identity, architecture or history, not an address.
+    if ('verify' in query.intent and 'ward' not in query.intent
+            and not LOCATION_RE.search(intent_text) and not query_scope(intent_text)[0]):
+        query.intent = query.intent - {'location'}
     if YEAR_IN_CHUNK_RE.search(question):
         query.intent = query.intent | {'time'}
     # A year verification is not automatically a location question.
@@ -119,11 +125,9 @@ def evidence_context(evidence, query: RetrievalQuery) -> str:
     parts = []
     for item in evidence:
         content = item.text
-        if 'location' in query.intent and query.subject:
-            content = ' '.join(location_sentences(content, query))
-        elif 'relation' in query.intent:
-            # Later sentences can refer to the subject as "Chúa", "ông" or
-            # "nhà vua". Keep their context for both reranking and generation.
+        # Keep verified passages intact: spatial details and references to
+        # "Chúa", "ông", etc. need not repeat the subject in every sentence.
+        if 'relation' in query.intent:
             if item.location_note and any(
                 contains_name(strip_accents(item.location_note), alias) for alias in query.aliases
             ):

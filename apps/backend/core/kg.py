@@ -20,7 +20,7 @@ L = "a-zđàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếể
 
 CLASSIFIERS = (
     "vua", "chúa", "hoàng đế", "hoàng hậu", "công chúa", "thái tử",
-    "lăng", "chùa", "đền", "miếu", "đình", "điện", "cung", "thành", "đàn",
+    "lăng", "chùa", "đền", "miếu", "đình", "điện", "cung", "thành", "đàn", "tháp",
     "làng", "phường", "xã", "huyện", "quận", "tỉnh", "thị xã",
     "sông", "núi", "đèo", "biển", "bán đảo", "cầu", "hồ", "vịnh",
     "bảo tàng", "lễ hội", "nhà hát",
@@ -30,7 +30,7 @@ CLASSIFIERS = (
 NAME_RE = re.compile(
     r"(?<!\w)((?i:"
     + "|".join(sorted(CLASSIFIERS, key=len, reverse=True))
-    + r"))\s+((?:[" + U + r"][" + L + r"]+\s?){1,3})"
+    + r"))[ \t]+((?:[" + U + r"][" + L + r"]+[ \t]?){1,3})"
 )
 YEAR_RE = re.compile(r"(?<!\d)(1[0-9]{3}|20[0-2][0-9])(?!\d)")
 
