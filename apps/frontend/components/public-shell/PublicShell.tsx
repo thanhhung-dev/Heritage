@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import searchIcon from "@/access/icons/search.svg";
 import type { ReactNode } from "react";
 import { PublicHeaderControls } from "./PublicHeaderControls";
 import { PublicFooter } from "./PublicFooter";
@@ -36,7 +37,7 @@ export function PublicShell({ children, account }: PublicShellProps) {
             role="search"
             aria-label="Search heritage collections"
           >
-            <Image src="/figma/search.svg" alt="" width={16} height={16} />
+            <Image src={searchIcon} alt="" width={16} height={16} />
             <input
               className={styles.searchInput}
               type="search"

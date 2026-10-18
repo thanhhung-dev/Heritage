@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import accountBell from "@/access/icons/account-bell.svg";
+import accountUser from "@/access/icons/account-user.svg";
 import { Avatar, Button, Dropdown, type MenuProps } from "antd";
 import { UserOutlined } from "@ant-design/icons";
 import { PUBLIC_ACCOUNT_LINKS } from "@/config/public-account";
@@ -102,7 +104,7 @@ export function AccountNavigation({
   return (
     <div className={styles.authenticated}>
       <button type="button" className={styles.notificationTrigger} aria-label="Notifications" disabled title="Notifications are not available yet">
-        <Image src="/figma/account-bell.svg" width={14} height={14} alt="" aria-hidden="true" />
+        <Image src={accountBell} width={14} height={14} alt="" aria-hidden="true" />
       </button>
       <Dropdown
         open={open}
@@ -156,7 +158,7 @@ export function AccountNavigation({
             }
           }}
         >
-          <Image src="/figma/account-user.svg" width={14} height={14} alt="" aria-hidden="true" />
+          <Image src={accountUser} width={14} height={14} alt="" aria-hidden="true" />
         </button>
       </Dropdown>
     </div>

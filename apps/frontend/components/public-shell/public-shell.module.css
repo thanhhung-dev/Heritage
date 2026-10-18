@@ -75,11 +75,11 @@
 .logoMarkMask {
   position: absolute;
   inset: 0;
-  -webkit-mask-image: url("/figma/heritage-logo-mask.svg");
+  -webkit-mask-image: url("../../access/icons/heritage-logo-mask.svg");
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: 0.22px 0.02px;
   -webkit-mask-size: 23.64px 23.94px;
-  mask-image: url("/figma/heritage-logo-mask.svg");
+  mask-image: url("../../access/icons/heritage-logo-mask.svg");
   mask-mode: alpha;
   mask-repeat: no-repeat;
   mask-position: 0.22px 0.02px;

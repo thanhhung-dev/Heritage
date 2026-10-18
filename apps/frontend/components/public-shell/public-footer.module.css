@@ -34,7 +34,7 @@
   width: 13px;
   height: 15px;
   flex: none;
-  mask-image: url("/figma/heritage-logo-mask.svg");
+  mask-image: url("../../access/icons/heritage-logo-mask.svg");
   mask-size: 100% 100%;
   mask-repeat: no-repeat;
 }

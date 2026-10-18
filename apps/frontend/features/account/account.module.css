@@ -124,12 +124,12 @@
 
 .menuIcon { position: relative; display: inline-block; flex: none; width: 10px; height: 17px; margin: 0 !important; }
 .menuIcon::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); background-position: center; background-repeat: no-repeat; }
-.profile::before { width: 14.1px; height: 14px; background-image: url("/figma/account-profile.svg"); }
+.profile::before { width: 14.1px; height: 14px; background-image: url("../../access/icons/account-profile.svg"); }
 .help { width: 14px; }
-.help::before { width: 14px; height: 14px; background-image: url("/figma/account-help.svg"); }
+.help::before { width: 14px; height: 14px; background-image: url("../../access/icons/account-help.svg"); }
 .language { width: 16px; }
-.language::before { left: 1px; width: 14px; height: 15px; background-image: url("/figma/account-language.svg"); }
-.logout::before { width: 15.4596px; height: 17px; background-image: url("/figma/account-logout.svg"); }
+.language::before { left: 1px; width: 14px; height: 15px; background-image: url("../../access/icons/account-language.svg"); }
+.logout::before { width: 15.4596px; height: 17px; background-image: url("../../access/icons/account-logout.svg"); }
 
 .preview { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); }
 .preview h2 { margin-bottom: 12px; font-size: var(--text-xl); color: var(--text); }

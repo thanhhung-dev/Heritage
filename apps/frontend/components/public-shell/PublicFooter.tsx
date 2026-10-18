@@ -1,4 +1,5 @@
 import Image from "next/image";
+import heritageMark from "@/access/icons/heritage-logo-mark.svg";
 import Link from "next/link";
 import { PUBLIC_FOOTER, type FooterLink } from "@/config/public-footer";
 import styles from "./public-footer.module.css";
@@ -23,7 +24,7 @@ export function PublicFooter() {
         <div className={styles.identity}>
           <Link href={PUBLIC_ROUTE_BY_KEY.home.href} className={styles.brand} aria-label="Heritage - Trang chủ">
             <span className={styles.mark} aria-hidden="true">
-              <Image src="/figma/heritage-logo-mark.svg" alt="" width={13} height={15} />
+              <Image src={heritageMark} alt="" width={13} height={15} />
             </span>
             <span>HERITAGE</span>
           </Link>
