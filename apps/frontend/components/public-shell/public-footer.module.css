@@ -102,3 +102,8 @@
   .group li { min-height: 28px; display: flex; align-items: center; }
   .link { display: inline-flex; align-items: center; min-height: 44px; }
 }
+
+/* The current develop shell uses fixed bottom navigation on small screens. */
+@media (max-width: 760px) {
+  .footer { padding-bottom: calc(32px + 76px + env(safe-area-inset-bottom)); }
+}

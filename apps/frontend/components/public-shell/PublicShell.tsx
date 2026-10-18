@@ -2,10 +2,10 @@ import Link from "next/link";
 import Image from "next/image";
 import searchIcon from "@/access/icons/search.svg";
 import type { ReactNode } from "react";
-import { PublicHeaderControls } from "./PublicHeaderControls";
+import { PublicNavigation } from "./PublicNavigation";
 import { PublicFooter } from "./PublicFooter";
 import { PublicFooterSlot } from "./PublicFooterSlot";
-import type { PublicAccount } from "@/features/account/types";
+import { AuthNavigation } from "@/features/auth/AuthNavigation";
 import styles from "./public-shell.module.css";
 import { LogoText } from "../LogoText";
 import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
@@ -47,7 +47,8 @@ export function PublicShell({ children, account }: PublicShellProps) {
               placeholder="Search Heritages…"
             />
           </div>
-          <PublicHeaderControls account={account} />
+          <PublicNavigation />
+          <AuthNavigation />
         </div>
       </header>
 
