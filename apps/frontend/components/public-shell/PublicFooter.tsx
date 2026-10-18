@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 import heritageMark from "@/access/icons/heritage-logo-mark.svg";
+import Link from "next/link";
 import { PUBLIC_FOOTER, type FooterLink } from "@/config/public-footer";
 import styles from "./public-footer.module.css";
 import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
