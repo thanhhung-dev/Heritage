@@ -140,9 +140,9 @@ async def index_snapshot(root):
 
 
 async def query_snapshot(root, message, community_level):
-    config = configure_worker(root)
     if json.loads((root / 'index-ready.json').read_text()) != snapshot_hashes(root):
         raise ValueError('Published snapshot changed; create and index a new snapshot.')
+    config = configure_worker(root)
     tables = load_tables(root)
     if community_level not in set(tables['community_reports']['level']):
         raise ValueError('Requested community level is absent from this snapshot.')

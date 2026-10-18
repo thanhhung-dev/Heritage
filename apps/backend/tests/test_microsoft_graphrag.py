@@ -1,6 +1,7 @@
 """Optional GraphRAG contract: isolated snapshots and honest R2 provenance."""
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,7 +10,8 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from apps.backend.app import app
-from pipelines.graph.microsoft_graphrag import build_global_response, export_snapshot
+from apps.backend.services.graphrag import run_global_query
+from pipelines.graph.microsoft_graphrag import build_global_response, export_snapshot, query_snapshot
 
 
 class MicrosoftGraphRagTests(unittest.TestCase):
@@ -112,6 +114,56 @@ class MicrosoftGraphRagTests(unittest.TestCase):
             response = client.post('/api/graphrag/query', json={'message': 'Tổng quan?'})
             self.assertEqual(response.status_code, 503)
             self.assertNotIn('private-worker-error', response.text)
+
+
+class GraphRagProcessTests(unittest.IsolatedAsyncioTestCase):
+    async def test_modified_snapshot_is_rejected_before_loading_model_config(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'output').mkdir()
+            (root / 'source-manifest.json').write_text('{}')
+            (root / 'settings.yaml').write_text('not a valid config mapping')
+            for name in ('entities', 'communities', 'community_reports', 'text_units', 'documents'):
+                (root / 'output' / f'{name}.parquet').write_bytes(b'changed')
+            (root / 'index-ready.json').write_text('{}')
+            with self.assertRaisesRegex(ValueError, 'snapshot changed'):
+                await query_snapshot(root, 'Tổng quan?', 0)
+
+    async def test_worker_protocol_failures_and_timeout_leave_service_usable(self):
+        # Exercise a real subprocess boundary, without loading a second AI model.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'index-ready.json').write_text('{}')
+            worker = root / 'worker'
+            worker.write_text(f'#!{sys.executable}\n' + '''
+import json, sys, time
+message = json.load(sys.stdin)['message']
+if message == 'timeout':
+    time.sleep(5)
+if message == 'fail':
+    print('token=private-subprocess-secret', file=sys.stderr)
+    sys.exit(1)
+if message == 'invalid':
+    print('not json')
+else:
+    print(json.dumps({'answer': message, 'snapshot_id': 'test', 'context_reports': [],
+                      'sources': [], 'source_scope': 'community_context', 'grounding_verified': False}))
+''')
+            worker.chmod(0o700)
+            with patch.dict(os.environ, {
+                'GRAPHRAG_ENABLED': 'true', 'GRAPHRAG_ROOT': str(root),
+                'GRAPHRAG_PYTHON': str(worker), 'GRAPHRAG_QUERY_TIMEOUT': '2',
+            }):
+                self.assertEqual((await run_global_query('question'))['answer'], 'question')
+                with self.assertRaises(RuntimeError) as error:
+                    await run_global_query('fail')
+                self.assertNotIn('private-subprocess-secret', str(error.exception))
+                with self.assertRaises(ValueError):
+                    await run_global_query('invalid')
+                with patch.dict(os.environ, {'GRAPHRAG_QUERY_TIMEOUT': '0.05'}), self.assertRaises(TimeoutError):
+                    await run_global_query('timeout')
+                # Timeout must not leave a stale busy lock or an unusable worker slot.
+                self.assertEqual((await run_global_query('after timeout'))['answer'], 'after timeout')
 
 
 if __name__ == '__main__':
