@@ -1,11 +1,12 @@
 """ORM entities mapped 1:1 from schema.sql.
 
 Import order matters — các model phụ thuộc theo thứ tự:
-  admin → kg → heritage → scene/... → chat
+  admin → user → kg → heritage → scene/... → chat
 """
 from apps.backend.db.base import Base, TimestampMixin, AsyncSessionLocal, engine, DATABASE_URL  # noqa: F401
 
 from apps.backend.models.admin import AdminAccount, AuditLog  # noqa: F401
+from apps.backend.models.user import Role, Account, UserProfile, UserConsent  # noqa: F401
 from apps.backend.models.kg import (  # noqa: F401
     CorpusRelease, Document, Passage, Entity, EntityAlias, EntityEvidence,
     EntityAliasEvidence, Predicate, Relation, PlaceLocation,
@@ -31,6 +32,8 @@ __all__ = [
     "uuid_pk",
     # admin
     "AdminAccount", "AuditLog",
+    # user auth
+    "Role", "Account", "UserProfile", "UserConsent",
     # kg
     "CorpusRelease", "Document", "Passage", "Entity", "EntityAlias",
     "EntityEvidence", "EntityAliasEvidence", "Predicate", "Relation", "PlaceLocation",
