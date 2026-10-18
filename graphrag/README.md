@@ -1,6 +1,6 @@
 # Microsoft GraphRAG MVP — Global Search
 
-Luồng tùy chọn, **không thay thế `/api/chat` (hybrid + BGE)** và không thay graph NetworkX hiện tại. Dùng package chính thức `graphrag==3.3.0` để xây community reports và trả lời câu hỏi tổng hợp xuyên tài liệu.
+Microsoft GraphRAG được **ghép vào `/api/chat` cùng hybrid + BGE** khi `GRAPHRAG_ENABLED=true`, không thay graph NetworkX hiện tại. Dùng package chính thức `graphrag==3.3.0` để xây community reports; vẫn có endpoint Global Search riêng để kiểm tra báo cáo tổng hợp.
 
 ```text
 PostgreSQL passage mapping → đọc text/checksum từ R2
@@ -91,9 +91,29 @@ curl http://127.0.0.1:8000/api/graphrag/query \
 
 Endpoint chỉ nhận câu hỏi và community level (mặc định 0), **không nhận đường dẫn file hoặc lệnh index từ client**. Chưa bật, snapshot lỗi, model lỗi, busy hoặc timeout trả 503 an toàn; không âm thầm giả làm kết quả hybrid. Timeout hủy worker; server LLM có thể còn cần thời gian phát hiện kết nối đã đóng. Câu hỏi trống/quá dài hoặc level ngoài 0–10 trả 422; level phải tồn tại trong snapshot.
 
+## 5. Chat kết hợp hybrid + Microsoft GraphRAG
+
+Với cùng cấu hình ở trên, gọi `/api/chat` như trước, không cần client tự gọi hai endpoint:
+
+```bash
+curl http://127.0.0.1:8000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Cổng Tam Quan có liên quan gì đến chùa Thiên Mụ?","use_rag":true}'
+```
+
+Sau các bước resolve/kiểm tra đối tượng hiện có, pipeline lấy candidate từ BM25, n-gram, vector, graph nội bộ và Microsoft Global Search. Chỉ các nguồn GraphRAG khớp **passage ID + bucket + object key + content hash** với inventory hiện tại mới được hợp nhất. Candidate trùng được gộp theo passage ID, rồi cùng qua coverage, lọc subject/intent, đọc R2 kiểm tra checksum, BGE rerank và chọn context. GraphRAG không vượt qua các ngưỡng hoặc giới hạn context hiện tại.
+
+**Không đưa câu trả lời do Global Search sinh ra vào prompt làm bằng chứng.** Chat cuối chỉ đọc văn bản gốc R2; report không được tự nâng thành dữ kiện đã xác minh. Response chat giữ schema cũ; passage được chọn từ kênh Microsoft có thêm `microsoft_graphrag` trong `sources[].retrieval_methods`. Nhãn này chỉ xuất hiện nếu passage đó còn được chọn sau rerank/context selection.
+
+Nếu tắt GraphRAG, snapshot chưa sẵn sàng, worker busy/lỗi/timeout, chat tiếp tục bằng hybrid. Snapshot cũ hoặc thuộc bucket khác không được gắn vào passage mới. Các trường hợp query rỗng, ambiguity, thiếu anchor hay kho nguồn lỗi vẫn giữ các cổng an toàn hiện có; không dùng GraphRAG để tự đoán đối tượng. Endpoint Global Search riêng vẫn có thể dùng cho câu hỏi tổng hợp không có anchor mà chat hiện từ chối.
+
+Trong Langfuse, xem `rag.request` → `retrieval` → `retrieval.microsoft_graphrag` → `graphrag.global_search`, sau đó `retrieval.rerank`, `context.assembly`, `generation`. Bước hợp nhất ghi snapshot ID, candidate và trạng thái `used`, `no_matching_sources`, `disabled` hoặc `hybrid_fallback`. Không có bảo đảm GraphRAG luôn thêm nguồn mới hoặc tăng chất lượng với mọi câu hỏi.
+
+Luồng này gọi Global Search trước khi sinh câu trả lời chat, nên có thêm lượt LLM map/reduce và độ trễ. `GRAPHRAG_QUERY_TIMEOUT` cũng là thời gian chờ tối đa bước GraphRAG trong chat; chỉ fallback sau khi bước đó lỗi/hết thời gian. Không bật thêm model, nhưng tổng lượng inference tăng. Snapshot mẫu chỉ chứa các passage đã export, không tự bao phủ toàn bộ kho R2 khi thêm dữ liệu mới.
+
 ## Dẫn nguồn và giới hạn tin cậy
 
-Response có `answer`, `snapshot_id`, `context_reports`, `sources`, `source_scope="community_context"`, `grounding_verified=false`.
+Response của endpoint Global Search riêng có `answer`, `snapshot_id`, `context_reports`, `sources`, `source_scope="community_context"`, `grounding_verified=false`.
 
 `sources` là **các passage thuộc community reports đã cấp cho truy vấn**, không phải khẳng định từng nguồn chứng minh từng câu. Global Search dùng report tổng hợp, không trực tiếp đọc lại passage R2 ở mỗi query. Model có thể tạo citation sai; adapter này không xác minh từng citation hay từng mệnh đề. Giữ nguyên `[Data: Reports (...)]` để đối chiếu với `context_reports`; report ID chỉ có ý nghĩa trong snapshot đó.
 
@@ -111,6 +131,8 @@ LANGFUSE_ENABLED=false .venv/bin/python -m unittest apps.backend.tests.test_micr
 ```
 
 Bộ đầu kiểm tra export, provenance, API, virtualenv isolation, lỗi subprocess, timeout và snapshot bị sửa. Bộ thứ hai dùng cấu hình, kiểu kết quả workflow và Parquet của SDK thật, nhưng stub lời gọi indexing/search để kiểm tra adapter độc lập với chất lượng LLM. Chúng không thay cho lần chạy index/query thật trên dữ liệu R2.
+
+`apps.backend.tests.test_chat_graphrag` chạy với `PASSAGE_TEST_DATABASE_URL` trỏ PostgreSQL có pgvector. Bộ này dùng TEMP table, không ghi DB/R2 lâu dài; kiểm tra hợp nhất candidate, rerank, nguồn snapshot cũ/khác bucket và hybrid fallback. Tắt `GRAPHRAG_ENABLED=false` khi chạy các kiểm thử hybrid khác để không gọi model thật ngoài ý muốn; kiểm thử tích hợp tự bật GraphRAG với worker giả lập có kiểm soát.
 
 ## Nguồn API
 

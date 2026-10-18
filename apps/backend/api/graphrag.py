@@ -1,4 +1,4 @@
-"""Explicit global-search endpoint; /api/chat keeps hybrid + BGE unchanged."""
+"""Standalone global search; its source candidates also join hybrid /api/chat."""
 import logging
 from typing import Literal
 

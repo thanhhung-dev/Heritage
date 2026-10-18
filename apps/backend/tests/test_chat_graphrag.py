@@ -18,6 +18,9 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.engine = create_async_engine(os.environ['PASSAGE_TEST_DATABASE_URL'])
         self.session = AsyncSession(self.engine)
+        self.addAsyncCleanup(self.engine.dispose)
+        self.addAsyncCleanup(self.session.close)
+        self.addAsyncCleanup(self.session.rollback)
         await self.session.begin()
         await self.session.execute(text('''
             CREATE TEMP TABLE passage (
@@ -60,12 +63,10 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
         }
         self.global_query.return_value = self.graph_result
 
-    async def asyncTearDown(self):
-        await self.session.rollback()
-        await self.session.close()
-        await self.engine.dispose()
-
     async def test_chat_reranks_graph_only_candidate_and_uses_original_r2_text(self):
+        self.global_query.return_value = {
+            **self.graph_result, 'sources': self.graph_result['sources'] * 2,
+        }
         with (
             patch.object(chat_api, 'PassageRepository', return_value=self.repo),
             patch.object(chat_api, 'generate_response', return_value='Năm 1601.') as generate,
@@ -74,6 +75,7 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
                                            db=self.session)
         self.assertEqual(response.sources[0]['passage_id'], self.rows[0]['id'])
         self.assertEqual(response.sources[0]['retrieval_methods'], ['microsoft_graphrag'])
+        self.assertEqual(len(response.sources), len({s['passage_id'] for s in response.sources}))
         context = generate.call_args.kwargs['context']
         self.assertIn('1601', context)
         self.assertNotIn('9999', context)

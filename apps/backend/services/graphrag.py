@@ -13,8 +13,12 @@ PROJECT = Path(__file__).resolve().parents[3]
 _query_lock = asyncio.Lock()
 
 
+def graphrag_enabled() -> bool:
+    return os.environ.get('GRAPHRAG_ENABLED', 'false').lower() in {'true', '1', 'yes', 'on'}
+
+
 async def run_global_query(message: str, community_level: int = 0) -> dict:
-    if os.environ.get('GRAPHRAG_ENABLED', 'false').lower() not in {'true', '1', 'yes', 'on'}:
+    if not graphrag_enabled():
         raise RuntimeError('Microsoft GraphRAG is disabled.')
     configured_root = os.environ.get('GRAPHRAG_ROOT', '')
     if not configured_root:
