@@ -1,9 +1,11 @@
 """Optional GraphRAG contract: isolated snapshots and honest R2 provenance."""
+import asyncio
 import json
 import os
 import sys
 import tempfile
 import unittest
+import venv
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -117,6 +119,29 @@ class MicrosoftGraphRagTests(unittest.TestCase):
 
 
 class GraphRagProcessTests(unittest.IsolatedAsyncioTestCase):
+    async def test_worker_preserves_the_selected_virtualenv(self):
+        create_process = asyncio.create_subprocess_exec
+
+        async def launch_probe(python, *args, **kwargs):
+            # Probe the actual child environment instead of invoking an LLM.
+            code = "import sys,json; print(json.dumps({'answer':sys.prefix,'snapshot_id':'test','sources':[],'context_reports':[]}))"
+            return await create_process(python, '-c', code, **kwargs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            environment = root / 'venv'
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(environment)
+            (root / 'index-ready.json').write_text('{}')
+            with (
+                patch.dict(os.environ, {
+                    'GRAPHRAG_ENABLED': 'true', 'GRAPHRAG_ROOT': str(root),
+                    'GRAPHRAG_PYTHON': str(environment / 'bin/python'),
+                }),
+                patch('apps.backend.services.graphrag.asyncio.create_subprocess_exec', new=launch_probe),
+            ):
+                result = await run_global_query('probe')
+            self.assertEqual(Path(result['answer']), environment)
+
     async def test_modified_snapshot_is_rejected_before_loading_model_config(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
