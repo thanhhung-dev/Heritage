@@ -93,14 +93,14 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
             'passage_id': self.rows[1]['id'], 'bucket': 'knowledge',
         })
         relation = {'kind': 'relationship', 'id': 'renovation', 'source': 'Chùa Thiên Mụ',
-                    'target': 'Trùng tu', 'description': 'RENOVATION_CONTEXT',
+                    'target': 'RENOVATION_CONTEXT',
                     'source_passage_ids': [row['id'] for row in self.rows[:2]]}
         self.graph_result['graph_context'] = [relation]
         for variant in ('valid', 'stale', 'not_selected', 'oversize'):
             with self.subTest(variant=variant):
                 self.graph_result['sources'][0] = {**source, 'content_hash': (
                     'outdated' if variant == 'stale' else source['content_hash'])}
-                relation['description'] = 'RENOVATION_CONTEXT' + ('x' * 5000 if variant == 'oversize' else '')
+                relation['target'] = 'RENOVATION_CONTEXT' + ('x' * 5000 if variant == 'oversize' else '')
                 self.repo.reranker = lambda q, texts: [
                     0.01 if variant == 'not_selected' and '1601' in t else 0.95 for t in texts]
                 with (

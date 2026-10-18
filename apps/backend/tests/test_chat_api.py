@@ -23,7 +23,8 @@ class R2ChatApiTests(unittest.TestCase):
             id=42, text="Chùa Thiên Mụ được dựng năm 1601.",
             location_note="Thiên Mụ", to_source=lambda: source,
         )
-        self.search = AsyncMock(return_value=SimpleNamespace(query=self.query, evidence=[self.evidence]))
+        self.search = AsyncMock(return_value=SimpleNamespace(
+            query=self.query, evidence=[self.evidence], graph_context=[]))
         self.repository = self.enterContext(patch.object(chat_api, "PassageRepository"))
         self.repository.return_value.search_evidence = self.search
 

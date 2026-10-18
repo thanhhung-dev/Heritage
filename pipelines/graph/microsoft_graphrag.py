@@ -15,7 +15,7 @@ from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parents[2]
 VERSION = '3.3.0'
-TABLES = ('entities', 'communities', 'community_reports', 'text_units', 'documents')
+TABLES = ('entities', 'relationships', 'communities', 'community_reports', 'text_units', 'documents')
 
 
 def export_snapshot(rows, store, root: Path) -> None:
@@ -47,10 +47,14 @@ def export_snapshot(rows, store, root: Path) -> None:
         stage.rename(root)
 
 
-def build_global_response(answer, context_reports, reports, communities, units, documents, manifest):
+def build_global_response(answer, context_reports, reports, communities, units, documents, manifest,
+                          *, entities=(), relationships=()):
     """Map considered report communities to R2; this is NOT claim verification."""
     sources = {}
     selected_reports = []
+    selected_units = set()
+    entity_ids = set()
+    relationship_ids = set()
     by_unit = {str(u['id']): u for u in units}
     by_document = {str(d['id']): d for d in documents}
     try:
@@ -64,6 +68,9 @@ def build_global_response(answer, context_reports, reports, communities, units, 
                        and c['level'] == report['level']]
             if len(members) != 1 or not len(members[0]['text_unit_ids']):
                 raise ValueError('Community has no resolvable text units.')
+            selected_units.update(str(i) for i in members[0]['text_unit_ids'])
+            entity_ids.update(str(i) for i in members[0].get('entity_ids', ()))
+            relationship_ids.update(str(i) for i in members[0].get('relationship_ids', ()))
             selected_reports.append({'report_id': report_id, 'title': report['title'],
                                      'level': int(report['level'])})
             for unit_id in members[0]['text_unit_ids']:
@@ -77,8 +84,30 @@ def build_global_response(answer, context_reports, reports, communities, units, 
         raise ValueError('Broken GraphRAG source lineage.') from error
     for item in sources.values():
         item['report_ids'] = sorted(item['report_ids'])
+    graph_context = []
+    for kind, records, selected_ids, fields in (
+        ('relationship', relationships, relationship_ids, ('source', 'target')),
+        ('entity', entities, entity_ids, ('title',)),
+    ):
+        for record in records:
+            if str(record['id']) not in selected_ids:
+                continue
+            unit_ids = {str(i) for i in record['text_unit_ids']}
+            # An aggregated description can depend on more than one source.
+            # Never relabel a partial set of its lineage as full support.
+            if not unit_ids or not unit_ids <= selected_units:
+                continue
+            passage_ids = sorted({manifest['documents'][
+                by_document[str(by_unit[i]['document_id'])]['title']
+            ]['passage_id'] for i in unit_ids})
+            graph_context.append({
+                'kind': kind, 'id': str(record['id']),
+                **{key: record[key] for key in fields},
+                'source_passage_ids': passage_ids,
+            })
     return {'answer': answer, 'snapshot_id': manifest['snapshot_id'],
             'context_reports': selected_reports, 'sources': [sources[k] for k in sorted(sources)],
+            'graph_context': graph_context,
             'source_scope': 'community_context', 'grounding_verified': False}
 
 
@@ -97,7 +126,7 @@ def load_tables(root):
     import pandas as pd
 
     tables = {name: pd.read_parquet(root / 'output' / f'{name}.parquet') for name in TABLES}
-    if any(table.empty for table in tables.values()):
+    if any(table.empty for name, table in tables.items() if name != 'relationships'):
         raise ValueError('Index is empty; inspect extraction/model quality before enabling it.')
     return tables
 
@@ -133,7 +162,9 @@ async def index_snapshot(root):
     # Check every report's R2 lineage before the snapshot becomes queryable.
     build_global_response('', [{'id': str(c)} for c in tables['community_reports']['community']],
                           *[tables[t].to_dict('records') for t in
-                            ('community_reports', 'communities', 'text_units', 'documents')], manifest)
+                            ('community_reports', 'communities', 'text_units', 'documents')], manifest,
+                          entities=tables['entities'].to_dict('records'),
+                          relationships=tables['relationships'].to_dict('records'))
     (root / 'index-ready.json').write_text(json.dumps(snapshot_hashes(root)), encoding='utf-8')
     return {'snapshot_id': manifest['snapshot_id'],
             'tables': {name: len(table) for name, table in tables.items()}}
@@ -161,7 +192,9 @@ async def query_snapshot(root, message, community_level):
     manifest = json.loads((root / 'source-manifest.json').read_text())
     return build_global_response(answer, context_reports,
                                  *[tables[t].to_dict('records') for t in
-                                   ('community_reports', 'communities', 'text_units', 'documents')], manifest)
+                                   ('community_reports', 'communities', 'text_units', 'documents')], manifest,
+                                 entities=tables['entities'].to_dict('records'),
+                                 relationships=tables['relationships'].to_dict('records'))
 
 
 async def export_from_database(root, limit, passage_ids):

@@ -40,8 +40,12 @@ class GraphRagSdkTests(unittest.IsolatedAsyncioTestCase):
 
                 async def successful_index(config):
                     data = {
-                        'entities': [{'id': 'entity'}],
-                        'communities': [{'community': 7, 'level': 0, 'text_unit_ids': ['tu']}],
+                        'entities': [{'id': 'entity', 'title': 'Thiên Mụ',
+                                      'description': 'Ngôi chùa ở Huế.', 'text_unit_ids': ['tu']}],
+                        'relationships': [{'id': 'relation', 'source': 'Thiên Mụ', 'target': 'Huế',
+                                           'description': 'Ngôi chùa nằm ở Huế.', 'text_unit_ids': ['tu']}],
+                        'communities': [{'community': 7, 'level': 0, 'text_unit_ids': ['tu'],
+                                         'entity_ids': ['entity'], 'relationship_ids': ['relation']}],
                         'community_reports': [{'id': 'uuid', 'community': 7, 'level': 0, 'title': 'Huế'}],
                         'text_units': [{'id': 'tu', 'document_id': 'doc'}],
                         'documents': [{'id': 'doc', 'title': 'passage-42.txt'}],
@@ -62,6 +66,13 @@ class GraphRagSdkTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response['sources'][0]['passage_id'], 42)
                 self.assertEqual(response['sources'][0]['report_ids'], ['7'])
                 self.assertFalse(response['grounding_verified'])
+                self.assertEqual({item['kind'] for item in response['graph_context']},
+                                 {'entity', 'relationship'})
+                self.assertTrue(all(item['source_passage_ids'] == [42]
+                                    for item in response['graph_context']))
+                (root / 'output/relationships.parquet').write_bytes(b'tampered relationship')
+                with self.assertRaisesRegex(ValueError, 'snapshot changed'):
+                    await query_snapshot(root, 'Tổng quan?', 0)
             finally:
                 os.chdir(previous)
 
