@@ -86,3 +86,18 @@ class PassageSelectionTests(unittest.IsolatedAsyncioTestCase):
         ], 'Nguyễn Phúc Chu liên quan gì đến việc sửa chùa Thiên Mụ?', limit=1,
             reranker=lambda q, texts: [0.99 if 'Tống Đức Đạt' in t else 0.6 for t in texts])
         self.assertEqual([e.text for e in result.evidence], [answer])
+
+    async def test_comparison_keeps_evidence_for_each_explicitly_named_subject(self):
+        temple = 'Chùa Thiên Mụ là công trình thờ tự ở Huế.'
+        bridge = 'Cầu Rồng là công trình giao thông ở Đà Nẵng.'
+        result = await self.search([{'text': temple}, {'text': bridge}],
+                                  'Chùa Thiên Mụ và Cầu Rồng khác nhau về chức năng gì?')
+        self.assertEqual({e.text for e in result.evidence}, {temple, bridge})
+
+    async def test_composite_title_does_not_require_contiguous_names_in_every_passage(self):
+        intro = 'Cổng Tam Quan chùa Thiên Mụ là một công trình kiến trúc.'
+        detail = 'Chùa Thiên Mụ có sân rộng sau cổng tam quan, hai bên là nhà Lôi Gia.'
+        result = await self.search([{'text': intro}, {'text': detail}],
+            'Cổng Tam Quan chùa Thiên Mụ liên hệ với hai nhà Lôi Gia như thế nào?',
+            reranker=lambda q, texts: [0.99 if 'sân rộng' in t else 0.01 for t in texts])
+        self.assertEqual([e.text for e in result.evidence], [detail])
