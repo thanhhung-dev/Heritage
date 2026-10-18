@@ -1,8 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Spin, Empty, Button, Result } from 'antd';
+import { Button, Empty, Flex, Result, Spin, Typography } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
+
+const panelStyle: React.CSSProperties = {
+  minHeight: 200,
+  padding: 32,
+  textAlign: 'center',
+};
 
 interface LoadingStateProps {
   tip?: string;
@@ -13,9 +19,11 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   tip = 'Đang tải dữ liệu di sản...',
   className = '',
 }) => (
-  <div className={`flex flex-col items-center justify-center p-8 min-h-[200px] ${className}`}>
-    <Spin size="large" tip={tip} />
-  </div>
+  <section className={className} role="status" aria-live="polite" aria-busy="true" aria-label={tip}>
+    <Flex vertical align="center" justify="center" style={panelStyle}>
+      <Spin size="large" tip={tip} />
+    </Flex>
+  </section>
 );
 
 interface EmptyStateProps {
@@ -33,15 +41,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onAction,
   className = '',
 }) => (
-  <div className={`flex flex-col items-center justify-center p-8 min-h-[240px] text-center ${className}`}>
-    <Empty description={<span className="text-stone-400">{description}</span>}>
-      {actionText && onAction && (
-        <Button type="primary" onClick={onAction} style={{ background: '#b45309', borderColor: '#b45309' }}>
-          {actionText}
-        </Button>
-      )}
-    </Empty>
-  </div>
+  <section className={className} role="region" aria-label={title}>
+    <Flex vertical align="center" justify="center" gap={12} style={panelStyle}>
+      <Typography.Title level={5} style={{ margin: 0 }}>{title}</Typography.Title>
+      <Empty description={<Typography.Text type="secondary">{description}</Typography.Text>}>
+        {actionText && onAction ? (
+          <Button type="primary" onClick={onAction}>
+            {actionText}
+          </Button>
+        ) : null}
+      </Empty>
+    </Flex>
+  </section>
 );
 
 interface ErrorStateProps {
@@ -57,18 +68,20 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry,
   className = '',
 }) => (
-  <div className={`flex items-center justify-center p-6 ${className}`}>
-    <Result
-      status="error"
-      title={<span className="text-red-500 font-medium">{title}</span>}
-      subTitle={<span className="text-stone-400">{subTitle}</span>}
-      extra={
-        onRetry && (
-          <Button icon={<ReloadOutlined />} onClick={onRetry} danger>
-            Tải lại trang
-          </Button>
-        )
-      }
-    />
-  </div>
+  <section className={className} role="alert">
+    <Flex align="center" justify="center" style={panelStyle}>
+      <Result
+        status="error"
+        title={title}
+        subTitle={subTitle}
+        extra={
+          onRetry ? (
+            <Button icon={<ReloadOutlined />} onClick={onRetry}>
+              Thử lại
+            </Button>
+          ) : null
+        }
+      />
+    </Flex>
+  </section>
 );

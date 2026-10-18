@@ -10,10 +10,13 @@ DB lookup là lớp trước, pipeline cũ vẫn là fallback khi DB không có 
 """
 import logging
 import re
+from collections.abc import AsyncGenerator
+from typing import Any
+from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from apps.backend.core.fuzzy_match import LOCATION_TYPE_PREFIXES, _without_location_type
 from apps.backend.core.rag import retrieve_context
@@ -34,17 +37,55 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
 
 
+class ChatSource(TypedDict, total=False):
+    text: str | None = None
+    score: float | None = None
+    doc: str | None = None
+    heading: str | None = None
+    url: str | None = None
+    chunk_id: str | None = None
+    graph: float | None = None
+    graph_hits: list[str] | None = None
+    used_in_context: bool | None = None
+    passage_id: str | None = None
+    quote: str | None = None
+
+
+class EntitySource(TypedDict):
+    document_id: str
+
+
+class EntitySuggestion(TypedDict):
+    entity_id: str
+    canonical_name: str
+    normalized_name: str
+    type: str
+    alias_used: str | None
+    score: float
+    sources: list[EntitySource]
+
+
+class CorrectionSuggestion(TypedDict):
+    original: str
+    suggested: str
+    score: float
+
+
 class ChatResponse(BaseModel):
     answer: str
-    sources: list[dict] = []
+    sources: list[ChatSource] = Field(default_factory=list)
     corrected_from: str = ""
     corrected_to: str = ""
     needs_user_choice: bool = False
-    suggestions: list[dict] = []
+    suggestions: list[EntitySuggestion | CorrectionSuggestion] = Field(default_factory=list)
     entity_id: str | None = None
     intent: str | None = None
     resolution_status: str | None = None
     answer_type: str | None = None
+
+
+class ChatErrorResponse(BaseModel):
+    detail: str | dict[str, Any]
 
 
 CONFIDENCE_HIGH = 0.9
@@ -244,12 +285,19 @@ async def _try_db_location_answer(
     )
 
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post(
+    "/chat",
+    response_model=ChatResponse,
+    responses={
+        400: {"model": ChatErrorResponse},
+        500: {"model": ChatErrorResponse},
+    },
+)
 async def chat(
     req: ChatRequest,
     db: AsyncSession = Depends(get_db),

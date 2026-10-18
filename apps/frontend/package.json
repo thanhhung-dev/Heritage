@@ -11,7 +11,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "api:generate": "python ../backend/scripts/generate_frontend_api_types.py",
+    "api:check": "python ../backend/scripts/generate_frontend_api_types.py --check"
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.4",

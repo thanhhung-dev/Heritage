@@ -2,12 +2,17 @@
 
 import { useCallback, useState } from "react";
 import { XProvider } from "@ant-design/x";
+import { apiClient } from "@/config/api";
+import type { components } from "@/types/api.generated";
 import { ChatLanding } from "./components/ChatLanding";
 import { ChatView } from "./components/ChatView";
-import { CHAT_API_URL, CHAT_SUGGESTIONS } from "./config";
+import { CHAT_SUGGESTIONS } from "./config";
 import type { Message, Source } from "./types";
 import styles from "./chat.module.css";
 import { useHeritageTheme } from "./useHeritageTheme";
+
+type ChatRequest = components["schemas"]["ChatRequest"];
+type ChatResponse = components["schemas"]["ChatResponse"];
 
 export function ChatExperience() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,14 +39,11 @@ export function ChatExperience() {
       setLoading(true);
 
       try {
-        const response = await fetch(`${CHAT_API_URL}/api/chat`, {
+        const request: ChatRequest = { message: userMessage, use_rag: true };
+        const data = await apiClient<ChatResponse>("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: userMessage, use_rag: true }),
+          body: JSON.stringify(request),
         });
-        if (!response.ok) throw new Error("Chat request failed");
-
-        const data = await response.json();
 
         setMessages((currentMessages) => [
           ...currentMessages,
@@ -49,7 +51,15 @@ export function ChatExperience() {
             id: (Date.now() + 1).toString(),
             role: "assistant",
             content: data.answer,
-            sources: data.sources as Source[],
+            sources: (data.sources ?? []).map(
+              ({ text, doc, url, heading, chunk_id }): Source => ({
+                text: text ?? undefined,
+                doc: doc ?? undefined,
+                url: url ?? undefined,
+                heading: heading ?? undefined,
+                chunk_id: chunk_id ?? undefined,
+              }),
+            ),
             correctedFrom: data.corrected_from,
             correctedTo: data.corrected_to,
           },
