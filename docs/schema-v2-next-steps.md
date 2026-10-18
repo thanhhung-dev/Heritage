@@ -71,7 +71,7 @@ Các điểm sau vẫn còn trong file DBML hiện tại và cần xử lý, kh�
 
 - [ ] Thêm PostgreSQL vào `docker-compose.yml`, volume bền vững và healthcheck. Không công khai cổng database nếu không cần.
 - [ ] Cấu hình `DATABASE_URL` bằng môi trường; không commit mật khẩu. Cập nhật `.env.docker.example` bằng giá trị mẫu.
-- [ ] Thêm SQLAlchemy, driver PostgreSQL và Alembic theo cách quản lý dependency hiện tại của backend.
+- [ ] Thêm SQLAlchemy, driver PostgreSQL và Alembic theo cách quản lý dependency hiện tại của apps.backend.
 - [ ] Tạo migration đầu tiên từ schema đã chốt; không dùng tự động tạo bảng để thay thế lịch sử migration.
 - [ ] Thực thi CHECK cho role, loại entity/alias, confidence trong [0,1], rating trong {-1,1}, offset hợp lệ, thời lượng và kích thước không âm.
 - [ ] Thực thi CHECK citation có đúng một nguồn; kiểm tra JSONB là array trước khi áp dụng quy tắc số lượng nguồn.
@@ -84,7 +84,7 @@ Các điểm sau vẫn còn trong file DBML hiện tại và cần xử lý, kh�
 
 ## 5. P2: Import corpus và nguồn có cấu trúc
 
-- [ ] Đọc lại `backend/core/corpus.py`, `backend/core/kg.py` và các script ingestion trước khi viết importer; tái sử dụng quy tắc chunking hiện có.
+- [ ] Đọc lại `apps/backend/core/corpus.py`, `apps/backend/core/kg.py` và các script ingestion trước khi viết importer; tái sử dụng quy tắc chunking hiện có.
 - [ ] Import document, passage, entity, alias và quan hệ bằng khóa nguồn ổn định; chạy lại không sinh bản ghi trùng.
 - [ ] Lưu phiên bản corpus và ánh xạ ID cũ sang UUID để truy vết nguồn hiện tại.
 - [ ] Kiểm tra quote/offset với đúng văn bản gốc; lưu URL lấy từ metadata nguồn, không để LLM tạo URL.
@@ -97,7 +97,7 @@ Các điểm sau vẫn còn trong file DBML hiện tại và cần xử lý, kh�
 
 ## 6. P3: Nâng cấp luồng chatbot
 
-Các điểm tích hợp hiện có: `backend/core/fuzzy_match.py`, `backend/core/retriever.py`, `backend/core/rag.py`, `backend/api/chat.py`.
+Các điểm tích hợp hiện có: `apps/backend/core/fuzzy_match.py`, `apps/backend/core/retriever.py`, `apps/backend/core/rag.py`, `apps/backend/api/chat.py`.
 
 - [ ] Resolve theo thứ tự exact, normalized, alias rồi fuzzy; trả entity ID và danh sách ứng viên thay vì chỉ thay chuỗi tên.
 - [ ] Dùng chính entity ID đã chọn xuyên suốt retrieval và generation. Không sửa tên ở đầu ra nhưng vẫn truy vấn theo tên cũ.
@@ -117,7 +117,7 @@ Các điểm tích hợp hiện có: `backend/core/fuzzy_match.py`, `backend/cor
 - [ ] Thêm workflow draft/reviewed/published/withdrawn cho nội dung cần duyệt và ghi audit log.
 - [ ] Thiết kế session có hết hạn, thu hồi và cookie an toàn nếu dùng cookie; một token hash không tự cung cấp đầy đủ vòng đời session.
 - [ ] Xác định thời gian giữ/xóa chat, feedback và IP hash. Không dùng IP hash làm danh tính hoặc bằng chứng xác thực người dùng.
-- [ ] Ghi thời gian retrieval/generation, intent, entity đã chọn, phiên bản corpus/model và lý do từ chối; tránh log token, mật khẩu hoặc dữ liệu cá nhân không cần thiết.
+- [ ] Ghi thời gian retripipelines/evaluation/generation, intent, entity đã chọn, phiên bản corpus/model và lý do từ chối; tránh log token, mật khẩu hoặc dữ liệu cá nhân không cần thiết.
 
 **Điều kiện hoàn thành:** đường ghi được bảo vệ, thay đổi có người chịu trách nhiệm và có thể điều tra câu trả lời sai theo phiên bản dữ liệu.
 
@@ -136,7 +136,7 @@ Các điểm tích hợp hiện có: `backend/core/fuzzy_match.py`, `backend/cor
 
 ## 9. Kiểm thử và chuyển đổi
 
-- [ ] Chạy bộ kiểm thử hiện có, đặc biệt `backend/tests/test_retriever_regressions.py`, trước khi sửa luồng truy vấn để chốt baseline.
+- [ ] Chạy bộ kiểm thử hiện có, đặc biệt `apps/backend/tests/test_retriever_regressions.py`, trước khi sửa luồng truy vấn để chốt baseline.
 - [ ] Thêm test cho “Cung An Định ở đâu?”, “cung an dinh o dau”, “lăng an định ở đâu”, tên trùng, tên không tồn tại và nguồn không có địa chỉ.
 - [ ] Thêm test địa chỉ lịch sử/hiện tại, passage không thuộc document, citation mồ côi, alias trùng giữa nhiều entity và import chạy hai lần.
 - [ ] Kiểm tra lời chào, yêu cầu làm rõ và user message lưu được mà không có citation.

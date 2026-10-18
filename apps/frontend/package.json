@@ -1,0 +1,36 @@
+{
+  "name": "Heritage-FE",
+  "version": "0.1.0",
+  "engines": {
+    "node": "20.19.3",
+    "npm": "10.8.2"
+  },
+  "packageManager": "npm@10.8.2",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "api:generate": "python ../backend/scripts/generate_frontend_api_types.py",
+    "api:check": "python ../backend/scripts/generate_frontend_api_types.py --check"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "@ant-design/x": "^2.9.0",
+    "@assistant-ui/react": "^0.15.18",
+    "@assistant-ui/react-ai-sdk": "^1.4.9",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
+    "antd": "^6.6.2",
+    "next": "14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.0.0"
+  }
+}
