@@ -101,6 +101,17 @@ Với GraphRAG 3.3.0, report ID trong context là **community ID**, không phả
 
 Trong Langfuse, xem `graphrag.request` → `graphrag.global_search`: câu hỏi, response, snapshot ID, community level, số report/nguồn và thời gian worker. `OBSERVABILITY_CONTENT_CAPTURE` vẫn kiểm soát nội dung. MVP này **chưa xuất từng lượt map/reduce, token usage hay chi phí bên trong subprocess** sang Langfuse. Không mặc định đây là trace generation chi tiết như luồng hybrid.
 
+## Kiểm thử tích hợp
+
+Hai môi trường có bộ kiểm thử riêng, không cần gọi model:
+
+```bash
+LANGFUSE_ENABLED=false .venv/bin/python -m unittest apps.backend.tests.test_microsoft_graphrag
+.venv-graphrag/bin/python -m unittest pipelines.graph.test_microsoft_graphrag
+```
+
+Bộ đầu kiểm tra export, provenance, API, virtualenv isolation, lỗi subprocess, timeout và snapshot bị sửa. Bộ thứ hai dùng cấu hình, kiểu kết quả workflow và Parquet của SDK thật, nhưng stub lời gọi indexing/search để kiểm tra adapter độc lập với chất lượng LLM. Chúng không thay cho lần chạy index/query thật trên dữ liệu R2.
+
 ## Nguồn API
 
 - [Microsoft GraphRAG v3.3.0](https://github.com/microsoft/graphrag/releases/tag/v3.3.0)
