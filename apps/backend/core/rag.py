@@ -27,7 +27,7 @@ REQUIRE_EVIDENCE_FOR_NAMED = True
 REQUIRE_SUBJECT_EVIDENCE = True
 REQUIRE_KNOWN_ADMIN = True
 
-CONTEXT_MAX_CHARS = 2200
+CONTEXT_MAX_CHARS = 4800
 MAX_CONTEXT_CHUNKS = 2
 
 SECOND_DOC_RATIO = 0.75
@@ -122,11 +122,8 @@ def evidence_context(evidence, query: RetrievalQuery) -> str:
         if 'location' in query.intent and query.subject:
             content = ' '.join(location_sentences(content, query))
         elif 'relation' in query.intent:
-            sentences = re.split(r'(?<=[.!?])\s+|\n+', content)
-            relevant = [s for s in sentences if any(
-                contains_name(strip_accents(s), alias) for alias in query.aliases
-            )]
-            content = ' '.join(relevant) or content
+            # Later sentences can refer to the subject as "Chúa", "ông" or
+            # "nhà vua". Keep their context for both reranking and generation.
             if item.location_note and any(
                 contains_name(strip_accents(item.location_note), alias) for alias in query.aliases
             ):
