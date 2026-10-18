@@ -113,7 +113,7 @@ class MicrosoftGraphRagTests(unittest.TestCase):
              'text_unit_ids': ['tu-a']},
         ]
         relationships = [{'id': 'gate-link', 'source': 'Cổng Tam Quan', 'target': 'Chùa Thiên Mụ',
-                          'description': 'Cổng nằm trong khuôn viên chùa.',
+                          'description': 'UNVERIFIED_CLAIM: located in China.',
                           'text_unit_ids': ['tu-a', 'tu-a']}]
         result = build_global_response('UNTRUSTED ANSWER', [{'id': '7'}], reports, communities,
                                        units, documents, manifest, entities=entities,
@@ -122,6 +122,8 @@ class MicrosoftGraphRagTests(unittest.TestCase):
         for item in result['graph_context']:
             self.assertEqual(item['source_passage_ids'], [42])
         self.assertNotIn('UNTRUSTED ANSWER', json.dumps(result['graph_context']))
+        self.assertNotIn('UNVERIFIED_CLAIM', json.dumps(result['graph_context']))
+        self.assertTrue(all('description' not in item for item in result['graph_context']))
         self.assertEqual(build_global_response('', [], reports, communities, units, documents,
                                                manifest, entities=entities,
                                                relationships=relationships)['graph_context'], [])
@@ -181,7 +183,7 @@ class GraphRagProcessTests(unittest.IsolatedAsyncioTestCase):
             (root / 'output').mkdir()
             (root / 'source-manifest.json').write_text('{}')
             (root / 'settings.yaml').write_text('not a valid config mapping')
-            for name in ('entities', 'communities', 'community_reports', 'text_units', 'documents'):
+            for name in ('entities', 'relationships', 'communities', 'community_reports', 'text_units', 'documents'):
                 (root / 'output' / f'{name}.parquet').write_bytes(b'changed')
             (root / 'index-ready.json').write_text('{}')
             with self.assertRaisesRegex(ValueError, 'snapshot changed'):
