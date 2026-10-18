@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from apps.backend.api import chat, health, heritage
+from apps.backend.api import chat, graphrag, health, heritage
 from apps.backend.core.assets import configure_asset_policy
 from apps.backend.core.config import cors_origins, validate_startup_config
 from apps.backend.core.observability import (
@@ -55,6 +55,7 @@ app.middleware("http")(correlation_middleware)
 app.include_router(health.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(heritage.router, prefix="/api")
+app.include_router(graphrag.router, prefix="/api")
 
 
 @app.get("/internal/metrics", include_in_schema=False)
