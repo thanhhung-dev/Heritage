@@ -1,17 +1,16 @@
-"""Pydantic schemas for authentication API.
+"""Pydantic schemas for authentication endpoints."""
 
-Request/response models for registration, login, and user info endpoints.
-"""
 from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class RegisterRequest(BaseModel):
-    """Request body for user registration."""
-    email: EmailStr = Field(..., description="User email address")
-    username: str = Field(..., min_length=3, max_length=50, description="Unique username")
-    password: str = Field(..., min_length=6, description="Plain text password (will be hashed)")
+    """Request schema for user registration."""
+    
+    email: EmailStr = Field(..., description="Email address")
+    username: str = Field(..., min_length=3, max_length=50, description="Username")
+    password: str = Field(..., min_length=8, description="Password (minimum 8 characters)")
     
     @field_validator("username")
     @classmethod
@@ -23,40 +22,51 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """Request body for user login."""
+    """Request schema for user login."""
+    
     username_or_email: str = Field(..., description="Username or email address")
-    password: str = Field(..., description="Plain text password")
+    password: str = Field(..., description="Password")
 
 
-class UserPayload(BaseModel):
-    """User information payload in auth responses."""
-    id: int
-    email: str
-    username: str
-    role: str
-
-
-class AuthResponse(BaseModel):
-    """Response body for successful authentication."""
-    access_token: str
-    token_type: str = "bearer"
-    user: UserPayload
+class UserResponse(BaseModel):
+    """User information in responses."""
+    
+    account_id: str = Field(..., description="Account UUID")
+    email: str = Field(..., description="Email address")
+    username: str = Field(..., description="Username")
+    role: str = Field(default="user", description="User role")
 
 
 class RegisterResponse(BaseModel):
-    """Response body for successful registration."""
-    message: str
-    account_id: int
-    email: str
-    username: str
+    """Response schema for successful registration."""
+    
+    account_id: str = Field(..., description="Account UUID")
+    email: str = Field(..., description="Email address")
+    username: str = Field(..., description="Username")
+    message: str = Field(default="Đăng ký thành công", description="Success message")
 
 
-class UserMeResponse(BaseModel):
-    """Response body for GET /api/auth/me endpoint."""
-    id: int
-    email: str
-    username: str
-    role: str
-    is_active: bool
-    profile: dict | None = None
-    consent: dict | None = None
+class LoginResponse(BaseModel):
+    """Response schema for successful login."""
+    
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(default="bearer", description="Token type")
+    user: UserResponse = Field(..., description="User information")
+
+
+class GoogleAuthRequest(BaseModel):
+    """Request schema for Google OAuth authentication."""
+    
+    id_token: str = Field(..., description="Google ID token from OAuth flow")
+
+
+class FacebookAuthRequest(BaseModel):
+    """Request schema for Facebook OAuth authentication."""
+    
+    access_token: str = Field(..., description="Facebook access token from OAuth flow")
+
+
+class ErrorResponse(BaseModel):
+    """Error response schema."""
+    
+    detail: str = Field(..., description="Error message")

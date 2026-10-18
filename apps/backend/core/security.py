@@ -1,75 +1,55 @@
-"""Security utilities for authentication and authorization.
+"""Security utilities for password hashing and JWT token management."""
 
-Provides password hashing with bcrypt and JWT token management.
-"""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import bcrypt
-from jose import JWTError, jwt
+import jwt
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-# JWT configuration
-SECRET_KEY = "heritage-capstone-secret-key-2026"
+# JWT Configuration
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+# Password hasher using argon2id
+ph = PasswordHasher()
+
+# HTTP Bearer scheme for JWT
+bearer_scheme = HTTPBearer()
 
 
 def hash_password(password: str) -> str:
-    """Hash a plain text password using bcrypt.
+    """Hash a password using argon2id.
     
     Args:
-        password: Plain text password to hash
+        password: Plain text password
         
     Returns:
-        Bcrypt hashed password string
-        
-    Note:
-        Bcrypt has a maximum password length of 72 bytes.
-        Passwords longer than this are truncated automatically.
+        Hashed password string
     """
-    # Convert password to UTF-8 bytes
-    pwd_bytes = password.encode('utf-8')
-    
-    # Bcrypt limitation: maximum 72 bytes
-    if len(pwd_bytes) > 72:
-        pwd_bytes = pwd_bytes[:72]
-    
-    # Generate salt and hash password
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd_bytes, salt)
-    
-    # Return as UTF-8 string
-    return hashed.decode('utf-8')
+    return ph.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain text password against a hashed password.
+    """Verify a password against its hash.
     
     Args:
         plain_password: Plain text password to verify
-        hashed_password: Bcrypt hashed password from database
+        hashed_password: Hashed password to compare against
         
     Returns:
         True if password matches, False otherwise
     """
     try:
-        # Convert plain password to UTF-8 bytes
-        pwd_bytes = plain_password.encode('utf-8')
-        
-        # Truncate to 72 bytes (bcrypt limitation)
-        if len(pwd_bytes) > 72:
-            pwd_bytes = pwd_bytes[:72]
-        
-        # Convert hashed password to bytes
-        hashed_bytes = hashed_password.encode('utf-8')
-        
-        # Verify password
-        return bcrypt.checkpw(pwd_bytes, hashed_bytes)
-        
-    except Exception:
-        # Return False if any error occurs during verification
+        ph.verify(hashed_password, plain_password)
+        return True
+    except VerifyMismatchError:
         return False
 
 
@@ -78,35 +58,75 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
     
     Args:
         data: Dictionary of claims to encode in the token
-        expires_delta: Optional custom expiration time delta
+        expires_delta: Optional custom expiration time
         
     Returns:
         Encoded JWT token string
     """
     to_encode = data.copy()
-    
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    
     return encoded_jwt
 
 
-def verify_token(token: str) -> dict[str, Any] | None:
-    """Verify and decode a JWT token.
+def decode_access_token(token: str) -> dict[str, Any]:
+    """Decode and verify a JWT access token.
     
     Args:
-        token: JWT token string to verify
+        token: JWT token string to decode
         
     Returns:
-        Decoded token payload if valid, None if invalid or expired
+        Dictionary of decoded claims
+        
+    Raises:
+        HTTPException: If token is invalid or expired
     """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
-        return None
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token đã hết hạn",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không hợp lệ",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> dict[str, Any]:
+    """Dependency to get current authenticated user from JWT token.
+    
+    Args:
+        credentials: HTTP Bearer credentials with JWT token
+        
+    Returns:
+        Dictionary containing user information from token
+        
+    Raises:
+        HTTPException: If token is missing or invalid
+    """
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    
+    # Verify required claims
+    account_id = payload.get("sub")
+    if account_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không hợp lệ",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return payload
