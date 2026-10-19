@@ -1,14 +1,40 @@
 "use client";
 
-import { useId, useRef, useState, type FormEvent } from "react";
-import { Alert, Button, Card, Input, Result, type InputRef } from "antd";
+import { useId, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRightOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { Alert, Button, Input, type InputRef } from "antd";
+import logo from "@/access/icons/auth-logo.svg";
 import { forgotPassword } from "@/services/authService";
-import styles from "./auth.module.css";
+
+const ORANGE = "#f97316";
+
+const inputStyle: CSSProperties = {
+  backgroundColor: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "6px",
+  height: "44px",
+  fontSize: "14px",
+  color: "#1f2937",
+  boxShadow: "none",
+};
+
+const buttonStyle: CSSProperties = {
+  backgroundColor: ORANGE,
+  border: "none",
+  borderRadius: "6px",
+  height: "44px",
+  color: "#ffffff",
+  fontWeight: 500,
+  fontSize: "14px",
+  width: "100%",
+  boxShadow: "none",
+};
 
 function emailError(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "Nhập địa chỉ email của bạn.";
-  // Strict email validation as requested
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Vui lòng nhập đúng định dạng email (VD: abc@gmail.com)!";
   return "";
 }
@@ -28,20 +54,24 @@ export function ForgotPasswordForm() {
     event.preventDefault();
     setTouched(true);
     setApiError(""); // Clear previous API errors
-    
+
     if (emailError(email)) {
       emailRef.current?.focus();
       return;
     }
-    
+
     setSubmitting(true);
     try {
-      const response = await forgotPassword(email.trim());
+      await forgotPassword(email.trim());
       setSubmittedEmail(email.trim()); // Store the email for success display
       setSubmitted(true);
     } catch (err: any) {
       // Extract specific error message from API response
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
       setApiError(errorMessage);
       console.error("Forgot password failed:", err);
     } finally {
@@ -51,90 +81,108 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <div className={styles.form}>
-        <Card
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-            padding: "16px"
-          }}
-          bodyStyle={{ padding: "24px" }}
-        >
-          <Result
-            status="success"
-            title={
-              <span style={{ 
-                color: "#111827", 
-                fontWeight: 700, 
-                fontSize: "22px",
-                display: "block",
-                marginBottom: "12px"
-              }}>
-                Yêu cầu đã được gửi thành công!
-              </span>
-            }
-            subTitle={
-              <div style={{ 
-                color: "#374151", 
-                fontSize: "15px", 
-                lineHeight: 1.6,
-                textAlign: "left"
-              }}>
-                <p style={{ marginBottom: "16px" }}>
-                  Hướng dẫn khôi phục mật khẩu đã được gửi đến địa chỉ email: <strong style={{ color: "#ea580c", fontWeight: 600 }}>{submittedEmail}</strong>
-                </p>
-                <p style={{ marginBottom: "16px" }}>
-                  Vui lòng kiểm tra hòm thư và làm theo hướng dẫn để đặt lại mật khẩu của bạn.
-                </p>
-                <div style={{
-                  backgroundColor: "#f9fafb",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                  padding: "12px 16px",
-                  marginTop: "16px"
-                }}>
-                  <p style={{ 
-                    margin: 0, 
-                    fontSize: "14px",
-                    color: "#374151"
-                  }}>
-                    <strong>💡 Lưu ý:</strong> Vui lòng kiểm tra cả hòm thư Thư rác / Spam nếu không thấy email trong Hộp thư đến.
-                  </p>
-                </div>
-              </div>
-            }
-            style={{
-              padding: "0"
-            }}
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          paddingTop: "6vh",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: "400px", padding: "0 20px", textAlign: "center" }}>
+          <Image
+            src={logo}
+            alt="Heritage"
+            style={{ height: 32, width: "auto", marginBottom: 40 }}
+            width={103}
+            height={32}
+            priority
           />
-        </Card>
+
+          <CheckCircleOutlined style={{ fontSize: 48, color: "#22c55e", marginBottom: 20 }} />
+
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#374151", margin: "0 0 12px" }}>
+            Check your email
+          </h1>
+
+          <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 24px", lineHeight: 1.6 }}>
+            We sent a password reset link to{" "}
+            <strong style={{ color: "#ea580c", fontWeight: 600 }}>{submittedEmail}</strong>
+          </p>
+
+          <div
+            style={{
+              backgroundColor: "#f9fafb",
+              border: "1px solid #e5e7eb",
+              borderRadius: 6,
+              padding: "12px 16px",
+              marginBottom: 24,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>
+              Didn&apos;t receive the email? Check your spam folder.
+            </p>
+          </div>
+
+          <Link href="/sign-in" style={{ textDecoration: "none" }}>
+            <Button type="primary" style={buttonStyle}>
+              Back to Log in
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} noValidate className={styles.form}>
-      {apiError && (
-        <Alert
-          showIcon
-          type="error"
-          message={apiError}
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #ffccc7",
-            color: "#cf1322",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.08)"
-          }}
-          closable
-          onClose={() => setApiError("")}
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#ffffff",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        paddingTop: "6vh",
+      }}
+    >
+      <form onSubmit={submit} noValidate style={{ width: "100%", maxWidth: "400px", padding: "0 20px" }}>
+        <Image
+          src={logo}
+          alt="Heritage"
+          style={{ display: "block", height: 32, width: "auto", margin: "0 auto 40px" }}
+          width={103}
+          height={32}
+          priority
         />
-      )}
-      <div className={styles.field}>
-        <label htmlFor={`${id}-email`}>Địa chỉ email</label>
+
+        <h1 style={{ textAlign: "center", fontSize: 24, fontWeight: 600, color: "#374151", margin: "0 0 24px" }}>
+          Reset Password
+        </h1>
+
+        <p style={{ textAlign: "left", fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>
+          We&apos;ll email you a password reset link
+        </p>
+
+        {apiError && (
+          <Alert
+            showIcon
+            type="error"
+            message={apiError}
+            style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #fecaca",
+              color: "#dc2626",
+              borderRadius: 6,
+              marginBottom: 16,
+              textAlign: "left",
+            }}
+            closable
+            onClose={() => setApiError("")}
+          />
+        )}
+
         <Input
           ref={emailRef}
           id={`${id}-email`}
@@ -144,26 +192,26 @@ export function ForgotPasswordForm() {
           autoCapitalize="none"
           spellCheck={false}
           required
-          className={styles.input}
+          placeholder="email@example.com"
           value={email}
           aria-invalid={Boolean(error)}
-          aria-describedby={`${id}-email-error`}
           onChange={event => setEmail(event.target.value)}
           onBlur={() => setTouched(true)}
+          style={{ ...inputStyle, marginBottom: 24 }}
         />
-        <p className={styles.error} id={`${id}-email-error`} aria-live="polite">{error}</p>
-      </div>
-      <div className={styles.actions}>
+
         <Button
           htmlType="submit"
           type="primary"
-          className={styles.submit}
+          icon={<ArrowRightOutlined />}
+          iconPosition="end"
           disabled={!email.trim() || submitting}
           loading={submitting}
+          style={buttonStyle}
         >
-          Gửi link khôi phục
+          Start Reset Password
         </Button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }

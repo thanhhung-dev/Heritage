@@ -1,27 +1,52 @@
 "use client";
 
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import authEye from "@/access/icons/auth-eye.svg";
-import { Alert, Button, Card, Input, Result, type InputRef } from "antd";
+import { ArrowRightOutlined, CheckCircleOutlined, EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
+import { Alert, Button, Input, type InputRef } from "antd";
+import logo from "@/access/icons/auth-logo.svg";
 import { resetPassword } from "@/services/authService";
-import styles from "./auth.module.css";
+
+const ORANGE = "#f97316";
+
+const inputStyle: CSSProperties = {
+  backgroundColor: "#ffffff",
+  border: "1px solid #5a6a88",
+  borderRadius: "6px",
+  height: "44px",
+  fontSize: "14px",
+  color: "#1f2937",
+  fontWeight: 500,
+  boxShadow: "none",
+};
+
+const buttonStyle: CSSProperties = {
+  backgroundColor: ORANGE,
+  border: "none",
+  borderRadius: "6px",
+  height: "44px",
+  color: "#ffffff",
+  fontWeight: 500,
+  fontSize: "14px",
+  width: "100%",
+  boxShadow: "none",
+};
 
 function validatePassword(value: string): string {
   if (!value) return "Nhập mật khẩu mới.";
   if (value.length < 12) return "Mật khẩu phải có ít nhất 12 ký tự.";
-  
+
   const hasUpper = /[A-Z]/.test(value);
   const hasLower = /[a-z]/.test(value);
   const hasDigit = /[0-9]/.test(value);
   const hasSpecial = /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(value);
-  
+
   if (!hasUpper) return "Mật khẩu phải có ít nhất một chữ hoa.";
   if (!hasLower) return "Mật khẩu phải có ít nhất một chữ thường.";
   if (!hasDigit) return "Mật khẩu phải có ít nhất một số.";
   if (!hasSpecial) return "Mật khẩu phải có ít nhất một ký tự đặc biệt.";
-  
+
   return "";
 }
 
@@ -30,50 +55,52 @@ export function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  
+
   const newPasswordRef = useRef<InputRef>(null);
   const confirmPasswordRef = useRef<InputRef>(null);
-  
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [visibleNew, setVisibleNew] = useState(false);
-  const [visibleConfirm, setVisibleConfirm] = useState(false);
   const [touched, setTouched] = useState({ newPassword: false, confirmPassword: false });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [apiError, setApiError] = useState("");
-  
+
   const newPasswordError = touched.newPassword ? validatePassword(newPassword) : "";
-  const confirmPasswordError = touched.confirmPassword && newPassword !== confirmPassword 
-    ? "Mật khẩu xác nhận không khớp." 
+  const confirmPasswordError = touched.confirmPassword && newPassword !== confirmPassword
+    ? "Mật khẩu xác nhận không khớp."
     : "";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTouched({ newPassword: true, confirmPassword: true });
     setApiError("");
-    
+
     if (!token) {
       setApiError("Token không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.");
       return;
     }
-    
+
     if (validatePassword(newPassword)) {
       newPasswordRef.current?.focus();
       return;
     }
-    
+
     if (newPassword !== confirmPassword) {
       confirmPasswordRef.current?.focus();
       return;
     }
-    
+
     setSubmitting(true);
     try {
       await resetPassword(token, newPassword);
       setSubmitted(true);
     } catch (err: any) {
-      const errorMessage = err?.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại sau.";
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Đặt lại mật khẩu thất bại. Vui lòng thử lại sau.";
       setApiError(errorMessage);
       console.error("Reset password failed:", err);
     } finally {
@@ -83,180 +110,158 @@ export function ResetPasswordForm() {
 
   if (submitted) {
     return (
-      <div className={styles.form}>
-        <Card
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
-            padding: "16px"
-          }}
-          bodyStyle={{ padding: "24px" }}
-        >
-          <Result
-            status="success"
-            title={
-              <span style={{ 
-                color: "#111827", 
-                fontWeight: 700, 
-                fontSize: "22px",
-                display: "block",
-                marginBottom: "12px"
-              }}>
-                Đặt lại mật khẩu thành công!
-              </span>
-            }
-            subTitle={
-              <div style={{ 
-                color: "#374151", 
-                fontSize: "15px", 
-                lineHeight: 1.6,
-                textAlign: "left"
-              }}>
-                <p style={{ margin: 0 }}>
-                  Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập lại bằng mật khẩu mới.
-                </p>
-              </div>
-            }
-            style={{
-              padding: "0"
-            }}
-            extra={
-              <Button
-                type="primary"
-                className={styles.submit}
-                style={{ width: "100%" }}
-                onClick={() => router.push("/sign-in")}
-              >
-                Đăng nhập ngay
-              </Button>
-            }
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          paddingTop: "6vh",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: "400px", padding: "0 20px", textAlign: "center" }}>
+          <Image
+            src={logo}
+            alt="Heritage"
+            style={{ height: 32, width: "auto", marginBottom: 40 }}
+            width={103}
+            height={32}
+            priority
           />
-        </Card>
-      </div>
-    );
-  }
 
-  if (!token) {
-    return (
-      <div className={styles.form}>
-        <Alert
-          showIcon
-          type="error"
-          message="Token không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới."
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #ffccc7",
-            color: "#cf1322",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.08)"
-          }}
-        />
+          <CheckCircleOutlined style={{ fontSize: 48, color: "#22c55e", marginBottom: 20 }} />
+
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#374151", margin: "0 0 24px" }}>
+            Password Reset Successfully!
+          </h1>
+
+          <Button
+            type="primary"
+            style={buttonStyle}
+            onClick={() => router.push("/sign-in")}
+          >
+            Log In Now
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} noValidate className={styles.form}>
-      {apiError && (
-        <Alert
-          showIcon
-          type="error"
-          message={apiError}
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #ffccc7",
-            color: "#cf1322",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.08)"
-          }}
-          closable
-          onClose={() => setApiError("")}
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#ffffff",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        paddingTop: "6vh",
+      }}
+    >
+      <form onSubmit={submit} noValidate style={{ width: "100%", maxWidth: "400px", padding: "0 20px" }}>
+        <Image
+          src={logo}
+          alt="Heritage"
+          style={{ display: "block", height: 32, width: "auto", margin: "0 auto 40px" }}
+          width={103}
+          height={32}
+          priority
         />
-      )}
-      <div className={styles.field}>
-        <label htmlFor={`${id}-new-password`}>Mật khẩu mới</label>
-        <div className={styles.passwordField}>
-          <Input
-            ref={newPasswordRef}
-            id={`${id}-new-password`}
-            name="new-password"
-            type={visibleNew ? "text" : "password"}
-            autoComplete="new-password"
-            required
-            className={styles.input}
-            value={newPassword}
-            aria-invalid={Boolean(newPasswordError)}
-            aria-describedby={`${id}-new-password-error`}
-            onChange={event => setNewPassword(event.target.value)}
-            onBlur={() => setTouched(prev => ({ ...prev, newPassword: true }))}
+
+        <h1 style={{ textAlign: "center", fontSize: 24, fontWeight: 600, color: "#374151", margin: "0 0 24px" }}>
+          Reset Password
+        </h1>
+
+        {apiError && (
+          <Alert
+            showIcon
+            type="error"
+            message={apiError}
+            style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #fecaca",
+              color: "#dc2626",
+              borderRadius: 6,
+              marginBottom: 16,
+              textAlign: "left",
+            }}
+            closable
+            onClose={() => setApiError("")}
           />
-          <button
-            type="button"
-            className={styles.eye}
-            aria-label={visibleNew ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-            aria-pressed={visibleNew}
-            onClick={() => setVisibleNew(prev => !prev)}
-          >
-            <Image src={authEye} alt="" aria-hidden="true" width={24} height={24} />
-          </button>
-        </div>
-        <p className={styles.error} id={`${id}-new-password-error`} aria-live="polite">
-          {newPasswordError}
-        </p>
-      </div>
-      
-      <div className={styles.field}>
-        <label htmlFor={`${id}-confirm-password`}>Xác nhận mật khẩu</label>
-        <div className={styles.passwordField}>
-          <Input
-            ref={confirmPasswordRef}
-            id={`${id}-confirm-password`}
-            name="confirm-password"
-            type={visibleConfirm ? "text" : "password"}
-            autoComplete="new-password"
-            required
-            className={styles.input}
-            value={confirmPassword}
-            aria-invalid={Boolean(confirmPasswordError)}
-            aria-describedby={`${id}-confirm-password-error`}
-            onChange={event => setConfirmPassword(event.target.value)}
-            onBlur={() => setTouched(prev => ({ ...prev, confirmPassword: true }))}
-          />
-          <button
-            type="button"
-            className={styles.eye}
-            aria-label={visibleConfirm ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-            aria-pressed={visibleConfirm}
-            onClick={() => setVisibleConfirm(prev => !prev)}
-          >
-            <Image src={authEye} alt="" aria-hidden="true" width={24} height={24} />
-          </button>
-        </div>
-        <p className={styles.error} id={`${id}-confirm-password-error`} aria-live="polite">
-          {confirmPasswordError}
-        </p>
-      </div>
-      
-      <p style={{ margin: "4px 0 0", fontSize: "11px", lineHeight: "18px", color: "var(--auth-label)" }}>
-        <strong>Lưu ý:</strong> Mật khẩu phải có ít nhất 12 ký tự. Bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
-      </p>
-      
-      <div className={styles.actions}>
+        )}
+
+        <Input.Password
+          ref={newPasswordRef}
+          id={`${id}-new-password`}
+          name="new-password"
+          placeholder="New Password"
+          autoComplete="new-password"
+          required
+          status={newPasswordError ? "error" : undefined}
+          value={newPassword}
+          aria-invalid={Boolean(newPasswordError)}
+          iconRender={visible =>
+            visible ? (
+              <EyeOutlined style={{ color: "#4b5563", fontSize: 16 }} />
+            ) : (
+              <EyeInvisibleOutlined style={{ color: "#4b5563", fontSize: 16 }} />
+            )
+          }
+          onChange={event => setNewPassword(event.target.value)}
+          onBlur={() => setTouched(prev => ({ ...prev, newPassword: true }))}
+          style={{ ...inputStyle, marginBottom: 12 }}
+        />
+
+        <Input.Password
+          ref={confirmPasswordRef}
+          id={`${id}-confirm-password`}
+          name="confirm-password"
+          placeholder="Confirm Password"
+          autoComplete="new-password"
+          required
+          status={confirmPasswordError ? "error" : undefined}
+          value={confirmPassword}
+          aria-invalid={Boolean(confirmPasswordError)}
+          iconRender={visible =>
+            visible ? (
+              <EyeOutlined style={{ color: "#4b5563", fontSize: 16 }} />
+            ) : (
+              <EyeInvisibleOutlined style={{ color: "#4b5563", fontSize: 16 }} />
+            )
+          }
+          onChange={event => setConfirmPassword(event.target.value)}
+          onBlur={() => setTouched(prev => ({ ...prev, confirmPassword: true }))}
+          style={{ ...inputStyle, marginBottom: 16 }}
+        />
+
         <Button
           htmlType="submit"
           type="primary"
-          className={styles.submit}
+          icon={<ArrowRightOutlined />}
+          iconPosition="end"
           disabled={!newPassword || !confirmPassword || submitting}
           loading={submitting}
+          style={buttonStyle}
         >
-          Đặt lại mật khẩu
+          Reset Password
         </Button>
-      </div>
-    </form>
+
+        <p
+          style={{
+            textAlign: "center",
+            fontSize: "12px",
+            color: "#9ca3af",
+            marginTop: "24px",
+            lineHeight: "1.6",
+            padding: "0 16px",
+          }}
+        >
+          Note: Password must contain at least 12 characters. Combination of symbols, numbers, uppercase
+          letters, lowercase letters.
+        </p>
+      </form>
+    </div>
   );
 }
 
