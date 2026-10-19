@@ -13,7 +13,7 @@ import httpx
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
-from apps.backend.db.import_structured import validate_package
+from pipelines.ingestion.package import validate_package
 from pipelines.ingestion.ingest_r2 import IngestionError, main, run_ingestion
 
 

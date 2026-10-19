@@ -20,16 +20,11 @@ class GraphRagSdkTests(unittest.IsolatedAsyncioTestCase):
         import pandas as pd
         from graphrag.index.typing.pipeline_run_result import PipelineRunResult
 
-        class Store:
-            bucket = 'test'
-
-            def read_text(self, key, digest):
-                return 'Chùa Thiên Mụ ở Huế.'
-
         previous = Path.cwd()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'snapshot'
-            export_snapshot([{'id': 42, 'object_key': 'key42', 'content_hash': 'h42'}], Store(), root)
+            export_snapshot([{'id': 42, 'object_key': 'key42', 'content_hash': 'h42',
+                              'bucket': 'test', 'text': 'Chùa Thiên Mụ ở Huế.'}], root)
             try:
                 failed = PipelineRunResult(workflow='extract_graph', result=None, state={},
                                            error=RuntimeError('extraction failed'))

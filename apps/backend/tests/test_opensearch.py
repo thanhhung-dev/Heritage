@@ -77,7 +77,8 @@ class OpenSearchIntegrationTests(unittest.IsolatedAsyncioTestCase):
         second = await self.store.export_passages(10)
         self.assertEqual({r['id'] for r in first}, {r['id'] for r in second})
         self.assertEqual(len(second), 2)
-        with patch('apps.backend.core.storage.R2PassageStore', side_effect=AssertionError('no R2')):
+        with patch.dict(os.environ, {'DATABASE_URL': '', 'R2_ENDPOINT_URL': '',
+                                    'R2_ACCESS_KEY_ID': '', 'R2_SECRET_ACCESS_KEY': ''}):
             repo = PassageRepository(self.store, embedder=vectors)
             for question in ('Chùa Thiên Mụ xây năm nào?', 'chua thien mu xay nam nao?'):
                 result = await repo.search_evidence(question, limit=1)

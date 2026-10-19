@@ -23,24 +23,19 @@ class MicrosoftGraphRagTests(unittest.TestCase):
                  'content_hash': 'hash', 'location_note': 'Chùa Thiên Mụ'}]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'snapshot'
-            export_snapshot(rows, None, root)
+            export_snapshot(rows, root)
             self.assertEqual((root / 'input/passage-PSG-example.txt').read_text(), rows[0]['text'])
             manifest = json.loads((root / 'source-manifest.json').read_text())
             self.assertEqual(manifest['documents']['passage-PSG-example.txt']['passage_id'], 'PSG-example')
 
     def test_export_preserves_passage_identity_and_refuses_overwrite(self):
         rows = [{'id': 42, 'object_key': 'processed/passages/hash.json',
-                 'content_hash': 'hash', 'location_note': 'Chùa Thiên Mụ'}]
-
-        class Store:
-            bucket = 'knowledge'
-
-            def read_text(self, key, digest):
-                return 'Chùa Thiên Mụ nằm ở Huế.'
+                 'content_hash': 'hash', 'location_note': 'Chùa Thiên Mụ',
+                 'text': 'Chùa Thiên Mụ nằm ở Huế.', 'bucket': 'knowledge'}]
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'snapshot'
-            export_snapshot(rows, Store(), root)
+            export_snapshot(rows, root)
             self.assertEqual((root / 'input/passage-42.txt').read_text(),
                              'Chùa Thiên Mụ nằm ở Huế.')
             manifest = json.loads((root / 'source-manifest.json').read_text())
@@ -50,20 +45,17 @@ class MicrosoftGraphRagTests(unittest.TestCase):
             self.assertEqual(source['bucket'], 'knowledge')
             self.assertTrue((root / 'settings.yaml').is_file())
             with self.assertRaises(FileExistsError):
-                export_snapshot(rows, Store(), root)
+                export_snapshot(rows, root)
             self.assertEqual(json.loads((root / 'source-manifest.json').read_text()), manifest)
 
-    def test_failed_source_read_does_not_publish_partial_snapshot(self):
-        class Store:
-            bucket = 'knowledge'
-
-            def read_text(self, key, digest):
-                raise ValueError('checksum mismatch')
-
+    def test_incomplete_source_does_not_publish_partial_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'snapshot'
-            with self.assertRaises(ValueError):
-                export_snapshot([{'id': 5, 'object_key': 'bad', 'content_hash': 'bad'}], Store(), root)
+            with self.assertRaises(KeyError):
+                export_snapshot([
+                    {'id': 4, 'text': 'Valid chunk.', 'content_hash': 'hash'},
+                    {'id': 5, 'object_key': 'bad', 'content_hash': 'bad'},
+                ], root)
             self.assertFalse(root.exists())
             self.assertEqual(list(Path(directory).iterdir()), [])
 

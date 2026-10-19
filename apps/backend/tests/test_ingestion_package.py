@@ -1,8 +1,7 @@
 import unittest
-from unittest.mock import AsyncMock
 
-from apps.backend.db.import_structured import (
-    PackageValidationError, import_package, validate_package,
+from pipelines.ingestion.package import (
+    PackageValidationError, validate_package,
 )
 
 
@@ -30,7 +29,7 @@ def valid_package() -> dict:
     }
 
 
-class StructuredImportTests(unittest.TestCase):
+class IngestionPackageTests(unittest.TestCase):
     def test_valid_package_preserves_exact_provenance(self) -> None:
         package = valid_package()
         self.assertIs(validate_package(package), package)
@@ -58,28 +57,6 @@ class StructuredImportTests(unittest.TestCase):
         package["documents"][0]["observed_at"] = "yesterday"
         with self.assertRaisesRegex(PackageValidationError, "observed_at"):
             validate_package(package)
-
-
-class StructuredImportIdempotencyTests(unittest.IsolatedAsyncioTestCase):
-    async def test_repeated_import_uses_the_same_stable_record_ids(self) -> None:
-        database = AsyncMock()
-
-        await import_package(database, valid_package())
-        first_ids = [
-            statement.compile().params.get("id")
-            for statement in (call.args[0] for call in database.execute.call_args_list)
-            if "id" in statement.compile().params
-        ]
-        database.reset_mock()
-        await import_package(database, valid_package())
-        second_ids = [
-            statement.compile().params.get("id")
-            for statement in (call.args[0] for call in database.execute.call_args_list)
-            if "id" in statement.compile().params
-        ]
-
-        self.assertEqual(first_ids, second_ids)
-        self.assertEqual(len(first_ids), 4)
 
 
 if __name__ == "__main__":

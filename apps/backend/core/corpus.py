@@ -1,8 +1,6 @@
-"""Đọc & chunk corpus - dùng CHUNG cho training và serving.
+"""Chunk text for R2 ingestion and load the offline Wikipedia training corpus.
 
-Lý do phải chung: nếu chunk lúc train khác chunk lúc serve thì đoạn `Nguồn:` mà
-model nhận lúc chạy thật có hình dạng khác đoạn nó được train trên - đúng loại
-lệch train/serve làm fine-tune mất tác dụng. Mọi hằng số ở đây là nguồn duy nhất.
+Serving reads indexed chunks from OpenSearch; it does not load local corpus files.
 """
 from __future__ import annotations
 

@@ -19,8 +19,8 @@ VERSION = '3.3.0'
 TABLES = ('entities', 'relationships', 'communities', 'community_reports', 'text_units', 'documents')
 
 
-def export_snapshot(rows, store, root: Path) -> None:
-    """Publish immutable input; store is only for legacy R2 export callers."""
+def export_snapshot(rows, root: Path) -> None:
+    """Publish immutable OpenSearch text and its original source mapping."""
     root = root.resolve()
     if root.exists():
         raise FileExistsError('Use a new snapshot directory.')
@@ -35,11 +35,11 @@ def export_snapshot(rows, store, root: Path) -> None:
             identity = str(row['id'])
             filename_id = identity if re.fullmatch(r'[A-Za-z0-9_-]+', identity) else hashlib.sha256(identity.encode()).hexdigest()
             name = f"passage-{filename_id}.txt"
-            content = row['text'] if store is None else store.read_text(row['object_key'], row['content_hash'])
+            content = row['text']
             (stage / 'input' / name).write_text(content, encoding='utf-8')
             manifest['documents'][name] = {
                 'passage_id': row['id'], 'object_key': row.get('object_key', ''),
-                'content_hash': row['content_hash'], 'bucket': row.get('bucket', '') if store is None else store.bucket,
+                'content_hash': row['content_hash'], 'bucket': row.get('bucket', ''),
                 'doc': row.get('location_note') or f"Passage {row['id']}",
                 'text_sha256': hashlib.sha256(content.encode()).hexdigest(),
             }
@@ -205,7 +205,7 @@ async def export_from_search(root, limit, passage_ids):
 
     async with PassageStore() as store:
         rows = await store.export_passages(limit, passage_ids)
-    export_snapshot(rows, None, root)
+    export_snapshot(rows, root)
     return {'root': str(root), 'passage_count': len(rows)}
 
 
