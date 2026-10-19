@@ -8,24 +8,31 @@ from typing import AsyncGenerator
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.concurrency import run_in_threadpool
+from fastapi.security import HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.backend.core.security import (
     create_access_token,
+    create_password_reset_token,
     get_current_user,
     hash_password,
     verify_password,
+    verify_reset_password_token,
 )
+from apps.backend.core.email import send_reset_password_email
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.models.admin import AdminAccount
 from apps.backend.schemas.auth import (
     ErrorResponse,
+    ForgotPasswordRequest,
     GoogleAuthRequest,
     LoginRequest,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
     UserResponse,
 )
 
@@ -67,13 +74,13 @@ async def register(
     """
     # Check if email already exists
     result = await db.execute(
-        select(AdminAccount).where(AdminAccount.username == request.email)
+        select(AdminAccount).where(AdminAccount.email == request.email)
     )
     existing_email = result.scalar_one_or_none()
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email đã được sử dụng",
+            detail="Email này đã được sử dụng.",
         )
     
     # Check if username already exists
@@ -84,7 +91,7 @@ async def register(
     if existing_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username đã được sử dụng",
+            detail="Tên đăng nhập này đã tồn tại.",
         )
     
     # Hash password
@@ -92,6 +99,7 @@ async def register(
     
     # Create new account
     new_account = AdminAccount(
+        email=request.email,
         username=request.username,
         password_hash=password_hash,
     )
@@ -100,11 +108,11 @@ async def register(
     await db.commit()
     await db.refresh(new_account)
     
-    log.info(f"New account registered: {new_account.username} (id={new_account.id})")
+    log.info(f"New account registered: {new_account.email} (username={new_account.username}, id={new_account.id})")
     
     return RegisterResponse(
         account_id=str(new_account.id),
-        email=request.email,
+        email=new_account.email,
         username=new_account.username,
         message="Đăng ký thành công",
     )
@@ -135,45 +143,58 @@ async def login(
     Raises:
         HTTPException 401: Nếu thông tin đăng nhập không đúng
     """
-    # Find user by username/email (currently stored in username field)
-    result = await db.execute(
-        select(AdminAccount).where(
-            AdminAccount.username == request.username_or_email
+    # Find user by username/email - check both email and username columns
+    username_or_email = request.username_or_email.strip()
+    
+    # Try email first if input contains @
+    if "@" in username_or_email:
+        result = await db.execute(
+            select(AdminAccount).where(AdminAccount.email == username_or_email)
         )
-    )
+    else:
+        result = await db.execute(
+            select(AdminAccount).where(AdminAccount.username == username_or_email)
+        )
+    
     account = result.scalar_one_or_none()
     
     # Verify password
     if not account or not verify_password(request.password, account.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Tên đăng nhập hoặc mật khẩu không đúng",
+            detail="Email/Tên đăng nhập hoặc mật khẩu không đúng.",
         )
     
     # Check if account is active
     if not account.is_active:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Tài khoản đã bị vô hiệu hóa",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản đã bị khóa hoặc chưa kích hoạt.",
         )
     
+    # Update last login
+    from datetime import datetime, timezone
+    account.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
+
     # Create access token
     access_token = create_access_token(
         data={
             "sub": str(account.id),
+            "email": account.email,
             "username": account.username,
-            "role": "admin",  # Default role for now
+            "role": "admin"
         }
     )
     
-    log.info(f"User logged in: {account.username} (id={account.id})")
+    log.info(f"User logged in: {account.email} (username={account.username}, id={account.id})")
     
     return LoginResponse(
         access_token=access_token,
         token_type="bearer",
         user=UserResponse(
             account_id=str(account.id),
-            email=account.username,  # Using username as email for now
+            email=account.email,
             username=account.username,
             role="admin",
         ),
@@ -200,7 +221,7 @@ async def get_me(
     """
     return UserResponse(
         account_id=current_user["sub"],
-        email=current_user.get("username", ""),
+        email=current_user.get("email", ""),
         username=current_user.get("username", ""),
         role=current_user.get("role", "user"),
     )
@@ -269,7 +290,7 @@ async def google_auth(
     
     # Find or create account
     result = await db.execute(
-        select(AdminAccount).where(AdminAccount.username == email)
+        select(AdminAccount).where(AdminAccount.email == email)
     )
     account = result.scalar_one_or_none()
     
@@ -280,7 +301,8 @@ async def google_auth(
         password_hash = hash_password(random_password)
         
         account = AdminAccount(
-            username=email,
+            email=email,
+            username=email.split('@')[0],  # Use email prefix as username
             password_hash=password_hash,
             is_active=True,
         )
@@ -300,10 +322,16 @@ async def google_auth(
         
         log.info(f"Existing Google account logged in: {email} (id={account.id})")
     
+    # Update last login
+    from datetime import datetime, timezone
+    account.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
+
     # Create access token
     access_token = create_access_token(
         data={
             "sub": str(account.id),
+            "email": account.email,
             "username": account.username,
             "role": "admin",
             "auth_method": "google",
@@ -315,11 +343,149 @@ async def google_auth(
         token_type="bearer",
         user=UserResponse(
             account_id=str(account.id),
-            email=account.username,
+            email=account.email,
             username=account.username,
             role="admin",
         ),
     )
+
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_200_OK,
+    responses={
+        200: {"description": "Email hướng dẫn khôi phục đã được gửi"},
+        404: {"model": ErrorResponse, "description": "Email không tồn tại trong hệ thống"},
+    },
+)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Yêu cầu khôi phục mật khẩu qua email.
+    
+    Args:
+        request: Email để nhận link khôi phục
+        db: Database session
+        
+    Returns:
+        Message thông báo đã gửi email
+        
+    Raises:
+        HTTPException 404: Nếu email không tồn tại trong hệ thống
+        
+    Note:
+        Theo yêu cầu UX-first approach: trả về lỗi cụ thể khi email không tồn tại
+        để người dùng biết và có thể đăng ký tài khoản mới.
+    """
+    # Find account by email
+    result = await db.execute(
+        select(AdminAccount).where(AdminAccount.email == request.email)
+    )
+    account = result.scalar_one_or_none()
+    
+    # Return 404 if email not found (UX-first approach)
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Email này chưa được đăng ký trong hệ thống.",
+        )
+    
+    # Generate reset token (valid for 30 minutes), encoding the account's
+    # email in the `sub` claim.
+    reset_token = create_password_reset_token(account.email)
+    
+    # Get frontend base URL from settings
+    frontend_url = "http://localhost:3000"  # Default fallback
+    
+    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+    
+    # Send the email to the exact address the account registered with.
+    # The SMTP call is blocking, so it's offloaded to a worker thread via
+    # run_in_threadpool to avoid freezing the async event loop. If SMTP is
+    # not configured (or the send fails), the link is simply logged to the
+    # console instead of raising - the dev flow keeps working either way.
+    try:
+        email_sent = await run_in_threadpool(
+            send_reset_password_email,
+            account.email,
+            reset_link,
+            account.username,
+        )
+    except Exception:
+        log.exception("Unexpected error while sending password reset email to %s", account.email)
+        email_sent = False
+    
+    if email_sent:
+        log.info(f"Password reset email sent to: {account.email}")
+    else:
+        # Fallback: Print link to console (dev mode / SMTP not configured)
+        log.info(f"Password reset requested for: {account.email}")
+        log.info(f"Reset link (copy to browser): {reset_link}")
+        print(f"\n{'='*80}")
+        print(f"PASSWORD RESET LINK FOR: {account.email}")
+        print(f"{reset_link}")
+        print(f"{'='*80}\n")
+    
+    return {
+        "message": "Hướng dẫn khôi phục mật khẩu đã được gửi đến email của bạn. Vui lòng kiểm tra hòm thư."
+    }
+
+
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_200_OK,
+    responses={
+        400: {"model": ErrorResponse, "description": "Token không hợp lệ hoặc đã hết hạn"},
+    },
+)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Đặt lại mật khẩu với token hợp lệ.
+    
+    Args:
+        request: Token và mật khẩu mới
+        db: Database session
+        
+    Returns:
+        Message thông báo đặt lại mật khẩu thành công
+        
+    Raises:
+        HTTPException 400: Nếu token không hợp lệ hoặc đã hết hạn
+    """
+    # Decode the reset token to retrieve the email it was issued for.
+    email = verify_reset_password_token(request.token)
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token không hợp lệ hoặc đã hết hạn",
+        )
+    
+    # Find account by email
+    result = await db.execute(
+        select(AdminAccount).where(AdminAccount.email == email)
+    )
+    account = result.scalar_one_or_none()
+    
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tài khoản không tồn tại",
+        )
+    
+    # Hash new password and persist it to PostgreSQL
+    new_password_hash = hash_password(request.new_password)
+    account.password_hash = new_password_hash
+    await db.commit()
+    
+    log.info(f"Password reset successfully for: {email}")
+    
+    return {
+        "message": "Đặt lại mật khẩu thành công!"
+    }
 
 
 # Disable Facebook temporarily - localhost domain issues

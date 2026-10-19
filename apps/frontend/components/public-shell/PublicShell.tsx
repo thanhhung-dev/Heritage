@@ -9,6 +9,7 @@ import { AuthNavigation } from "@/features/auth/AuthNavigation";
 import styles from "./public-shell.module.css";
 import { LogoText } from "../LogoText";
 import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
+import type { PublicAccount } from "@/features/account/types";
 
 interface PublicShellProps {
   children: ReactNode;

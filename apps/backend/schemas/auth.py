@@ -70,3 +70,33 @@ class ErrorResponse(BaseModel):
     """Error response schema."""
     
     detail: str = Field(..., description="Error message")
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request schema for forgot password."""
+    
+    email: EmailStr = Field(..., description="Email address")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request schema for reset password."""
+    
+    token: str = Field(..., description="Password reset token")
+    new_password: str = Field(..., min_length=12, description="New password (minimum 12 characters)")
+    
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        """Validate password complexity."""
+        if len(v) < 12:
+            raise ValueError("Mật khẩu phải có ít nhất 12 ký tự")
+        
+        has_upper = any(c.isupper() for c in v)
+        has_lower = any(c.islower() for c in v)
+        has_digit = any(c.isdigit() for c in v)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
+        
+        if not (has_upper and has_lower and has_digit and has_special):
+            raise ValueError("Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt")
+        
+        return v

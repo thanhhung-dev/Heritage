@@ -5,9 +5,6 @@ import PortraitCard, { type PortraitCardData } from "@/components/PortraitCard/P
 import { Button } from "@/components/Button/Button";
 import mockData from "@/mocks/heritage-mock.json";
 import styles from "./preview.module.css";
-import { AccountNavigationPreview } from "@/features/account/AccountNavigationPreview";
-import { RouteStatesPreview } from "@/features/route-states/RouteStatesPreview";
-import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
 
 export default function HeritagePreviewPage() {
   const items = mockData.slice(0, 5) as unknown as TriptychCardData[];
@@ -45,11 +42,9 @@ export default function HeritagePreviewPage() {
       </div>
 
       <div className={styles.moreRow}>
-        <Button href={PUBLIC_ROUTE_BY_KEY.library.href}>Browse Library</Button>
+        <Button href="/library">Browse Library</Button>
         <Button>Browse Library (button)</Button>
       </div>
-      <AccountNavigationPreview />
-      <RouteStatesPreview />
     </div>
   );
 }
