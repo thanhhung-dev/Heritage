@@ -159,3 +159,50 @@ export async function handleGoogleLogin(
     throw error;
   }
 }
+
+/**
+ * Request password reset link
+ */
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    const error = json as ErrorResponse;
+    throw new Error(error.detail || 'Gửi yêu cầu thất bại');
+  }
+
+  return json as { message: string };
+}
+
+/**
+ * Reset password with token
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    const error = json as ErrorResponse;
+    throw new Error(error.detail || 'Đặt lại mật khẩu thất bại');
+  }
+
+  return json as { message: string };
+}

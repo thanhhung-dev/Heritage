@@ -4,14 +4,22 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import authEye from "@/access/icons/auth-eye.svg";
-import { Button, Input, type InputRef } from "antd";
+import { Alert, Button, Input, type InputRef } from "antd";
 import { handleLogin } from "@/services/authService";
 import styles from "./auth.module.css";
 
 function identityError(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "Nhập email hoặc tên đăng nhập của bạn.";
-  if (trimmed.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Nhập địa chỉ email hợp lệ.";
+  // Strict email validation as requested
+  if (trimmed.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Vui lòng nhập đúng định dạng email (VD: abc@gmail.com)!";
+  return "";
+}
+
+function passwordError(value: string) {
+  if (!value) return "Nhập mật khẩu của bạn.";
+  // Min 6 chars validation as requested
+  if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự!";
   return "";
 }
 
@@ -25,14 +33,17 @@ export function SignInForm() {
   const [visible, setVisible] = useState(false);
   const [touched, setTouched] = useState({ identity: false, password: false });
   const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
   const emailError = touched.identity ? identityError(identity) : "";
-  const passwordError = touched.password && !password ? "Nhập mật khẩu của bạn." : "";
+  const passwordErr = touched.password ? passwordError(password) : "";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTouched({ identity: true, password: true });
+    setApiError(""); // Clear previous API errors
+    
     if (identityError(identity)) { identityRef.current?.focus(); return; }
-    if (!password) { passwordRef.current?.focus(); return; }
+    if (passwordError(password)) { passwordRef.current?.focus(); return; }
     
     setSubmitting(true);
     try {
@@ -46,9 +57,11 @@ export function SignInForm() {
           router.push("/");
         }
       );
-    } catch (error) {
-      // Error already displayed by handleLogin
-      console.error("Login failed:", error);
+    } catch (err: any) {
+      // Extract specific error message from API response
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
+      setApiError(errorMessage);
+      console.error("Login failed:", err);
     } finally {
       setSubmitting(false);
     }
@@ -56,6 +69,23 @@ export function SignInForm() {
 
   return (
     <form onSubmit={submit} noValidate className={styles.form}>
+      {apiError && (
+        <Alert
+          showIcon
+          type="error"
+          message={apiError}
+          style={{
+            backgroundColor: "#ffffff",
+            border: "1px solid #ffccc7",
+            color: "#cf1322",
+            borderRadius: "8px",
+            marginBottom: "20px",
+            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.08)"
+          }}
+          closable
+          onClose={() => setApiError("")}
+        />
+      )}
       <div className={styles.field}>
         <label htmlFor={`${id}-identity`}>Email hoặc tên đăng nhập</label>
         <Input
@@ -102,7 +132,7 @@ export function SignInForm() {
             <Image src={authEye} alt="" aria-hidden="true" width={24} height={24} />
           </button>
         </div>
-        <p className={styles.error} id={`${id}-password-error`} aria-live="polite">{passwordError}</p>
+        <p className={styles.error} id={`${id}-password-error`} aria-live="polite">{passwordErr}</p>
       </div>
       <div className={styles.actions}>
         <Button
@@ -114,7 +144,13 @@ export function SignInForm() {
         >
           Đăng nhập
         </Button>
-        <Button type="text" className={styles.forgot} disabled>Quên mật khẩu?</Button>
+        <Button 
+          type="text" 
+          className={styles.forgot}
+          onClick={() => router.push("/forgot-password")}
+        >
+          Quên mật khẩu?
+        </Button>
       </div>
     </form>
   );

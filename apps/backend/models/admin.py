@@ -20,6 +20,7 @@ class AdminAccount(Base):
     __tablename__ = "admin_account"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True, comment="Email address")
     username: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False, comment="argon2id")
     session_token_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
