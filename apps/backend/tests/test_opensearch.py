@@ -56,6 +56,7 @@ class SearchTransportTests(unittest.IsolatedAsyncioTestCase):
 @unittest.skipUnless(os.environ.get('OPENSEARCH_TEST_URL'), 'local OpenSearch required')
 class OpenSearchIntegrationTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        self.enterContext(patch.dict(os.environ, {'GRAPHRAG_ENABLED': 'false'}))
         self.index = 'heritage-test-' + uuid.uuid4().hex
         self.store = await PassageStore(url=os.environ['OPENSEARCH_TEST_URL'], index=self.index).__aenter__()
 

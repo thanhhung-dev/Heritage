@@ -1,4 +1,4 @@
-"""R2 snapshot export (backend env), official index/query (isolated GraphRAG env)."""
+"""OpenSearch snapshot export, official index/query in an isolated GraphRAG env."""
 from __future__ import annotations
 
 import argparse
@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 import uuid
@@ -19,24 +20,26 @@ TABLES = ('entities', 'relationships', 'communities', 'community_reports', 'text
 
 
 def export_snapshot(rows, store, root: Path) -> None:
-    """Publish verified input atomically, without modifying DB or R2."""
+    """Publish immutable input; store is only for legacy R2 export callers."""
     root = root.resolve()
     if root.exists():
         raise FileExistsError('Use a new snapshot directory.')
     if not rows:
-        raise ValueError('No R2 passages selected.')
+        raise ValueError('No passages selected.')
     root.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.export-', dir=root.parent) as temporary:
         stage = Path(temporary) / 'snapshot'
         (stage / 'input').mkdir(parents=True)
         manifest = {'snapshot_id': uuid.uuid4().hex, 'graphrag_version': VERSION, 'documents': {}}
         for row in rows:
-            name = f"passage-{int(row['id'])}.txt"
-            content = store.read_text(row['object_key'], row['content_hash'])
+            identity = str(row['id'])
+            filename_id = identity if re.fullmatch(r'[A-Za-z0-9_-]+', identity) else hashlib.sha256(identity.encode()).hexdigest()
+            name = f"passage-{filename_id}.txt"
+            content = row['text'] if store is None else store.read_text(row['object_key'], row['content_hash'])
             (stage / 'input' / name).write_text(content, encoding='utf-8')
             manifest['documents'][name] = {
-                'passage_id': row['id'], 'object_key': row['object_key'],
-                'content_hash': row['content_hash'], 'bucket': store.bucket,
+                'passage_id': row['id'], 'object_key': row.get('object_key', ''),
+                'content_hash': row['content_hash'], 'bucket': row.get('bucket', '') if store is None else store.bucket,
                 'doc': row.get('location_note') or f"Passage {row['id']}",
                 'text_sha256': hashlib.sha256(content.encode()).hexdigest(),
             }
@@ -197,25 +200,13 @@ async def query_snapshot(root, message, community_level):
                                  relationships=tables['relationships'].to_dict('records'))
 
 
-async def export_from_database(root, limit, passage_ids):
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
-    from apps.backend.core.storage import R2PassageStore
+async def export_from_search(root, limit, passage_ids):
+    from apps.backend.core.search import PassageStore
 
-    engine = create_async_engine(os.environ['DATABASE_URL'])
-    try:
-        async with engine.connect() as connection:
-            rows = list((await connection.execute(text('''
-                SELECT id, location_note, object_key, content_hash FROM passage
-                WHERE object_key IS NOT NULL AND content_hash IS NOT NULL
-                  AND (:all_ids OR id = ANY(CAST(:ids AS bigint[])))
-                ORDER BY id LIMIT :limit
-            '''), {'all_ids': not passage_ids, 'ids': passage_ids, 'limit': limit})).mappings())
-        with R2PassageStore() as store:
-            export_snapshot(rows, store, root)
-        return {'root': str(root), 'passage_count': len(rows)}
-    finally:
-        await engine.dispose()
+    async with PassageStore() as store:
+        rows = await store.export_passages(limit, passage_ids)
+    export_snapshot(rows, None, root)
+    return {'root': str(root), 'passage_count': len(rows)}
 
 
 def main():
@@ -224,7 +215,7 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--env-file', type=Path)
     parser.add_argument('--limit', type=int, default=10)
-    parser.add_argument('--passage-ids', type=int, nargs='*', default=[])
+    parser.add_argument('--passage-ids', nargs='*', default=[])
     args = parser.parse_args()
     if args.limit <= 0:
         parser.error('--limit must be positive')
@@ -236,7 +227,7 @@ def main():
         # Upstream progress output must not corrupt the worker's JSON protocol.
         with redirect_stdout(sys.stderr):
             if args.command == 'export':
-                result = asyncio.run(export_from_database(root, args.limit, args.passage_ids))
+                result = asyncio.run(export_from_search(root, args.limit, args.passage_ids))
             elif args.command == 'index':
                 result = asyncio.run(index_snapshot(root))
             else:

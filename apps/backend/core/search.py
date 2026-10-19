@@ -116,11 +116,15 @@ class PassageStore:
                         'query': question, 'fields': ['text', 'location_note^2'],
                         'minimum_should_match': '50%',
                     }}]}},
-                    {'knn': {'embedding': {
-                        'vector': vector, 'filter': model_filter,
-                        # Faiss cosine distance = 1 - cosine, score = 1 / (1 + distance).
-                        'min_score': 1 / (2 - threshold),
-                    }}},
+                    {'function_score': {
+                        'query': {'knn': {'embedding': {
+                            'vector': vector, 'filter': model_filter, 'k': limit,
+                        }}},
+                        # Faiss cosine score = (1 + cosine) / 2. Gate returned
+                        # scores: 3.3's filtered exact radial fallback converts
+                        # knn.min_score incorrectly for cosinesimil.
+                        'min_score': (1 + threshold) / 2,
+                    }},
                 ]}},
             })
         return [{**hit['_source'], 'id': hit['_id'], 'score': hit['_score']}
