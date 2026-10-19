@@ -17,6 +17,17 @@ from pipelines.graph.microsoft_graphrag import build_global_response, export_sna
 
 
 class MicrosoftGraphRagTests(unittest.TestCase):
+    def test_export_uses_opensearch_text_and_string_ids_without_r2(self):
+        rows = [{'id': 'PSG-example', 'text': 'Chùa Thiên Mụ nằm ở Huế.',
+                 'object_key': 'documents/temple.pdf', 'bucket': 'knowledge',
+                 'content_hash': 'hash', 'location_note': 'Chùa Thiên Mụ'}]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'snapshot'
+            export_snapshot(rows, None, root)
+            self.assertEqual((root / 'input/passage-PSG-example.txt').read_text(), rows[0]['text'])
+            manifest = json.loads((root / 'source-manifest.json').read_text())
+            self.assertEqual(manifest['documents']['passage-PSG-example.txt']['passage_id'], 'PSG-example')
+
     def test_export_preserves_passage_identity_and_refuses_overwrite(self):
         rows = [{'id': 42, 'object_key': 'processed/passages/hash.json',
                  'content_hash': 'hash', 'location_note': 'Chùa Thiên Mụ'}]
