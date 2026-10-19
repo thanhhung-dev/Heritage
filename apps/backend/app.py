@@ -24,7 +24,7 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     settings = validate_startup_config()
     configure_logging(settings.otel_service_name, settings.app_environment)
-    engine = configure_database(settings.database_url)
+    engine = configure_database(settings.database_url) if settings.database_url else None
     configure_asset_policy(settings.r2_public_base_url, settings.r2_allowed_asset_hosts)
     tracing = setup_tracing(app, settings, engine)
     app.state.settings = settings

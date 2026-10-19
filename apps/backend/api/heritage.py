@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,6 +41,8 @@ router = APIRouter(prefix="/heritages", tags=["heritage"])
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    if AsyncSessionLocal.kw.get('bind') is None:
+        raise HTTPException(status_code=503, detail='PostgreSQL chưa được cấu hình cho dữ liệu di sản.')
     async with AsyncSessionLocal() as session:
         yield session
 

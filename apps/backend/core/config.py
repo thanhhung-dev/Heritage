@@ -106,9 +106,8 @@ def validate_startup_config(
     errors: list[str] = []
 
     database_url = env.get("DATABASE_URL", "").strip()
-    if not database_url:
-        errors.append("DATABASE_URL is required; copy .env.example to .env and set it.")
-    else:
+    # Chat uses OpenSearch. PostgreSQL remains optional for heritage/business APIs.
+    if database_url:
         try:
             parsed_database_url = urlparse(database_url)
             database_url_is_valid = (
