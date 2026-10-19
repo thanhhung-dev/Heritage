@@ -11,7 +11,7 @@ class DatabaseInitTests(unittest.TestCase):
     def test_required_extensions_cover_runtime_needs(self) -> None:
         self.assertEqual(
             set(REQUIRED_EXTENSIONS),
-            {"pgcrypto", "vector", "pg_trgm", "unaccent"},
+            {"pgcrypto", "pg_trgm", "unaccent"},
         )
 
     def test_predicate_seed_is_complete_and_unique(self) -> None:
