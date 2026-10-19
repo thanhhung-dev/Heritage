@@ -120,6 +120,19 @@ class OpenSearchIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(sum(len(e.text) for e in result.evidence), 4800)
         self.assertTrue(all(e.text == content for e in result.evidence))
 
+    async def test_semantic_threshold_is_cosine_not_opensearch_score(self):
+        # Unit query vector along x: cosine equals the document's x coordinate.
+        # No lexical overlap, so BM25 cannot mask a wrong score conversion.
+        await import_passages([
+            {'id': 'above', 'text': 'Văn hóa miền Trung.', 'embedding_model': EMBEDDING_ID,
+             'embedding': [0.56, (1 - 0.56 ** 2) ** 0.5] + [0.0] * 1022},
+            {'id': 'below', 'text': 'Lịch sử miền Trung.', 'embedding_model': EMBEDDING_ID,
+             'embedding': [0.54, (1 - 0.54 ** 2) ** 0.5] + [0.0] * 1022},
+        ], store=self.store, reuse_embeddings=True)
+        with patch.dict(os.environ, {'PASSAGE_MIN_SIMILARITY': '0.55'}):
+            results = await self.store.search('zzqxv', [1.0, 0.0] + [0.0] * 1022)
+        self.assertEqual([row['id'] for row in results], ['above'])
+
 
 if __name__ == '__main__':
     unittest.main()
