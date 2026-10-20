@@ -4,7 +4,7 @@ import io
 import os
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -84,6 +84,7 @@ class AdminKnowledgeTests(unittest.TestCase):
                     c, tables=[KnowledgeDocument.__table__, KnowledgeUpload.__table__]))
         asyncio.run(create())
         factory = async_sessionmaker(self.engine, expire_on_commit=False)
+        self.factory = factory
         async def database():
             async with factory() as session:
                 yield session
@@ -184,6 +185,64 @@ class AdminKnowledgeTests(unittest.TestCase):
         b = self.upload(document_id=doc['id'], text=b'Version B')
         self.assertEqual(self.client.post(f'/api/admin/uploads/{b}/complete').status_code, 200)
         self.assertEqual(self.client.post(f'/api/admin/uploads/{a}/complete').status_code, 409)
+
+    def test_missing_expired_and_mismatched_uploads_do_not_create_documents(self):
+        uid = self.upload()
+        from apps.backend.models.knowledge import KnowledgeUpload
+        async def expire():
+            async with self.factory() as session:
+                row = await session.get(KnowledgeUpload, uid)
+                row.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+                await session.commit()
+        asyncio.run(expire())
+        self.assertEqual(self.client.post(f'/api/admin/uploads/{uid}/complete').status_code, 409)
+        self.assertEqual(self.client.post('/api/admin/uploads/00000000-0000-0000-0000-000000000000/complete').status_code, 404)
+        uid = self.upload()
+        staging = next(k for k in self.s3.objects if uid in k)
+        self.s3.objects[staging]['body'] = b'wrong size'
+        self.assertEqual(self.client.post(f'/api/admin/uploads/{uid}/complete').status_code, 422)
+        self.assertEqual(self.client.get('/api/admin/documents').json()['items'], [])
+
+    def test_indexed_documents_are_protected_and_chunks_are_bounded(self):
+        from apps.backend.core.search import PassageStore
+        from apps.backend.core.embedding import EMBEDDING_ID
+        from apps.backend.models.knowledge import KnowledgeDocument
+        uid = self.upload()
+        doc = self.client.post(f'/api/admin/uploads/{uid}/complete').json()
+        async def indexed():
+            async with self.factory() as session:
+                row = await session.get(KnowledgeDocument, doc['id'])
+                row.status = 'indexed'
+                await session.commit()
+        asyncio.run(indexed())
+        path = f'/api/admin/documents/{doc["id"]}'
+        self.assertEqual(self.client.delete(path).status_code, 409)
+        self.assertEqual(self.client.patch(path, json={'title': 'changed'}).status_code, 409)
+        def search(request):
+            import json
+            body = json.loads(request.content)
+            filters = body['query']['bool']['filter']
+            self.assertIn({'term': {'object_key': doc['object_key']}}, filters)
+            self.assertIn({'term': {'bucket': 'test-bucket'}}, filters)
+            self.assertIn({'term': {'embedding_model': EMBEDDING_ID}}, filters)
+            hits = [{'sort': [str(i)], '_id': str(i), '_source': {'text': f'chunk {i}'}}
+                    for i in ([2] if body.get('search_after') == ['1'] else [1, 2])]
+            return httpx.Response(200, json={'hits': {'hits': hits}})
+        def store():
+            return PassageStore(client=httpx.AsyncClient(transport=httpx.MockTransport(search)))
+        with patch.object(self.api, 'PassageStore', side_effect=store):
+            first = self.client.get(path + '/chunks', params={'limit': 1}).json()
+            self.assertEqual(first['items'], [{'id': '1', 'text': 'chunk 1'}])
+            self.assertEqual(first['next_cursor'], '1')
+            second = self.client.get(path + '/chunks', params={'limit': 1, 'cursor': first['next_cursor']}).json()
+            self.assertEqual(second['items'], [{'id': '2', 'text': 'chunk 2'}])
+            self.assertIsNone(second['next_cursor'])
+
+    def test_actual_app_registers_admin_router(self):
+        from apps.backend.app import app
+        paths = app.openapi()['paths']
+        self.assertIn('/api/admin/storage/entries', paths)
+        self.assertIn('/api/admin/uploads/{upload_id}/complete', paths)
 
 
 if __name__ == '__main__':
