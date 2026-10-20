@@ -1,4 +1,4 @@
-"""Download explicit R2 file URLs and build a reviewable PostgreSQL package.
+"""Download explicit R2 file URLs and build a reviewable OpenSearch import package.
 
 No bucket scan, R2 write, database write, or model inference occurs here.
 """
@@ -23,7 +23,7 @@ from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 from apps.backend.core.corpus import chunk_text_spans
-from apps.backend.db.import_structured import PackageValidationError, validate_package
+from pipelines.ingestion.package import PackageValidationError, validate_package
 
 MAX_BYTES = 16 * 1024 * 1024
 PROCESSOR_VERSION = "r2-text-v1"
@@ -145,7 +145,7 @@ def run_ingestion(
                "documents": [], "passages": [], "entities": [], "aliases": []}
     manifest = {"schema_version": 1, "corpus_version": version,
                 "processing_config": processing, "processing_config_digest": digest,
-                "search": "postgres-fts-trigram", "embedding_model": None,
+                "search": "opensearch-hybrid", "embedding_model": None,
                 "objects": [], "documents": [], "passages": []}
     files: dict[str, bytes] = {}
 

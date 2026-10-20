@@ -1,314 +1,331 @@
 # HeritageGraph — Chatbot văn hóa Đà Nẵng – Huế
 
-Chatbot hỏi đáp về di sản, ẩm thực và nghệ thuật **Đà Nẵng – Huế**, chạy 100% local.
+Hỏi đáp từ tài liệu di sản bằng **BGE-M3 + OpenSearch hybrid search + GGUF qua
+llama.cpp**, phục vụ bởi FastAPI và Next.js.
 
-- **Retrieval**: BM25 theo từ + BM25 theo n-gram (chịu được gõ không dấu) hợp nhất
-  bằng RRF, mở rộng và xếp lại bằng **knowledge graph dựng deterministic** — không
-  gọi LLM lúc index, không Ollama, không vector DB (`apps/backend/core/kg.py`).
-- **LoRA fine-tune**: Hugging Face Transformers + PEFT FP16/BF16, chạy CUDA Docker/Kaggle
-- **Backend**: FastAPI · **Frontend**: Next.js
-- **Không cần API key, không cần internet** sau khi crawl xong corpus.
+README này là hướng dẫn vận hành kiến trúc hiện tại. Chạy các lệnh từ thư mục
+gốc repository; mỗi terminal Python cần `source .venv/bin/activate`.
 
-Đo được hiện tại: trong phạm vi `68/70`, paraphrase `9/39`, bằng chứng `34/34`,
-ngoài phạm vi `31/38` bằng `pipelines/evaluation/eval_attribution.py`; graph 510 node / 1135
-edge, dựng hết 0.23 giây.
+- [Cài đặt và chạy local](#chạy-local-trên-mac)
+- [Ingest tài liệu từ R2](#ingest-tài-liệu-từ-r2)
+- [Bảo trì và cập nhật dữ liệu](#bảo-trì-và-cập-nhật-dữ-liệu)
+- [Chẩn đoán chậm và lỗi thường gặp](#chẩn-đoán-chậm-và-lỗi-thường-gặp)
+- [Kiểm tra](#kiểm-tra)
 
-## Cấu trúc
+## Luồng hiện tại
 
-```
-HeritageGraph/
-├── apps/
-│   ├── backend/
-│   │   ├── app.py
-│   │   ├── api/{chat,health,graph}.py
-│   │   └── core/                 # retrieval, KG, RAG và LLM
-│   └── frontend/                 # Next.js
-├── pipelines/
-│   ├── ingestion/                # crawl và chuẩn hóa corpus
-│   ├── graph/                    # build, export và truy dấu knowledge graph
-│   ├── training/                 # tạo dữ liệu, fine-tune và fuse model
-│   └── evaluation/               # gold set, benchmark và báo cáo
-├── corpus/
-│   ├── wiki_by_location/*.txt
-│   └── locations_index.json      # 25 crawl được / 24 chưa
-├── data/                         # train.jsonl + valid.jsonl
-├── models/                       # peft-adapter/ + qwen-fused.gguf
-└── docs/
+```text
+INGESTION (offline)
+Tài liệu R2 → tải/trích text → chuẩn hóa/chia chunk → BGE-M3
+                                                   ↓
+                              OpenSearch: text + vector + metadata
+                                                   ↑
+Q&A                                                │
+User → Next.js → FastAPI → BGE-M3 embed câu hỏi → hybrid BM25 + vector
+                                                   ↓
+                              chọn chunk → ghép prompt → llama.cpp → answer + nguồn
+
+Tùy chọn: OpenSearch → export snapshot → Microsoft GraphRAG index (offline)
+          Q&A → GraphRAG global query → đối chiếu chunk gốc → bổ sung context
 ```
 
-## Chạy local và kiểm tra health
+Chat không tải text từ R2 hoặc quét PostgreSQL để dựng index trong mỗi process.
+OpenSearch sở hữu BM25, vector index và hợp nhất điểm hybrid. Bộ retrieval/KG
+cũ và các script chỉ phục vụ nó đã được xóa, không giữ hai đường search song song.
+Các số benchmark BM25/KG cũ **không phải kết quả của kiến trúc mới**.
 
-Tất cả lệnh bên dưới chạy từ project root. Java không được sử dụng trong project.
+## Chạy local trên Mac
 
-### 1. Yêu cầu
-
-| Công cụ | Phiên bản |
-|---|---|
-| Python | `3.12.11` |
-| Node.js | `20.19.3` |
-| npm | `10.8.2` |
-| Docker | Docker Engine/Desktop có Compose v2 |
-
-Kiểm tra môi trường trước khi cài:
+Yêu cầu Python 3.12, Node 20, Docker Compose v2 và llama.cpp native (Metal).
+Docker **chỉ chạy OpenSearch**; chưa chạy OpenSearch Dashboards hoặc Langfuse.
+Model và dữ liệu không nằm trong Git, cần chuẩn bị riêng.
 
 ```bash
-python --version
-node --version
-npm --version
-docker compose version
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r apps/backend/requirements.txt -r pipelines/ingestion/requirements.txt
+test -f .env || cp .env.example .env
+docker compose up -d opensearch
+curl -fsS 'http://127.0.0.1:9200/_cluster/health?wait_for_status=yellow&timeout=30s'
 ```
 
-### 2. Cài backend và frontend
-
-macOS/Linux:
-
-```bash
-python3.12 -m venv apps/backend/.venv
-source apps/backend/.venv/bin/activate
-python -m pip install -r apps/backend/requirements.txt
-
-cd apps/frontend
-npm ci
-cd ../..
-```
-
-Windows PowerShell:
-
-```powershell
-py -3.12 -m venv apps/backend/.venv
-.\apps\backend\.venv\Scripts\Activate.ps1
-python -m pip install -r apps/backend/requirements.txt
-
-Push-Location apps/frontend
-npm ci
-Pop-Location
-```
-
-### 3. Cấu hình môi trường
-
-macOS/Linux:
-
-```bash
-cp .env.example .env
-cp apps/frontend/.env.local.example apps/frontend/.env.local
-```
-
-Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-Copy-Item apps/frontend/.env.local.example apps/frontend/.env.local
-```
-
-Mở `.env`, thay password mẫu và giữ `POSTGRES_PASSWORD` khớp với password
-trong `DATABASE_URL`. Cấu hình local tối thiểu:
+Nếu chưa có llama.cpp native, cài bằng `brew install llama.cpp`.
+Kiểm tra các giá trị trong `.env`:
 
 ```dotenv
-POSTGRES_DB=heritagegraph
-POSTGRES_USER=heritagegraph
-POSTGRES_PASSWORD=replace-with-a-random-local-password
-DATABASE_URL=postgresql+psycopg://heritagegraph:replace-with-a-random-local-password@localhost:5433/heritagegraph
+OPENSEARCH_URL=http://127.0.0.1:9200
+OPENSEARCH_INDEX=heritage-passages-v1
 INFERENCE_BACKEND=llama_server
-LLAMA_SERVER_URL=http://localhost:8080
-LLAMA_SERVER_TIMEOUT=300
+LLAMA_SERVER_URL=http://127.0.0.1:8080
+LANGFUSE_ENABLED=false
+OTEL_TRACING_ENABLED=false
+GRAPHRAG_ENABLED=false
+DATABASE_URL=
 ```
 
-Frontend đọc `NEXT_PUBLIC_API_URL=http://localhost:8000` từ
-`apps/frontend/.env.local`. Biến có tiền tố `NEXT_PUBLIC_` được gửi xuống trình
-duyệt, vì vậy không đặt password hoặc API key vào đó. Không commit `.env` hoặc
-`.env.local`.
+Để `DATABASE_URL=` nếu chỉ chạy chat; DB nghiệp vụ là tùy chọn, không nằm trong
+Compose mới. API nghiệp vụ cần PostgreSQL riêng và trả 503 nếu chưa cấu hình.
+Không reset database/volume cũ. Backend đọc `.env` khi khởi động; biến đã export
+trong shell được ưu tiên hơn `.env`. Sau khi đổi cấu hình, restart backend.
 
-Nếu `DATABASE_URL` thiếu hoặc sai định dạng, backend sẽ dừng ngay khi startup và
-in ra biến cấu hình cần sửa; không mở cổng với cấu hình chưa hợp lệ.
-
-### 4. Chuẩn bị database và model
-
-Health check yêu cầu `models/qwen-fused.gguf` khi dùng `llama_server` qua Docker
-Compose. Xem [hướng dẫn training](docs/training.md) để tạo GGUF. Sau đó khởi tạo
-PostgreSQL, schema và llama.cpp:
+Chuẩn bị `models/qwen-fused.gguf` rồi chạy trong terminal riêng:
 
 ```bash
-docker compose up -d db
-docker compose run --rm migrate
-docker compose up -d llm
-```
-
-Không cần Ollama hoặc package `graphrag`; graph được dựng trực tiếp bằng
-`apps/backend/core/kg.py`.
-
-### 5. Chạy backend và frontend
-
-Terminal 1, từ project root và với Python virtual environment đã activate:
-
-```bash
-python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --reload
-```
-
-Chat hiện đọc nội dung passage từ R2, không đọc `passage.text` trong DB.
-Trong `.env`, đặt `R2_BUCKET` đúng bucket đã ingest cùng `R2_ENDPOINT_URL`,
-`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`. PostgreSQL phải có mapping/hash và
-embedding BGE-M3 tương ứng; không chạy lại schema hoặc xoá DB đã ingest.
-
-Trên macOS có thể chạy llama.cpp native để dùng Metal, thay cho service `llm`
-trong Docker. Nếu chưa có model fine-tune, có thể dùng bản Qwen GGUF đã tải
-(đây là model gốc, không tương đương model fine-tune):
-
-```bash
-llama-server --model models/Qwen3-4B-Q4_K_M.gguf --host 127.0.0.1 --port 8080 \
+llama-server --model models/qwen-fused.gguf --host 127.0.0.1 --port 8080 \
   --ctx-size 4096 --parallel 1 --n-gpu-layers 99 \
   --chat-template-kwargs '{"enable_thinking":false}'
 ```
 
-Khi dùng cách này, giữ `LLAMA_SERVER_URL=http://localhost:8080` và không chạy
-đồng thời backend/LLM Docker trên cùng cổng với các tiến trình native.
+Native llama.cpp dùng Metal trên Mac; Docker Linux cũ không có Metal nên sinh
+token trên CPU. Tên `qwen-fused.gguf` không bảo đảm model đã fine-tune: kiểm tra
+file/symlink thực tế trước khi báo cáo chất lượng. Xem [training](docs/training.md).
 
-Terminal 2:
-
-```bash
-cd apps/frontend
-npm run dev
-```
-
-Các địa chỉ local:
-
-- Frontend: <http://localhost:3000>
-- Backend API docs: <http://localhost:8000/docs>
-- Backend health: <http://localhost:8000/api/health>
-
-### 6. Kiểm tra health
-
-macOS/Linux:
+Ingest tài liệu theo [hướng dẫn ingestion](docs/ingestion.md), sau đó chạy backend:
 
 ```bash
-cd ~/CAP/HeritageGraph
-cp .env.example .env
-cp apps/frontend/.env.local.example apps/frontend/.env.local
-python3 -m venv apps/backend/.venv
-apps/backend/.venv/bin/pip install -r apps/backend/requirements.txt
-
-```powershell
-curl.exe -i http://localhost:8000/api/health
+python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000
 ```
 
-Khi llama.cpp sẵn sàng, endpoint trả HTTP `200`:
+Frontend, terminal riêng:
+
+```bash
+test -f apps/frontend/.env.local || cp apps/frontend/.env.local.example apps/frontend/.env.local
+npm --prefix apps/frontend ci
+npm --prefix apps/frontend run dev
+```
+
+Frontend dùng `NEXT_PUBLIC_API_URL=http://localhost:8000` trong
+`apps/frontend/.env.local`; restart frontend khi đổi biến này.
+
+- Chat UI: <http://localhost:3000>
+- API docs: <http://localhost:8000/docs>
+- Model health: <http://localhost:8000/api/health> (không xác minh search index)
+- OpenSearch: <http://localhost:9200> (local-only, security tắt; không public)
+
+**Cổng 9200 là JSON API, không phải giao diện quản trị.** OpenSearch Dashboards
+chưa có trong Compose nên chưa có UI ở cổng 5601. Các lệnh dưới đây dùng API
+để xem dữ liệu; không cần cài Dashboards để ingestion hoặc chat hoạt động.
+
+```bash
+curl 'http://127.0.0.1:9200/_cat/indices?v'
+curl -X POST http://127.0.0.1:8000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Chùa Thiên Mụ xây năm nào?","use_rag":true}'
+```
+
+Lần embed đầu có thể tải BGE-M3 từ Hugging Face và nạp model vào RAM; cần Internet
+cho lần tải đầu. Không đánh giá tốc độ chỉ bằng request cold-start này.
+
+## Ingest tài liệu từ R2
+
+### 1. Chuẩn bị nguồn
+
+Upload tài liệu gốc lên R2 bằng công cụ quản lý R2 của bạn trước. Pipeline hiện
+tại **không upload file, không tự liệt kê bucket**; nó tải các URL bạn khai báo.
+Hỗ trợ TXT, Markdown, HTML và PDF có text; PDF scan phải OCR trước.
+
+```bash
+mkdir -p data/ingestion
+test -f data/ingestion/sources.json || cp pipelines/ingestion/r2_sources.example.json data/ingestion/sources.json
+```
+
+Sửa `data/ingestion/sources.json`, ví dụ dưới đây là bản dữ liệu số 2:
 
 ```json
 {
-  "status": "ok",
-  "inference_backend": "llama_server",
-  "model_ready": true
+  "corpus_version": 2,
+  "chunking": {"max_chars": 2400, "overlap_chars": 300},
+  "documents": [
+    {
+      "url": "https://YOUR-R2-DOMAIN/knowledge/curated/thien-mu/lich-su.md",
+      "object_key": "knowledge/curated/thien-mu/lich-su.md",
+      "source_url": "https://YOUR-ORIGINAL-SOURCE/thien-mu",
+      "title": "Lịch sử chùa Thiên Mụ",
+      "region": "hue",
+      "source_type": "official",
+      "tier": 1,
+      "observed_at": "2026-10-19T00:00:00Z"
+    }
+  ]
 }
 ```
 
-HTTP `503` với `status: "starting"` nghĩa là backend đã nhận request nhưng model
-chưa sẵn sàng. Kiểm tra:
+- `url`: link tải file trên R2. Với file riêng tư, thay `url` bằng
+  `"url_env": "R2_DOCUMENT_URL"`, đặt signed URL vào biến môi trường của terminal
+  chạy ingestion; không commit signed URL. CLI tải/chia chunk không tự đọc `.env`.
+- `source_url`: trang nguồn để trích dẫn, phải không chứa query/secret và không
+  trùng giữa các document. Đây không nhất thiết là link tải R2.
+- `object_key`: đường dẫn object gốc trong R2, không phải URL.
+- `title`: tên tài liệu, được dùng cùng text khi embed.
+- Link không có đuôi file có thể khai báo thêm `"format": "pdf"` (hoặc `txt/md/html`).
+- Nếu dùng `R2_BUCKET` trong `.env`, đặt đúng bucket nguồn trước khi import để
+  metadata không trỏ sai. Q&A không cần credentials R2 để đọc chunk.
+
+### 2. Tải, trích text và chia chunk
 
 ```bash
-docker compose ps db llm
-docker compose logs llm
+python -m pipelines.ingestion.ingest_r2 --config data/ingestion/sources.json
 ```
 
-Health endpoint kiểm tra model runtime. Trạng thái PostgreSQL xem bằng
-`docker compose ps db`.
+Kết quả ở `data/ingestion/corpus-v2/`: file gốc, passage JSON, `package.json`,
+`manifest.json` và checksum. Chunk là **đoạn text thông thường**, không phải hash;
+vector là trường riêng được tạo ở bước sau. Mặc định tối đa 2400 ký tự/chunk,
+overlap mục tiêu 300 ký tự, ưu tiên ranh giới đoạn/câu/từ.
 
-### 7. Chạy toàn bộ bằng Docker
+Mở package kiểm tra text, dấu tiếng Việt, tên tài liệu và nguồn trước khi index.
+Output giữ nguyên khi chạy lại cùng input; nếu nội dung/config thay đổi, tăng
+`corpus_version` và dùng thư mục output mới. Không sửa đè một release đã review.
 
-Nếu không chạy Python/Node trực tiếp, tạo `.env` từ template Docker, thay
-`POSTGRES_PASSWORD`, bảo đảm GGUF đã có rồi chạy:
+### 3. Embed và import vào index mới
+
+Ví dụ bản dữ liệu số 2 dùng index `heritage-passages-v2`:
 
 ```bash
-cp .env.docker.example .env
-docker compose up --build -d
+OPENSEARCH_INDEX=heritage-passages-v2 python -m apps.backend.db.import_passages \
+  data/ingestion/corpus-v2/package.json --env-file .env
+
+curl -fsS 'http://127.0.0.1:9200/heritage-passages-v2/_count?pretty'
+curl -fsS -X POST 'http://127.0.0.1:9200/heritage-passages-v2/_search?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{"size":2,"_source":["id","text","location_note","source_url","object_key"],"query":{"match_all":{}}}'
+```
+
+Importer tự tạo mapping + hybrid search pipeline, embed BGE-M3 1024 chiều và lưu
+text/vector/metadata. Không phải tạo index bằng tay. Tên module `db.import_passages`
+được giữ cho CLI, nhưng **không ghi PostgreSQL hay R2**.
+
+Import cùng package vào cùng index là upsert theo ID ổn định, không tạo bản sao.
+Nếu bulk lỗi có thể đã ghi thành công một phần: sửa lỗi rồi chạy lại cùng lệnh.
+`release_status: draft` không chặn import; việc review là trách nhiệm vận hành.
+
+### 4. Chuyển Q&A sang bản dữ liệu mới
+
+Đổi `OPENSEARCH_INDEX=heritage-passages-v2` trong `.env`, restart backend, rồi chạy
+smoke `/api/chat` như trên. Kiểm tra cả câu trả lời và nguồn; count/search thành
+công chưa chứng minh câu trả lời đúng. Giữ index cũ để có thể rollback.
+
+Xem [ingestion chi tiết](docs/ingestion.md) cho migration vector có sẵn và GraphRAG.
+
+## Bảo trì và cập nhật dữ liệu
+
+### Mỗi lần thêm, sửa hoặc bỏ tài liệu
+
+1. Cập nhật danh sách nguồn đầy đủ cho release mới, tăng `corpus_version`.
+2. Chạy tải/chia chunk, review package, import **toàn bộ release** vào index mới.
+3. Kiểm tra số passage, text/metadata và Q&A rồi chuyển `.env` + restart backend.
+4. Giữ package/manifest và index trước đó tới khi chấp nhận bản mới.
+
+**Importer không tự xóa chunk cũ**. Chỉ upsert tài liệu đã sửa vào index đang
+phục vụ có thể để lại cả nội dung cũ lẫn mới. Muốn bỏ tài liệu, loại nó khỏi danh
+sách nguồn rồi rebuild index mới từ toàn bộ tài liệu còn lại. Không chỉ import
+phần thay đổi vào một index trống: như vậy sẽ mất các tài liệu không nằm trong batch.
+
+Rollback: đặt lại tên index cũ trong `.env`, restart backend và kiểm tra chat.
+Không cần tải lại R2 hay embed lại nếu index cũ còn nguyên. Nếu đã bật GraphRAG,
+re-export/index theo release mới và cấu hình đúng `GRAPHRAG_ROOT`; có thể tắt
+GraphRAG trong lúc chuyển bản để không dựa vào snapshot lỗi thời.
+
+### Kiểm tra tài nguyên và dữ liệu
+
+```bash
 docker compose ps
-curl -i http://localhost:8000/api/health
+docker stats --no-stream heritagegraph-opensearch-1
+docker compose logs --tail=100 opensearch
+curl -fsS 'http://127.0.0.1:9200/_cluster/health?pretty'
+curl -fsS 'http://127.0.0.1:9200/_cat/indices?v'
+curl -fsS 'http://127.0.0.1:9200/_cat/allocation?v'
 ```
 
-Trên PowerShell, thay lệnh đầu bằng:
+OpenSearch local có heap 512 MiB, giới hạn RAM 2 GiB và 2 CPU. Cấu hình single-node
+này không phải HA/production. Theo dõi thêm Memory Pressure/Swap trong Activity
+Monitor vì BGE-M3 và llama.cpp dùng chung RAM/GPU trên Mac.
 
-```powershell
-Copy-Item .env.docker.example .env
-```
+### Lưu trữ và backup
 
-Hướng dẫn vận hành Docker chi tiết nằm tại [docs/docker-local.md](docs/docker-local.md).
+- Giữ tài liệu gốc R2, config nguồn đã loại secret, package/manifest từng release,
+  phiên bản code/model và tên index đang phục vụ. Bảo vệ cả dữ liệu tải về local;
+  không commit tài liệu riêng tư hoặc `.env` vào Git.
+- Volume `heritagegraph_opensearch_data` giữ index sau khi dừng container, nhưng
+  **volume trên cùng máy không phải backup**. Nếu mất volume, có thể rebuild từ
+  package đã lưu bằng importer; sẽ tốn thời gian embed lại.
+- Chưa có backup OpenSearch tự động trong Compose. Trước khi triển khai dữ liệu
+  quan trọng, cần cấu hình snapshot repository/backup độc lập và thử restore.
+- Không chạy `docker compose down -v`, volume prune hoặc xóa database cũ để
+  “dọn nhẹ máy”. Chỉ xóa index/release cũ sau khi xác nhận backup và rollback;
+  hướng dẫn này không tự thực hiện thao tác xóa dữ liệu.
 
-## Chuẩn bị dữ liệu và model
+### Dừng và chạy lại hằng ngày
 
-### Crawl corpus (~10 phút)
+Dừng backend, frontend và llama-server bằng `Ctrl+C` ở terminal tương ứng;
+`docker compose stop opensearch` dừng search nhưng giữ volume. Lần sau chạy
+`docker compose up -d opensearch`, rồi khởi động lại llama-server, backend và
+frontend theo phần local. **Không cần ingest lại mỗi lần bật máy.**
+
+## Chẩn đoán chậm và lỗi thường gặp
+
+| Hiện tượng | Kiểm tra / cách xử lý |
+| --- | --- |
+| Lần hỏi đầu chậm | BGE tải/nạp model lần đầu; so sánh lần cold với các lần warm, không restart backend giữa mỗi câu. |
+| Máy nóng, swap tăng | Kiểm tra Activity Monitor và `docker stats`; tránh ingest/GraphRAG cùng lúc chat, dừng container legacy sau khi xác định đúng service. Không chạy nhiều backend worker trên máy ít RAM vì mỗi process có thể nạp BGE riêng. |
+| Sinh answer chậm | Xem log terminal llama-server về Metal và tốc độ prompt/token generation. Chạy native, không dùng image Linux cũ trên Mac. OpenSearch nhanh hơn không làm bước sinh token tự nhanh hơn. |
+| Không có nguồn hoặc search lỗi | Kiểm tra `_count`, tên `OPENSEARCH_INDEX`, OpenSearch health và import đã thành công. `/api/health` không kiểm tra index. Không tạo index thủ công thiếu mapping/pipeline. |
+| Import lỗi sau khi đổi embedding | Tạo index mới và embed lại; không trộn model/vector khác phiên bản hoặc dimension. |
+| Tải R2 lỗi | Kiểm tra quyền/link hết hạn/format file trong bước ingestion. Chat đọc text từ OpenSearch nên không tải lại file R2 để trả lời; link nguồn/media có thể vẫn cần R2 khi người dùng mở. |
+| Đã sửa `.env` nhưng chưa đổi hành vi | Restart backend; kiểm tra biến shell cũ đang override `.env`. CLI import cần truyền `--env-file .env`. |
+
+Để đo thời gian toàn request sau khi các service sẵn sàng:
 
 ```bash
-python pipelines/ingestion/crawl_by_location.py
+curl -sS -o /tmp/heritage-chat-response.json -w 'HTTP %{http_code} — total %{time_total}s\n' \
+  -X POST http://127.0.0.1:8000/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Chùa Thiên Mụ xây năm nào?","use_rag":true}'
+cat /tmp/heritage-chat-response.json
 ```
 
-Kết quả ghi vào `corpus/wiki_by_location/` + `corpus/locations_index.json`.
+Đây là tổng thời gian, không tách embedding/search/generation. Muốn kết luận
+nút thắt, cần đối chiếu log và đo từng bước; không mặc định R2 hay search là nguyên
+nhân. Hiện chưa có dashboard báo cáo latency/capacity tự động; `/internal/metrics`
+là endpoint metrics, không phải UI và không thay thế benchmark tải thực tế.
 
-### Xây và kiểm tra graph (~1 giây)
+## GraphRAG và phạm vi thay đổi
+
+Microsoft GraphRAG vẫn là tùy chọn, mặc định `GRAPHRAG_ENABLED=false`. Export từ
+OpenSearch rồi index trong `.venv-graphrag` riêng trước khi bật; xem
+[ingestion](docs/ingestion.md). Global query có thêm lượt gọi LLM nên không phải
+đường nhanh cho mọi câu hỏi. Graph chỉ bổ sung khi lineage còn khớp nguồn gốc.
+
+Retrieval mới giữ tối đa 2 chunk nguyên vẹn trong 4800 ký tự. Các bộ sửa tên/gate
+entity và reranker Python cũ không còn chạy trong chat; cần đánh giá lại gold set,
+đặc biệt typo, câu ngoài miền và câu quan hệ. Điểm hybrid không phải xác suất đúng.
+Không có chunk thì từ chối; có chunk không có nghĩa factual grounding đã được kiểm chứng.
+
+## Kiểm tra
 
 ```bash
-bash pipelines/graph/run_indexing.sh                            # thống kê + xuất artifact
-python pipelines/graph/build_graph.py --node "triều Nguyễn"
-python pipelines/graph/build_graph.py --query "lăng Minh Mạng xây năm nào"
-python pipelines/evaluation/eval_attribution.py              # retrieval + quy trách nhiệm lỗi
+OPENSEARCH_TEST_URL=http://127.0.0.1:9200 LANGFUSE_ENABLED=false \
+  python -m unittest apps.backend.tests.test_opensearch \
+  apps.backend.tests.test_passages apps.backend.tests.test_chat_api \
+  apps.backend.tests.test_chat_graphrag apps.backend.tests.test_microsoft_graphrag \
+  apps.backend.tests.test_startup_config apps.backend.tests.test_db_init \
+  apps.backend.tests.test_docker_database apps.backend.tests.test_r2_ingestion
 ```
 
-Artifact ra `graphrag/output/`: `graph.gexf` (mở bằng Gephi), `graph.json`
-(node-link cho frontend), `stats.json`.
+Search integration tests dùng index tạm `heritage-test-*`; không sửa index phục vụ.
+Benchmark model và toàn bộ Q&A phải chạy riêng với model/dữ liệu thật.
 
-### Train LoRA
+## Tài liệu và công cụ offline
 
-```bash
-python pipelines/training/bootstrap_deep_qa.py   # sinh data/train.jsonl + valid.jsonl
-docker compose --profile training run --rm trainer       # Linux có NVIDIA GPU
-docker compose --profile training run --rm trainer bash pipelines/training/eval.sh
-docker compose --profile training run --rm trainer bash pipelines/training/fuse.sh  # → GGUF
-```
-
-Trên Kaggle chạy cùng `pipelines/training/train_hf.py`, không chạy Docker lồng trong
-notebook. Xem hướng dẫn đầy đủ và cách nâng model 8B tại
-[`docs/training.md`](docs/training.md). Xem graph qua API:
-
-```bash
-curl localhost:8000/api/graph/stats
-curl 'localhost:8000/api/graph/trace?q=cao lau la mon gi'
-curl 'localhost:8000/api/graph/subgraph?node=Huế'
-```
-
-## Tech stack
-
-| Layer | Công nghệ | Vai trò |
-|---|---|---|
-| **Frontend** | Next.js 14, React 18, TypeScript | UI chat |
-| **Backend** | FastAPI, Pydantic, Uvicorn | API, orchestration |
-| **LLM runtime** | llama.cpp + GGUF | Sinh câu trả lời portable |
-| **Retrieval** | BM25 tự viết + RRF + networkx | Lấy context, xếp lại theo graph |
-| **Fine-tune** | Transformers + PEFT LoRA FP16/BF16 | Văn phong + trích dẫn + cách từ chối |
-| **Corpus** | Wikipedia VN (Huế, Đà Nẵng) | 45 bài dùng được / 349 chunk |
-
-## Đánh giá
-
-Hai nửa của độ chính xác `P(đúng) = P(lấy đúng đoạn) × P(model trung thực)`:
-
-```bash
-# Nửa trên - retrieval (không cần model, chạy trong 1 giây)
-python pipelines/evaluation/eval_attribution.py
-
-# Nửa dưới - model (cần gold set gán nhãn tay)
-python pipelines/evaluation/make_gold_template.py
-python pipelines/training/score_gold.py \
-  --gold pipelines/evaluation/gold.jsonl --out pipelines/evaluation/report_lora.json
-```
-
-## Tài liệu
-
-- [docs/architecture.md](docs/architecture.md) — kiến trúc, luồng dữ liệu, ba cổng từ chối
-- [docs/chatbot.md](docs/chatbot.md) — kiến trúc chatbot chốt theo Microsoft GraphRAG + KAG
-- [docs/metrics.md](docs/metrics.md) — 4 metric đánh giá
-- [docs/demo-guide.md](docs/demo-guide.md) — hướng dẫn demo
-- [docs/secrets-policy.md](docs/secrets-policy.md) — quy tắc `.env`, API key và secret cho local/Docker/Jenkins
-
-## Chi phí
-
-| Hạng mục | Chi phí |
-|---|---|
-| API | $0 |
-| Điện | ~$0.10 |
-| **Tổng** | **~$0.10** |
+- [Docker local](docs/docker-local.md) — giới hạn tài nguyên, volume và bảo mật.
+- [Ingestion](docs/ingestion.md) — R2, chunk, import OpenSearch, chuyển dữ liệu cũ.
+- [Training](docs/training.md) — Transformers + PEFT LoRA, export GGUF;
+  profile `trainer` không còn trong Compose mặc định.
+- `apps/backend/core/corpus.py` giữ chunking cho ingestion và loader corpus training;
+  `core/kg.py` chỉ giữ trích tên/năm cho NER, không còn dựng/truy hồi graph.
+- `pipelines/evaluation/eval_answers.py`, `eval_graphrag_chat.py` đánh giá qua API
+  hiện tại. Các script retrieval/graph/alias legacy và generator phụ thuộc chúng
+  đã bị loại bỏ. Các hướng dẫn lịch sử nhắc tới chúng không còn chạy được.
+- [Metrics](docs/metrics.md), [secrets policy](docs/secrets-policy.md).
+- [Architecture](docs/architecture.md), [chatbot design](docs/chatbot.md) và
+  [demo guide](docs/demo-guide.md) là tài liệu thiết kế/luồng cũ, chưa phải
+  hướng dẫn vận hành OpenSearch hiện tại; ưu tiên README và hai hướng dẫn trên.

@@ -8,11 +8,10 @@ from fastapi.testclient import TestClient
 from apps.backend.api import chat as chat_api
 
 
-class R2ChatApiTests(unittest.TestCase):
+class ChatApiTests(unittest.TestCase):
     def setUp(self):
         app = FastAPI()
         app.include_router(chat_api.router, prefix="/api")
-        app.dependency_overrides[chat_api.get_db] = lambda: AsyncMock()
         self.client = TestClient(app)
         self.query = SimpleNamespace(
             ambiguous=False, corrections=[], subject="Chùa Thiên Mụ",
@@ -54,7 +53,7 @@ class R2ChatApiTests(unittest.TestCase):
             response = self.client.post("/api/chat", json={"message": "Câu hỏi"})
         self.assertEqual(response.json()["answer"], "Không đổi")
 
-    def test_returns_answer_with_r2_citation(self):
+    def test_returns_answer_with_passage_citation(self):
         with patch.object(chat_api, "generate_response", return_value="Chùa được dựng năm 1601."):
             response = self.client.post("/api/chat", json={"message": "Chùa Thiên Mụ xây năm nào?"})
         self.assertEqual(response.status_code, 200)

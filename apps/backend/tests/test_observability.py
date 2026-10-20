@@ -3,8 +3,9 @@ import json
 import logging
 import unittest
 import uuid
+from contextlib import contextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
 from fastapi import FastAPI
@@ -39,15 +40,17 @@ class ObservabilityTests(unittest.TestCase):
     def test_rag_trace_groups_children_and_enforces_capture_mode(self) -> None:
         records = []
 
+        @contextmanager
         def start(**fields):
             record = dict(fields)
+            record['trace_id'] = (fields['trace_context'] or {}).get('trace_id', uuid.uuid4().hex)
             records.append(record)
-            return SimpleNamespace(
-                trace_id=fields['trace_context']['trace_id'], id=str(len(records)),
+            yield SimpleNamespace(
+                trace_id=record['trace_id'], id=str(len(records)),
                 update=lambda **values: record.update(values), end=lambda: None,
             )
 
-        client = SimpleNamespace(start_observation=start)
+        client = SimpleNamespace(start_as_current_observation=start)
         for mode in ('full', 'metadata', 'none'):
             records.clear()
             with (
@@ -61,7 +64,7 @@ class ObservabilityTests(unittest.TestCase):
                 self.assertEqual(records, [])
                 continue
             self.assertEqual(records[1]['trace_context']['parent_span_id'], '1')
-            self.assertEqual(records[0]['trace_context']['trace_id'], records[1]['trace_context']['trace_id'])
+            self.assertEqual(records[0]['trace_id'], records[1]['trace_context']['trace_id'])
             self.assertNotIn('person@example.com', repr(records))
             self.assertNotIn('private', repr(records))
             self.assertEqual(records[1]['metadata']['finish_reason'], 'stop')
@@ -72,16 +75,25 @@ class ObservabilityTests(unittest.TestCase):
                 self.assertNotIn('input', records[0])
 
     def test_rag_trace_failure_does_not_swallow_business_error(self) -> None:
-        client = Mock()
-        client.start_observation.side_effect = RuntimeError('private telemetry error')
-        with (
-            patch.dict('os.environ', {'OBSERVABILITY_CONTENT_CAPTURE': 'full'}),
-            patch.object(telemetry, '_langfuse_client', return_value=client),
-            self.assertRaisesRegex(ValueError, 'business error'),
-        ):
-            with telemetry.rag_observation('rag.request') as observation:
-                observation.update(output='safe')
-                raise ValueError('business error')
+        for phase in ('start', 'update', 'end'):
+            with self.subTest(phase=phase):
+                client = Mock()
+                manager = MagicMock()
+                client.start_as_current_observation.return_value = manager
+                failing_call = {
+                    'start': client.start_as_current_observation,
+                    'update': manager.__enter__.return_value.update,
+                    'end': manager.__exit__,
+                }[phase]
+                failing_call.side_effect = RuntimeError('private telemetry error')
+                with (
+                    patch.dict('os.environ', {'OBSERVABILITY_CONTENT_CAPTURE': 'full'}),
+                    patch.object(telemetry, '_langfuse_client', return_value=client),
+                    self.assertRaisesRegex(ValueError, 'business error'),
+                ):
+                    with telemetry.rag_observation('rag.request') as observation:
+                        observation.update(output='safe')
+                        raise ValueError('business error')
 
     def test_correlation_header_is_preserved_or_replaced(self) -> None:
         supplied = str(uuid.uuid4())
@@ -292,18 +304,12 @@ class ObservabilityTests(unittest.TestCase):
         _retrieve.return_value.search_evidence = AsyncMock(return_value=SimpleNamespace(
             query=SimpleNamespace(ambiguous=False, intent=frozenset(),
                                   search_text="Giới thiệu di sản"),
-            evidence=[SimpleNamespace(text="safe context")],
+            evidence=[SimpleNamespace(id=42, text="safe context")],
+            graph_context=[],
         ))
-        async def fake_db():
-            yield Mock()
-
-        app.dependency_overrides[chat_api.get_db] = fake_db
-        try:
-            response = self.client.post(
-                "/api/chat", json={"message": "Giới thiệu di sản", "use_rag": True}
-            )
-        finally:
-            app.dependency_overrides.pop(chat_api.get_db, None)
+        response = self.client.post(
+            "/api/chat", json={"message": "Giới thiệu di sản", "use_rag": True}
+        )
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json(), {"detail": "Model trả lời hiện không khả dụng."})
         self.assertNotIn("private-dependency-secret", response.text)
