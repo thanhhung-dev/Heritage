@@ -5,6 +5,12 @@ pydantic==2.13.5
 httpx==0.28.1
 python-dotenv==1.2.3
 
+# R2 administration and dependencies of the existing auth router
+boto3==1.43.113
+PyJWT==2.10.1
+argon2-cffi==25.1.0
+email-validator==2.3.0
+
 # BGE-M3 document/query embeddings
 sentence-transformers==6.1.0
 

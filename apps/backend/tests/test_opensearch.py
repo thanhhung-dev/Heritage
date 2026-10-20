@@ -135,6 +135,30 @@ class OpenSearchIntegrationTests(unittest.IsolatedAsyncioTestCase):
             results = await self.store.search('zzqxv', [1.0, 0.0] + [0.0] * 1022)
         self.assertEqual([row['id'] for row in results], ['above'])
 
+    async def test_admin_chunks_are_scoped_paginated_and_sources_are_protected(self):
+        await self.store.ensure_index()
+        rows = [
+            {'id': 'a', 'object_key': 'curated/a.txt', 'bucket': 'knowledge'},
+            {'id': 'b', 'object_key': 'curated/a.txt', 'bucket': 'knowledge'},
+            {'id': 'c', 'object_key': 'curated/a.txt', 'bucket': 'another-bucket'},
+            {'id': 'd', 'object_key': 'curated/b.txt', 'bucket': 'knowledge'},
+            {'id': 'legacy', 'object_key': 'curated/legacy.txt'},
+        ]
+        await self.store.index_passages([{**row, 'text': 'Văn bản nguồn.',
+            'embedding_model': EMBEDDING_ID, 'embedding': vectors(['Thiên Mụ'])[0]}
+            for row in rows])
+        first = await self.store.document_chunks('curated/a.txt', 'knowledge', limit=1)
+        second = await self.store.document_chunks('curated/a.txt', 'knowledge', limit=1,
+                                                   after=first['next_cursor'])
+        self.assertEqual([r['id'] for r in first['items']], ['a'])
+        self.assertEqual([r['id'] for r in second['items']], ['b'])
+        self.assertIsNone(second['next_cursor'])
+        self.assertNotIn('embedding', first['items'][0])
+        self.assertTrue(await self.store.source_in_use('curated/a.txt', 'knowledge'))
+        self.assertTrue(await self.store.source_in_use('curated/legacy.txt', 'knowledge'))
+        self.assertFalse(await self.store.source_in_use('curated/a.txt', 'unrelated-bucket'))
+        self.assertFalse(await self.store.source_in_use('curated/missing.txt', 'knowledge'))
+
 
 if __name__ == '__main__':
     unittest.main()

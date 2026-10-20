@@ -141,6 +141,36 @@ class PassageStore:
         return [{**hit['_source'], 'id': hit['_id']} for hit in result['docs']
                 if hit.get('found') and hit['_source']['embedding_model'] == EMBEDDING_ID]
 
+    async def document_chunks(self, object_key, bucket, *, limit=50, after=None):
+        """Admin view of one source's chunks; never expose embedding vectors."""
+        body = {
+            'size': limit + 1, 'sort': ['id'], '_source': {'excludes': ['embedding']},
+            'query': {'bool': {'filter': [
+                {'term': {'object_key': object_key}}, {'term': {'bucket': bucket}},
+                {'term': {'embedding_model': EMBEDDING_ID}},
+            ]}},
+        }
+        if after:
+            body['search_after'] = [after]
+        result = await self._request('POST', f'/{self.index}/_search', json=body)
+        hits = result['hits']['hits']
+        return {'items': [{**h['_source'], 'id': h['_id']} for h in hits[:limit]],
+                'next_cursor': hits[limit - 1]['sort'][0] if len(hits) > limit else None}
+
+    async def source_in_use(self, object_key, bucket):
+        # Include legacy rows without bucket metadata; fail closed on dependency
+        # errors rather than deleting a source still referenced by chat.
+        result = await self._request('POST', f'/{self.index}/_count', json={
+            'query': {'bool': {'filter': [
+                {'term': {'object_key': object_key}},
+                {'bool': {'should': [
+                    {'terms': {'bucket': [bucket, '']}},
+                    {'bool': {'must_not': [{'exists': {'field': 'bucket'}}]}},
+                ], 'minimum_should_match': 1}},
+            ]}},
+        })
+        return result['count'] > 0
+
     async def export_passages(self, limit, ids=()):
         """Read bounded pages for offline GraphRAG exports, not runtime inventory scans."""
         rows = []

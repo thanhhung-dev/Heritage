@@ -110,7 +110,8 @@ class AdminKnowledgeTests(unittest.TestCase):
         app.include_router(api.router, prefix='/api')
         app.dependency_overrides[api.get_storage] = lambda: self.storage
         app.dependency_overrides[api.get_db] = database
-        self.client = self.enterContext(TestClient(app))
+        self.client = self.enterContext(TestClient(app, base_url='http://127.0.0.1:8000',
+                                                  client=('127.0.0.1', 50000)))
         self.addCleanup(lambda: asyncio.run(self.engine.dispose()))
 
     def upload(self, *, document_id=None, text=b'Thien Mu nam 1601.', parent='knowledge/hue/'):
@@ -193,6 +194,10 @@ class AdminKnowledgeTests(unittest.TestCase):
         self.assertEqual(self.client.post('/api/admin/storage/folders',
             headers={'Origin': 'https://evil.example'}, json={
                 'parent_prefix': 'knowledge/', 'name': 'bad'}).status_code, 403)
+        self.assertEqual(self.client.get('/api/admin/storage/entries',
+            headers={'Host': 'evil.example'}).status_code, 403)
+        self.assertEqual(self.client.get('/api/admin/storage/entries',
+            headers={'Origin': 'http://127.0.0.1:8000'}).status_code, 200)
 
     def test_stale_replacements_do_not_overwrite_newer_document(self):
         uid = self.upload()
@@ -259,6 +264,18 @@ class AdminKnowledgeTests(unittest.TestCase):
         paths = app.openapi()['paths']
         self.assertIn('/api/admin/storage/entries', paths)
         self.assertIn('/api/admin/uploads/{upload_id}/complete', paths)
+
+    def test_missing_configuration_returns_actionable_503_without_network(self):
+        self.client.app.dependency_overrides.pop(self.api.get_db)
+        with patch.dict(self.api.AsyncSessionLocal.kw, {'bind': None}):
+            r = self.client.get('/api/admin/documents')
+        self.assertEqual(r.status_code, 503)
+        self.assertIn('DATABASE_URL', r.json()['detail'])
+        self.client.app.dependency_overrides.pop(self.api.get_storage)
+        with patch.dict(os.environ, {'R2_BUCKET': ''}):
+            r = self.client.get('/api/admin/storage/entries')
+        self.assertEqual(r.status_code, 503)
+        self.assertIn('R2_BUCKET', r.json()['detail'])
 
     def test_existing_file_registration_and_real_index_guard(self):
         key = 'knowledge/hue/old.txt'

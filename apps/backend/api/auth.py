@@ -8,6 +8,7 @@ from typing import AsyncGenerator
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -336,4 +337,3 @@ async def google_auth(
 # ) -> LoginResponse:
 #     """Đăng nhập hoặc đăng ký bằng Facebook OAuth 2.0."""
 #     pass
-
