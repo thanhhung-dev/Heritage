@@ -65,6 +65,20 @@ class MemoryS3:
         return f'https://test.invalid/{Params["Key"]}?signature=test'
 
 
+class MemoryPassages:
+    def __init__(self):
+        self.keys = set()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
+
+    async def source_in_use(self, object_key, bucket):
+        return object_key in self.keys
+
+
 class AdminKnowledgeTests(unittest.TestCase):
     def setUp(self):
         # Import inside the test so RED runs and reports the missing feature.
@@ -90,6 +104,8 @@ class AdminKnowledgeTests(unittest.TestCase):
                 yield session
         self.s3 = MemoryS3()
         self.storage = R2Storage(client=self.s3, bucket='test-bucket')
+        self.passages = MemoryPassages()
+        self.enterContext(patch('apps.backend.services.knowledge.PassageStore', return_value=self.passages, create=True))
         app = FastAPI()
         app.include_router(api.router, prefix='/api')
         app.dependency_overrides[api.get_storage] = lambda: self.storage
@@ -243,6 +259,43 @@ class AdminKnowledgeTests(unittest.TestCase):
         paths = app.openapi()['paths']
         self.assertIn('/api/admin/storage/entries', paths)
         self.assertIn('/api/admin/uploads/{upload_id}/complete', paths)
+
+    def test_existing_file_registration_and_real_index_guard(self):
+        key = 'knowledge/hue/old.txt'
+        self.s3.put_object(Bucket='test-bucket', Key=key, Body=b'Historical text.', ContentType='text/plain')
+        r = self.client.post('/api/admin/documents', json={'object_key': key, 'title': 'Tài liệu cũ'})
+        self.assertEqual(r.status_code, 201, r.text)
+        self.assertEqual(r.json()['title'], 'Tài liệu cũ')
+        self.assertEqual(self.client.post('/api/admin/documents', json={'object_key': key}).status_code, 409)
+        self.passages.keys.add(key)
+        self.assertEqual(self.client.delete(f'/api/admin/documents/{r.json()["id"]}').status_code, 409)
+        self.assertIn(key, self.s3.objects)
+
+    def test_r2_errors_do_not_leak_credentials_and_folders_are_not_recursive(self):
+        with patch.object(self.s3, 'list_objects_v2', side_effect=ClientError(
+                {'Error': {'Code': 'AccessDenied', 'Message': 'secret-value'}}, 'ListObjectsV2')):
+            r = self.client.get('/api/admin/storage/entries')
+        self.assertEqual(r.status_code, 503)
+        self.assertNotIn('secret-value', r.text)
+        for action, data in [('post', {'parent_prefix': 'knowledge/', 'name': 'empty'}),
+                             ('post', {'parent_prefix': 'knowledge/', 'name': 'empty'})]:
+            r = getattr(self.client, action)('/api/admin/storage/folders', json=data)
+        self.assertEqual(r.status_code, 409)
+        self.s3.put_object(Bucket='test-bucket', Key='knowledge/empty/deep/file.txt', Body=b'x')
+        r = self.client.patch('/api/admin/storage/folders', json={'prefix': 'knowledge/empty/', 'name': 'new'})
+        self.assertEqual(r.status_code, 409)
+        self.assertIn('knowledge/empty/deep/file.txt', self.s3.objects)
+
+    def test_pdf_content_and_missing_objects_are_checked_before_complete(self):
+        r = self.client.post('/api/admin/uploads', json={'parent_prefix': 'knowledge/',
+            'filename': 'paper.pdf', 'content_type': 'application/pdf', 'size_bytes': 5}).json()
+        self.assertEqual(self.client.post(f'/api/admin/uploads/{r["upload_id"]}/complete').status_code, 404)
+        from urllib.parse import urlsplit
+        key = urlsplit(r['upload_url']).path.lstrip('/')
+        self.s3.put_object(Bucket='test-bucket', Key=key, Body=b'wrong', ContentType='application/pdf')
+        self.assertEqual(self.client.post(f'/api/admin/uploads/{r["upload_id"]}/complete').status_code, 422)
+        self.s3.put_object(Bucket='test-bucket', Key=key, Body=b'%PDF-', ContentType='application/pdf')
+        self.assertEqual(self.client.post(f'/api/admin/uploads/{r["upload_id"]}/complete').status_code, 200)
 
 
 if __name__ == '__main__':
