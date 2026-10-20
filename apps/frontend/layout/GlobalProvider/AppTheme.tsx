@@ -8,7 +8,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import { memo, useMemo, ReactNode } from "react";
 import Image from 'next/image';
 import Link from 'next/link';
-import { tapestryTheme } from "@/styles/theme/tapestryTheme";
+import { tapestryTheme } from "@/styles/theme/heritageTheme";
 
 const FONT_CDN = "https://unpkg.com/@fontsource";
 
