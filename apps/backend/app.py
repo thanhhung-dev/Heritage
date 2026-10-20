@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
 from apps.backend.api import auth, chat, health, heritage, profile
 from apps.backend.core.assets import configure_asset_policy
 from apps.backend.core.config import cors_origins, validate_startup_config
