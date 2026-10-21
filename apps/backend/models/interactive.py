@@ -38,6 +38,19 @@ class Interactive(Base):
         nullable=True,
     )
 
+    # Tiêu đề + mô tả hiện trong panel khi vào chế độ đi bộ (`free_explore`).
+    # Cột riêng chứ không nhét vào `explore_area`: đây là nội dung biên tập, còn
+    # `explore_area` là hình học.
+    explore_title: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    explore_description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

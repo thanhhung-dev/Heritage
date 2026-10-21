@@ -129,6 +129,8 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
             cam_pos=inter.cam_pos,
             cam_target=inter.cam_target,
             explore_area=inter.explore_area,
+            explore_title=inter.explore_title,
+            explore_description=inter.explore_description,
             highlights=[
                 InteractiveHighlightOut.model_validate(h)
                 for h in sorted(inter.highlights, key=lambda h: h.sort_order)
