@@ -6,8 +6,11 @@ Import order matters — các model phụ thuộc theo thứ tự:
 from apps.backend.db.base import Base, TimestampMixin, AsyncSessionLocal, engine, DATABASE_URL  # noqa: F401
 
 from apps.backend.models.admin import AdminAccount, AuditLog  # noqa: F401
-from apps.backend.models.knowledge import KnowledgeDocument, KnowledgeUpload  # noqa: F401
-from apps.backend.models.user import Role, Account, UserProfile, UserConsent  # noqa: F401
+from apps.backend.models.user import (  # noqa: F401
+    UserProfile, UserConsent,
+    BadgeDefinition, UserBadge,
+    MilestoneLevelDefinition, MilestoneTaskDefinition, UserMilestoneTask,
+)
 from apps.backend.models.kg import (  # noqa: F401
     CorpusRelease, Document, Passage, Entity, EntityAlias, EntityEvidence,
     EntityAliasEvidence, Predicate, Relation, PlaceLocation,
@@ -31,10 +34,12 @@ __all__ = [
     # base
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
     "uuid_pk",
-    # admin
-    "AdminAccount", "AuditLog", "KnowledgeDocument", "KnowledgeUpload",
-    # user auth
-    "Role", "Account", "UserProfile", "UserConsent",
+    # admin / identity
+    "AdminAccount", "AuditLog",
+    # profile & gamification
+    "UserProfile", "UserConsent",
+    "BadgeDefinition", "UserBadge",
+    "MilestoneLevelDefinition", "MilestoneTaskDefinition", "UserMilestoneTask",
     # kg
     "CorpusRelease", "Document", "Passage", "Entity", "EntityAlias",
     "EntityEvidence", "EntityAliasEvidence", "Predicate", "Relation", "PlaceLocation",
@@ -48,3 +53,4 @@ __all__ = [
     # chat
     "ChatSession", "ChatMessage", "ChatFeedback",
 ]
+

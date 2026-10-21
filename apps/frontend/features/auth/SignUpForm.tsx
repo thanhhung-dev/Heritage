@@ -4,14 +4,15 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import authEye from "@/access/icons/auth-eye.svg";
-import { Button, Input, type InputRef } from "antd";
+import { Alert, Button, Input, type InputRef } from "antd";
 import { handleRegister } from "@/services/authService";
 import styles from "./auth.module.css";
 
 function emailError(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "Nhập địa chỉ email của bạn.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Nhập địa chỉ email hợp lệ.";
+  // Strict email validation as requested
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Vui lòng nhập đúng định dạng email (VD: abc@gmail.com)!";
   return "";
 }
 
@@ -25,7 +26,8 @@ function usernameError(value: string) {
 
 function passwordError(value: string) {
   if (!value) return "Nhập mật khẩu của bạn.";
-  if (value.length < 8) return "Mật khẩu phải có ít nhất 8 ký tự.";
+  // Changed to min 6 chars as requested
+  if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự!";
   return "";
 }
 
@@ -42,6 +44,7 @@ export function SignUpForm() {
   const [visible, setVisible] = useState(false);
   const [touched, setTouched] = useState({ email: false, username: false, password: false });
   const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
   
   const emailErr = touched.email ? emailError(email) : "";
   const usernameErr = touched.username ? usernameError(username) : "";
@@ -50,6 +53,7 @@ export function SignUpForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTouched({ email: true, username: true, password: true });
+    setApiError(""); // Clear previous API errors
     
     // Validation
     if (emailError(email)) { emailRef.current?.focus(); return; }
@@ -69,9 +73,11 @@ export function SignUpForm() {
           router.push("/sign-in");
         }
       );
-    } catch (error) {
-      // Error already displayed by handleRegister
-      console.error("Registration failed:", error);
+    } catch (err: any) {
+      // Extract specific error message from API response
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
+      setApiError(errorMessage);
+      console.error("Registration failed:", err);
     } finally {
       setSubmitting(false);
     }
@@ -79,6 +85,23 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={submit} noValidate className={styles.form}>
+      {apiError && (
+        <Alert
+          showIcon
+          type="error"
+          message={apiError}
+          style={{
+            backgroundColor: "#ffffff",
+            border: "1px solid #ffccc7",
+            color: "#cf1322",
+            borderRadius: "8px",
+            marginBottom: "20px",
+            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.08)"
+          }}
+          closable
+          onClose={() => setApiError("")}
+        />
+      )}
       <div className={styles.field}>
         <label htmlFor={`${id}-email`}>Email</label>
         <Input

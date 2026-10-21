@@ -1,13 +1,15 @@
 """FastAPI app chính cho chatbot văn hóa Đà Nẵng - Huế."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from apps.backend.api import admin_knowledge, auth, chat, graphrag, health, heritage
+from apps.backend.api import auth, chat, health, heritage, profile
 from apps.backend.core.assets import configure_asset_policy
 from apps.backend.core.config import cors_origins, validate_startup_config
+from apps.backend.core.email import EmailConfig, init_email_service
 from apps.backend.core.observability import (
     configure_logging,
     correlation_middleware,
@@ -18,6 +20,7 @@ from apps.backend.core.observability import (
 from apps.backend.db.base import configure_database, dispose_database
 
 load_dotenv()
+log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -26,6 +29,24 @@ async def lifespan(app: FastAPI):
     configure_logging(settings.otel_service_name, settings.app_environment)
     engine = configure_database(settings.database_url) if settings.database_url else None
     configure_asset_policy(settings.r2_public_base_url, settings.r2_allowed_asset_hosts)
+    
+    # Initialize email service
+    if settings.smtp_host and settings.smtp_port and settings.smtp_user and settings.smtp_password and settings.smtp_sender_email:
+        email_config = EmailConfig(
+            smtp_host=settings.smtp_host,
+            smtp_port=settings.smtp_port,
+            smtp_user=settings.smtp_user,
+            smtp_password=settings.smtp_password,
+            sender_email=settings.smtp_sender_email,
+            sender_name=settings.smtp_sender_name,
+            use_tls=settings.smtp_use_tls,
+        )
+        init_email_service(email_config)
+        log.info(f"Email service initialized: {settings.smtp_host}:{settings.smtp_port}")
+    else:
+        init_email_service(None)
+        log.warning("Email service disabled - SMTP not configured in .env")
+    
     tracing = setup_tracing(app, settings, engine)
     app.state.settings = settings
     try:
@@ -52,13 +73,11 @@ app.add_middleware(
 )
 app.middleware("http")(correlation_middleware)
 
-app.include_router(auth.router)  # prefix already in router
+app.include_router(auth.router)  # prefix="/api/auth" already in router
 app.include_router(health.router, prefix="/api")
-app.include_router(auth.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(heritage.router, prefix="/api")
-app.include_router(graphrag.router, prefix="/api")
-app.include_router(admin_knowledge.router, prefix="/api")
+app.include_router(profile.router)
 
 
 @app.get("/internal/metrics", include_in_schema=False)
