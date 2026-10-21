@@ -5,6 +5,10 @@ export interface User {
   email: string;
   username: string;
   role: string;
+  /** Display name supplied by the identity provider (e.g. Google). */
+  display_name?: string;
+  /** Avatar URL supplied by the identity provider (e.g. Google `picture`). */
+  avatar_url?: string;
 }
 
 export interface AuthTokens {
@@ -16,6 +20,15 @@ export interface AuthTokens {
 const TOKEN_KEY = 'heritage_access_token';
 const USER_KEY = 'heritage_user';
 
+/** Fired in the same tab whenever the stored session changes. */
+export const AUTH_CHANGE_EVENT = 'heritage-auth-change';
+
+function notifyAuthChange(): void {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
 /**
  * Store authentication token and user info in localStorage
  */
@@ -24,6 +37,7 @@ export function setAuthTokens(tokens: AuthTokens): void {
   
   localStorage.setItem(TOKEN_KEY, tokens.access_token);
   localStorage.setItem(USER_KEY, JSON.stringify(tokens.user));
+  notifyAuthChange();
 }
 
 /**
@@ -66,6 +80,7 @@ export function clearAuth(): void {
   
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  notifyAuthChange();
 }
 
 /**

@@ -169,3 +169,37 @@ export async function openGooglePopup(
     onError?.(error instanceof Error ? error : new Error('Failed to initialize Google login'));
   }
 }
+
+export interface GoogleIdTokenClaims {
+  email?: string;
+  name?: string;
+  /** Google profile photo URL (`picture` claim). */
+  picture?: string;
+}
+
+/**
+ * Decode the profile claims from a Google ID token on the client.
+ *
+ * The backend has already verified the token signature; we only read the
+ * public claims here because the auth API does not return the Google avatar.
+ */
+export function decodeGoogleIdToken(idToken: string): GoogleIdTokenClaims {
+  try {
+    const payload = idToken.split('.')[1];
+    if (!payload) return {};
+
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const claims = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+
+    return {
+      email: typeof claims.email === 'string' ? claims.email : undefined,
+      name: typeof claims.name === 'string' ? claims.name : undefined,
+      picture: typeof claims.picture === 'string' ? claims.picture : undefined,
+    };
+  } catch {
+    return {};
+  }
+}

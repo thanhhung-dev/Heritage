@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Alert, ConfigProvider, Spin, theme } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import Link from "next/link";
+import { getUser, type User } from "@/lib/auth";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfileTabs } from "./ProfileTabs";
 import {
@@ -85,6 +86,12 @@ export function ProfilePage() {
   const [apiError, setApiError] = useState("");
   const [badges, setBadges] = useState<Badge[]>([]);
   const [milestones, setMilestones] = useState<MilestoneLevel[]>([]);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Google profile data (display name + avatar) lives in localStorage.
+    setAuthUser(getUser());
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -172,8 +179,9 @@ export function ProfilePage() {
       setProfile(updated);
       setFormData(updated);
       setIsEditing(false);
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to save profile. Please try again.";
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to save profile. Please try again.";
       setApiError(errorMessage);
     } finally {
       setSaving(false);
@@ -239,6 +247,9 @@ export function ProfilePage() {
 
           <ProfileHeader
             profile={profile}
+            authAvatarUrl={authUser?.avatar_url}
+            authDisplayName={authUser?.display_name}
+            authHandle={authUser?.username}
             isEditing={isEditing}
             saving={saving}
             onEdit={handleEdit}
@@ -254,14 +265,11 @@ export function ProfilePage() {
             displayEmail={displayEmail}
             personalizationConsent={personalizationConsent}
             consentSaving={consentSaving}
-            saving={saving}
             badges={badges}
             milestones={milestones}
             onFormChange={handleFormChange}
             onDisplayEmailChange={setDisplayEmail}
             onPersonalizationConsentChange={handlePersonalizationConsentChange}
-            onCancel={handleCancel}
-            onSave={handleSave}
           />
 
         </div>

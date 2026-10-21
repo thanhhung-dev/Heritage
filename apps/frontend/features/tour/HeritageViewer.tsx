@@ -22,6 +22,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import logoText from "@/access/icons/logo-text.svg";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
+import { interactiveUrl, sceneUrl } from "@/lib/tour-routes";
 import { tapestryTourVarsStyle } from "@/styles/theme/heritageTheme";
 import Fullscreen from "@/access/icons/full_screen.png";
 import FullScreenExit from "@/access/icons/full_screen_exit.png"

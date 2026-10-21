@@ -10,11 +10,11 @@ interface BadgesGridProps {
 }
 
 /**
- * Renders the gamification Badges grid (6 columns, responsive).
- * Locked badges (is_unlocked === false) are dimmed to 0.4 opacity and
+ * Renders the gamification Badges grid (2 / 4 / 5 columns, responsive).
+ * Locked badges (is_unlocked === false) are dimmed to 50% opacity and
  * show a lock icon in the top-right corner. Unlocked badges render at
- * full brightness with their earned icon (resolved from `icon_key` via
- * `getBadgeIcon`).
+ * full brightness with their earned white icon (resolved from `icon_key`
+ * via `getBadgeIcon`).
  */
 export function BadgesGrid({ badges }: BadgesGridProps) {
   return (

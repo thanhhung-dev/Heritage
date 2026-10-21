@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type FormEvent } from "react";
+import { useMemo } from "react";
 import {
   EnvironmentOutlined,
   InstagramOutlined,
@@ -18,11 +18,8 @@ const BIO_MAX_LENGTH = 750;
 
 interface ProfileEditFormProps {
   formData: Partial<ProfileData>;
-  saving: boolean;
   badges: Badge[];
   onFormChange: <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => void;
-  onCancel: () => void;
-  onSave: () => void;
 }
 
 /**
@@ -32,7 +29,7 @@ interface ProfileEditFormProps {
  * `onFormChange` handler passed down from ProfilePage, so there are no
  * ad-hoc local field states here.
  */
-export function ProfileEditForm({ formData, saving, badges, onFormChange, onCancel, onSave }: ProfileEditFormProps) {
+export function ProfileEditForm({ formData, badges, onFormChange }: ProfileEditFormProps) {
   const featuredBadges = formData.featured_badges || [];
   const bioLength = formData.bio?.length ?? 0;
 
@@ -49,25 +46,12 @@ export function ProfileEditForm({ formData, saving, badges, onFormChange, onCanc
     onFormChange("featured_badges", [...featuredBadges, badgeId]);
   };
 
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    onSave();
-  };
-
   return (
-    <Form layout="vertical" component="form" onSubmitCapture={handleSubmit} className={styles.editForm}>
+    <Form layout="vertical" className={styles.editForm}>
       <div className={styles.editFormHeader}>
         <div>
           <h2 className={styles.editFormTitle}>Edit profile</h2>
           <p className={styles.cardDescription}>Update your personal information and social links.</p>
-        </div>
-        <div className={styles.editFormActions}>
-          <button type="button" className={styles.buttonOutline} onClick={onCancel} disabled={saving}>
-            Cancel
-          </button>
-          <button type="submit" className={styles.buttonPrimary} disabled={saving}>
-            {saving ? "Saving..." : "Save changes"}
-          </button>
         </div>
       </div>
 

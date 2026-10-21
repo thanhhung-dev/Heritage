@@ -1,11 +1,18 @@
 "use client";
 
-import { EditOutlined, EnvironmentOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { ClockCircleOutlined, EditOutlined } from "@ant-design/icons";
+import { UserAvatar } from "@/features/account/UserAvatar";
 import type { ProfileData } from "./types";
 import styles from "./profile.module.css";
 
 interface ProfileHeaderProps {
   profile: ProfileData;
+  /** Google avatar from the stored session, used when the profile has none. */
+  authAvatarUrl?: string | null;
+  /** Google display name from the stored session. */
+  authDisplayName?: string | null;
+  /** Account username, used as a handle fallback. */
+  authHandle?: string | null;
   isEditing: boolean;
   saving: boolean;
   onEdit: () => void;
@@ -20,28 +27,41 @@ function formatJoined(joinedAt?: string): string {
   return `Joined ${date.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
 }
 
-export function ProfileHeader({ profile, isEditing, saving, onEdit, onCancel, onSave }: ProfileHeaderProps) {
-  const initials = (profile.display_name || "Hung Thanh").trim().charAt(0).toUpperCase();
+export function ProfileHeader({
+  profile,
+  authAvatarUrl,
+  authDisplayName,
+  authHandle,
+  isEditing,
+  saving,
+  onEdit,
+  onCancel,
+  onSave,
+}: ProfileHeaderProps) {
+  const displayName =
+    profile.display_name?.trim() ||
+    authDisplayName?.trim() ||
+    profile.handle?.trim() ||
+    "Heritage Explorer";
+  const avatarUrl = profile.avatar_url?.trim() || authAvatarUrl?.trim() || "";
+  const handle = (profile.handle?.trim() || authHandle?.trim() || "").replace(/^@+/, "");
   const joined = formatJoined(profile.joined_at);
   const totalHours = profile.total_hours ?? 0;
   const level = profile.level || "Explorer";
 
   return (
     <>
-      {isEditing ? (
-        <div className={styles.editActions}>
-          <button type="button" className={styles.buttonOutline} onClick={onCancel} disabled={saving}>
-            Cancel
-          </button>
-          <button type="button" className={styles.buttonPrimary} onClick={onSave} disabled={saving}>
-            {saving ? "Saving..." : "Save changes"}
-          </button>
-        </div>
-      ) : null}
-
       <div
         className={styles.banner}
-        style={profile.banner_url ? { backgroundImage: `url(${profile.banner_url})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+        style={
+          profile.banner_url
+            ? {
+                backgroundImage: `url(${profile.banner_url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : undefined
+        }
       >
         <div className={styles.bannerMap} aria-hidden="true">
           <div className={styles.bannerMapPin} />
@@ -58,48 +78,61 @@ export function ProfileHeader({ profile, isEditing, saving, onEdit, onCancel, on
 
       <div className={styles.headerRow}>
         <div className={styles.avatarIdentityRow}>
-          <div className={styles.avatarWrap}>
-            <div className={styles.avatar}>
-              {profile.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatar_url} alt="" className={styles.avatarImage} />
-              ) : (
-                <span aria-hidden="true">{initials}</span>
-              )}
-            </div>
-            <span className={styles.avatarPin}>
-              <EnvironmentOutlined />
-            </span>
-          </div>
+          <UserAvatar
+            src={avatarUrl}
+            name={displayName}
+            size={120}
+            className={styles.avatar}
+          />
+
           <div className={styles.identityCol}>
             {!isEditing ? (
-              <div className={styles.nameRow}>
-                <span className={styles.levelPill}>★ {level} ★</span>
-              </div>
+              <span className={styles.levelPill}>★ {level} ★</span>
             ) : null}
+
             <div className={styles.nameRow}>
-              <h1 className={styles.displayName}>{profile.display_name || "Hung Thanh"}</h1>
-              {isEditing ? <EditOutlined className={styles.nameEditIcon} /> : null}
-            </div>
-            <div className={styles.metaRow}>
-              <span className={styles.handle}>@{profile.handle || "hung-thanh-1"}</span>
-              {joined ? (
-                <>
-                  <span className={styles.metaDot}>&middot;</span>
-                  <span className={styles.joined}>{joined}</span>
-                </>
+              <h1 className={styles.displayName}>{displayName}</h1>
+              {!isEditing ? (
+                <button
+                  type="button"
+                  className={styles.nameEditButton}
+                  onClick={onEdit}
+                  aria-label="Edit profile"
+                  title="Edit profile"
+                >
+                  <EditOutlined aria-hidden="true" />
+                </button>
               ) : null}
+            </div>
+
+            <div className={styles.metaRow}>
+              {handle ? <span className={styles.handle}>@{handle}</span> : null}
+              {handle && joined ? <span className={styles.metaDot}>&middot;</span> : null}
+              {joined ? <span className={styles.joined}>{joined}</span> : null}
             </div>
           </div>
         </div>
 
-        <div className={styles.actionsRow}>
-          {!isEditing ? (
-            <button type="button" className={styles.buttonOutline} onClick={onEdit}>
-              <EditOutlined /> Edit profile
+        {isEditing ? (
+          <div className={styles.actionsRow}>
+            <button
+              type="button"
+              className={styles.buttonOutline}
+              onClick={onCancel}
+              disabled={saving}
+            >
+              Hủy
             </button>
-          ) : null}
-        </div>
+            <button
+              type="button"
+              className={styles.buttonPrimary}
+              onClick={onSave}
+              disabled={saving}
+            >
+              {saving ? "Đang lưu..." : "Lưu thay đổi"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </>
   );

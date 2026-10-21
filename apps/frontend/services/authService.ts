@@ -2,7 +2,8 @@
 
 import { message } from 'antd';
 import { API_BASE_URL } from '@/config/api';
-import { setAuthTokens, type AuthTokens, type User } from '@/lib/auth';
+import { decodeGoogleIdToken } from '@/lib/googleAuth';
+import { setAuthTokens, type User } from '@/lib/auth';
 
 export interface RegisterData {
   email: string;
@@ -138,6 +139,18 @@ export async function loginWithGoogle(idToken: string): Promise<LoginResponse> {
   return json as LoginResponse;
 }
 
+/** Only allow https URLs (Google profile photos always use https). */
+function getSafeAvatarUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Handle Google login with UI feedback and token storage
  */
@@ -147,9 +160,19 @@ export async function handleGoogleLogin(
 ): Promise<void> {
   try {
     const response = await loginWithGoogle(idToken);
-    
-    // Store tokens and user info
-    setAuthTokens(response);
+    const claims = decodeGoogleIdToken(idToken);
+
+    // The auth API only returns account fields, so hydrate the display name
+    // and Google profile photo from the verified ID token claims.
+    const user: User = {
+      ...response.user,
+      display_name:
+        claims.name?.trim() || response.user.display_name || response.user.username,
+      avatar_url: getSafeAvatarUrl(claims.picture) ?? response.user.avatar_url,
+    };
+
+    // Store tokens and user info (including the Google avatar).
+    setAuthTokens({ ...response, user });
     
     message.success('Đăng nhập bằng Google thành công!');
     if (onSuccess) onSuccess();

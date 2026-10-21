@@ -15,14 +15,11 @@ interface ProfileTabsProps {
   displayEmail: boolean;
   personalizationConsent: boolean;
   consentSaving: boolean;
-  saving: boolean;
   badges: Badge[];
   milestones: MilestoneLevel[];
   onFormChange: <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => void;
   onDisplayEmailChange: (checked: boolean) => void;
   onPersonalizationConsentChange: (checked: boolean) => void;
-  onCancel: () => void;
-  onSave: () => void;
 }
 
 /** Owns tab-switching state/UI for Personal info, Milestones, and Achievements. */
@@ -34,14 +31,11 @@ export function ProfileTabs({
   displayEmail,
   personalizationConsent,
   consentSaving,
-  saving,
   badges,
   milestones,
   onFormChange,
   onDisplayEmailChange,
   onPersonalizationConsentChange,
-  onCancel,
-  onSave,
 }: ProfileTabsProps) {
   return (
     <Tabs
@@ -51,7 +45,7 @@ export function ProfileTabs({
       items={[
         {
           key: "personal",
-          label: "Personal info",
+          label: "Personal Info",
           children: (
             <PersonalInfoTab
               isEditing={isEditing}
@@ -59,17 +53,13 @@ export function ProfileTabs({
               displayEmail={displayEmail}
               personalizationConsent={personalizationConsent}
               consentSaving={consentSaving}
-              saving={saving}
               badges={badges}
               onFormChange={onFormChange}
               onDisplayEmailChange={onDisplayEmailChange}
               onPersonalizationConsentChange={onPersonalizationConsentChange}
-              onCancel={onCancel}
-              onSave={onSave}
             />
           ),
         },
-
         {
           key: "milestones",
           label: "Milestones",
@@ -84,4 +74,3 @@ export function ProfileTabs({
     />
   );
 }
-
