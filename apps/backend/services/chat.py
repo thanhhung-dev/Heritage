@@ -18,7 +18,7 @@ class ChatSessionService:
         self.db = db
 
     async def get_or_create(
-        self, ip_hash: str, site_id: uuid.UUID | None = None,
+        self, ip_hash: str,
         user_agent: str | None = None,
     ) -> ChatSession:
         """Tìm session theo ip_hash (session per IP), tạo nếu chưa có.
@@ -39,7 +39,6 @@ class ChatSessionService:
             insert(ChatSession)
             .values(
                 ip_hash=ip_hash,
-                site_id=site_id,
                 user_agent=user_agent,
             )
             .returning(ChatSession)

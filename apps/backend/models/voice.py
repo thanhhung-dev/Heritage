@@ -1,21 +1,16 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Text
+from sqlalchemy import BigInteger, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from apps.backend.db.base import Base
 
+
 class Voice(Base):
+    """voice — linked to Heritage via the heritage_voice junction table."""
     __tablename__ = "voice"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    heritage_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("heritage.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
     name: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -23,4 +18,15 @@ class Voice(Base):
     intro_video_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    heritage: Mapped["Heritage"] = relationship(back_populates="voices")
+    voice_clips: Mapped[list["VoiceClip"]] = relationship(
+        "VoiceClip",
+        back_populates="voice",
+        cascade="all, delete-orphan",
+    )
+
+    heritages: Mapped[list["Heritage"]] = relationship(
+        "Heritage",
+        secondary="heritage_voice",
+        back_populates="voices",
+        order_by="HeritageVoice.sort_order",
+    )

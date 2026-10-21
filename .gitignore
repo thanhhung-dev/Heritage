@@ -108,3 +108,7 @@ Thumbs.db
 .agents
 .opencode
 _bmad/
+
+infra/
+*.tfstate
+*.tfstate.*

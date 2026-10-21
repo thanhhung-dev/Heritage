@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
+
+log = logging.getLogger(__name__)
 
 # Project root
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -29,6 +32,12 @@ DEFAULT_OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4317"
 SUPPORTED_ENVIRONMENTS = {"local", "test", "staging", "production"}
 SUPPORTED_CONTENT_CAPTURE = {"none", "metadata", "full"}
 
+# Frontend origins allowed by the API CORS policy when CORS_ORIGINS is unset.
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+)
+
 
 class ConfigurationError(RuntimeError):
     """Raised when the backend cannot safely start with its environment."""
@@ -45,6 +54,18 @@ class StartupSettings:
     otel_exporter_otlp_endpoint: str
     otel_tracing_enabled: bool
     observability_content_capture: str
+    cors_origins: tuple[str, ...] = field(default_factory=tuple)
+    r2_public_base_url: str | None = None
+    r2_allowed_asset_hosts: tuple[str, ...] = field(default_factory=tuple)
+    # Email SMTP settings
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_user: str | None = None
+    smtp_password: str = field(default=None, repr=False)
+    smtp_sender_email: str | None = None
+    smtp_sender_name: str = "Heritage Support"
+    smtp_use_tls: bool = True
+    frontend_base_url: str = "http://localhost:3000"
 
 
 def _is_http_url(value: str) -> bool:
@@ -53,6 +74,23 @@ def _is_http_url(value: str) -> bool:
         return parsed.scheme in {"http", "https"} and bool(parsed.hostname)
     except ValueError:
         return False
+
+
+def _is_host(value: str) -> bool:
+    """A bare host name — no scheme, no path (e.g. assets.heritage.vn)."""
+    return bool(value) and "://" not in value and "/" not in value
+
+
+def cors_origins(environ: Mapping[str, str] | None = None) -> list[str]:
+    """Origins allowed by the API CORS policy.
+
+    Reads ``CORS_ORIGINS`` (comma-separated); falls back to the local frontend.
+    """
+    env = os.environ if environ is None else environ
+    raw = env.get("CORS_ORIGINS", "").strip()
+    if not raw:
+        return list(DEFAULT_CORS_ORIGINS)
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 def _boolean(
@@ -159,11 +197,63 @@ def validate_startup_config(
             "OBSERVABILITY_CONTENT_CAPTURE must be one of: full, metadata, none."
         )
 
+    configured_cors_origins = cors_origins(env)
+    for origin in configured_cors_origins:
+        if not _is_http_url(origin):
+            errors.append(
+                "CORS_ORIGINS must be a comma-separated list of "
+                "http:// or https:// origins."
+            )
+            break
+
+    r2_base_raw = env.get("R2_PUBLIC_BASE_URL", "").strip()
+    r2_public_base_url: str | None = None
+    if r2_base_raw:
+        if not _is_http_url(r2_base_raw):
+            errors.append(
+                "R2_PUBLIC_BASE_URL must be a valid http:// or https:// URL."
+            )
+        else:
+            r2_public_base_url = r2_base_raw.rstrip("/")
+
+    r2_allowed_asset_hosts = tuple(
+        host.strip().lower()
+        for host in env.get("R2_ALLOWED_ASSET_HOSTS", "").split(",")
+        if host.strip()
+    )
+    for host in r2_allowed_asset_hosts:
+        if not _is_host(host):
+            errors.append(
+                "R2_ALLOWED_ASSET_HOSTS must be a comma-separated list of "
+                "host names (no scheme or path)."
+            )
+            break
+
     if errors:
         details = "\n".join(f"- {message}" for message in errors)
         raise ConfigurationError(
             f"Backend startup configuration is invalid:\n{details}"
         )
+    
+    # Parse SMTP settings (optional)
+    smtp_host = env.get("SMTP_HOST", "").strip() or None
+    smtp_port_raw = env.get("SMTP_PORT", "").strip()
+    smtp_port = None
+    if smtp_port_raw:
+        try:
+            smtp_port = int(smtp_port_raw)
+            if smtp_port <= 0 or smtp_port > 65535:
+                raise ValueError
+        except ValueError:
+            log.warning(f"Invalid SMTP_PORT: {smtp_port_raw}, email disabled")
+            smtp_host = None
+    
+    smtp_user = env.get("SMTP_USER", "").strip() or None
+    smtp_password = env.get("SMTP_PASSWORD", "").strip() or None
+    smtp_sender_email = env.get("SMTP_SENDER_EMAIL", "").strip() or None
+    smtp_sender_name = env.get("SMTP_SENDER_NAME", "Heritage Support").strip()
+    smtp_use_tls = _boolean(env, "SMTP_USE_TLS", True, [])
+    frontend_base_url = env.get("FRONTEND_BASE_URL", "http://localhost:3000").strip().rstrip("/")
 
     return StartupSettings(
         database_url=database_url,
@@ -175,6 +265,17 @@ def validate_startup_config(
         otel_exporter_otlp_endpoint=otel_endpoint,
         otel_tracing_enabled=otel_enabled,
         observability_content_capture=capture,
+        cors_origins=tuple(configured_cors_origins),
+        r2_public_base_url=r2_public_base_url,
+        r2_allowed_asset_hosts=r2_allowed_asset_hosts,
+        smtp_host=smtp_host,
+        smtp_port=smtp_port,
+        smtp_user=smtp_user,
+        smtp_password=smtp_password,
+        smtp_sender_email=smtp_sender_email,
+        smtp_sender_name=smtp_sender_name,
+        smtp_use_tls=smtp_use_tls,
+        frontend_base_url=frontend_base_url,
     )
 
 
