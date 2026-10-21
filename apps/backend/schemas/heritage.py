@@ -116,6 +116,8 @@ class InteractiveOut(BaseModel):
     cam_pos: dict[str, Any] | list[Any] | None = None
     cam_target: dict[str, Any] | list[Any] | None = None
     explore_area: dict[str, Any] | list[Any] | None = None
+    explore_title: str | None = None
+    explore_description: str | None = None
     highlights: list[InteractiveHighlightOut] = Field(default_factory=list)
 
 

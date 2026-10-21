@@ -79,7 +79,15 @@ export interface HeritageInteractiveHighlight {
   id: number;
   popup_title: string | null;
   popup_text: string | null;
+  /** Thumbnail từ tour nguồn; API backend hiện chưa trả trường này. */
+  thumb_url?: string | null;
   media_url: string | null;
+  /** Metadata popup từ tour nguồn; optional để tương thích API backend cũ. */
+  media_type?: string | null;
+  media_alt?: string | null;
+  media_credit?: string | null;
+  captions_url?: string | null;
+  audio_url?: string | null;
   cam_pos: number[] | Record<string, number> | null;
   cam_target: number[] | Record<string, number> | null;
   lens_pos: number[] | Record<string, number> | null;
@@ -88,12 +96,21 @@ export interface HeritageInteractiveHighlight {
   sort_order: number;
 }
 
+
+export interface ExploreArea {
+  center: number[];
+  extents: number[];
+  rotation: number[];
+}
+
 export interface HeritageInteractive {
   id: number;
   mode: string;
   cam_pos: number[] | Record<string, number> | null;
   cam_target: number[] | Record<string, number> | null;
-  explore_area: number[] | Record<string, number> | null;
+  explore_area: ExploreArea | string | null;
+  explore_title?: string | null;
+  explore_description?: string | null;
   highlights: HeritageInteractiveHighlight[];
 }
 
@@ -106,7 +123,6 @@ export interface HeritageSceneHighlight {
   animation_type: string | null;
 }
 
-// ── Scene (full payload, == backend SceneDetailOut) ──────────────────────────
 
 export interface HeritageScene {
   id: number;
@@ -123,7 +139,6 @@ export interface HeritageScene {
   highlights: HeritageSceneHighlight[];
 }
 
-// ── Heritage (list & detail, == backend HeritageOut) ─────────────────────────
 
 export interface HeritageSummary {
   id: number;
@@ -152,7 +167,6 @@ export interface HeritageSummary {
   voice_length: number;
 }
 
-// ── Full single-load payload (== backend HeritageContentOut) ─────────────────
 
 export interface HeritagePayload {
   heritage: HeritageSummary;

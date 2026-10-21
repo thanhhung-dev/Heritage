@@ -502,4 +502,3 @@ async def reset_password(
 # ) -> LoginResponse:
 #     """Đăng nhập hoặc đăng ký bằng Facebook OAuth 2.0."""
 #     pass
-

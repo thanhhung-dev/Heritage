@@ -1,0 +1,2 @@
+# Separate environment: do not install into the backend's .venv.
+graphrag==3.3.0
