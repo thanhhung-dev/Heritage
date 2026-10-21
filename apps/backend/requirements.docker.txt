@@ -5,8 +5,8 @@ pydantic==2.13.5
 httpx==0.28.1
 python-dotenv==1.2.3
 
-# Graph processing
-networkx==3.7
+# BGE-M3 document/query embeddings
+sentence-transformers==6.1.0
 
 # Database
 SQLAlchemy==2.0.54

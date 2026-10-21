@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useHeritageTour } from "@/context/heritage-tour";
-import { tapestryTourVarsStyle } from "@/styles/theme/tapestryTheme";
+import { tapestryTourVarsStyle } from "@/styles/theme/heritageTheme";
 import styles from "./content-shell.module.css";
 import { LogoText } from "@/components/LogoText";
 

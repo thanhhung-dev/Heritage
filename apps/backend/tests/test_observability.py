@@ -3,7 +3,9 @@ import json
 import logging
 import unittest
 import uuid
-from unittest.mock import Mock, patch
+from contextlib import contextmanager
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
 from fastapi import FastAPI
@@ -17,6 +19,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 from apps.backend.api import chat as chat_api
 from apps.backend.app import app
 from apps.backend.core.llm import _llama_server_generate
+from apps.backend.core import observability as telemetry
 from apps.backend.core.observability import (
     DEPENDENCY_HEALTH,
     JsonFormatter,
@@ -33,6 +36,64 @@ from apps.backend.core.observability import (
 class ObservabilityTests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
+
+    def test_rag_trace_groups_children_and_enforces_capture_mode(self) -> None:
+        records = []
+
+        @contextmanager
+        def start(**fields):
+            record = dict(fields)
+            record['trace_id'] = (fields['trace_context'] or {}).get('trace_id', uuid.uuid4().hex)
+            records.append(record)
+            yield SimpleNamespace(
+                trace_id=record['trace_id'], id=str(len(records)),
+                update=lambda **values: record.update(values), end=lambda: None,
+            )
+
+        client = SimpleNamespace(start_as_current_observation=start)
+        for mode in ('full', 'metadata', 'none'):
+            records.clear()
+            with (
+                patch.dict('os.environ', {'OBSERVABILITY_CONTENT_CAPTURE': mode}),
+                patch.object(telemetry, '_langfuse_client', return_value=client),
+            ):
+                with telemetry.rag_observation('rag.request', input={'question': 'person@example.com'}):
+                    with telemetry.rag_observation('generation', as_type='generation') as generation:
+                        generation.update(output='answer token=private', metadata={'finish_reason': 'stop'})
+            if mode == 'none':
+                self.assertEqual(records, [])
+                continue
+            self.assertEqual(records[1]['trace_context']['parent_span_id'], '1')
+            self.assertEqual(records[0]['trace_id'], records[1]['trace_context']['trace_id'])
+            self.assertNotIn('person@example.com', repr(records))
+            self.assertNotIn('private', repr(records))
+            self.assertEqual(records[1]['metadata']['finish_reason'], 'stop')
+            if mode == 'full':
+                self.assertIn('answer', records[1]['output'])
+            else:
+                self.assertNotIn('output', records[1])
+                self.assertNotIn('input', records[0])
+
+    def test_rag_trace_failure_does_not_swallow_business_error(self) -> None:
+        for phase in ('start', 'update', 'end'):
+            with self.subTest(phase=phase):
+                client = Mock()
+                manager = MagicMock()
+                client.start_as_current_observation.return_value = manager
+                failing_call = {
+                    'start': client.start_as_current_observation,
+                    'update': manager.__enter__.return_value.update,
+                    'end': manager.__exit__,
+                }[phase]
+                failing_call.side_effect = RuntimeError('private telemetry error')
+                with (
+                    patch.dict('os.environ', {'OBSERVABILITY_CONTENT_CAPTURE': 'full'}),
+                    patch.object(telemetry, '_langfuse_client', return_value=client),
+                    self.assertRaisesRegex(ValueError, 'business error'),
+                ):
+                    with telemetry.rag_observation('rag.request') as observation:
+                        observation.update(output='safe')
+                        raise ValueError('business error')
 
     def test_correlation_header_is_preserved_or_replaced(self) -> None:
         supplied = str(uuid.uuid4())
@@ -236,25 +297,21 @@ class ObservabilityTests(unittest.TestCase):
         "apps.backend.api.chat.generate_response",
         side_effect=RuntimeError("token=private-dependency-secret"),
     )
-    @patch(
-        "apps.backend.api.chat.retrieve_context",
-        return_value=("safe context", [{"doc": "safe source"}], []),
-    )
+    @patch("apps.backend.api.chat.PassageRepository")
     def test_chat_dependency_error_response_is_sanitized(
         self, _retrieve: Mock, _generate: Mock
     ) -> None:
-        async def fake_db():
-            yield Mock()
-
-        app.dependency_overrides[chat_api.get_db] = fake_db
-        try:
-            response = self.client.post(
-                "/api/chat", json={"message": "Giới thiệu di sản", "use_rag": True}
-            )
-        finally:
-            app.dependency_overrides.pop(chat_api.get_db, None)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json(), {"detail": "LLM unavailable"})
+        _retrieve.return_value.search_evidence = AsyncMock(return_value=SimpleNamespace(
+            query=SimpleNamespace(ambiguous=False, intent=frozenset(),
+                                  search_text="Giới thiệu di sản"),
+            evidence=[SimpleNamespace(id=42, text="safe context")],
+            graph_context=[],
+        ))
+        response = self.client.post(
+            "/api/chat", json={"message": "Giới thiệu di sản", "use_rag": True}
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {"detail": "Model trả lời hiện không khả dụng."})
         self.assertNotIn("private-dependency-secret", response.text)
 
     @patch("apps.backend.core.llm.httpx.post")

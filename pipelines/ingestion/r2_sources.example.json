@@ -1,0 +1,16 @@
+{
+  "corpus_version": 2,
+  "chunking": {"max_chars": 2400, "overlap_chars": 300},
+  "documents": [
+    {
+      "url": "https://YOUR-R2-DOMAIN/knowledge/curated/thien-mu/lich-su.md",
+      "object_key": "knowledge/curated/thien-mu/lich-su.md",
+      "source_url": "https://YOUR-ORIGINAL-SOURCE/thien-mu",
+      "title": "Lịch sử chùa Thiên Mụ",
+      "region": "hue",
+      "source_type": "official",
+      "tier": 1,
+      "observed_at": "2026-10-14T00:00:00Z"
+    }
+  ]
+}

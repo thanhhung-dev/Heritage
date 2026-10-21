@@ -325,11 +325,9 @@ def cmd_fetch(force: bool) -> int:
     total = sum(s["chars"] for s in success)
     print(f"\n=== {len(success)} bài, {total:,} ký tự | {len(failed)} bỏ ===")
     print(f"  Index: {INDEX_FILE}  (mỗi bài có 'url' thật - model không phải nhớ url)")
-    print("\n  Sau khi cào lại PHẢI làm tiếp, vì corpus là gốc của mọi thứ:")
-    print("    apps/backend/.venv/bin/python pipelines/graph/build_graph.py        # graph đổi node/edge")
-    print("    apps/backend/.venv/bin/python pipelines/evaluation/eval_retrieval.py        # kiểm cổng từ chối")
+    print("\n  Corpus này phục vụ training offline, không tự cập nhật OpenSearch:")
     print("    apps/backend/.venv/bin/python pipelines/training/bootstrap_deep_qa.py # sinh lại data")
-    print("    apps/backend/.venv/bin/python pipelines/evaluation/make_gold_template.py    # gold set mới")
+    print("    Xem docs/ingestion.md để ingest tài liệu vào OpenSearch.")
     return 0
 
 

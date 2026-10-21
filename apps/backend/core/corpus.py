@@ -1,13 +1,12 @@
-"""Đọc & chunk corpus - dùng CHUNG cho training và serving.
+"""Chunk text for R2 ingestion and load the offline Wikipedia training corpus.
 
-Lý do phải chung: nếu chunk lúc train khác chunk lúc serve thì đoạn `Nguồn:` mà
-model nhận lúc chạy thật có hình dạng khác đoạn nó được train trên - đúng loại
-lệch train/serve làm fine-tune mất tác dụng. Mọi hằng số ở đây là nguồn duy nhất.
+Serving reads indexed chunks from OpenSearch; it does not load local corpus files.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import urllib.parse
 from pathlib import Path
 
@@ -121,6 +120,50 @@ def chunk_document(text: str) -> list[dict]:
             if sum(len(x) for x in buf) >= int(MAX_CHUNK_CHARS * 0.7):
                 flush()
     flush()
+    return chunks
+
+
+def chunk_text_spans(
+    text: str, max_chars: int = 2400, overlap_chars: int = 300,
+) -> list[dict]:
+    """Chunk extracted text without losing headings or exact source offsets.
+
+    Prefer paragraph, sentence, then word boundaries. Character limits are not
+    token limits; runtime must still enforce the model's token budget.
+    """
+    if max_chars < 32 or not 0 <= overlap_chars < max_chars // 2:
+        raise ValueError("max_chars >= 32; 0 <= overlap_chars < max_chars / 2")
+    chunks: list[dict] = []
+    start = 0
+    while start < len(text):
+        limit = min(start + max_chars, len(text))
+        end = limit
+        if limit < len(text):
+            window = text[start + max_chars // 2:limit]
+            for pattern in (r"\n\s*\n", r"[.!?][\s]+", r"\s+"):
+                boundaries = list(re.finditer(pattern, window))
+                if boundaries:
+                    end = start + max_chars // 2 + boundaries[-1].end()
+                    break
+        while start < end and text[start].isspace():
+            start += 1
+        trimmed_end = end
+        while trimmed_end > start and text[trimmed_end - 1].isspace():
+            trimmed_end -= 1
+        if trimmed_end > start:
+            chunks.append({"text": text[start:trimmed_end],
+                           "char_start": start, "char_end": trimmed_end})
+        if end == len(text):
+            break
+        next_start = max(start + 1, end - overlap_chars)
+        # Start overlap at a word boundary without leaving a coverage gap.
+        if overlap_chars:
+            boundary = next_start
+            while boundary < end and not text[boundary - 1].isspace():
+                boundary += 1
+            if boundary < end:
+                next_start = boundary
+        start = next_start
     return chunks
 
 

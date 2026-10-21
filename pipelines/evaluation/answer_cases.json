@@ -1,0 +1,82 @@
+{
+  "sources": {
+    "stele": {
+      "object_key": "processed/passages/d4ebe4d30e1964a1ab9ab0a267ee7fa11c9815c04f99d3a6eac60d56a9f5a750.json",
+      "context": "Bia Ngự kiến Thiên Mụ Tự tại chùa Thiên Mụ có niên đại năm 1715. Bia được ghép từ hai tấm đá lớn, thuộc hai loại đá khác nhau. Trán bia làm bằng cẩm thạch trắng. Phần thân bia làm bằng sa thạch màu xám. Lòng thân khắc bài ký và minh của chúa Nguyễn Phúc Chu, gồm 1.250 chữ Hán. Đế bia được tạo hình theo kiểu thức rùa đội bia. Rùa được tạc từ đá hoa cương nguyên khối."
+    },
+    "phuc_chu": {
+      "passage_ids": [79, 77],
+      "context": "nguyen phuc chu: Năm 1710, nhân ngày Phật đản, Chúa cho đúc chuông chùa Thiên Mụ nặng 2,021 kg, cao 2,5 m, đường kính 1,2 m. Năm 1714, Chúa giao cho Chưởng cơ Tống Đức Đạt sửa sang chùa Thiên Mụ. nguyen phuc chu: Ông còn cho xây dựng một loạt chùa miếu, mở hội lớn ở chùa Thiên Mụ, chùa Mỹ Am."
+    },
+    "location": {
+      "context": "Hiện nay, chùa Thiên Mụ tọa lạc tại phường Kim Long, thành phố Huế."
+    }
+  },
+  "cases": [
+    {
+      "id": "stele-maker",
+      "source": "stele",
+      "question": "bia trong chùa thiên mụ được ai làm ra",
+      "min_sentences": 2,
+      "expected_terms": [["Nguyễn Phúc Chu"], ["bài ký", "bài kí"], ["1715"]],
+      "rubric": "Phân biệt tác giả bài ký với người trực tiếp chế tác. Không khẳng định Nguyễn Phúc Chu tự khắc bia. Trình bày thông tin đã biết, nói rõ giới hạn nguồn."
+    },
+    {
+      "id": "stele-author",
+      "source": "stele",
+      "question": "ai viết bài ký trên bia Ngự kiến Thiên Mụ Tự",
+      "min_sentences": 2,
+      "expected_terms": [["Nguyễn Phúc Chu"], ["1715", "1.250", "1250"]],
+      "rubric": "Đáp án thành câu đầy đủ, thêm dữ kiện liên quan có nguồn, không suy ra tác giả là người khắc."
+    },
+    {
+      "id": "stele-material",
+      "source": "stele",
+      "question": "bia Ngự kiến Thiên Mụ Tự làm bằng chất liệu gì",
+      "min_sentences": 2,
+      "expected_terms": [["cẩm thạch"], ["sa thạch"], ["hoa cương"]],
+      "rubric": "Gắn đúng vật liệu với trán bia, thân bia và rùa đỡ bia; không bịa quy trình chế tác."
+    },
+    {
+      "id": "phuc-chu-relationship",
+      "source": "phuc_chu",
+      "question": "phúc chu có liên quan gì đến chùa thiên mụ",
+      "min_sentences": 2,
+      "expected_terms": [["1710"], ["1714"], ["chuông"], ["Tống Đức Đạt"]],
+      "rubric": "Nêu quan hệ cụ thể: cho đúc chuông và giao Tống Đức Đạt sửa sang chùa, thay vì tổng quan nhân vật hoặc gán trực tiếp công việc chế tác."
+    },
+    {
+      "id": "false-city",
+      "source": "location",
+      "question": "chùa thiên mụ ở đà nẵng hả",
+      "min_sentences": 1,
+      "expected_terms": [["Huế"], ["không", "nhầm"]],
+      "rubric": "Đính chính Đà Nẵng một cách tự nhiên, nêu vị trí Huế. Không đồng ý tiền đề sai."
+    },
+    {
+      "id": "missing-district",
+      "source": "location",
+      "question": "chùa thiên mụ ở quận nào",
+      "min_sentences": 1,
+      "expected_terms": [["chưa", "không"]],
+      "rubric": "Nguồn chỉ nêu phường và thành phố: không tự suy ra quận hoặc trả Kim Long như tên quận."
+    },
+    {
+      "id": "explicit-short",
+      "source": "stele",
+      "question": "Chỉ trả lời năm: bia Ngự kiến Thiên Mụ Tự có niên đại năm nào?",
+      "min_sentences": 1,
+      "max_sentences": 1,
+      "expected_terms": [["1715"]],
+      "rubric": "Tôn trọng yêu cầu chỉ trả lời năm, không cố kéo dài."
+    },
+    {
+      "id": "missing-ticket-price",
+      "source": "location",
+      "question": "vé vào chùa thiên mụ giá bao nhiêu",
+      "min_sentences": 1,
+      "expected_terms": [["chưa", "không"]],
+      "rubric": "Nói chưa có giá vé trong nguồn. Không bịa giá hoặc kết luận miễn phí."
+    }
+  ]
+}

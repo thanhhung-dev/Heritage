@@ -19,13 +19,9 @@ VALID_ENV = {
 
 
 class StartupConfigTests(unittest.TestCase):
-    def test_missing_database_url_stops_startup_with_clear_error(self) -> None:
-        with self.assertRaises(ConfigurationError) as raised:
-            validate_startup_config({})
-
-        message = str(raised.exception)
-        self.assertIn("DATABASE_URL is required", message)
-        self.assertIn(".env.example", message)
+    def test_chat_only_configuration_does_not_require_postgres(self) -> None:
+        settings = validate_startup_config({})
+        self.assertEqual(settings.database_url, '')
 
     def test_all_invalid_values_are_reported_together(self) -> None:
         with self.assertRaises(ConfigurationError) as raised:
@@ -69,11 +65,11 @@ class StartupConfigTests(unittest.TestCase):
         self.assertIn("OBSERVABILITY_CONTENT_CAPTURE", message)
         self.assertNotIn("secret", message)
 
-    def test_fastapi_lifespan_rejects_missing_required_config(self) -> None:
+    def test_fastapi_lifespan_supports_chat_without_a_database(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaises(ConfigurationError):
-                with TestClient(app):
-                    self.fail("Application must not start without DATABASE_URL")
+            with TestClient(app) as client:
+                self.assertEqual(client.get('/').status_code, 200)
+                self.assertEqual(client.get('/api/heritages').status_code, 503)
 
     def test_fastapi_lifespan_initializes_and_disposes_database(self) -> None:
         with (

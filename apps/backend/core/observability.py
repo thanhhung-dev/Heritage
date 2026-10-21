@@ -11,6 +11,7 @@ import re
 import time
 import uuid
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -18,7 +19,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from opentelemetry import propagate, trace
+from opentelemetry import context as otel_context, propagate, trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -64,6 +65,13 @@ DEPENDENCY_HEALTH = Gauge(
 )
 
 
+@contextmanager
+def retrieval_stage(name: str):
+    """Trace retrieval work without recording questions or source content."""
+    with trace.get_tracer(__name__).start_as_current_span(f"retrieval.{name}"):
+        yield
+
+
 def redact(value: Any) -> Any:
     """Remove secrets and common raw personal identifiers recursively."""
     if isinstance(value, dict):
@@ -84,6 +92,70 @@ def redact(value: Any) -> Any:
         redacted = _IPV6.sub("[REDACTED_IP]", redacted)
         return _PHONE.sub("[REDACTED_PHONE]", redacted)
     return value
+
+
+_rag_parent: contextvars.ContextVar[Any] = contextvars.ContextVar('rag_parent', default=None)
+
+
+class RagObservation:
+    """Fail-open SDK boundary shared by all RAG stages, including worker threads."""
+
+    def __init__(self, span: Any, mode: str):
+        self.span, self.mode = span, mode
+
+    def update(self, **fields: Any) -> None:
+        if self.span is None:
+            return
+        if self.mode != 'full':
+            fields = {k: v for k, v in fields.items() if k not in {'input', 'output'}}
+        for key in ('input', 'output', 'metadata'):
+            if key in fields:
+                fields[key] = redact(fields[key])
+        try:
+            self.span.update(**fields)
+        except Exception:
+            logging.getLogger(__name__).warning('rag_observation_update_failed')
+
+
+@contextmanager
+def rag_observation(name: str, *, as_type: str = 'span', input: Any = None,
+                    metadata: dict | None = None):
+    """Explicit parentage avoids auto-recording exception messages or SDK failures."""
+    mode = os.environ.get('OBSERVABILITY_CONTENT_CAPTURE', 'metadata')
+    parent = _rag_parent.get()
+    span = None
+    manager = None
+    context_token = None
+    try:
+        client = _langfuse_client() if mode != 'none' else None
+        if client is not None:
+            if parent is None:
+                # Do not give the application root an unexported HTTP parent.
+                context_token = otel_context.attach(otel_context.Context())
+            context = ({'trace_id': parent.trace_id, 'parent_span_id': parent.id}
+                       if parent is not None else None)
+            manager = client.start_as_current_observation(name=name, as_type=as_type, trace_context=context)
+            span = manager.__enter__()
+    except Exception:
+        logging.getLogger(__name__).warning('rag_observation_start_failed')
+    observation = RagObservation(span, mode)
+    observation.update(input=input, metadata=metadata or {})
+    token = _rag_parent.set(span)
+    try:
+        yield observation
+    except BaseException as error:
+        observation.update(level='ERROR', status_message=type(error).__name__)
+        raise
+    finally:
+        _rag_parent.reset(token)
+        if span is not None:
+            try:
+                # Never hand raw business exceptions to the SDK's recorder.
+                manager.__exit__(None, None, None)
+            except Exception:
+                logging.getLogger(__name__).warning('rag_observation_end_failed')
+        if context_token is not None:
+            otel_context.detach(context_token)
 
 
 def grounded_qa_metadata(
@@ -160,6 +232,12 @@ def _langfuse_client() -> Any | None:
 
 def send_grounded_qa(metadata: dict[str, Any]) -> None:
     """Queue one grounded-QA generation in Langfuse without blocking on flush."""
+    parent = _rag_parent.get()
+    if parent is not None:
+        RagObservation(parent, os.environ.get('OBSERVABILITY_CONTENT_CAPTURE', 'metadata')).update(
+            metadata={k: v for k, v in metadata.items() if k not in {'prompt', 'evidence'}},
+        )
+        return
     client = _langfuse_client()
     if client is None or not metadata:
         return

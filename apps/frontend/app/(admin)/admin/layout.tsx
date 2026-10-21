@@ -32,7 +32,7 @@ import {
 } from '@ant-design/icons';
 
 import styles from './heritage.module.css';
-import { tapestryColors } from '@/styles/theme/tapestryTheme';
+import { tapestryColors } from '@/styles/theme/heritageTheme';
 
 // 1. HeritageLogo (Logo dải màu sọc đa sắc chuẩn Figma)
 function HeritageLogo({ size = 32 }: { size?: number }) {

@@ -1,1 +1,0 @@
-"""Deployable HeritageGraph applications."""

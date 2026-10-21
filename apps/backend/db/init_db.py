@@ -12,9 +12,8 @@ from __future__ import annotations
 import os
 
 
-# gen_random_uuid() (pgcrypto) plus the trigram/unaccent functions used by the
-# KG retrieval service, and pgvector for future embedding columns.
-REQUIRED_EXTENSIONS = ("pgcrypto", "vector", "pg_trgm", "unaccent")
+# Business/KG tables only; passage vectors are indexed in OpenSearch.
+REQUIRED_EXTENSIONS = ("pgcrypto", "pg_trgm", "unaccent")
 
 SEED_STATEMENTS = (
     "INSERT INTO corpus_release(version) VALUES (1) ON CONFLICT DO NOTHING",

@@ -1,336 +1,36 @@
 name: heritagegraph
 
+# Local development only. FastAPI/BGE-M3/llama.cpp run natively on the host.
+# Security is disabled only for this loopback-bound, single-node instance.
 services:
-  db:
-    image: pgvector/pgvector:pg16
+  opensearch:
+    image: opensearchproject/opensearch:3.3.0
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-heritagegraph}
-      POSTGRES_USER: ${POSTGRES_USER:-heritagegraph}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      DISABLE_SECURITY_PLUGIN: "true"
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${OPENSEARCH_PORT:-9200}:9200"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - opensearch_data:/usr/share/opensearch/data
+    mem_limit: 2g
+    cpus: 2
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks:
-      - heritage-network
-
-  llm:
-    image: ghcr.io/ggml-org/llama.cpp:server
-    restart: unless-stopped
-    ports:
-      - "${LLAMA_PORT:-8080}:8080"
-    volumes:
-      - ./models/qwen-fused.gguf:/models/qwen-fused.gguf:ro
-    command:
-      - --model
-      - /models/qwen-fused.gguf
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8080"
-      - --ctx-size
-      - "4096"
-      - --n-gpu-layers
-      - ${LLAMA_GPU_LAYERS:-0}
-    networks:
-      - heritage-network
-
-
-  backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-    restart: unless-stopped
-    environment:
-      INFERENCE_BACKEND: llama_server
-      HEALTHCHECK_SKIP_MODEL: ${HEALTHCHECK_SKIP_MODEL:-false}
-      LLAMA_SERVER_URL: http://llm:8080
-      LLAMA_SERVER_TIMEOUT: ${LLAMA_SERVER_TIMEOUT:-300}
-      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}"
-      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-local}
-      OTEL_SERVICE_NAME: heritage-api
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      OTEL_TRACING_ENABLED: ${OTEL_TRACING_ENABLED:-false}
-      OBSERVABILITY_CONTENT_CAPTURE: ${OBSERVABILITY_CONTENT_CAPTURE:-metadata}
-      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
-      LANGFUSE_HOST: http://langfuse-web:3000
-      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-}
-      LANGFUSE_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-}
-      CORPUS_VERSION: ${CORPUS_VERSION:-1}
-      CORS_ORIGINS: ${CORS_ORIGINS:-}
-      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
-      R2_ALLOWED_ASSET_HOSTS: ${R2_ALLOWED_ASSET_HOSTS:-}
-    ports:
-      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
-    depends_on:
-      llm:
-        condition: service_started
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=3s' >/dev/null"]
       interval: 10s
       timeout: 5s
-      retries: 30
-      start_period: 20s
-    networks:
-      - heritage-network
-
-  otel-collector:
-    profiles: ["observability"]
-    image: otel/opentelemetry-collector-contrib:0.115.1
-    command: ["--config=/etc/otelcol/config.yaml"]
-    volumes:
-      - ./observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
-    networks: [heritage-network]
-
-  prometheus:
-    profiles: ["observability"]
-    image: prom/prometheus:v3.1.0
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
-    volumes:
-      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus_data:/prometheus
-    networks: [heritage-network]
-
-  observability-init:
-    profiles: ["observability"]
-    image: alpine:3.21
-    network_mode: none
-    command: ["sh", "-c", "chown -R 10001:10001 /tmp/loki /tmp/tempo"]
-    volumes:
-      - tempo_data:/tmp/tempo
-      - loki_data:/tmp/loki
-
-  tempo:
-    profiles: ["observability"]
-    image: grafana/tempo:2.6.1
-    command: ["-config.file=/etc/tempo.yaml"]
-    volumes:
-      - ./observability/tempo.yaml:/etc/tempo.yaml:ro
-      - tempo_data:/tmp/tempo
-    depends_on:
-      observability-init:
-        condition: service_completed_successfully
-    networks: [heritage-network]
-
-  loki:
-    profiles: ["observability"]
-    image: grafana/loki:3.3.2
-    command: ["-config.file=/etc/loki/config.yaml"]
-    volumes:
-      - ./observability/loki.yaml:/etc/loki/config.yaml:ro
-      - loki_data:/tmp/loki
-    depends_on:
-      observability-init:
-        condition: service_completed_successfully
-    networks: [heritage-network]
-
-  promtail:
-    profiles: ["observability"]
-    image: grafana/promtail:3.3.2
-    command: ["-config.file=/etc/promtail/config.yaml"]
-    volumes:
-      - ./observability/promtail.yaml:/etc/promtail/config.yaml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks: [heritage-network]
-
-  grafana:
-    profiles: ["observability"]
-    image: grafana/grafana:11.4.0
-    ports:
-      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
-    volumes:
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    networks: [heritage-network]
-
-  langfuse-worker:
-    profiles: ["observability"]
-    image: docker.langfuse.com/langfuse/langfuse-worker:4.46.0
-    restart: unless-stopped
-    depends_on: &langfuse-dependencies
-      langfuse-postgres:
-        condition: service_healthy
-      langfuse-clickhouse:
-        condition: service_healthy
-      langfuse-redis:
-        condition: service_healthy
-      langfuse-minio:
-        condition: service_healthy
-    environment: &langfuse-environment
-      NEXTAUTH_URL: http://127.0.0.1:${LANGFUSE_PORT:-3003}
-      DATABASE_URL: postgresql://langfuse:${LANGFUSE_POSTGRES_PASSWORD:-}@langfuse-postgres:5432/langfuse
-      SALT: ${LANGFUSE_SALT:-}
-      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-}
-      TELEMETRY_ENABLED: "false"
-      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
-      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
-      CLICKHOUSE_USER: langfuse
-      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-}
-      CLICKHOUSE_CLUSTER_ENABLED: "false"
-      REDIS_HOST: langfuse-redis
-      REDIS_PORT: 6379
-      REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD:-}
-      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
-      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-}
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
-      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
-      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
-      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: langfuse
-      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-}
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
-      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
-    networks: [heritage-network]
-
-  langfuse-web:
-    profiles: ["observability"]
-    image: docker.langfuse.com/langfuse/langfuse:4.46.0
-    restart: unless-stopped
-    depends_on: *langfuse-dependencies
-    ports:
-      - "127.0.0.1:${LANGFUSE_PORT:-3003}:3000"
-    environment:
-      <<: *langfuse-environment
-      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-}
-      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://langfuse-minio:9000
-      LANGFUSE_INIT_ORG_ID: heritagegraph
-      LANGFUSE_INIT_ORG_NAME: HeritageGraph
-      LANGFUSE_INIT_PROJECT_ID: heritagegraph-local
-      LANGFUSE_INIT_PROJECT_NAME: HeritageGraph
-      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-}
-      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-}
-      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
-      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-HeritageGraph Operator}
-      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://$$(hostname):3000/api/public/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    networks: [heritage-network]
-
-  langfuse-postgres:
-    profiles: ["observability"]
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: langfuse
-      POSTGRES_USER: langfuse
-      POSTGRES_PASSWORD: ${LANGFUSE_POSTGRES_PASSWORD:-}
-    volumes:
-      - langfuse_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
-      interval: 5s
-      timeout: 5s
       retries: 20
-    networks: [heritage-network]
+      start_period: 45s
 
-  langfuse-clickhouse:
-    profiles: ["observability"]
-    image: clickhouse/clickhouse-server:25.12
-    restart: unless-stopped
-    user: "101:101"
-    environment:
-      CLICKHOUSE_DB: default
-      CLICKHOUSE_USER: langfuse
-      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-}
-    volumes:
-      - langfuse_clickhouse_data:/var/lib/clickhouse
-      - langfuse_clickhouse_logs:/var/log/clickhouse-server
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8123/ping || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks: [heritage-network]
-
-  langfuse-redis:
-    profiles: ["observability"]
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--requirepass", "${LANGFUSE_REDIS_PASSWORD:-}", "--maxmemory-policy", "noeviction"]
-    volumes:
-      - langfuse_redis_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$LANGFUSE_REDIS_PASSWORD ping | grep -q PONG"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    environment:
-      LANGFUSE_REDIS_PASSWORD: ${LANGFUSE_REDIS_PASSWORD:-}
-    networks: [heritage-network]
-
-  langfuse-minio:
-    profiles: ["observability"]
-    image: cgr.dev/chainguard/minio
-    restart: unless-stopped
-    entrypoint: sh
-    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" /data'
-    environment:
-      MINIO_ROOT_USER: langfuse
-      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_PASSWORD:-}
-    volumes:
-      - langfuse_minio_data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks: [heritage-network]
-
-
-  trainer:
-    profiles: ["training"]
-    platform: linux/amd64
-    build:
-      context: .
-      dockerfile: pipelines/training/Dockerfile
-    environment:
-      HF_HOME: /cache/huggingface
-    volumes:
-      - ./pipelines/training:/workspace/pipelines/training:ro
-      - ./data:/workspace/data:ro
-      - ./corpus:/workspace/corpus:ro
-      - ./pipelines/evaluation:/workspace/pipelines/evaluation
-      - ./scripts:/workspace/scripts:ro
-      - ./models:/workspace/models
-      - huggingface_cache:/cache/huggingface
-    shm_size: "2gb"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 volumes:
-  postgres_data:
-  huggingface_cache:
-  prometheus_data:
-  tempo_data:
-  loki_data:
-  langfuse_postgres_data:
-  langfuse_clickhouse_data:
-  langfuse_clickhouse_logs:
-  langfuse_redis_data:
-  langfuse_minio_data:
-
-networks:
-  heritage-network:
-    driver: bridge
+  opensearch_data:
