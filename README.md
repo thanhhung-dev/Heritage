@@ -118,6 +118,25 @@ Frontend đọc `NEXT_PUBLIC_API_URL=http://localhost:8000` từ
 duyệt, vì vậy không đặt password hoặc API key vào đó. Không commit `.env` hoặc
 `.env.local`.
 
+### OpenAPI types và mock API
+
+Frontend types được sinh trực tiếp từ OpenAPI schema của FastAPI. Khi thay đổi
+request/response model ở backend, chạy lại từ `apps/frontend`:
+
+```bash
+npm run api:generate
+npm run api:check
+```
+
+Chạy `npm run api:check` để phát hiện lệch contract. Các lệnh này cần môi
+trường Python backend đã cài `apps/backend/requirements.txt`.
+
+Để chạy frontend bằng fixture mock mà không sửa source, đặt
+`NEXT_PUBLIC_API_URL=mock` trong `apps/frontend/.env.local`, rồi khởi động lại
+Next.js. API chat trả câu trả lời mẫu mặc định; nhập `[mock:empty]` để xem phản hồi
+không có nguồn hoặc `[mock:error]` để xem tình huống lỗi. Đổi lại thành
+`NEXT_PUBLIC_API_URL=http://localhost:8000` để gọi FastAPI.
+
 Nếu `DATABASE_URL` thiếu hoặc sai định dạng, backend sẽ dừng ngay khi startup và
 in ra biến cấu hình cần sửa; không mở cổng với cấu hình chưa hợp lệ.
 
