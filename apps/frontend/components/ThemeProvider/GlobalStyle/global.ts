@@ -71,17 +71,26 @@ const globalStyle = (token: Theme) => css`
     --danger: #ea3241;
     --muted: rgba(240, 232, 221, 0.5);
 
-    --auth-background: #f6f5f4;
-    --auth-field: #edece8;
-    --auth-field-hover: #e3e1dc;
-    --auth-field-border: #b4b2ad;
-    --auth-text: #37383c;
-    --auth-label: #18191b;
-    --auth-provider-text: #2c2e31;
-    --auth-link: #7e2a01;
-    --auth-on-accent: #fff9f7;
-    --auth-error: #a32424;
-    --auth-accent-hover: #ffb04f;
+    --auth-background: #ebeced;
+    --auth-panel: #fcfcfc;
+    --auth-card: transparent;
+    --auth-border: #d2d4d6;
+    --auth-border-strong: #c0c3c4;
+    --auth-field: #f0f1f2;
+    --auth-field-hover: #e4e5e6;
+    --auth-field-border: #98999c;
+    --auth-text: #07080a;
+    --auth-text-secondary: #5c5f66;
+    --auth-label: #07080a;
+    --auth-placeholder: #5c5f66;
+    --auth-provider-text: #07080a;
+    --auth-link: #bb3e02;
+    --auth-on-accent: #ffffff;
+    --auth-error: #c20a0a;
+    --auth-accent-hover: #bb3e02;
+    --auth-accent-active: #7e2a01;
+    --auth-focus: #ec4e02;
+    --auth-focus-ring: rgba(236, 78, 2, 0.2);
     --auth-navigation-text: #ffb366;
 
     --public-footer-border: rgba(255, 155, 45, 0.18);

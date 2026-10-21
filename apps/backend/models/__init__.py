@@ -5,7 +5,7 @@ Import order matters — các model phụ thuộc theo thứ tự:
 """
 from apps.backend.db.base import Base, TimestampMixin, AsyncSessionLocal, engine, DATABASE_URL  # noqa: F401
 
-from apps.backend.models.admin import AdminAccount, AuditLog  # noqa: F401
+from apps.backend.models.admin import AdminAccount  # noqa: F401
 from apps.backend.models.user import (  # noqa: F401
     UserProfile, UserConsent,
     BadgeDefinition, UserBadge,
@@ -28,14 +28,12 @@ from apps.backend.models.interactive import Interactive  # noqa: F401
 from apps.backend.models.interactive_highlight import InteractiveHighlight  # noqa: F401
 from apps.backend.models.scene_highlight import SceneHighlight  # noqa: F401
 from apps.backend.models.chat import ChatSession, ChatMessage, ChatFeedback  # noqa: F401
-from apps.backend.models.admin import _uuid_pk as uuid_pk  # noqa: F401
 
 __all__ = [
     # base
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
-    "uuid_pk",
     # admin / identity
-    "AdminAccount", "AuditLog",
+    "AdminAccount",
     # profile & gamification
     "UserProfile", "UserConsent",
     "BadgeDefinition", "UserBadge",

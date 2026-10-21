@@ -1,9 +1,8 @@
 """Profile & Personalization Consent API — also serves the Badges/Milestones tabs."""
 from typing import AsyncGenerator
-from uuid import UUID
-
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.backend.core.security import get_current_user
@@ -27,38 +26,58 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_current_account_id(current_user: dict = Depends(get_current_user)) -> UUID:
-    """Resolve the authenticated account's UUID from the JWT `sub` claim."""
+async def get_current_account_id(current_user: dict = Depends(get_current_user)) -> int:
+    """Resolve the authenticated account id from the JWT ``sub`` claim."""
     try:
-        return UUID(current_user["sub"])
+        return int(current_user["sub"])
     except (KeyError, ValueError, TypeError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token không hợp lệ",
+            detail="Invalid token",
         )
 
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_profile(
-    account_id: UUID = Depends(get_current_account_id),
+    account_id: int = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(UserProfile).where(UserProfile.account_id == account_id)
-    result = await db.execute(stmt)
-    profile = result.scalar_one_or_none()
-    if not profile:
-        profile = UserProfile(account_id=account_id)
-        db.add(profile)
+    result = await db.execute(
+        text("SELECT account_id, full_name, avatar_url, about, address, personal_link "
+             "FROM profiles WHERE account_id = :account_id"),
+        {"account_id": account_id},
+    )
+    profile = result.mappings().one_or_none()
+    if profile is None:
+        await db.execute(
+            text("INSERT INTO profiles (account_id) VALUES (:account_id)"),
+            {"account_id": account_id},
+        )
         await db.commit()
-        await db.refresh(profile)
-    return profile
+        profile = {"full_name": None, "avatar_url": None, "about": None, "address": None}
+    return {
+        "display_name": profile["full_name"],
+        "handle": None,
+        "avatar_url": profile["avatar_url"],
+        "banner_url": None,
+        "bio": profile["about"],
+        "country": None,
+        "city": profile["address"],
+        "display_email": False,
+        "created_at": datetime.now(),
+        "socials": None,
+        "total_hours": 0,
+        "level": None,
+        "featured_badges": None,
+        "show_activity_on_profile": True,
+    }
 
 
 
 @router.put("/me", response_model=UserProfileResponse)
 async def update_profile(
     payload: UserProfileUpdate,
-    account_id: UUID = Depends(get_current_account_id),
+    account_id: int = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(UserProfile).where(UserProfile.account_id == account_id)
@@ -77,7 +96,7 @@ async def update_profile(
         if existing.scalar_one_or_none() is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Tên người dùng này đã được sử dụng.",
+                detail="This username is already taken.",
             )
 
     for field in (
@@ -100,7 +119,7 @@ async def update_profile(
 
 @router.get("/consent", response_model=UserConsentResponse)
 async def get_consent(
-    account_id: UUID = Depends(get_current_account_id),
+    account_id: int = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(UserConsent).where(UserConsent.account_id == account_id)
@@ -117,7 +136,7 @@ async def get_consent(
 @router.put("/consent", response_model=UserConsentResponse)
 async def update_consent(
     payload: UserConsentUpdate,
-    account_id: UUID = Depends(get_current_account_id),
+    account_id: int = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(UserConsent).where(UserConsent.account_id == account_id)
@@ -136,7 +155,7 @@ async def update_consent(
 
 @router.get("/badges", response_model=list[BadgeResponse])
 async def get_badges(
-    account_id: UUID = Depends(get_current_account_id),
+    account_id: int = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     service = GamificationService(db)
@@ -145,7 +164,7 @@ async def get_badges(
 
 @router.get("/milestones", response_model=list[MilestoneLevelResponse])
 async def get_milestones(
-    account_id: UUID = Depends(get_current_account_id),
+    account_id: int = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     service = GamificationService(db)

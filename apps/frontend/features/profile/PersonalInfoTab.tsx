@@ -1,8 +1,7 @@
 "use client";
 
-import { Switch } from "antd";
 import Link from "next/link";
-import { EnvironmentOutlined } from "@ant-design/icons";
+import { CompassOutlined, EnvironmentOutlined } from "@ant-design/icons";
 import type { Badge, ProfileData } from "./types";
 import { BadgesSection } from "./BadgesSection";
 import { ProfileEditForm } from "./ProfileEditForm";
@@ -23,15 +22,19 @@ interface PersonalInfoTabProps {
 function RecentExploreCard() {
   return (
     <section className={styles.exploreSection} aria-labelledby="recent-explored-title">
-      <div className={styles.exploreHeader}>
-        <div>
-          <h2 id="recent-explored-title" className={styles.exploreTitle}>
+      <div className={styles.sectionHeader}>
+        <div className={styles.sectionHeading}>
+          <h2 id="recent-explored-title" className={styles.sectionTitle}>
             Recently explored
           </h2>
           <p className={styles.cardDescription}>
             Your latest heritage discoveries will appear here.
           </p>
         </div>
+        <Link href="/map" className={styles.sectionAction}>
+          <CompassOutlined aria-hidden="true" />
+          View map
+        </Link>
       </div>
 
       <div className={styles.emptyState}>
@@ -75,38 +78,16 @@ export function PersonalInfoTab({
     );
   }
 
-  // Edit mode keeps account-level toggles here because they save immediately
-  // through their own handlers. Save/Cancel live in ProfileHeader.
   return (
-    <>
-      <ProfileEditForm formData={formData} badges={badges} onFormChange={onFormChange} />
-
-      <div className={styles.card}>
-        <h2 className={styles.cardTitle}>Privacy</h2>
-        <p className={styles.cardDescription}>
-          Control what&apos;s visible on your profile and how we personalize it.
-        </p>
-
-        <div className={styles.toggleRow}>
-          <Switch checked={displayEmail} onChange={onDisplayEmailChange} />
-          <span className={styles.toggleLabel}>Display your account email</span>
-        </div>
-        <div className={styles.toggleRow}>
-          <Switch
-            checked={personalizationConsent}
-            loading={consentSaving}
-            onChange={onPersonalizationConsentChange}
-          />
-          <span className={styles.toggleLabel}>Personalization consent</span>
-        </div>
-        <div className={styles.toggleRow}>
-          <span className={styles.toggleLabel}>Show activity on profile</span>
-          <Switch
-            checked={formData.show_activity_on_profile ?? true}
-            onChange={(checked) => onFormChange("show_activity_on_profile", checked)}
-          />
-        </div>
-      </div>
-    </>
+    <ProfileEditForm
+      formData={formData}
+      badges={badges}
+      displayEmail={displayEmail}
+      personalizationConsent={personalizationConsent}
+      consentSaving={consentSaving}
+      onFormChange={onFormChange}
+      onDisplayEmailChange={onDisplayEmailChange}
+      onPersonalizationConsentChange={onPersonalizationConsentChange}
+    />
   );
 }

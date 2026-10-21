@@ -2,15 +2,14 @@
 
 import { useMemo } from "react";
 import {
+  EditOutlined,
   EnvironmentOutlined,
   InstagramOutlined,
   LinkedinOutlined,
-  TwitterOutlined,
-  EditOutlined,
-  PictureOutlined,
   PlusOutlined,
+  TwitterOutlined,
 } from "@ant-design/icons";
-import { Form, Input, Select } from "antd";
+import { Form, Input, Select, Switch } from "antd";
 import type { Badge, ProfileData } from "./types";
 import styles from "./profile.module.css";
 
@@ -19,22 +18,28 @@ const BIO_MAX_LENGTH = 750;
 interface ProfileEditFormProps {
   formData: Partial<ProfileData>;
   badges: Badge[];
+  displayEmail: boolean;
+  personalizationConsent: boolean;
+  consentSaving: boolean;
   onFormChange: <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => void;
+  onDisplayEmailChange: (checked: boolean) => void;
+  onPersonalizationConsentChange: (checked: boolean) => void;
 }
 
-/**
- * Edit-mode form for the Personal info tab.
- * Layout: left column (70%) for personal information, right column (30%)
- * for social links. State is centralized through the shared `formData` /
- * `onFormChange` handler passed down from ProfilePage, so there are no
- * ad-hoc local field states here.
- */
-export function ProfileEditForm({ formData, badges, onFormChange }: ProfileEditFormProps) {
+export function ProfileEditForm({
+  formData,
+  badges,
+  displayEmail,
+  personalizationConsent,
+  consentSaving,
+  onFormChange,
+  onDisplayEmailChange,
+  onPersonalizationConsentChange,
+}: ProfileEditFormProps) {
   const featuredBadges = formData.featured_badges || [];
   const bioLength = formData.bio?.length ?? 0;
 
   const claimedBadges = useMemo(() => badges.filter((badge) => badge.is_unlocked), [badges]);
-
 
   const toggleFeaturedBadge = (badgeId: string) => {
     const isSelected = featuredBadges.includes(badgeId);
@@ -48,166 +53,192 @@ export function ProfileEditForm({ formData, badges, onFormChange }: ProfileEditF
 
   return (
     <Form layout="vertical" className={styles.editForm}>
-      <div className={styles.editFormHeader}>
-        <div>
-          <h2 className={styles.editFormTitle}>Edit profile</h2>
-          <p className={styles.cardDescription}>Update your personal information and social links.</p>
-        </div>
-      </div>
-
       <div className={styles.editModeGrid}>
-        {/* Left Column (70%): Personal Information */}
-        <div className={styles.card}>
-          <h2 className={styles.cardTitle}>Personal Information</h2>
-          <p className={styles.cardDescription}>Update personal information to customize your experience.</p>
-
-          <Form.Item label="Edit handle" className={styles.formItem}>
-            <Input
-              placeholder="@hung-thanh-1"
-              suffix={<EditOutlined />}
-              value={formData.handle || ""}
-              onChange={(e) => onFormChange("handle", e.target.value)}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Avatar URL"
-            className={styles.formItem}
-            extra="Paste a direct image link to use as your profile avatar."
-          >
-            <Input
-              placeholder="https://example.com/avatar.jpg"
-              prefix={<PictureOutlined />}
-              value={formData.avatar_url || ""}
-              onChange={(e) => onFormChange("avatar_url", e.target.value)}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Banner URL"
-            className={styles.formItem}
-            extra="Paste a direct image link to use as your profile banner."
-          >
-            <Input
-              placeholder="https://example.com/banner.jpg"
-              prefix={<PictureOutlined />}
-              value={formData.banner_url || ""}
-              onChange={(e) => onFormChange("banner_url", e.target.value)}
-            />
-          </Form.Item>
-
-          <Form.Item label="Location" className={styles.formItem}>
-            <div className={styles.locationRow}>
-              <Select
-                placeholder="Select your country"
-                value={formData.country || undefined}
-                onChange={(value) => onFormChange("country", value)}
-                options={[
-                  { value: "VN", label: "Vietnam" },
-                  { value: "US", label: "United States" },
-                  { value: "FR", label: "France" },
-                  { value: "JP", label: "Japan" },
-                ]}
-              />
-              <Input
-                placeholder="e.g. San Francisco"
-                prefix={<EnvironmentOutlined />}
-                value={formData.city || ""}
-                onChange={(e) => onFormChange("city", e.target.value)}
-              />
-            </div>
-          </Form.Item>
-
-          <Form.Item
-            label="Bio"
-            className={styles.formItem}
-            extra={
-              <span className={styles.bioCounter}>
-                {bioLength}/{BIO_MAX_LENGTH}
-              </span>
-            }
-          >
-            <Input.TextArea
-              rows={4}
-              maxLength={BIO_MAX_LENGTH}
-              placeholder="Write a short bio about yourself..."
-              value={formData.bio || ""}
-              onChange={(e) => onFormChange("bio", e.target.value)}
-            />
-          </Form.Item>
-
-          <div className={styles.featuredBadgesPicker}>
-            {claimedBadges.map((badge) => (
-              <button
-                key={badge.id}
-                type="button"
-                className={[
-                  styles.featuredBadgeChip,
-                  featuredBadges.includes(badge.id) ? styles.featuredBadgeChipActive : "",
-                ].join(" ")}
-                onClick={() => toggleFeaturedBadge(badge.id)}
-              >
-                {badge.title}
-              </button>
-            ))}
+        <section className={styles.editSection}>
+          <div className={styles.editSectionHeader}>
+            <h2 className={styles.editSectionTitle}>Personal info</h2>
           </div>
-        </div>
 
-        {/* Right Column (30%): Social Links */}
-        <div className={styles.glassCard}>
-          <div className={styles.socialsHeader}>
-            <div>
-              <h2 className={styles.cardTitle}>Socials</h2>
-              <p className={styles.cardDescription}>Connect your social media accounts.</p>
+          <div className={styles.editSectionBody}>
+            <Form.Item label="Edit handle" className={styles.formItem}>
+              <Input
+                placeholder="@hung-thanh-1"
+                suffix={<EditOutlined />}
+                value={formData.handle || ""}
+                onChange={(e) => onFormChange("handle", e.target.value)}
+              />
+            </Form.Item>
+
+            <Form.Item label="Location" className={styles.formItem}>
+              <div className={styles.locationRow}>
+                <Select
+                  placeholder="Select your country"
+                  value={formData.country || undefined}
+                  onChange={(value) => onFormChange("country", value)}
+                  options={[
+                    { value: "VN", label: "Vietnam" },
+                    { value: "US", label: "United States" },
+                    { value: "FR", label: "France" },
+                    { value: "JP", label: "Japan" },
+                  ]}
+                />
+                <Input
+                  placeholder="e.g. San Francisco"
+                  prefix={<EnvironmentOutlined />}
+                  value={formData.city || ""}
+                  onChange={(e) => onFormChange("city", e.target.value)}
+                />
+              </div>
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <span className={styles.bioLabel}>
+                  <span>Bio</span>
+                  <span>
+                    {bioLength}/{BIO_MAX_LENGTH}
+                  </span>
+                </span>
+              }
+              className={`${styles.formItem} ${styles.bioFormItem}`}
+              extra="Max. 750 characters"
+            >
+              <Input.TextArea
+                rows={6}
+                maxLength={BIO_MAX_LENGTH}
+                placeholder="Write a short bio about yourself..."
+                value={formData.bio || ""}
+                onChange={(e) => onFormChange("bio", e.target.value)}
+              />
+            </Form.Item>
+
+            <div className={styles.inlineToggle}>
+              <Switch checked={displayEmail} onChange={onDisplayEmailChange} />
+              <span className={styles.toggleLabel}>Display your account email</span>
             </div>
+          </div>
+        </section>
+
+        <section className={styles.editSection}>
+          <div className={styles.editSectionHeader}>
+            <h2 className={styles.editSectionTitle}>Socials</h2>
             <button type="button" className={styles.addCustomLink}>
               <PlusOutlined /> Add custom link
             </button>
           </div>
 
-          <Form.Item label="Instagram" className={styles.formItem}>
-            <Input
-              prefix={<InstagramOutlined />}
-              placeholder="@username"
-              value={formData.socials?.instagram || ""}
-              onChange={(e) =>
-                onFormChange("socials", {
-                  ...formData.socials,
-                  instagram: e.target.value,
-                })
-              }
-            />
-          </Form.Item>
+          <div className={styles.editSectionBody}>
+            <Form.Item label="Instagram" className={styles.formItem}>
+              <Input
+                prefix={<InstagramOutlined />}
+                placeholder="@Username"
+                value={formData.socials?.instagram || ""}
+                onChange={(e) =>
+                  onFormChange("socials", {
+                    ...formData.socials,
+                    instagram: e.target.value,
+                  })
+                }
+              />
+            </Form.Item>
 
-          <Form.Item label="LinkedIn" className={styles.formItem}>
-            <Input
-              prefix={<LinkedinOutlined />}
-              placeholder="https://linkedin.com/in/username"
-              value={formData.socials?.linkedin || ""}
-              onChange={(e) =>
-                onFormChange("socials", {
-                  ...formData.socials,
-                  linkedin: e.target.value,
-                })
-              }
-            />
-          </Form.Item>
+            <Form.Item label="LinkedIn" className={styles.formItem}>
+              <Input
+                prefix={<LinkedinOutlined />}
+                placeholder="https://linkedin.com/in/username"
+                value={formData.socials?.linkedin || ""}
+                onChange={(e) =>
+                  onFormChange("socials", {
+                    ...formData.socials,
+                    linkedin: e.target.value,
+                  })
+                }
+              />
+            </Form.Item>
 
-          <Form.Item label="X (Twitter)" className={styles.formItem}>
-            <Input
-              prefix={<TwitterOutlined />}
-              placeholder="@username"
-              value={formData.socials?.twitter || ""}
-              onChange={(e) =>
-                onFormChange("socials", {
-                  ...formData.socials,
-                  twitter: e.target.value,
-                })
-              }
-            />
-          </Form.Item>
-        </div>
+            <Form.Item label="X (Twitter)" className={styles.formItem}>
+              <Input
+                prefix={<TwitterOutlined />}
+                placeholder="@Username"
+                value={formData.socials?.twitter || ""}
+                onChange={(e) =>
+                  onFormChange("socials", {
+                    ...formData.socials,
+                    twitter: e.target.value,
+                  })
+                }
+              />
+            </Form.Item>
+          </div>
+        </section>
       </div>
+
+      <section className={styles.editSection}>
+        <div className={styles.editSectionHeader}>
+          <div>
+            <h2 className={styles.editSectionTitle}>Featured badges</h2>
+            <p className={styles.editSectionDescription}>
+              Your first 3 claimed badges are featured automatically. Pick which ones show as
+              icons next to your level.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.editSectionBody}>
+          {claimedBadges.length === 0 ? (
+            <p className={styles.claimEmpty}>Claim a badge to feature it here.</p>
+          ) : (
+            <div className={styles.featuredBadgesPicker}>
+              {claimedBadges.map((badge) => (
+                <button
+                  key={badge.id}
+                  type="button"
+                  className={[
+                    styles.featuredBadgeChip,
+                    featuredBadges.includes(badge.id) ? styles.featuredBadgeChipActive : "",
+                  ].join(" ")}
+                  onClick={() => toggleFeaturedBadge(badge.id)}
+                >
+                  {badge.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <div className={styles.activitySection}>
+        <h2 className={styles.editSectionTitle}>Activity</h2>
+        <label className={styles.activityToggle}>
+          <Switch
+            checked={formData.show_activity_on_profile ?? true}
+            onChange={(checked) => onFormChange("show_activity_on_profile", checked)}
+          />
+          <span className={styles.toggleLabel}>Show on profile</span>
+        </label>
+      </div>
+
+      <section className={styles.editSection}>
+        <div className={styles.editSectionHeader}>
+          <div>
+            <h2 className={styles.editSectionTitle}>Privacy</h2>
+            <p className={styles.editSectionDescription}>
+              Control how we personalize your experience.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.editSectionBody}>
+          <div className={styles.inlineToggle}>
+            <Switch
+              checked={personalizationConsent}
+              loading={consentSaving}
+              onChange={onPersonalizationConsentChange}
+            />
+            <span className={styles.toggleLabel}>Personalization consent</span>
+          </div>
+        </div>
+      </section>
     </Form>
   );
 }

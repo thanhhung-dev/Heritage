@@ -34,8 +34,8 @@ const buttonStyle: CSSProperties = {
 
 function emailError(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return "Nhập địa chỉ email của bạn.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Vui lòng nhập đúng định dạng email (VD: abc@gmail.com)!";
+  if (!trimmed) return "Enter your email address.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Enter a valid email address.";
   return "";
 }
 
@@ -71,7 +71,7 @@ export function ForgotPasswordForm() {
         err?.response?.data?.detail ||
         err?.response?.data?.message ||
         err?.message ||
-        "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
+        "Something went wrong. Please try again.";
       setApiError(errorMessage);
       console.error("Forgot password failed:", err);
     } finally {

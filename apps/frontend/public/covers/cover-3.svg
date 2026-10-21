@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c0a06"/>
+      <stop offset="0.5" stop-color="#7f1d1d"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fde68a" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#fde68a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lantern" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fca5a5"/>
+      <stop offset="1" stop-color="#dc2626"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#night)"/>
+  <rect x="0" y="250" width="1200" height="150" fill="#2b0d0a" opacity="0.55"/>
+  <g opacity="0.9">
+    <circle cx="250" cy="150" r="150" fill="url(#glow)"/>
+    <circle cx="640" cy="110" r="190" fill="url(#glow)"/>
+    <circle cx="980" cy="160" r="150" fill="url(#glow)"/>
+  </g>
+  <g>
+    <path d="M250 0 v92" stroke="#fca5a5" stroke-width="2" opacity="0.6"/>
+    <path d="M640 0 v58" stroke="#fca5a5" stroke-width="2" opacity="0.6"/>
+    <path d="M980 0 v104" stroke="#fca5a5" stroke-width="2" opacity="0.6"/>
+    <g transform="translate(250 92)">
+      <ellipse cx="0" cy="0" rx="34" ry="8" fill="#fbbf24"/>
+      <path d="M-34 4 Q-46 40 0 62 Q46 40 34 4 Z" fill="url(#lantern)"/>
+      <path d="M0 62 v16" stroke="#fbbf24" stroke-width="3"/>
+      <path d="M-10 78 h20" stroke="#fbbf24" stroke-width="3"/>
+    </g>
+    <g transform="translate(640 58) scale(1.2)">
+      <ellipse cx="0" cy="0" rx="30" ry="7" fill="#fbbf24"/>
+      <path d="M-30 4 Q-42 38 0 58 Q42 38 30 4 Z" fill="url(#lantern)"/>
+      <path d="M0 58 v16" stroke="#fbbf24" stroke-width="3"/>
+      <path d="M-9 74 h18" stroke="#fbbf24" stroke-width="3"/>
+    </g>
+    <g transform="translate(980 104) scale(0.9)">
+      <ellipse cx="0" cy="0" rx="34" ry="8" fill="#fbbf24"/>
+      <path d="M-34 4 Q-46 40 0 62 Q46 40 34 4 Z" fill="url(#lantern)"/>
+      <path d="M0 62 v16" stroke="#fbbf24" stroke-width="3"/>
+      <path d="M-10 78 h20" stroke="#fbbf24" stroke-width="3"/>
+    </g>
+  </g>
+  <g fill="#1c0a06">
+    <rect x="0" y="330" width="1200" height="70"/>
+    <path d="M60 330 v-70 h150 v70 Z"/>
+    <path d="M90 330 v-42 h36 v42 Z" fill="#f59e0b" opacity="0.25"/>
+    <path d="M170 330 v-42 h30 v42 Z" fill="#f59e0b" opacity="0.25"/>
+    <path d="M470 330 v-58 h120 v58 Z"/>
+    <path d="M960 330 v-64 h160 v64 Z"/>
+  </g>
+  <g fill="#fbbf24" opacity="0.4">
+    <rect x="112" y="304" width="10" height="12"/>
+    <rect x="180" y="304" width="10" height="12"/>
+    <rect x="500" y="300" width="12" height="14"/>
+    <rect x="1000" y="298" width="12" height="14"/>
+  </g>
+</svg>

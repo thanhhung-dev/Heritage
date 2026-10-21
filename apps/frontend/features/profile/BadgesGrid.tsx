@@ -11,10 +11,9 @@ interface BadgesGridProps {
 
 /**
  * Renders the gamification Badges grid (2 / 4 / 5 columns, responsive).
- * Locked badges (is_unlocked === false) are dimmed to 50% opacity and
- * show a lock icon in the top-right corner. Unlocked badges render at
- * full brightness with their earned white icon (resolved from `icon_key`
- * via `getBadgeIcon`).
+ * Locked badges (is_unlocked === false) are dimmed and show a lock icon in
+ * the top-right corner of the artwork plate. Unlocked badges render their
+ * earned icon (resolved from `icon_key` via `getBadgeIcon`).
  */
 export function BadgesGrid({ badges }: BadgesGridProps) {
   return (
@@ -24,19 +23,27 @@ export function BadgesGrid({ badges }: BadgesGridProps) {
           key={badge.id}
           className={[styles.badgeCard, badge.is_unlocked ? "" : styles.badgeCardLocked].join(" ")}
         >
-          {!badge.is_unlocked ? (
-            <span className={styles.badgeCornerIcon}>
-              <LockOutlined />
+          <div className={styles.badgeArtCard}>
+            {!badge.is_unlocked ? (
+              <span className={styles.badgeCornerIcon} aria-hidden="true">
+                <LockOutlined />
+              </span>
+            ) : null}
+            <span
+              className={[styles.badgeIcon, badge.is_unlocked ? "" : styles.badgeIconLocked].join(" ")}
+              aria-hidden="true"
+            >
+              {getBadgeIcon(badge.icon_key)}
             </span>
-          ) : null}
-          <span className={styles.badgeIcon} aria-hidden="true">
-            {getBadgeIcon(badge.icon_key)}
-          </span>
-          <div className={styles.badgeLabel}>{badge.title}</div>
-          <div className={styles.badgeDescription}>{badge.description}</div>
+            <span className={styles.badgeSpacer} aria-hidden="true" />
+          </div>
+
+          <div className={styles.badgeMeta}>
+            <h3 className={styles.badgeLabel}>{badge.title}</h3>
+            <p className={styles.badgeDescription}>{badge.description}</p>
+          </div>
         </div>
       ))}
     </div>
   );
 }
-

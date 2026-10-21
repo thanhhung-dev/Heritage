@@ -39,7 +39,7 @@ class ProfileAvatarBannerUrlValidationTests(unittest.TestCase):
     def test_rejects_javascript_scheme(self) -> None:
         with self.assertRaises(ValidationError) as raised:
             UserProfileUpdate(avatar_url="javascript:alert(1)")
-        self.assertIn("http:// hoặc https://", str(raised.exception))
+        self.assertIn("http:// or https://", str(raised.exception))
 
     def test_rejects_data_scheme(self) -> None:
         with self.assertRaises(ValidationError):

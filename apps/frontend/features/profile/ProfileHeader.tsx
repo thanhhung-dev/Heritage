@@ -1,6 +1,11 @@
 "use client";
 
-import { ClockCircleOutlined, EditOutlined } from "@ant-design/icons";
+import {
+  CameraOutlined,
+  EditOutlined,
+  ExpandOutlined,
+  PictureOutlined,
+} from "@ant-design/icons";
 import { UserAvatar } from "@/features/account/UserAvatar";
 import type { ProfileData } from "./types";
 import styles from "./profile.module.css";
@@ -15,7 +20,9 @@ interface ProfileHeaderProps {
   authHandle?: string | null;
   isEditing: boolean;
   saving: boolean;
+  coverPosition?: string;
   onEdit: () => void;
+  onManageCover: () => void;
   onCancel: () => void;
   onSave: () => void;
 }
@@ -34,7 +41,9 @@ export function ProfileHeader({
   authHandle,
   isEditing,
   saving,
+  coverPosition = "50% 50%",
   onEdit,
+  onManageCover,
   onCancel,
   onSave,
 }: ProfileHeaderProps) {
@@ -47,7 +56,7 @@ export function ProfileHeader({
   const handle = (profile.handle?.trim() || authHandle?.trim() || "").replace(/^@+/, "");
   const joined = formatJoined(profile.joined_at);
   const totalHours = profile.total_hours ?? 0;
-  const level = profile.level || "Explorer";
+  const level = profile.level?.trim() || "Explorer";
 
   return (
     <>
@@ -58,80 +67,110 @@ export function ProfileHeader({
             ? {
                 backgroundImage: `url(${profile.banner_url})`,
                 backgroundSize: "cover",
-                backgroundPosition: "center",
+                backgroundPosition: coverPosition,
               }
             : undefined
         }
       >
-        <div className={styles.bannerMap} aria-hidden="true">
-          <div className={styles.bannerMapPin} />
-        </div>
-        <div className={styles.bannerOverlay} />
-        <div className={styles.statBadge}>
-          <ClockCircleOutlined className={styles.statBadgeIcon} />
-          <div className={styles.statBadgeTextCol}>
-            <span className={styles.statBadgeValue}>{totalHours} Hours</span>
-            <span className={styles.statBadgeLabel}>Total Hours</span>
+        {!profile.banner_url ? (
+          <div className={styles.bannerMap} aria-hidden="true">
+            <div className={styles.bannerMapPin} />
           </div>
-        </div>
+        ) : null}
+        <div className={styles.bannerOverlay} />
+
+        {!isEditing ? (
+          <div className={styles.coverActions}>
+            <span className={styles.coverScrim} aria-hidden="true" />
+            <button type="button" className={styles.coverAction} onClick={onManageCover}>
+              <PictureOutlined aria-hidden="true" />
+              Replace Image
+            </button>
+            <button type="button" className={styles.coverAction} onClick={onManageCover}>
+              <ExpandOutlined aria-hidden="true" />
+              Reposition
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.headerRow}>
-        <div className={styles.avatarIdentityRow}>
+        <div className={styles.avatarWrap}>
           <UserAvatar
             src={avatarUrl}
             name={displayName}
-            size={120}
+            size={144}
             className={styles.avatar}
           />
-
-          <div className={styles.identityCol}>
-            {!isEditing ? (
-              <span className={styles.levelPill}>★ {level} ★</span>
-            ) : null}
-
-            <div className={styles.nameRow}>
-              <h1 className={styles.displayName}>{displayName}</h1>
-              {!isEditing ? (
-                <button
-                  type="button"
-                  className={styles.nameEditButton}
-                  onClick={onEdit}
-                  aria-label="Edit profile"
-                  title="Edit profile"
-                >
-                  <EditOutlined aria-hidden="true" />
-                </button>
-              ) : null}
+          {!isEditing ? (
+            <div className={styles.avatarOverlay}>
+              <button
+                type="button"
+                className={styles.avatarEditButton}
+                onClick={onEdit}
+                aria-label="Edit profile photo"
+                title="Edit profile photo"
+              >
+                <CameraOutlined aria-hidden="true" />
+              </button>
             </div>
-
-            <div className={styles.metaRow}>
-              {handle ? <span className={styles.handle}>@{handle}</span> : null}
-              {handle && joined ? <span className={styles.metaDot}>&middot;</span> : null}
-              {joined ? <span className={styles.joined}>{joined}</span> : null}
-            </div>
-          </div>
+          ) : null}
         </div>
 
-        {isEditing ? (
-          <div className={styles.actionsRow}>
-            <button
-              type="button"
-              className={styles.buttonOutline}
-              onClick={onCancel}
-              disabled={saving}
-            >
-              Hủy
-            </button>
-            <button
-              type="button"
-              className={styles.buttonPrimary}
-              onClick={onSave}
-              disabled={saving}
-            >
-              {saving ? "Đang lưu..." : "Lưu thay đổi"}
-            </button>
+        <div className={styles.headerContent}>
+          <div className={styles.identityCol}>
+            {!isEditing ? <span className={styles.levelPill}>{level}</span> : null}
+            <h1 className={styles.displayName}>{displayName}</h1>
           </div>
+
+          {isEditing ? (
+            <div className={styles.actionsRow}>
+              <button
+                type="button"
+                className={styles.buttonOutline}
+                onClick={onCancel}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.buttonPrimary}
+                onClick={onSave}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          ) : (
+            <div className={styles.actionsRow}>
+              <button
+                type="button"
+                className={styles.editIconButton}
+                onClick={onEdit}
+                aria-label="Edit profile"
+                title="Edit profile"
+              >
+                <EditOutlined aria-hidden="true" />
+              </button>
+              <button type="button" className={styles.editButton} onClick={onEdit}>
+                <EditOutlined aria-hidden="true" />
+                Edit profile
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.metaRow}>
+        {handle ? <span className={styles.handle}>@{handle}</span> : null}
+        {handle && joined ? <span className={styles.metaDot}>&middot;</span> : null}
+        {joined ? <span className={styles.joined}>{joined}</span> : null}
+        {totalHours > 0 ? (
+          <>
+            <span className={styles.metaDot}>&middot;</span>
+            <span className={styles.joined}>{totalHours} hours explored</span>
+          </>
         ) : null}
       </div>
     </>

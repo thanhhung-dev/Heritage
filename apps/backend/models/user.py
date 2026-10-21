@@ -46,8 +46,8 @@ class UserConsent(Base, TimestampMixin):
     __tablename__ = "user_consent"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    account_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("admin_account.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+    account_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("account.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
     )
     analytics_opt_in: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
@@ -69,8 +69,8 @@ class UserBadge(Base):
     __tablename__ = "user_badge"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    account_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("admin_account.id", ondelete="CASCADE"), nullable=False, index=True
+    account_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("account.id", ondelete="CASCADE"), nullable=False, index=True
     )
     badge_id: Mapped[int] = mapped_column(Integer, ForeignKey("badge_definition.id", ondelete="CASCADE"), nullable=False, index=True)
     earned_at: Mapped[date] = mapped_column(Date, nullable=False)
@@ -114,8 +114,8 @@ class UserMilestoneTask(Base):
     __tablename__ = "user_milestone_task"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    account_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("admin_account.id", ondelete="CASCADE"), nullable=False, index=True
+    account_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("account.id", ondelete="CASCADE"), nullable=False, index=True
     )
     task_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("milestone_task_definition.id", ondelete="CASCADE"), nullable=False, index=True

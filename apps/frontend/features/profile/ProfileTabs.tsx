@@ -1,6 +1,5 @@
 "use client";
 
-import { Tabs } from "antd";
 import { PersonalInfoTab } from "./PersonalInfoTab";
 import { MilestonesTab } from "./MilestonesTab";
 import { AchievementsTab } from "./AchievementsTab";
@@ -22,6 +21,12 @@ interface ProfileTabsProps {
   onPersonalizationConsentChange: (checked: boolean) => void;
 }
 
+const TAB_ITEMS: { key: ProfileTabKey; label: string }[] = [
+  { key: "personal", label: "Personal Info" },
+  { key: "milestones", label: "Milestones" },
+  { key: "achievements", label: "Achievements" },
+];
+
 /** Owns tab-switching state/UI for Personal info, Milestones, and Achievements. */
 export function ProfileTabs({
   activeTab,
@@ -38,39 +43,47 @@ export function ProfileTabs({
   onPersonalizationConsentChange,
 }: ProfileTabsProps) {
   return (
-    <Tabs
-      activeKey={activeTab}
-      onChange={(key) => onTabChange(key as ProfileTabKey)}
-      className={styles.tabs}
-      items={[
-        {
-          key: "personal",
-          label: "Personal Info",
-          children: (
-            <PersonalInfoTab
-              isEditing={isEditing}
-              formData={formData}
-              displayEmail={displayEmail}
-              personalizationConsent={personalizationConsent}
-              consentSaving={consentSaving}
-              badges={badges}
-              onFormChange={onFormChange}
-              onDisplayEmailChange={onDisplayEmailChange}
-              onPersonalizationConsentChange={onPersonalizationConsentChange}
-            />
-          ),
-        },
-        {
-          key: "milestones",
-          label: "Milestones",
-          children: <MilestonesTab milestones={milestones} />,
-        },
-        {
-          key: "achievements",
-          label: "Achievements",
-          children: <AchievementsTab badges={badges} />,
-        },
-      ]}
-    />
+    <div className={styles.tabsWrap}>
+      {!isEditing ? (
+        <div className={styles.tabs} role="tablist">
+          {TAB_ITEMS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.key}
+              className={[styles.tab, activeTab === tab.key ? styles.tabActive : ""].join(" ")}
+              onClick={() => onTabChange(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <div className={styles.tabPanel} role="tabpanel">
+        {isEditing || activeTab === "personal" ? (
+          <PersonalInfoTab
+            isEditing={isEditing}
+            formData={formData}
+            displayEmail={displayEmail}
+            personalizationConsent={personalizationConsent}
+            consentSaving={consentSaving}
+            badges={badges}
+            onFormChange={onFormChange}
+            onDisplayEmailChange={onDisplayEmailChange}
+            onPersonalizationConsentChange={onPersonalizationConsentChange}
+          />
+        ) : null}
+
+        {!isEditing && activeTab === "milestones" ? (
+          <MilestonesTab milestones={milestones} />
+        ) : null}
+
+        {!isEditing && activeTab === "achievements" ? (
+          <AchievementsTab badges={badges} />
+        ) : null}
+      </div>
+    </div>
   );
 }

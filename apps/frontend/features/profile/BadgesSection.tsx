@@ -12,20 +12,19 @@ export function BadgesSection({ badges }: BadgesSectionProps) {
   const earnedCount = badges.filter((badge) => badge.is_unlocked).length;
 
   return (
-    <div className={styles.badgesSection}>
-      <div className={styles.badgesHeader}>
-        <div>
-          <h2 className={styles.badgesTitle}>Badges</h2>
+    <section className={styles.badgesSection}>
+      <div className={styles.sectionHeader}>
+        <div className={styles.sectionHeading}>
+          <h2 className={styles.sectionTitle}>Badges</h2>
           <p className={styles.cardDescription}>
-            Collect badges by exploring heritage, asking the chatbot, and learning local customs.
+            Badges you earn automatically as you build. Claim them to show them off.
           </p>
         </div>
         <span className={styles.badgesEarnedCount}>
-          {earnedCount}/{badges.length} badges earned
+          {earnedCount} of {badges.length} earned
         </span>
       </div>
       <BadgesGrid badges={badges} />
-    </div>
+    </section>
   );
 }
-

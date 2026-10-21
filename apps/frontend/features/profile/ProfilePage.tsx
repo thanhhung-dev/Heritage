@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, ConfigProvider, Spin, theme } from "antd";
+import { ConfigProvider, Spin, theme } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { getUser, type User } from "@/lib/auth";
+import { CoverImageModal } from "./CoverImageModal";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfileTabs } from "./ProfileTabs";
 import {
@@ -19,9 +20,9 @@ import type { Badge, MilestoneLevel, ProfileData, ProfileTabKey } from "./types"
 import styles from "./profile.module.css";
 
 const ORANGE = "#f97316";
-const ACTIVE_ORANGE = "#f97316";
-const PROFILE_BACKGROUND = "#171717";
-const PROFILE_BORDER = "#333333";
+const PROFILE_BACKGROUND = "#121214";
+const PROFILE_BORDER = "#2a2a2e";
+const COVER_POSITION_KEY = "heritage.profile.cover-position";
 
 const profileTheme = {
   algorithm: theme.darkAlgorithm,
@@ -29,46 +30,32 @@ const profileTheme = {
     colorPrimary: ORANGE,
     colorBgContainer: PROFILE_BACKGROUND,
     colorBorder: PROFILE_BORDER,
-    colorText: "#ffffff",
-    colorTextSecondary: "rgba(255, 255, 255, 0.7)",
-    colorTextPlaceholder: "rgba(255, 255, 255, 0.7)",
-    borderRadius: 12,
+    colorText: "#fafafa",
+    colorTextSecondary: "#a1a1aa",
+    colorTextPlaceholder: "#71717a",
+    borderRadius: 8,
   },
   components: {
     Input: {
       colorBgContainer: PROFILE_BACKGROUND,
       colorBorder: PROFILE_BORDER,
-      colorText: "#ffffff",
-      colorTextPlaceholder: "rgba(255, 255, 255, 0.7)",
-      controlHeight: 44,
-      borderRadius: 12,
+      colorText: "#fafafa",
+      colorTextPlaceholder: "#71717a",
+      controlHeight: 40,
+      borderRadius: 8,
       activeBorderColor: ORANGE,
-      hoverBorderColor: "rgba(255, 155, 45, 0.5)",
-      activeShadow: "0 0 0 2px rgba(255, 155, 45, 0.15)",
+      hoverBorderColor: "#52525b",
+      activeShadow: "0 0 0 2px rgba(249, 115, 22, 0.15)",
     },
     Select: {
       colorBgContainer: PROFILE_BACKGROUND,
       colorBorder: PROFILE_BORDER,
-      controlHeight: 44,
-      borderRadius: 12,
-      optionSelectedBg: "rgba(255, 155, 45, 0.15)",
+      controlHeight: 40,
+      borderRadius: 8,
+      optionSelectedBg: "rgba(249, 115, 22, 0.15)",
     },
     Switch: {
       colorPrimary: ORANGE,
-    },
-    Tabs: {
-      itemColor: "rgba(255, 255, 255, 0.7)",
-      itemSelectedColor: "#ffffff",
-      itemHoverColor: "#ffffff",
-      inkBarColor: ACTIVE_ORANGE,
-      titleFontSize: 14,
-    },
-    Alert: {
-      colorErrorBg: "#ffffff",
-      colorErrorBorder: "#fecaca",
-      colorError: "#dc2626",
-      colorText: "#dc2626",
-      colorIcon: "#dc2626",
     },
   },
 };
@@ -82,6 +69,9 @@ export function ProfilePage() {
   const [personalizationConsent, setPersonalizationConsent] = useState(false);
   const [consentSaving, setConsentSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [coverModalOpen, setCoverModalOpen] = useState(false);
+  const [coverSaving, setCoverSaving] = useState(false);
+  const [coverPosition, setCoverPosition] = useState("50% 50%");
   const [activeTab, setActiveTab] = useState<ProfileTabKey>("personal");
   const [apiError, setApiError] = useState("");
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -91,6 +81,10 @@ export function ProfilePage() {
   useEffect(() => {
     // Google profile data (display name + avatar) lives in localStorage.
     setAuthUser(getUser());
+    try {
+      const storedPosition = window.localStorage.getItem(COVER_POSITION_KEY);
+      if (storedPosition) setCoverPosition(storedPosition);
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -135,7 +129,7 @@ export function ProfilePage() {
           currentError ||
           (badgesResult.reason instanceof Error
             ? badgesResult.reason.message
-            : "Không thể tải danh sách huy hiệu."),
+            : "Could not load badges."),
         );
       }
 
@@ -146,7 +140,7 @@ export function ProfilePage() {
           currentError ||
           (milestonesResult.reason instanceof Error
             ? milestonesResult.reason.message
-            : "Không thể tải cột mốc khám phá."),
+            : "Could not load milestones."),
         );
       }
 
@@ -188,6 +182,32 @@ export function ProfilePage() {
     }
   };
 
+  const handleCoverSave = async (bannerUrl: string, position: string) => {
+    setProfile((current) => (current ? { ...current, banner_url: bannerUrl } : current));
+    setFormData((current) => ({ ...current, banner_url: bannerUrl }));
+    setCoverPosition(position);
+    setCoverModalOpen(false);
+    try {
+      window.localStorage.setItem(COVER_POSITION_KEY, position);
+    } catch {}
+
+    if (bannerUrl.startsWith("data:")) return;
+
+    try {
+      setCoverSaving(true);
+      setApiError("");
+      const updated = await updateProfile({ banner_url: bannerUrl });
+      setProfile(updated);
+      setFormData(updated);
+    } catch (err: unknown) {
+      setApiError(
+        err instanceof Error ? err.message : "Could not update cover image. Please try again.",
+      );
+    } finally {
+      setCoverSaving(false);
+    }
+  };
+
   const handlePersonalizationConsentChange = async (checked: boolean) => {
     const previousValue = personalizationConsent;
     setPersonalizationConsent(checked);
@@ -214,18 +234,7 @@ export function ProfilePage() {
     );
   }
 
-  if (!profile) {
-    return (
-      <ConfigProvider theme={profileTheme}>
-        <div className={styles.page}>
-          <div className={styles.container}>
-            <Alert type="error" message={apiError || "Profile not found."} showIcon className={styles.alert} />
-          </div>
-        </div>
-      </ConfigProvider>
-    );
-  }
-
+  if (!profile) return null;
   return (
     <ConfigProvider theme={profileTheme}>
       <div className={styles.page}>
@@ -234,16 +243,6 @@ export function ProfilePage() {
             <ArrowLeftOutlined /> Back
           </Link>
 
-          {apiError && (
-            <Alert
-              type="error"
-              message={apiError}
-              closable
-              onClose={() => setApiError("")}
-              className={styles.alert}
-              showIcon
-            />
-          )}
 
           <ProfileHeader
             profile={profile}
@@ -252,7 +251,9 @@ export function ProfilePage() {
             authHandle={authUser?.username}
             isEditing={isEditing}
             saving={saving}
+            coverPosition={coverPosition}
             onEdit={handleEdit}
+            onManageCover={() => setCoverModalOpen(true)}
             onCancel={handleCancel}
             onSave={handleSave}
           />
@@ -272,6 +273,14 @@ export function ProfilePage() {
             onPersonalizationConsentChange={handlePersonalizationConsentChange}
           />
 
+          <CoverImageModal
+            open={coverModalOpen}
+            currentUrl={profile.banner_url}
+            initialPosition={coverPosition}
+            saving={coverSaving}
+            onClose={() => setCoverModalOpen(false)}
+            onSave={handleCoverSave}
+          />
         </div>
       </div>
     </ConfigProvider>
