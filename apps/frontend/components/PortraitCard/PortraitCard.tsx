@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import Image from "next/image";
 import styles from "./portrait-card.module.css";
 
 export interface PortraitCardData {
@@ -45,15 +46,18 @@ export function PortraitCard({
     .filter(Boolean)
     .join(" ");
 
+  // API asset hosts are dynamic; preserve direct loading until the CDN allowlist is agreed.
   return (
     <article className={classNames} style={style} data-card-id={item.slug}>
       <div className={styles.hp_portrait_card_img}>
         {item.card_image_url ? (
-          <img
+          <Image
             src={item.card_image_url}
             alt={item.title}
             width={220}
             height={330}
+            sizes="220px"
+            unoptimized
             loading="lazy"
           />
         ) : null}
@@ -70,11 +74,15 @@ export function PortraitCard({
         />
       ) : null}
 
-      {hasHoverImg ? (
-        <img
+      {hoverImage ? (
+        <Image
           className={styles.hp_portrait_card_hover_img}
-          src={hoverImage || undefined}
+          src={hoverImage}
           alt=""
+          width={220}
+          height={330}
+          sizes="220px"
+          unoptimized
           loading="lazy"
         />
       ) : null}

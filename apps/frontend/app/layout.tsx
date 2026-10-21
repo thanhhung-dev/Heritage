@@ -5,9 +5,9 @@ export { generateMetadata } from "./metadata";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi">
-      <GlobalProvider appearance="light">
-        <body>{children}</body>
-      </GlobalProvider>
+      <body>
+        <GlobalProvider appearance="light">{children}</GlobalProvider>
+      </body>
     </html>
   );
 }

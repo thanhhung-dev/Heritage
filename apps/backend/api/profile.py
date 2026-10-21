@@ -1,17 +1,23 @@
-from typing import AsyncGenerator, Optional
+"""Profile & Personalization Consent API — also serves the Badges/Milestones tabs."""
+from typing import AsyncGenerator
+from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.backend.core.security import get_current_user
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.models.user import UserConsent, UserProfile
 from apps.backend.schemas.user import (
+    BadgeResponse,
+    MilestoneLevelResponse,
     UserConsentResponse,
     UserConsentUpdate,
     UserProfileResponse,
     UserProfileUpdate,
 )
+from apps.backend.services.gamification import GamificationService
 
 router = APIRouter(prefix="/api/profile", tags=["Profile & Personalization Consent"])
 
@@ -21,14 +27,20 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_current_account_id() -> int:
-    # Mock auth dependency choice for Subtask HER-165 (default test user account_id = 1)
-    return 1
+async def get_current_account_id(current_user: dict = Depends(get_current_user)) -> UUID:
+    """Resolve the authenticated account's UUID from the JWT `sub` claim."""
+    try:
+        return UUID(current_user["sub"])
+    except (KeyError, ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không hợp lệ",
+        )
 
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_profile(
-    account_id: int = Depends(get_current_account_id),
+    account_id: UUID = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(UserProfile).where(UserProfile.account_id == account_id)
@@ -42,10 +54,11 @@ async def get_profile(
     return profile
 
 
+
 @router.put("/me", response_model=UserProfileResponse)
 async def update_profile(
     payload: UserProfileUpdate,
-    account_id: int = Depends(get_current_account_id),
+    account_id: UUID = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(UserProfile).where(UserProfile.account_id == account_id)
@@ -55,12 +68,30 @@ async def update_profile(
         profile = UserProfile(account_id=account_id)
         db.add(profile)
 
-    if payload.display_name is not None:
-        profile.display_name = payload.display_name
-    if payload.avatar_url is not None:
-        profile.avatar_url = payload.avatar_url
-    if payload.bio is not None:
-        profile.bio = payload.bio
+    if payload.handle is not None:
+        existing = await db.execute(
+            select(UserProfile).where(
+                UserProfile.handle == payload.handle, UserProfile.account_id != account_id
+            )
+        )
+        if existing.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tên người dùng này đã được sử dụng.",
+            )
+
+    for field in (
+        "display_name", "handle", "avatar_url", "banner_url", "bio",
+        "country", "city", "display_email", "show_activity_on_profile",
+    ):
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(profile, field, value)
+
+    if payload.socials is not None:
+        profile.socials = payload.socials.model_dump(exclude_none=True)
+    if payload.featured_badges is not None:
+        profile.featured_badges = payload.featured_badges
 
     await db.commit()
     await db.refresh(profile)
@@ -69,7 +100,7 @@ async def update_profile(
 
 @router.get("/consent", response_model=UserConsentResponse)
 async def get_consent(
-    account_id: int = Depends(get_current_account_id),
+    account_id: UUID = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(UserConsent).where(UserConsent.account_id == account_id)
@@ -86,7 +117,7 @@ async def get_consent(
 @router.put("/consent", response_model=UserConsentResponse)
 async def update_consent(
     payload: UserConsentUpdate,
-    account_id: int = Depends(get_current_account_id),
+    account_id: UUID = Depends(get_current_account_id),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(UserConsent).where(UserConsent.account_id == account_id)
@@ -101,3 +132,22 @@ async def update_consent(
     await db.commit()
     await db.refresh(consent)
     return consent
+
+
+@router.get("/badges", response_model=list[BadgeResponse])
+async def get_badges(
+    account_id: UUID = Depends(get_current_account_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = GamificationService(db)
+    return await service.list_badges(account_id)
+
+
+@router.get("/milestones", response_model=list[MilestoneLevelResponse])
+async def get_milestones(
+    account_id: UUID = Depends(get_current_account_id),
+    db: AsyncSession = Depends(get_db),
+):
+    service = GamificationService(db)
+    return await service.list_milestones(account_id)
+

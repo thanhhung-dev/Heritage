@@ -28,7 +28,7 @@
       "deploy_units": ["frontend"]
     },
     "migration": {
-      "triggers": ["apps/backend/migrations/**", "apps/backend/db/**", "corpus/**", "alembic.ini", "schema.sql"],
+      "triggers": ["apps/backend/db/**", "corpus/**", "schema.sql"],
       "ci_profiles": ["backend", "migration"],
       "images": ["backend"],
       "deploy_units": ["migrate", "import-data", "backend"]

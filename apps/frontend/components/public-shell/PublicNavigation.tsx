@@ -11,11 +11,16 @@ function isCurrentRoute(pathname: string, href: string) {
     : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function PublicNavigation() {
+interface PublicNavigationProps {
+  className?: string;
+  onNavigate?: () => void;
+}
+
+export function PublicNavigation({ className, onNavigate }: PublicNavigationProps = {}) {
   const pathname = usePathname();
 
   return (
-    <nav className={styles.navigation} aria-label="Điều hướng chính">
+    <nav className={[styles.navigation, className].filter(Boolean).join(" ")} aria-label="Điều hướng chính">
       {PUBLIC_NAVIGATION_ITEMS.map((route) => {
         const isCurrent = isCurrentRoute(pathname, route.href);
 
@@ -26,6 +31,7 @@ export function PublicNavigation() {
             className={styles.navigationLink}
             aria-current={isCurrent ? "page" : undefined}
             data-active={isCurrent || undefined}
+            onClick={onNavigate}
           >
             {route.label}
           </Link>
