@@ -124,5 +124,5 @@ Hai hành trình trình diễn hoàn chỉnh đầu-cuối cho một người d�
 
 - Thay đổi phạm vi v2.0 đã chốt bằng văn bản với giảng viên hướng dẫn chưa? (hạng mục chặn Tuần 2)
 - Email giảng viên và quyền sử dụng nguồn/ghi công chưa xác nhận — ai là đầu mối cố vấn chuyên môn (bảo tàng/trung tâm bảo tồn) rà soát bản ghi lễ hội + cổ vật?
-- Baseline retrieval và phép so sánh base↔LoRA đã chốt ngày 08/09/2026; xem `eval/baseline-summary.md`.
+- Baseline retrieval và phép so sánh base↔LoRA đã chốt ngày 08/09/2026; xem `pipelines/evaluation/baseline-summary.md`.
 - Loại thực thể sự kiện không có nhãn vàng nào — "bốn loại" thực chất là ba loại tới khi rà soát và bổ sung nhãn; ai rà soát nhãn vàng ngoài trước báo cáo cuối?

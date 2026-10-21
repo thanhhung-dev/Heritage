@@ -1,0 +1,199 @@
+import { Theme, css } from 'antd-style';
+
+const globalStyle = (token: Theme) => css`
+  :root {
+    --font-sans: 'Inter', 'Inter Fallback', system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', Roboto, sans-serif;
+    --font-brand: 'Poppins', var(--font-sans);
+
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-extrabold: 800;
+
+    --tracking-tight: -0.025em;
+
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 12.5px;
+    --radius-xl: 14px;
+
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --zinc-00: #fff;
+    --zinc-400: #a1a1a9;
+    --zinc-600: #4e4e55;
+    --zinc-700: #36363a;
+    --zinc-1000: #09090b;
+
+    --steel-800: #27272b;
+    --steel-900: #1a1a1e;
+    --steel-925: #17171b;
+    --steel-950: #101013;
+
+    --orange-500: #ff9b2d;
+    --orange-600: #de4408;
+
+    --tl-4: #ffffff0a;
+    --tl-6: #ffffff0f;
+    --tl-8: #ffffff14;
+    --tl-10: #ffffff1a;
+    --tl-15: #ffffff26;
+    --tl-25: #ffffff40;
+
+    --bg: #0a0e14;
+    --bg-raised: #101013;
+    --bg-strong: #27272b;
+    --bg-hover: #36363a;
+
+    --text: #f0e8dd;
+    --text-strong: #fffffff2;
+    --text-secondary: #ccccd1;
+    --text-tertiary: #a1a1aa;
+
+    --border: var(--tl-10);
+    --border-subtle: var(--tl-8);
+
+    --accent: #ff9b2d;
+    --accent-glow: #fa500f21;
+
+    --line: rgba(240, 232, 221, 0.12);
+    --surface: #14181f;
+    --brand: #ff9b2d;
+    --success: #16a34a;
+    --danger: #ea3241;
+    --muted: rgba(240, 232, 221, 0.5);
+
+    --auth-background: #f6f5f4;
+    --auth-field: #edece8;
+    --auth-field-hover: #e3e1dc;
+    --auth-field-border: #b4b2ad;
+    --auth-text: #37383c;
+    --auth-label: #18191b;
+    --auth-provider-text: #2c2e31;
+    --auth-link: #7e2a01;
+    --auth-on-accent: #fff9f7;
+    --auth-error: #a32424;
+    --auth-accent-hover: #ffb04f;
+    --auth-navigation-text: #ffb366;
+
+    --public-footer-border: rgba(255, 155, 45, 0.18);
+    --public-footer-background:
+      radial-gradient(ellipse 50.82% 50.82% at 49.18% 0%, rgba(255, 155, 45, 0.1) 0%, rgba(255, 130, 50, 0.04) 40%, rgba(255, 130, 50, 0) 65%),
+      #060504;
+
+    --glass-surface: #8a8a8a4d;
+    --glass-surface-hover: #8a8a8a66;
+    --glass-surface-strong: #00000080;
+    --glass-border: #ffffff61;
+
+    --public-hero-background:
+      radial-gradient(
+        circle at 50% 72%,
+        color-mix(in srgb, var(--accent) 52%, var(--bg)),
+        color-mix(in srgb, var(--accent) 18%, var(--bg)) 42%,
+        var(--bg) 78%
+      );
+
+    --shadow-floating: 0 10px 30px #00000059;
+    --shadow-brand: 0 2px 4px #00000066;
+    --shadow-glass-inset: inset 0 0 6px 3px #8a8a8a4d;
+
+    --font-settings: 'cv01', 'tnum', 'kern';
+    --font-variations: 'opsz' auto, tabular-nums;
+
+    text-autospace: normal;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    overscroll-behavior: none;
+    overflow-x: hidden;
+    color-scheme: ${token.isDarkMode ? 'dark' : 'light'};
+  }
+
+  body {
+    overflow: hidden auto;
+
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+
+    font-family: ${token.fontFamily};
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    font-feature-settings: var(--font-settings);
+    font-variation-settings: var(--font-variations);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: var(--text);
+    text-size-adjust: none;
+    text-rendering: optimizelegibility;
+    word-wrap: break-word;
+    vertical-align: baseline;
+
+    background-color: var(--bg);
+
+    -webkit-overflow-scrolling: touch;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  code {
+    font-family: ${token.fontFamilyCode} !important;
+
+    span {
+      font-family: ${token.fontFamilyCode} !important;
+    }
+  }
+
+  ::selection {
+    color: #000;
+    background: ${token.yellow9};
+
+    -webkit-text-fill-color: unset !important;
+  }
+
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--tl-15);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--tl-25);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+`;
+
+export default globalStyle;

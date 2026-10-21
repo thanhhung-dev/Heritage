@@ -15,7 +15,7 @@
 cd ~/CAP/HeritageGraph
 
 # 2. Verify graph + retrieval (1 giây, không cần model)
-backend/.venv/bin/python eval/eval_attribution.py
+apps/backend/.venv/bin/python pipelines/evaluation/eval_attribution.py
 #    → trong phạm vi 68/70; paraphrase 9/39; bằng chứng 34/34;
 #      phường/xã 18/20; ngoài phạm vi 31/38
 
@@ -35,7 +35,7 @@ lên, không có bước index bằng LLM.
 - Mở slide kiến trúc
 - Giải thích: graph + BM25 (knowledge) + LoRA (output style) + FastAPI/Next.js (app)
 - Cho xem graph thật, không chỉ sơ đồ:
-  `backend/.venv/bin/python scripts/build_graph.py --node "triều Nguyễn"`
+  `apps/backend/.venv/bin/python pipelines/graph/build_graph.py --node "triều Nguyễn"`
 
 ### 2. Demo chatbot (5 phút)
 Mở `http://localhost:3000`, hỏi tuần tự:
@@ -48,7 +48,7 @@ Mở `http://localhost:3000`, hỏi tuần tự:
 | "Hãy kể chi tiết về Hoàng thành Huế" | Test với câu hỏi dài, multi-entity |
 | "Chùa Một Cột được xây năm nào?" | Ngoài phạm vi corpus → phải TỪ CHỐI, không bịa |
 
-Chỉ hỏi về 45 bài đã crawl được (`backend/.venv/bin/python -c "..."` hoặc xem
+Chỉ hỏi về 45 bài đã crawl được (`apps/backend/.venv/bin/python -c "..."` hoặc xem
 `corpus/locations_index.json`). Lưu ý danh mục bị lệch: Di tích lịch sử 22,
 Ẩm thực 9, Danh thắng 6, Nghệ thuật 4, Lễ hội 2, Làng nghề 2 — nên câu hỏi về
 lễ hội/làng nghề dễ rơi vào "ngoài phạm vi": đúng theo thiết kế, nhưng đừng đưa
@@ -58,13 +58,13 @@ vào phần demo kiến thức.
 Mở terminal:
 ```bash
 # Sinh gold set (lấy từ 5 bài KHÔNG có trong train) rồi soát tay phần ner-*
-backend/.venv/bin/python eval/make_gold_template.py
+apps/backend/.venv/bin/python pipelines/evaluation/make_gold_template.py
 
-# Đo base và đo LoRA bằng CÙNG một prompt (backend/core/prompt.py)
-backend/.venv/bin/python training/score_gold.py --model mlx-community/Qwen2.5-3B-Instruct-4bit \
-  --gold eval/gold.jsonl --out eval/report_base.json
-backend/.venv/bin/python training/score_gold.py \
-  --gold eval/gold.jsonl --out eval/report_lora.json
+# Đo base và đo LoRA bằng CÙNG một prompt (apps/backend/core/prompt.py)
+python pipelines/training/score_gold.py --base --model Qwen/Qwen2.5-3B-Instruct \
+  --gold pipelines/evaluation/gold.jsonl --out pipelines/evaluation/report_base.json
+python pipelines/training/score_gold.py \
+  --gold pipelines/evaluation/gold.jsonl --out pipelines/evaluation/report_lora.json
 ```
 
 Bảng so sánh có kiểm soát: cả hai cột đo trên cùng 76 mẫu, corpus 45 bài,
@@ -78,10 +78,10 @@ prompt và greedy decoding (08/09/2026):
 | Refusal accuracy | 0.3750 | 0.9167 | `refusal_accuracy` |
 
 > Hai report có trường `meta` để kiểm tra checkpoint và fingerprint; bản tóm tắt
-> dùng cho slide nằm tại `eval/baseline-summary.md`.
+> dùng cho slide nằm tại `pipelines/evaluation/baseline-summary.md`.
 
 Ba điều phải nói thẳng nếu hội đồng hỏi:
-- Nhãn NER trong gold do `backend/core/nerlabel.py` điền sẵn từ graph rồi soát tay;
+- Nhãn NER trong gold do `apps/backend/core/nerlabel.py` điền sẵn từ graph rồi soát tay;
   phần chưa soát vẫn còn cờ `"_prefilled": true`.
 - Loại `sự kiện` gần như không có mẫu (danh mục Lễ hội chỉ có 2 tài liệu trong
   corpus 45 bài), nên F1 của riêng loại đó không đủ dữ liệu để kết luận - đọc
@@ -102,11 +102,11 @@ Câu hỏi thường gặp + cách trả lời:
 **"Sao không dùng Microsoft GraphRAG?"**
 > "Đã cân nhắc và bỏ. Nó cần LLM extract entity: 8-12 giờ index trên corpus này, prompt mặc định bằng tiếng Anh chạy trên văn bản tiếng Việt sai nhiều, và entity do LLM sinh ra có thể bịa. Graph ở đây xây deterministic bằng khớp tên thực thể + mẫu 'danh từ loại + tên riêng' của tiếng Việt: 510 node / 1135 edge, build hết 0.23 giây, và mọi node đều truy được về một chuỗi có thật trong văn bản."
 
-**"Tại sao 4-bit base?"**
-> "Để model 3B + LoRA vừa RAM và train nhanh trên M4 Pro. 4-bit quantization giảm RAM ~4× với loss chất lượng nhỏ cho downstream task. Kiến thức đến từ nguồn được truy xuất, nên không cần model to."
+**"Tại sao dùng LoRA?"**
+> "LoRA chỉ tối ưu các ma trận hạng thấp thay vì cập nhật toàn bộ model, nên giảm VRAM và kích thước artifact trong khi base model vẫn được train ở FP16/BF16. Kiến thức đến từ nguồn được truy xuất; LoRA chủ yếu dạy văn phong, trích nguồn và hành vi từ chối."
 
 **"Mất bao lâu để train?"**
-> "Sinh data vài giây. Train LoRA (r=16, 16 lớp cuối) 1000 iters trên M4 Pro: lần chạy rank-8 trước đo được ~2 giờ 05; cấu hình hiện tại giảm grad_accumulation 8→4 nên dự kiến ~1–1,5 giờ. Xây graph 0.23 giây, đo retrieval 1 giây — nên vòng lặp sửa retrieval rất nhanh, không phải index lại gì cả."
+> "Thời gian phụ thuộc GPU Kaggle, sequence length và số mẫu. Pipeline ghi checkpoint và tự resume; thời gian thực tế phải lấy từ log của run CUDA hiện tại, không dùng lại số đo MLX cũ."
 
 **"Chi phí toàn bộ dự án?"**
 > "Dưới $1 (chỉ tính điện). Toàn bộ stack local, không tốn API."

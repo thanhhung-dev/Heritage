@@ -1,0 +1,1712 @@
+[
+  {
+    "id": 1,
+    "slug": "son-tra-peninsula",
+    "title": "Sơn Trà Peninsula",
+    "tagline": "Wild green peninsula above the bay",
+    "description": "Home to the Linh Ung Pagoda and the majestic Lady Buddha, Son Tra is a lush nature reserve wrapped around Da Nang Bay, circling from city to sea.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.094,
+    "lng": 108.2774,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Step into the lush nature reserve of Son Tra Peninsula.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/son-tra-peninsula-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/son-tra-peninsula-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 1,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 2,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 3,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 2,
+    "slug": "marble-mountains",
+    "title": "Ngũ Hành Sơn",
+    "tagline": "Five marble peaks between beach and river",
+    "description": "A cluster of five marble and limestone hills bearing caves, pagodas and Buddhist sanctuaries shaped by faith and legend, standing between the city and the sea.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.004,
+    "lng": 108.263,
+    "duration_seconds": 2700,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Discover caves and pagodas inside the marble mountains.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/marble-mountains-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/marble-mountains-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 4,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 5,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 6,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 3,
+    "slug": "linh-ung-pagoda",
+    "title": "Chùa Linh Ứng",
+    "tagline": "67-metre Lady Buddha watching the sea",
+    "description": "Perched on Son Tra Peninsula, Linh Ung is Da Nang's largest pagoda and is home to the towering white Lady Buddha statue that blesses fishers at sea.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.0994,
+    "lng": 108.2776,
+    "duration_seconds": 1800,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Stand beneath the towering white Lady Buddha of Linh Ung.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/linh-ung-pagoda-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/linh-ung-pagoda-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 7,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 8,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 9,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 4,
+    "slug": "my-khe-beach",
+    "title": "Bãi biển Mỹ Khê",
+    "tagline": "One of Vietnam's most beautiful beaches",
+    "description": "Soft white sand and gentle waves along a long stretch of coast, famous worldwide for calm water, clean air and stunning sunsets.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.0626,
+    "lng": 108.2465,
+    "duration_seconds": 1200,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Feel the soft white sand and gentle waves of My Khe.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/my-khe-beach-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/my-khe-beach-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 10,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 11,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 12,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 5,
+    "slug": "dragon-bridge",
+    "title": "Cầu Rồng",
+    "tagline": "A dragon-shaped landmark crossing the Han River",
+    "description": "A 666-metre steel dragon spanning the Han River that breathes fire and water on weekend evenings, a symbol of a modern Da Nang.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.0612,
+    "lng": 108.227,
+    "duration_seconds": 600,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Watch the Dragon Bridge breathe fire on weekend nights.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/dragon-bridge-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/dragon-bridge-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 13,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 14,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 15,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 6,
+    "slug": "han-river-bridge",
+    "title": "Cầu Sông Hàn",
+    "tagline": "The swing bridge that lights up the river",
+    "description": "The first swing bridge built by Vietnamese engineers, rotating open to let ships pass under a canopy of lights after dark.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.0663,
+    "lng": 108.2252,
+    "duration_seconds": 720,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "See the first swing bridge built by Vietnamese engineers.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/han-river-bridge-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/han-river-bridge-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 16,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 17,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 18,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 7,
+    "slug": "ba-na-hills",
+    "title": "Bà Nà Hills",
+    "tagline": "A hilltop French village in the clouds",
+    "description": "A mountaintop resort reached by one of the world's longest cable car systems, famous for the Golden Bridge held by giant stone hands.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 15.9951,
+    "lng": 107.9886,
+    "duration_seconds": 3600,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Ride the cable car up to the clouds at Ba Na Hills.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/ba-na-hills-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/ba-na-hills-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 19,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 20,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 21,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 8,
+    "slug": "golden-bridge",
+    "title": "Cầu Vàng",
+    "tagline": "Golden walkway held by giant hands",
+    "description": "A 150-metre golden footbridge cradled by two colossal stone hands high above the forest canopy at Ba Na Hills.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 15.995,
+    "lng": 107.989,
+    "duration_seconds": 900,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Walk the famous Golden Bridge among the treetops.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/golden-bridge-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/golden-bridge-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 22,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 23,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 24,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 9,
+    "slug": "son-tra-lighthouse",
+    "title": "Hải đăng Tiên Sa",
+    "tagline": "Guiding ships into the bay for a century",
+    "description": "A century-old lighthouse on Son Tra Peninsula offering panoramic views over Da Nang Bay and the East Sea.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.1067,
+    "lng": 108.2758,
+    "duration_seconds": 1200,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Climb the century-old lighthouse over Da Nang Bay.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/son-tra-lighthouse-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/son-tra-lighthouse-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 25,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 26,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 27,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 10,
+    "slug": "non-nuoc-village",
+    "title": "Làng đá Non Nước",
+    "tagline": "Traditional stone carving village",
+    "description": "A centuries-old craft village at the foot of the Marble Mountains, shaping white and green marble into statues and intricate carvings.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.0163,
+    "lng": 108.2605,
+    "duration_seconds": 1800,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Watch marble being shaped by Non Nuoc craftsmen.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/non-nuoc-village-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/non-nuoc-village-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 28,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 29,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 30,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 11,
+    "slug": "con-market",
+    "title": "Chợ Cồn",
+    "tagline": "Da Nang's liveliest morning market",
+    "description": "Fruit, seafood, local snacks and everyday life under one roof in the heart of Da Nang.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.0618,
+    "lng": 108.2129,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Taste the bustle of Con Market's many stalls.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/con-market-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/con-market-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 31,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 32,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 33,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 12,
+    "slug": "han-market",
+    "title": "Chợ Hàn",
+    "tagline": "Central riverside market",
+    "description": "A bustling riverside market selling fresh produce, dried seafood and handcrafted specialities of Da Nang.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.0702,
+    "lng": 108.2229,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Browse fresh produce beside the Han River.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/han-market-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/han-market-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 34,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 35,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 36,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 13,
+    "slug": "nam-o-fish-sauce",
+    "title": "Làng nghề nước mắm Nam Ô",
+    "tagline": "Fish sauce village by the coast",
+    "description": "Nam O fish sauce is fermented for over a year in clay jars, carrying the salty soul of Da Nang cuisine.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.1116,
+    "lng": 108.2163,
+    "duration_seconds": 900,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Smell the salty soul of Nam O fish sauce village.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/nam-o-fish-sauce-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/nam-o-fish-sauce-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 37,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 38,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 39,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 14,
+    "slug": "my-son-sanctuary",
+    "title": "Thánh địa Mỹ Sơn",
+    "tagline": "Ruins of the ancient Champa kingdom",
+    "description": "A cluster of red-brick Hindu sanctuaries built between the 4th and 14th centuries, a UNESCO World Heritage site near Da Nang.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 15.7631,
+    "lng": 108.1243,
+    "duration_seconds": 3000,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Wander the brick temples of the Champa civilisation.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/my-son-sanctuary-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/my-son-sanctuary-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 40,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 41,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 42,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 15,
+    "slug": "hai-van-pass",
+    "title": "Đèo Hải Vân",
+    "tagline": "The great mountain road by the sea",
+    "description": "A dramatic mountain pass running along the coast between Da Nang and Hue, offering sweeping views over Lang Co Bay and the sea.",
+    "region": "Đà Nẵng, Việt Nam",
+    "lat": 16.1906,
+    "lng": 108.1223,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Ride the winding coastal pass High to the clouds.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/hai-van-pass-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/hai-van-pass-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 43,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 44,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 45,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 16,
+    "slug": "tu-duc-tomb",
+    "title": "Lăng Tự Đức",
+    "tagline": "An emperor's poetic retreat",
+    "description": "The most poetic of the Nguyen imperial tombs, built as a retreat where Emperor Tu Duc composed poetry among pine hills, lakes and pavilions.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.4359,
+    "lng": 107.5652,
+    "duration_seconds": 2400,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Step into the poetic landscape of Tu Duc Tomb.",
+    "map_zoom": 15.0,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/tu-duc-tomb-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/tu-duc-tomb-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 46,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 47,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 48,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 17,
+    "slug": "khai-dinh-tomb",
+    "title": "Lăng Khải Định",
+    "tagline": "Amalgam of East and West",
+    "description": "A blend of Vietnamese, Chinese and European architecture whose interior glitters with porcelain and glass mosaics.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.3996,
+    "lng": 107.5905,
+    "duration_seconds": 1800,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Marvel at the glazed mosaics of Khai Dinh Tomb.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/khai-dinh-tomb-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/khai-dinh-tomb-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 49,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 50,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 51,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 18,
+    "slug": "minh-mang-tomb",
+    "title": "Lăng Minh Mạng",
+    "tagline": "Harmony of feng-shui gardens",
+    "description": "The most majestic imperial tomb, laid out symmetrically between lotus lakes in a grand feng-shui garden of the Nguyen era.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.398,
+    "lng": 107.564,
+    "duration_seconds": 2100,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Walk the symmetrical gardens of Minh Mang Tomb.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/minh-mang-tomb-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/minh-mang-tomb-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 52,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 53,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 54,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 19,
+    "slug": "forbidden-city",
+    "title": "Đại Nội Huế",
+    "tagline": "The imperial citadel of the Nguyen dynasty",
+    "description": "The vast walled capital and forbidden purple city of the Nguyen emperors, a UNESCO World Heritage site of gates, palaces and gardens.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.4695,
+    "lng": 107.5773,
+    "duration_seconds": 3600,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Enter the heart of the Nguyen imperial Citadel.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/forbidden-city-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/forbidden-city-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 55,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 56,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 57,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 20,
+    "slug": "nine-urns",
+    "title": "Cửu Đỉnh",
+    "tagline": "Nine bronze urns of the emperors",
+    "description": "Nine ceremonial bronze urns cast in the 19th century, each engraving the landscape and people of the Nguyen realm.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.469,
+    "lng": 107.5768,
+    "duration_seconds": 900,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Study the nine bronze urns in front of the palace.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/nine-urns-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/nine-urns-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 58,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 59,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 60,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 21,
+    "slug": "thien-mu-pagoda",
+    "title": "Chùa Thiên Mụ",
+    "tagline": "The oldest pagoda on the Perfume River",
+    "description": "A serene pagoda on the north bank of the Perfume River, crowned by the seven-storey Phuoc Duyen tower, the unofficial symbol of Hue.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.4535,
+    "lng": 107.545,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Ring the bell at the seven-storey Thien Mu Tower.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/thien-mu-pagoda-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/thien-mu-pagoda-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 61,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 62,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 63,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 22,
+    "slug": "perfume-river",
+    "title": "Sông Hương",
+    "tagline": "Perfume River through the ancient capital",
+    "description": "The legendary river that winds through Hue, named for the fallen flowers that perfume its waters, best seen at dusk by dragon boat.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.47,
+    "lng": 107.59,
+    "duration_seconds": 1800,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Float along the Perfume River at sunset.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/perfume-river-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/perfume-river-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 64,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 65,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 66,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 23,
+    "slug": "trang-tien-bridge",
+    "title": "Cầu Tràng Tiền",
+    "tagline": "Hue's graceful bridge over the Perfume River",
+    "description": "A graceful six-arched iron bridge built in 1899, a landmark course for photographers as it lights up with colour at night.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.4688,
+    "lng": 107.595,
+    "duration_seconds": 600,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Cross the six-arched bridge over the Perfume River.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/trang-tien-bridge-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/trang-tien-bridge-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 67,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 68,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 69,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 24,
+    "slug": "dong-ba-market",
+    "title": "Chợ Đông Ba",
+    "tagline": "The 19th-century heart of Hue",
+    "description": "Historic marketplace by the river selling conical hats, bronze castings, imperial snacks and vibrant daily life.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.4703,
+    "lng": 107.593,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Hunt for Hue specialities at Dong Ba Market.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/dong-ba-market-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/dong-ba-market-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 70,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 71,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 72,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 25,
+    "slug": "an-dinh-palace",
+    "title": "Cung An Định",
+    "tagline": "The palace of the last queen",
+    "description": "An elegant early-20th-century palace blending Vietnamese and art-nouveau styles, once home of the last queen of the Nguyen dynasty.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.467,
+    "lng": 107.585,
+    "duration_seconds": 900,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Admire the art-nouveau palace of the last queen.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/an-dinh-palace-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/an-dinh-palace-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 73,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 74,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 75,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 26,
+    "slug": "buddha-of-hue",
+    "title": "Điện Hòn Chén",
+    "tagline": "Sacred shrine of the Perfume River",
+    "description": "A riverside shrine built into cliffs along the Perfume River, devoted to Po Nagar and beloved for festivals on the water.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.441,
+    "lng": 107.533,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Climb the waterfall shrine of Hon Chen temple.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/buddha-of-hue-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/buddha-of-hue-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 76,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 77,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 78,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 27,
+    "slug": "vong-canh-hill",
+    "title": "Đồi Vọng Cảnh",
+    "tagline": "A quiet hill overlooking the river",
+    "description": "A quiet garden hill above the Perfume River once favoured by emperors for its sweeping view, perfect for a slow afternoon.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.448,
+    "lng": 107.556,
+    "duration_seconds": 900,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Watch the river bend below Vong Canh hill.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/vong-canh-hill-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/vong-canh-hill-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 79,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 80,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 81,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 28,
+    "slug": "gia-long-tomb",
+    "title": "Lăng Gia Long",
+    "tagline": "The dynastic founder's tomb",
+    "description": "The tomb of the founder of the Nguyen dynasty, secluded in a pine forest far beyond the Perfume River.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.379,
+    "lng": 107.5455,
+    "duration_seconds": 2100,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Find the tomb of Gia Long in a pine forest.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/gia-long-tomb-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/gia-long-tomb-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 82,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 83,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 84,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 29,
+    "slug": "thieu-tri-tomb",
+    "title": "Lăng Thiệu Trị",
+    "tagline": "Emperor beneficial and gentle",
+    "description": "An imperial tomb built as retreat and resting place of the third Nguyen emperor, elegant and smaller than its royal neighbours.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.41,
+    "lng": 107.571,
+    "duration_seconds": 1500,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Discover the gentle tomb of Emperor Thieu Tri.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/thieu-tri-tomb-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/thieu-tri-tomb-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 85,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 86,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 87,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  },
+  {
+    "id": 30,
+    "slug": "bach-ma-national-park",
+    "title": "Vườn quốc gia Bạch Mã",
+    "tagline": "Mist-shrouded mountain sanctuary",
+    "description": "A national park south of Hue rising to a historic French hill station, home to waterfalls, cloud forests and the source rivers of the region.",
+    "region": "Huế, Việt Nam",
+    "lat": 16.192,
+    "lng": 107.86,
+    "duration_seconds": 3600,
+    "launch_date": "2026-10-06",
+    "publish_state": 1,
+    "publish_date": "2026-10-06",
+    "headline": "Hike the cloud forests of Bach Ma mountain.",
+    "map_zoom": null,
+    "hover_video_url": null,
+    "community_made": false,
+    "presented_by_logo_url": null,
+    "display_map": true,
+    "splash_image_url": "https://picsum.photos/seed/bach-ma-national-park-splash/1600/900",
+    "card_image_url": "https://picsum.photos/seed/bach-ma-national-park-card/800/600",
+    "language1": {
+      "code": "vi",
+      "name": "Vietnamese"
+    },
+    "language2": {
+      "code": "eng",
+      "name": "English"
+    },
+    "voices": [
+      {
+        "id": 88,
+        "name": "Nguyen Minh Anh",
+        "title": "Hue Heritage Guide",
+        "bio": "A local heritage guide sharing stories about the monuments and cultural landscape of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 89,
+        "name": "Dr. Tran Quoc Bao",
+        "title": "Historian & Heritage Researcher",
+        "bio": "A researcher specialising in Nguyen dynasty history and the cultural heritage of Hue and Da Nang.",
+        "headshot_url": null,
+        "intro_video_url": null
+      },
+      {
+        "id": 90,
+        "name": "Le Thi Huong",
+        "title": "Local Resident & Cultural Storyteller",
+        "bio": "A local storyteller sharing personal perspectives on the heritage and living culture of central Vietnam.",
+        "headshot_url": null,
+        "intro_video_url": null
+      }
+    ],
+    "voice_length": 3
+  }
+]

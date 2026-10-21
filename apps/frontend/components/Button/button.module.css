@@ -1,0 +1,28 @@
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: "Poppins",sans-serif;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all .3s ease;
+    border: none;
+    cursor: pointer
+}
+
+.primary {
+    color: #fff;
+    background: linear-gradient(135deg, #ff9b2d 0%, #f05447 100%);
+    box-shadow: 0 4px 20px rgba(255,155,45,.35)
+}
+
+/* Hover có sẵn cho cảm giác nút */
+@media(hover: hover)and (pointer: fine) {
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 28px rgba(255,155,45,.5)
+    }
+}

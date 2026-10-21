@@ -1,0 +1,28 @@
+# Web/API
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic==2.13.5
+httpx==0.28.1
+python-dotenv==1.2.3
+
+# R2 administration and dependencies of the existing auth router
+boto3==1.43.113
+PyJWT==2.10.1
+argon2-cffi==25.1.0
+email-validator==2.3.0
+
+# BGE-M3 document/query embeddings
+sentence-transformers==6.1.0
+
+# Database
+SQLAlchemy==2.0.54
+psycopg[binary]==3.3.6
+
+# Observability
+langfuse==4.15.6
+prometheus-client==0.24.1
+opentelemetry-api==1.37.0
+opentelemetry-sdk==1.37.0
+opentelemetry-exporter-otlp==1.37.0
+opentelemetry-instrumentation-httpx==0.58b0
+opentelemetry-instrumentation-sqlalchemy==0.58b0

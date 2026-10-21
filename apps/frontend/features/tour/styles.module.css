@@ -1,0 +1,4274 @@
+/* ============================================================
+   Elephanta Caves Heritage Viewer
+   Design system: CyArk Tapestry
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
+/* ─────────────────────────────────────────────────────────────
+   Accessibility Primitives
+   ───────────────────────────────────────────────────────────── */
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.viewer :focus-visible {
+  outline: 2px solid #fff !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #0a0e14 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer {
+    scroll-behavior: auto !important;
+  }
+
+  .viewer *,
+  .viewer *::before,
+  .viewer *::after {
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+
+  .custom-spinner,
+  .bar1,
+  .bar2,
+  .top_loading_bar::before {
+    animation-iteration-count: infinite !important;
+  }
+}
+
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 8px;
+  z-index: 100000;
+  padding: 10px 18px;
+  background-color: #0a0e14;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 6px;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.skip-link:focus,
+.skip-link.viewer :focus-visible {
+  top: 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Base Reset
+   ───────────────────────────────────────────────────────────── */
+
+.viewer {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+.viewer {
+  margin: 0;
+  padding: 0;
+  font-family: "Poppins", sans-serif;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--title);
+}
+
+.threeCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.threeCanvas canvas {
+  display: block;
+  touch-action: none;
+}
+
+:where(.viewer) button {
+  appearance: unset;
+  writing-mode: unset;
+  font-style: unset;
+  font-variant-ligatures: unset;
+  font-variant-caps: unset;
+  font-variant-numeric: unset;
+  font-variant-east-asian: unset;
+  font-variant-alternates: unset;
+  font-weight: unset;
+  font-stretch: unset;
+  font-size: unset;
+  font-family: unset;
+  font-optical-sizing: unset;
+  font-kerning: unset;
+  font-feature-settings: unset;
+  font-variation-settings: unset;
+  text-rendering: unset;
+  color: unset;
+  letter-spacing: unset;
+  word-spacing: unset;
+  line-height: unset;
+  text-transform: unset;
+  text-indent: unset;
+  text-shadow: unset;
+  display: block;
+  text-align: unset;
+  align-items: unset;
+  cursor: pointer;
+  box-sizing: unset;
+  background-color: unset;
+  margin: unset;
+  padding: unset;
+  border-width: unset;
+  border-style: unset;
+  border-color: unset;
+  border-image: unset;
+}
+
+.viewer a {
+  color: #ff9b2d;
+  text-decoration: unset;
+}
+
+.viewer button,
+.viewer a {
+  pointer-events: auto;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+.viewer h1 {
+  font-weight: unset;
+  display: block;
+  font-size: unset;
+  margin-block-start: unset;
+  margin-block-end: unset;
+  margin-inline-start: unset;
+  margin-inline-end: unset;
+}
+
+.unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Stop-Nav — Vertical Skewed Tile Navigation (left edge)
+   Exact CyArk Tapestry stop-nav system
+   ───────────────────────────────────────────────────────────── */
+
+.stopNav {
+  display: flex;
+  position: fixed;
+  z-index: 15;
+  left: -6px;
+  top: 0;
+  bottom: 0;
+  width: auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  margin: 40px 0;
+  zoom: var(--zoom-value);
+  pointer-events: none;
+}
+
+.stopNav.disabled {
+  pointer-events: none;
+  filter: brightness(0.5) grayscale(1);
+}
+
+.stopNav.disabled .ssNavBar {
+  pointer-events: none !important;
+}
+
+.ssNavBars {
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  gap: 0;
+}
+
+.ssNavBarGroup {
+  width: auto;
+  flex-wrap: nowrap;
+  cursor: pointer;
+  margin: 0;
+  filter: drop-shadow(1px -3px 1px rgba(0, 0, 0, 0.18));
+  animation: slideInFromLeft 0.5s ease forwards;
+}
+
+.ssNavBarGroup:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.ssNavBarGroup:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ssNavBarGroup:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.ssNavBarGroup:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.ssNavBarGroup:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+.ssNavBarGroup:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+.ssNavBarGroup:nth-child(7) {
+  animation-delay: 0.7s;
+}
+
+.ssNavBarGroup:nth-child(8) {
+  animation-delay: 0.8s;
+}
+
+.ssNavBarGroup:nth-child(9) {
+  animation-delay: 0.9s;
+}
+
+.ssNavBarGroup.survey {
+  margin: unset;
+}
+
+.viewer:not(.no-hover) .ssNavBarGroup.survey:hover .ssNavBar {
+  width: 48px;
+}
+
+.ssNavBar {
+  display: flex;
+  width: 36px;
+  height: 33px;
+  background-color: var(--gd-stop-nav-bg);
+  border-radius: 0 7px 7px 0;
+  margin-top: -1px;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.18));
+  transition:
+    width 0.2s ease,
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
+  box-sizing: border-box;
+  padding: 0 0 0 5px;
+  transform: skewY(-6deg);
+  pointer-events: all;
+}
+
+.ssNavBar::before {
+  content: attr(data-no);
+  font-size: var(--font-size-13);
+  font-weight: 500;
+  color: var(--title);
+  transform: skewY(6deg);
+  line-height: 1;
+  min-width: 18px;
+  text-align: center;
+  transition:
+    text-shadow 0.3s ease,
+    filter 0.3s ease;
+}
+
+.ssNavBarGroup.survey .ssNavBar::before {
+  content: none;
+}
+
+/* ── DivBarText — Floating Label ─────────────────────────────── */
+
+.ssDivBarText {
+  display: none;
+  font-size: var(--font-size-13);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.2px;
+  margin: 9px 6px 5px 4px;
+  box-sizing: border-box;
+  min-width: unset;
+  width: max-content;
+  color: #fff;
+  text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.8);
+  justify-content: flex-start;
+  pointer-events: none;
+  z-index: 1;
+  white-space: nowrap;
+  border-radius: 0 6px 6px 0;
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: skewY(6deg) translateY(-50%) translateX(-10px);
+  height: auto;
+  align-items: center;
+  background-color: var(--black-opacity-0);
+  padding: 6px;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.ssDivBarText.overview {
+  display: flex;
+  position: static;
+  background-color: rgba(0, 0, 0, 0);
+  padding: 0;
+  margin: 0;
+  z-index: 1;
+  width: auto;
+  min-width: unset;
+  height: auto;
+  transform: skewY(6deg);
+  text-shadow: none;
+  color: rgba(0, 0, 0, 0);
+  border-radius: 0;
+}
+
+.ssDivBarText.overview img {
+  width: 13px;
+  filter: brightness(0) invert(0.94);
+  opacity: 1;
+}
+
+.ssDivBarText.overview svg {
+  width: 13px;
+  height: 13px;
+  filter: brightness(0) invert(0.94);
+  opacity: 1;
+}
+
+/* ── Active NavBar ──────────────────────────────────────────── */
+
+.ssActiveNavBar {
+  width: 44px;
+  background-color: var(--gd-button-hover);
+  z-index: 1;
+}
+
+.ssActiveNavBar::before {
+  text-shadow:
+    0 0 8px rgba(240, 232, 221, 0.9),
+    0 0 16px rgba(240, 232, 221, 0.5);
+}
+
+.ssActiveNavBar .overview svg {
+  filter: brightness(0) invert(0.94) drop-shadow(0 0 6px rgba(240, 232, 221, 0.9)) drop-shadow(0 0 12px rgba(240, 232, 221, 0.4));
+}
+
+.ssActiveNavBar .overview img {
+  filter: brightness(0) invert(0.94) drop-shadow(0 0 6px rgba(240, 232, 221, 0.9)) drop-shadow(0 0 12px rgba(240, 232, 221, 0.4));
+}
+
+/* ── Hover States ───────────────────────────────────────────── */
+
+.viewer:not(.no-hover) .ssNavBarGroup:hover .ssNavBar {
+  width: 50px;
+  background-color: var(--gd-button-hover);
+}
+
+.viewer:not(.no-hover) .ssNavBarGroup:hover .ssDivBarText {
+  display: flex;
+  opacity: 1;
+  transform: skewY(6deg) translateY(-50%) translateX(0);
+}
+
+.viewer:not(.no-hover) .ssNavBarGroup:hover .ssDivBarText.survey {
+  display: flex;
+  position: static;
+  background-color: rgba(0, 0, 0, 0);
+  transform: skewY(6deg);
+}
+
+/* ── Progress Bar (playback fill inside tiles) ──────────────── */
+
+@keyframes grow {
+  to {
+    width: 100%;
+  }
+}
+
+.progress-fill {
+  animation: grow var(--dur) linear forwards;
+  animation-play-state: paused;
+}
+
+.ssNavBar.playing .progress-fill {
+  animation-play-state: running;
+}
+
+.filled .progress-fill {
+  animation: none;
+  width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Gradient Overlays
+   ───────────────────────────────────────────────────────────── */
+
+.gradientAll {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  height: var(--app-height);
+  height: 100dvh;
+  box-shadow: 0 30px 200px 50px rgba(0, 0, 0, 0.9) inset;
+  transition: all 0.3s ease;
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Title / Description Group (top center)
+   ───────────────────────────────────────────────────────────── */
+
+.titleGroup {
+  display: none;
+  z-index: 35;
+  position: fixed;
+  left: 50%;
+  top: 28px;
+  right: auto;
+  transform: translateX(-50%);
+  width: 520px;
+  max-width: 90vw;
+  margin-top: 0;
+  margin-right: 0;
+  color: var(--title);
+  text-shadow: 0px 1px 2px rgba(47, 29, 6, 0.5450980392);
+  text-align: center;
+  zoom: var(--zoom-value);
+}
+
+.title {
+  margin: unset;
+  margin-bottom: 9px;
+  font-weight: 500;
+  font-size: 32px;
+  background-color: var(--black-opacity-0);
+  line-height: 40px;
+}
+
+.tTextParent {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  border-top: none;
+  position: relative;
+}
+
+.tTextParent::before {
+  content: "";
+  display: block;
+  width: 50%;
+  height: 1.2px;
+  background-color: rgba(255, 255, 255, 0.12);
+  margin: 0 auto;
+  transition:
+    background-color 0.6s ease,
+    box-shadow 0.6s ease,
+    width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tDescription {
+  font-size: var(--font-size-12);
+  font-weight: 300;
+  width: 100%;
+  line-height: 16px;
+  margin-top: 6px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  pointer-events: none;
+  background-color: var(--black-opacity-0);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Stop UI — Header (top center, for in-scene title)
+   ───────────────────────────────────────────────────────────── */
+
+.stopUI {
+  display: block;
+  position: relative;
+  top: 0;
+  left: 0;
+  margin: 0;
+  width: 100%;
+  color: var(--title);
+  pointer-events: none;
+}
+
+.stopHeader {
+  display: flex;
+  z-index: 100;
+  flex-direction: column;
+  align-items: center;
+  position: fixed;
+  left: 50%;
+  top: 28px;
+  transform: translateX(-50%);
+  width: 60vw;
+  min-width: 320px;
+  text-align: center;
+  color: var(--title);
+  text-shadow: 0px 1px 2px rgba(47, 29, 6, 0.5450980392);
+  pointer-events: auto;
+  zoom: var(--zoom-value);
+  cursor: default;
+  background-color: var(--black-opacity-0);
+  border-radius: 11px;
+  padding-top: 5px;
+  animation: fadeInDown 0.6s ease forwards;
+}
+
+.stopHeader .stopTitle {
+  transition:
+    text-shadow 0.6s ease,
+    filter 0.6s ease;
+}
+
+.stopHeader .stopDesc {
+  transition:
+    padding 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.6s ease,
+    backdrop-filter 0.4s ease,
+    -webkit-backdrop-filter 0.4s ease;
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 10px;
+  padding: 0 20px;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  outline: none;
+}
+
+.viewer:not(.no-hover) .stopHeader:has(.stopDesc:hover) .stopDesc {
+  font-size: var(--font-size-14);
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  padding: 12px 20px;
+}
+
+.stopHeader .stopDivider {
+  width: 50%;
+  height: 1.5px;
+  background-color: rgba(255, 255, 255, 0.12);
+  margin: 0 auto 9px;
+  transition:
+    background-color 0.6s ease,
+    box-shadow 0.6s ease,
+    width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.viewer:not(.no-hover) .stopHeader:has(.stopDesc:hover) .stopDivider {
+  background-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.4),
+    0 0 24px rgba(255, 255, 255, 0.15);
+}
+
+.viewer:not(.no-hover) .stopHeader:has(.stopDesc:hover) .stopTitle {
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.5),
+    0 0 40px rgba(255, 255, 255, 0.2),
+    0px 2px 4px #000;
+}
+
+.stopHeader.stopDescOpen .stopDesc {
+  font-size: var(--font-size-14);
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.stopHeader.stopDescOpen .stopDivider {
+  background-color: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.4),
+    0 0 24px rgba(255, 255, 255, 0.15);
+}
+
+.stopHeader.stopDescOpen .stopTitle {
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.5),
+    0 0 40px rgba(255, 255, 255, 0.2),
+    0px 2px 4px #000;
+}
+
+.stopTitle {
+  margin: unset;
+  padding-bottom: 9px;
+  font-size: 32px;
+  line-height: 34px;
+  font-weight: 400;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.stopDesc {
+  font-size: var(--font-size-12);
+  font-weight: 300;
+  line-height: 1.5;
+  width: 350px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  pointer-events: auto;
+  background-color: rgba(0, 0, 0, 0);
+  text-align: center;
+}
+
+.captionDisplay {
+  position: fixed;
+  left: 50%;
+  bottom: 118px;
+  z-index: 1200;
+  max-width: min(720px, 82vw);
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+}
+
+.viewportTools {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 30;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.axisGizmo {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  pointer-events: auto;
+}
+
+.axisGizmo::before,
+.axisGizmo::after {
+  content: "";
+  position: absolute;
+  left: 45px;
+  top: 45px;
+  width: 38px;
+  height: 2px;
+  transform-origin: left center;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.axisGizmo::before {
+  transform: rotate(-28deg);
+}
+
+.axisGizmo::after {
+  transform: rotate(150deg);
+}
+
+.axisGizmo button {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  color: #fff;
+  font: 600 12px/24px Poppins, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.axisGizmo button:hover {
+  filter: brightness(1.3);
+  transform: scale(1.12);
+}
+
+.axisGizmoX {
+  right: 2px;
+  bottom: 8px;
+  background: #d84b56;
+}
+
+.axisGizmoY {
+  right: 2px;
+  top: 8px;
+  background: #76a92f;
+}
+
+.axisGizmoZ {
+  left: 7px;
+  top: 0;
+  background: #2c78c7;
+}
+
+.viewportHelp {
+  padding: 6px 9px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(20, 18, 16, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.cameraMotionToggle {
+  padding: 6px 9px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(20, 18, 16, 0.78);
+  border: 1px solid rgba(255, 155, 45, 0.55);
+  border-radius: 4px;
+  font: 500 10px/1.2 Poppins, sans-serif;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.cameraMotionToggle:hover {
+  background: rgba(48, 46, 44, 0.94);
+}
+
+@media (max-width: 700px) {
+  .viewportTools {
+    top: 12px;
+    right: 12px;
+  }
+
+  .viewportHelp {
+    display: none;
+  }
+}
+
+.hotspotPopup {
+  position: fixed;
+  right: 24px;
+  bottom: 118px;
+  z-index: 1300;
+  width: min(320px, calc(100vw - 48px));
+  padding: 18px;
+  color: #f0e8dd;
+  background: #1c1b1a;
+  border: 1px solid rgba(255, 155, 45, 0.55);
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.hotspotPopup[hidden] {
+  display: none;
+}
+
+.hotspotPopupClose {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.hotspotPopup h2 {
+  margin: 0 24px 8px 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.hotspotPopup p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.hotspotPopupMedia {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  margin-bottom: 12px;
+  object-fit: cover;
+}
+
+.hotspotPopupMediaSlot video.hotspotPopupMedia {
+  max-height: 200px;
+  background: #000;
+}
+
+.hotspotPopupText p,
+.stopDesc p {
+  margin: 0;
+}
+
+.stopDesc p+p {
+  margin-top: 6px;
+}
+
+@media (max-width: 1200px) {
+  .stopHeader {
+    width: 70vw;
+  }
+}
+
+@media (max-width: 900px) {
+  .stopHeader {
+    width: 70vw;
+  }
+}
+
+@media (max-width: 768px) {
+  .stopHeader {
+    width: 80vw;
+  }
+
+  .stopHeader {
+    margin-left: 0;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .stopDesc {
+    width: unset;
+  }
+}
+
+@media only screen and (max-width: 510px) {
+  .stopHeader {
+    margin-left: 0;
+    margin-top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+
+  .stopTitle {
+    font-size: 22px;
+    line-height: 28px;
+    margin-top: 0;
+  }
+}
+
+
+
+.topNavBar {
+  display: block;
+  zoom: var(--zoom-value);
+}
+
+.topNav_logo {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  bottom: env(safe-area-inset-bottom);
+  padding-bottom: 15px;
+  left: 15px;
+  z-index: 60;
+  animation: logoFadeIn 5s ease forwards;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  pointer-events: all;
+}
+
+.topNav_logo:hover {
+  opacity: 1 !important;
+  animation: none;
+  filter: drop-shadow(0px 0px 8px rgba(255, 255, 255, 0.4)) brightness(1.2);
+}
+
+.topNav_logo:hover .tapestryLogo_type {
+  max-width: 200px;
+  opacity: 0.5;
+  animation: none;
+}
+
+@keyframes logoFadeIn {
+  from {
+    opacity: 0.9;
+  }
+
+  to {
+    opacity: 0.4;
+  }
+}
+
+.tapestryLogo {
+  width: auto;
+  height: 14px;
+}
+
+.tapestryLogo_icon {
+  height: 18px;
+}
+
+.tapestryLogo_type {
+  margin-left: 5px;
+  height: 15px;
+  max-width: 200px;
+  opacity: 0.65;
+  overflow: hidden;
+  animation: logoTypeFadeOut 20s ease forwards;
+  transition: max-width 0.3s ease, opacity 0.3s ease;
+}
+
+@keyframes logoTypeFadeOut {
+  0% {
+    opacity: 0.65;
+    max-width: 200px;
+  }
+
+  90% {
+    opacity: 0;
+    max-width: 200px;
+  }
+
+  100% {
+    opacity: 0;
+    max-width: 0;
+  }
+}
+
+@media (max-width: 780px) {
+  .topNavBar {
+    margin: 0 25px;
+  }
+}
+
+@media (max-width: 769px) {
+  .topNav_logo {
+    display: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Closed Captions Group
+   ───────────────────────────────────────────────────────────── */
+
+.closedCaptionsGroup {
+  width: 100%;
+  width: -moz-available;
+  width: -webkit-fill-available;
+  position: absolute;
+  pointer-events: none;
+  bottom: 80px;
+  font-size: var(--font-size-13);
+  z-index: 15;
+  transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.closedCaptions {
+  margin: auto;
+  height: 70px;
+  max-width: 408px;
+  z-index: 15;
+  color: #fff;
+  text-align: center;
+}
+
+.closedCaptionsText {
+  display: flex;
+  margin: auto;
+  height: inherit;
+  max-width: 357px;
+  width: 100%;
+  padding: 0 25px;
+  text-align: center;
+  align-items: center;
+  box-sizing: border-box;
+  background-color: var(--black-opacity-70);
+  border-radius: 10px;
+}
+
+.closedCaptionsText:empty {
+  background-color: transparent;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Media Strip — Bottom carousel bar
+   ───────────────────────────────────────────────────────────── */
+
+.mediaStrip {
+  display: none;
+  justify-content: center;
+  position: fixed;
+  bottom: env(safe-area-inset-bottom);
+  padding-bottom: 9px;
+  width: 100%;
+  z-index: 30;
+  pointer-events: none;
+  zoom: var(--zoom-value);
+}
+
+.mediaStripContent {
+  margin: 0 auto;
+  z-index: 15;
+  width: calc(100% - 32px);
+  max-width: 720px;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Autoplay Indicator
+   ───────────────────────────────────────────────────────────── */
+
+.autoplay-indicator {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: var(--font-size-12);
+  font-family: inherit;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.3s ease;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Voice / Narrator Avatars
+   ───────────────────────────────────────────────────────────── */
+
+.oLocalVoicesGroup {
+  position: fixed;
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  zoom: var(--zoom-value);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: min(85vw, 540px);
+}
+
+.oLocalVoices {
+  z-index: 150;
+  position: relative;
+  height: auto;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  overflow: visible;
+  transition: transform 0.25s ease;
+}
+
+.oActive {
+  display: flex;
+  filter: grayscale(0) drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.3764705882));
+  pointer-events: all;
+  opacity: 1;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.3s ease;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Explore Tooltip
+   ───────────────────────────────────────────────────────────── */
+
+.exploreTooltip {
+  scale: 1;
+  opacity: 0;
+  visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition:
+    opacity 0.5s ease,
+    visibility 0.5s ease;
+}
+
+.exploreTooltip.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.exploreTooltipIcons {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+
+.exploreTooltipItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.exploreTooltipItem span {
+  text-align: center;
+  font-weight: 400;
+  font-size: var(--font-size-14);
+  color: #fef1d7;
+  background-color: var(--white-opacity-6);
+  backdrop-filter: blur(5px) saturate(1.2);
+  -webkit-backdrop-filter: blur(5px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+  width: max-content;
+  padding: 6px 12px;
+  border-radius: 30px;
+}
+
+.exploreTooltipIcon-wrap {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+
+.exploreTooltipIcon {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+}
+
+/* Bản gốc xếp hai ảnh WASD chồng nhau rồi cho ảnh viền sáng nhấp nháy ⇒ bàn phím
+   như đang tự gõ. */
+.exploreTooltipIcon--glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  filter: drop-shadow(0 0 16px rgb(255, 255, 255)) drop-shadow(0 0 14px rgba(200, 180, 140, 0.9));
+  animation: wasdGlow 2s ease-in-out infinite;
+}
+
+.exploreTooltipIcon--mouse {
+  width: 76px;
+  animation: mouseDrag 2.5s ease-in-out infinite;
+}
+
+@keyframes wasdGlow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes mouseDrag {
+  0%,
+  100% {
+    transform: translateX(-8px);
+  }
+
+  50% {
+    transform: translateX(8px);
+  }
+}
+
+/* Lớp phủ giữa màn hình của chế độ đi bộ. `pointer-events: none` để người dùng
+   vẫn kéo được canvas xuyên qua lớp này. */
+.centerUI {
+  position: absolute;
+  top: 0;
+  z-index: 300;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
+}
+
+@media (max-width: 1000px) {
+  .exploreTooltip {
+    position: absolute;
+    left: 30.7692307692%;
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 768px) {
+  .exploreTooltip {
+    position: static;
+    left: auto;
+    transform: none;
+  }
+
+  .exploreTooltipIcons {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Orb Tracker (bottom-left discovery circles)
+   ───────────────────────────────────────────────────────────── */
+
+.orbTracker {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  border-radius: 16px;
+  padding: 14px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.4s ease,
+    visibility 0.4s ease;
+  z-index: 10;
+  bottom: 15px;
+  align-content: center;
+  flex-wrap: wrap;
+  left: 19px;
+  right: 0;
+}
+
+.orbTracker.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.orbTracker-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--title);
+  text-transform: uppercase;
+}
+
+.orbTracker-circles {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.orbTracker-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0);
+  box-shadow: none;
+  transition:
+    background 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+
+.orbTracker-circle.orbVisited {
+  border-color: #f5f5e7;
+  background: #f2f2e4;
+  box-shadow: 0 0 10px #f9eec1;
+  animation: orbPulse 2s ease-in-out infinite;
+}
+
+.orbTracker-count {
+  font-size: 11px;
+  color: var(--title);
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Bottom Navigation Controls
+   ───────────────────────────────────────────────────────────── */
+
+.buttomNavParent {
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  width: 100%;
+  right: 0;
+  left: 0;
+}
+
+.buttomNavParent_Group {
+  margin: 0 auto;
+  z-index: 15;
+  width: 40vw;
+  min-width: 320px;
+}
+
+@media (max-width: 1200px) {
+  .buttomNavParent_Group {
+    width: 55vw;
+  }
+}
+
+@media (max-width: 900px) {
+  .buttomNavParent_Group {
+    width: 70vw;
+  }
+}
+
+@media (max-width: 768px) {
+  .buttomNavParent_Group {
+    width: 90vw;
+  }
+}
+
+.ssBottomUI {
+  display: flex;
+  position: absolute;
+  bottom: 9px;
+  width: 100%;
+  zoom: var(--zoom-value);
+}
+
+.ssButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  margin: 0 3px;
+  color: rgb(255, 255, 255);
+  background-color: #1c1b1acc;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 18px;
+  font-family: sans-serif;
+  line-height: normal;
+  cursor: pointer;
+  filter: none;
+}
+
+.ssNavToolTip {
+  display: none;
+  position: absolute;
+  bottom: 41px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 400;
+  width: max-content;
+  padding: 0 9px;
+  background-color: #00000099;
+  color: #fff;
+  height: 20px;
+  line-height: 22px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  z-index: 100
+}
+
+.stripControls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+}
+
+.infoControls,
+.systemControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  z-index: 5
+}
+
+.systemControls {
+  justify-self: end;
+}
+
+.stripControls .navIconBg {
+  background-color: var(--gd-media-strip-bg);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  pointer-events: all;
+  cursor: pointer;
+  position: relative
+}
+
+html:not(.no-hover) .stripControls .navIconBg:hover {
+  background-color: var(--gd-button-hover);
+  box-shadow: 0 0 0 1.2px rgba(255, 255, 255, .3)
+}
+
+.stripControls .navIcons {
+  height: 13px;
+  width: 13px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #fff;
+}
+
+.stripControls .captionIcon {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.stripControls .navToolTip {
+  position: absolute;
+  top: -24px;
+  bottom: auto;
+  margin-top: 0;
+  font-size: var(--font-size-9);
+  text-transform: uppercase;
+  color: #fff;
+  background-color: var(--black-opacity-60);
+  border-radius: 8px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  display: none;
+  filter: none;
+  width: max-content;
+  left: 50%;
+  transform: translateX(-50%)
+}
+
+html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
+  display: block
+}
+
+.stripControls .additionalIcons {
+  display: none;
+  gap: 4px
+}
+
+.playbackControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  gap: 6px;
+}
+
+.playbackControls button {
+  margin: 0;
+}
+
+.playbackControls .middleButtonGroup {
+  min-width: 40px;
+}
+
+@media (max-width: 640px) {
+  .mediaStrip {
+    padding-bottom: 32px;
+  }
+
+  .closedCaptionsGroup {
+    bottom: calc(100% + 10px);
+  }
+
+  .stripControls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .playbackControls {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .playbackControls {
+    gap: 0;
+  }
+}
+
+.ssSeekButton {
+  position: relative;
+  border: none;
+  padding: 8px;
+  box-sizing: border-box
+}
+
+.ssSeekButton.ssMiddleDisable {
+  padding: 8px
+}
+
+.ssSeekButton .ssSeekImg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Playback Timeline
+   ───────────────────────────────────────────────────────────── */
+
+.playbackTimeline {
+  width: 100%;
+  height: 1.2px;
+  box-sizing: content-box;
+  border-radius: 4px;
+  background-color: rgba(240, 232, 221, 0.5);
+  position: relative;
+  overflow: visible;
+  padding: 10px 0 10px 0;
+  background-clip: content-box;
+}
+
+.viewer:not(.no-hover) .playbackTimeline:hover:not(.playbackTimeline--done) .playbackTime {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.playbackTimeline--done {
+  padding: 0px 0 10px 0;
+}
+
+.playbackTime {
+  bottom: 14px;
+  position: absolute;
+  font-size: var(--font-size-11);
+  color: rgba(240, 232, 221, 0.7);
+  font-family: inherit;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 1s ease-out 0.9s;
+  pointer-events: none;
+  user-select: none;
+}
+
+.playbackTime--flash {
+  opacity: 1 !important;
+  transition: opacity 2s ease-in !important;
+}
+
+.playbackTime--hiding {
+  opacity: 0 !important;
+  transition: opacity 0.3s ease-out !important;
+}
+
+.playbackTimeElapsed {
+  left: 0;
+}
+
+.playbackTimeTotal {
+  right: 0;
+}
+
+.playbackTimelineFill {
+  height: 100%;
+  background-color: #f0e8dd;
+  border-radius: 4px;
+  width: 0;
+  transition: width 0.25s linear;
+  box-shadow:
+    0 0 4px 1px rgba(240, 232, 221, 0.5),
+    0 0 10px 2px rgba(240, 232, 221, 0.25);
+}
+
+
+
+.splashPage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 550;
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.sBackgroundImage {
+  position: absolute;
+  display: block;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #fff;
+}
+
+.sBackgroundImage img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  background-color: #373737;
+  animation: slowZoom 30s ease-in-out infinite alternate;
+}
+
+.sPageGroup {
+  display: flex;
+  position: absolute;
+  margin: auto;
+  background: none;
+  border-radius: 0;
+  max-width: none;
+  pointer-events: none;
+  box-sizing: border-box;
+  bottom: 80px;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.splash-top {
+  max-width: min(52rem, 80vw);
+  border-radius: 20px;
+  background-color: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: #fff;
+  padding: 24px 48px 22px;
+  pointer-events: auto;
+  box-sizing: border-box;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+  margin: 0 0 14px;
+  animation: fadeInUp 0.8s ease forwards;
+}
+
+.sTitle {
+  font-size: 46px;
+  line-height: 1.12;
+  font-weight: 500;
+  padding-top: 0;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+  text-wrap: balance;
+}
+
+.sLocationGroup {
+  margin-top: 0;
+  margin-bottom: 6px;
+  font-size: var(--font-size-9);
+  font-weight: 400;
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
+.sTagline {
+  padding-top: 8px;
+  font-size: 16px;
+  line-height: 24px;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+  max-width: 46rem;
+}
+
+.splash-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  padding: 0 30px;
+  box-sizing: border-box;
+  pointer-events: auto;
+  margin: 0 auto;
+}
+
+.bEnterButtonGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  cursor: pointer;
+  pointer-events: none;
+  padding-top: 0;
+}
+
+.splashPage .bStartExperience {
+  width: 100%;
+  height: 48px;
+  border-radius: 30px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(240, 232, 221, 0.3);
+  color: #fef0d7;
+  font-size: var(--font-size-14);
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  line-height: 48px;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(240, 232, 221, 0.1) 40%,
+      rgba(240, 232, 221, 0.05) 60%,
+      rgba(200, 195, 188, 0.08) 100%);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  box-shadow:
+    0 0 6px 1px rgba(240, 232, 221, 0.2),
+    0 0 14px 3px rgba(240, 232, 221, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  animation: startBtnGlow 2.5s ease-in-out infinite;
+}
+
+.splashPage .bStartExperience:hover {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.26) 0%,
+      rgba(240, 232, 221, 0.18) 40%,
+      rgba(240, 232, 221, 0.12) 60%,
+      rgba(200, 195, 188, 0.14) 100%);
+  border-color: rgba(240, 232, 221, 0.55);
+  animation: none;
+  box-shadow:
+    0 0 12px 4px rgba(240, 232, 221, 0.9),
+    0 0 20px 8px rgba(240, 232, 221, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  transform: scale(1.04);
+  filter: brightness(1.15);
+}
+
+.splashPage .bStartExperience:active {
+  animation: none;
+  transform: scale(0.97);
+}
+
+/* ── Loading Bar (splash) ── */
+
+.splashPage .l_BottomNav {
+  max-width: none;
+  align-items: center;
+  position: relative;
+  display: flex;
+  z-index: 20;
+  width: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+}
+
+.splashPage .t_loadingBarMain {
+  position: relative;
+  width: 100%;
+  display: flex;
+  height: 48px;
+  border-radius: 30px;
+  align-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(240, 232, 221, 0.08) 40%,
+      rgba(240, 232, 221, 0.04) 60%,
+      rgba(200, 195, 188, 0.06) 100%);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  box-shadow:
+    0 0 30px 4px rgba(240, 232, 221, 0.1),
+    0 0 60px 8px rgba(240, 232, 221, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.splashPage .t_loadingBar {
+  background-color: rgba(80, 65, 45, 0.35);
+  height: inherit;
+  border-radius: inherit;
+  width: 100%;
+}
+
+.splashPage .t_loadingBarFill {
+  background: linear-gradient(90deg,
+      rgba(254, 240, 215, 0.3) 0%,
+      rgba(254, 240, 215, 0.5) 100%);
+  height: inherit;
+  border-radius: inherit;
+  width: 0;
+  min-width: 48px;
+  position: absolute;
+  bottom: 0;
+  transition: width 0.4s ease;
+}
+
+.splashPage .t_loadingBar_text {
+  position: absolute;
+  width: 100%;
+  font-size: var(--font-size-12);
+  font-weight: 600;
+  color: #fef0d7;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  z-index: 1;
+}
+
+/* ── Tapestry Logo ── */
+
+.sTapestryLogo {
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  width: 115px;
+  opacity: 0.9;
+  z-index: 900;
+  filter: drop-shadow(0 2px 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 1px 4px rgba(0, 0, 0, 0.4));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Playpen Info Panel (right side)
+   ───────────────────────────────────────────────────────────── */
+
+.playpenInfoParent {
+  z-index: 152;
+  opacity: 0;
+  display: flex;
+  position: fixed;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 25vw;
+  min-width: 300px;
+  max-width: 420px;
+  color: var(--title);
+  transition: opacity 0.5s ease;
+  padding: 30px 28px 30px 55px;
+  pointer-events: none;
+  overflow: visible;
+  box-sizing: border-box;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(240, 232, 221, 0.06) 40%,
+      rgba(240, 232, 221, 0.03) 60%,
+      rgba(200, 195, 188, 0.04) 100%);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border-left: 1px solid rgba(240, 232, 221, 0.12);
+  box-shadow:
+    -4px 0 30px rgba(0, 0, 0, 0.25),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08);
+  border-radius: 12% 0 0 12% / 50% 0 0 50%;
+  transition:
+    opacity 0.5s ease,
+    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.playpenInfoParent.collapsed {
+  transform: translateX(calc(100% - 36px));
+}
+
+.playpenInfo-Title {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  padding-bottom: 0;
+  margin-bottom: 16px;
+  margin-top: 0;
+  text-align: left;
+  color: var(--title);
+  pointer-events: none;
+  width: 100%;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.4));
+  background-color: var(--black-opacity-0);
+}
+
+.playpenInfo-Desc {
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  margin-top: 16px;
+  color: rgba(240, 232, 221, 0.82);
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+  width: 100%;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+  line-clamp: 7;
+  overflow: hidden;
+  background-color: var(--black-opacity-0);
+}
+
+.playpenInfo-Desc:hover {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.playpenInfo-progressBar {
+  width: 100%;
+  margin-top: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.playpenInfo-progressFill {
+  width: 0;
+  height: 4px;
+  background-color: var(--title);
+  pointer-events: none;
+  border-radius: 3px;
+  box-shadow: 0 0 6px 1px rgba(240, 232, 221, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Interactive Buttons (bottom center)
+   ───────────────────────────────────────────────────────────── */
+
+.intButton {
+  display: flex;
+  position: relative;
+  bottom: 0px;
+  background-color: rgba(28, 27, 26, 0.8);
+  backdrop-filter: blur(8px) saturate(1.2);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  border-radius: 12px;
+  text-align: center;
+  color: #fff;
+  font-family: sans-serif;
+  line-height: 28px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  font-weight: 400;
+  margin: 0 3px;
+  align-items: center;
+  justify-content: center;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* Controls shown while a lens hotspot is open. They replace the narration
+   controls, matching the playpen's reset/back controls from the source UI. */
+.interactivePlaybackControls {
+  gap: 6px;
+}
+
+.intButtonImg {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.intNavToolTip {
+  display: none;
+  position: absolute;
+  bottom: 41px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  padding: 0 9px;
+  border-radius: 8px;
+  background-color: #00000099;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 22px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.viewer:not(.no-hover) .intButton:hover .intNavToolTip {
+  display: block;
+}
+
+.intButton:hover {
+  box-shadow: 0 0 0 2px rgba(240, 232, 221, 0.35);
+  background-color: rgba(28, 27, 26, 0.9);
+  transform: scale(1.08);
+}
+
+.intBtn--scene {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 12px !important;
+  margin: 0 3px !important;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(240, 232, 221, 0.08) 40%,
+      rgba(240, 232, 221, 0.04) 60%,
+      rgba(200, 195, 188, 0.06) 100%) !important;
+  backdrop-filter: blur(10px) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.3) !important;
+  border: 1px solid rgba(240, 232, 221, 0.22) !important;
+  box-shadow:
+    0 0 24px 2px rgba(240, 232, 221, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  transition:
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease,
+    filter 0.3s ease;
+}
+
+.intBtn--scene:hover {
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.24) 0%,
+      rgba(240, 232, 221, 0.16) 40%,
+      rgba(240, 232, 221, 0.1) 60%,
+      rgba(200, 195, 188, 0.12) 100%) !important;
+  border-color: rgba(240, 232, 221, 0.5) !important;
+  box-shadow:
+    0 0 40px 6px rgba(240, 232, 221, 0.18),
+    0 0 80px 12px rgba(240, 232, 221, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  filter: brightness(1.15);
+  transform: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Exit Corner (top right)
+   ───────────────────────────────────────────────────────────── */
+
+.exitCorner {
+  display: flex;
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  /* Bản gốc dùng 9; ở app này canvas là z-index 0 và nút "Dive Deeper"
+     cùng góc là 70 nên lấy 70 cho hai CTA cùng tầng. */
+  z-index: 70;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 0.5s ease,
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.exitCorner.active {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.exitCorner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(240, 232, 221, 0.08) 40%,
+      rgba(240, 232, 221, 0.04) 60%,
+      rgba(200, 195, 188, 0.06) 100%);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  box-shadow:
+    0 0 30px 2px rgba(240, 232, 221, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease,
+    filter 0.3s ease;
+}
+
+/* Hai lớp sáng tạo cảm giác thuỷ tinh: quầng sáng lệch trên-trái và
+   vệt phản chiếu ellipse ở nửa trên. */
+.exitCorner-btn::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 30% 20%,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.06) 25%,
+      transparent 50%);
+  pointer-events: none;
+}
+
+.exitCorner-btn::after {
+  content: "";
+  position: absolute;
+  top: 6%;
+  left: 18%;
+  width: 55%;
+  height: 35%;
+  border-radius: 50%;
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.04) 100%);
+  filter: blur(2px);
+  pointer-events: none;
+  transform: rotate(-15deg);
+}
+
+.exitCorner-btn:hover {
+  transform: scale(1.1);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.24) 0%,
+      rgba(240, 232, 221, 0.16) 40%,
+      rgba(240, 232, 221, 0.1) 60%,
+      rgba(200, 195, 188, 0.12) 100%);
+  border-color: rgba(240, 232, 221, 0.5);
+  box-shadow:
+    0 0 40px 6px rgba(240, 232, 221, 0.18),
+    0 0 80px 12px rgba(240, 232, 221, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  filter: brightness(1.15);
+}
+
+.exitCorner-icon {
+  width: 42px;
+  height: 42px;
+  opacity: 1;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.exitCorner-label {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fef0d7;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.5));
+  background-color: var(--black-opacity-0);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Explore Corner (top right, main CTA)
+   ───────────────────────────────────────────────────────────── */
+
+.exploreCorner {
+  display: none;
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  z-index: 70;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  zoom: var(--zoom-value);
+}
+
+.exploreCorner.active {
+  display: flex;
+  pointer-events: auto;
+}
+
+.exploreCorner-rays {
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 700px;
+  height: 700px;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(215deg, rgba(254, 240, 215, 0.45), rgba(254, 240, 215, 0.12) 30%, transparent 60%),
+    linear-gradient(225deg, rgba(254, 240, 215, 0.3), rgba(254, 240, 215, 0.06) 35%, transparent 55%),
+    linear-gradient(205deg, rgba(254, 240, 215, 0.2), transparent 50%),
+    linear-gradient(235deg, rgba(254, 240, 215, 0.1), transparent 40%);
+}
+
+.exploreCorner-glowSvg {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 700px;
+  height: auto;
+  pointer-events: none;
+  opacity: 0;
+  z-index: -2;
+}
+
+.exploreCorner-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(254, 240, 215, 0.15), rgba(254, 240, 215, 0.04) 50%, transparent 70%);
+  z-index: -1;
+}
+
+.exploreCorner-rays.reveal,
+.exploreCorner-glowSvg.reveal,
+.exploreCorner-glow.reveal {
+  opacity: 1;
+}
+
+.exploreCorner-glowSvg.reveal,
+.exploreCorner-glow.reveal {
+  animation: exploreGlowPulse 3.5s ease-in-out 1.6s infinite;
+}
+
+.exploreCorner-tiltWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) {
+  .exploreCorner.active:hover .exploreCorner-tiltWrap {
+    transform: scale(1.1);
+  }
+}
+
+.exploreCorner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(240, 232, 221, 0.08) 40%,
+      rgba(240, 232, 221, 0.04) 60%,
+      rgba(200, 195, 188, 0.06) 100%);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  box-shadow:
+    0 0 30px 2px rgba(240, 232, 221, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 0.5s ease,
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease,
+    filter 0.3s ease;
+}
+
+.exploreCorner-btn.pop {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.exploreCorner-btn:hover {
+  border-color: rgba(240, 232, 221, 0.5);
+  filter: brightness(1.15);
+  box-shadow: 0 0 40px 6px rgba(240, 232, 221, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.exploreCorner-iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: exploreIconZoom 3s ease-in-out infinite;
+}
+
+.exploreCorner-shineClip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.exploreCorner-shine {
+  position: absolute;
+  top: -20%;
+  left: 0;
+  width: 45%;
+  height: 140%;
+  background: linear-gradient(105deg, transparent 35%, rgba(254, 240, 215, 0.5) 50%, transparent 65%);
+  transform: skewX(-18deg);
+  translate: -100% 0;
+  opacity: 0;
+  animation: exploreShineSwipe 3s ease-in-out infinite;
+}
+
+.exploreCorner-footsteps {
+  display: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: rotate(45deg);
+}
+
+.exploreCorner.free-explore .exploreCorner-iconWrap {
+  visibility: hidden;
+}
+
+.exploreCorner.free-explore .exploreCorner-shineClip {
+  display: none;
+}
+
+.exploreCorner.free-explore .exploreCorner-footsteps {
+  display: block;
+}
+
+.footstepStrip {
+  position: absolute;
+  left: 50%;
+  top: -11px;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 180px;
+}
+
+.footstep {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+  animation: footstepAppear 6s linear infinite;
+}
+
+.footstep-l {
+  left: 1px;
+}
+
+.footstep-r {
+  right: 1px;
+}
+
+.footstep:nth-child(1) {
+  top: 0;
+  animation-delay: -0.75s;
+}
+
+.footstep:nth-child(2) {
+  top: 20px;
+  animation-delay: -1.5s;
+}
+
+.footstep:nth-child(3) {
+  top: 40px;
+  animation-delay: -2.25s;
+}
+
+.footstep:nth-child(4) {
+  top: 60px;
+  animation-delay: -3s;
+}
+
+.footstep:nth-child(5) {
+  top: 80px;
+  animation-delay: -3.75s;
+}
+
+.footstep:nth-child(6) {
+  top: 100px;
+  animation-delay: -4.5s;
+}
+
+.footstep:nth-child(7) {
+  top: 120px;
+  animation-delay: -5.25s;
+}
+
+.footstep:nth-child(8) {
+  top: 140px;
+  animation-delay: 0s;
+}
+
+@keyframes exploreGlowPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes exploreIconZoom {
+
+  0%,
+  65%,
+  100% {
+    transform: scale(1);
+  }
+
+  75%,
+  90% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes exploreShineSwipe {
+
+  0%,
+  68% {
+    translate: -100% 0;
+    opacity: 0;
+  }
+
+  72%,
+  90% {
+    opacity: 1;
+  }
+
+  96%,
+  100% {
+    translate: 200% 0;
+    opacity: 0;
+  }
+}
+
+@keyframes footstepAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+
+  4% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  7% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  42% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+
+  58%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.exploreCorner-icon {
+  width: 72px;
+  height: 72px;
+  opacity: 1;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.exploreCorner-label {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fef0d7;
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.5));
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  background-color: var(--black-opacity-0);
+}
+
+.exploreCorner-label.show {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Gradient Overlay Layers
+   ───────────────────────────────────────────────────────────── */
+
+.gradientUI {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.gradientLeft {
+  left: 0;
+  height: 100%;
+  height: var(--app-height);
+  height: 100dvh;
+  width: 100%;
+  max-width: 400px;
+  background-image: linear-gradient(to right,
+      rgba(0, 0, 0, 0.6),
+      rgba(0, 0, 0, 0));
+}
+
+.gradientRight {
+  right: 0;
+  height: 100%;
+  height: var(--app-height);
+  height: 100dvh;
+  width: 100%;
+  max-width: 400px;
+  background-image: linear-gradient(to left,
+      rgba(0, 0, 0, 0.6),
+      rgba(0, 0, 0, 0));
+}
+
+.gradientBottom {
+  bottom: 0;
+  height: 44px;
+  width: 100%;
+  background-image: linear-gradient(to top,
+      rgba(0, 0, 0, 0.5),
+      rgba(0, 0, 0, 0));
+}
+
+.gradientTop {
+  top: 0;
+  height: 57px;
+  width: 100%;
+  background-image: linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.22),
+      rgba(0, 0, 0, 0));
+}
+
+.gradientAll_sceneStart {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: background-color 1s ease;
+  background-color: #000;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Next/Previous Buttons
+   ───────────────────────────────────────────────────────────── */
+.ssPlayButton,
+.ssPauseButton {
+  padding: 13px;
+  box-sizing: border-box;
+}
+
+.ssPlayButton {
+  display: none;
+}
+
+.ssNextButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px 13px 13px 9px;
+}
+
+/* Nhịp sáng nhấp nháy cho nút Next Scene (khi đã hết video / bấm Skip Voiceover). */
+.ssGlow {
+  animation: nextBtnGlow 2.5s ease-in-out infinite;
+}
+
+.ssPrevButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px 9px 9px 13px;
+}
+
+.ssNextButtonRing {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px 13px 13px 9px !important;
+  border: none !important;
+  background: rgba(0, 0, 0, 0) !important;
+  animation: nextBtnGlow 2.5s ease-in-out infinite !important;
+  box-shadow:
+    0 0 8px 2px rgba(240, 232, 221, 0.15),
+    0 0 20px 4px rgba(240, 232, 221, 0.08);
+}
+
+.ssPlayPauseImg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 14px;
+  color: #fff;
+  padding: 0px;
+}
+
+.ssButtonImg {
+  height: 14px;
+  width: 14px;
+  font-size: 14px;
+  color: #fff;
+  padding: 0;
+  pointer-events: none;
+}
+
+.ssExploreImg {
+  height: 22px;
+  width: 22px;
+  font-size: 22px;
+  color: #fff;
+  padding: 0;
+}
+
+.ssMiddleButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background-color: #1c1b1acc;
+  background-image: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px;
+  cursor: pointer;
+}
+
+.ssMiddleButton:hover {
+  outline: none;
+  background-color: #302e2ce6;
+  box-shadow: 0 0 0 1.2px rgba(255, 255, 255, .3);
+}
+
+/* Điều khiển phát (15s, Play/Pause) khi narration đã hết:
+   vẫn hiện nhưng mờ đi và không cho click. */
+.ssControlDisabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+
+.ssControlDisabled * {
+  pointer-events: none;
+}
+
+/* Giữ nguyên độ mờ khi hover, không nhấc sáng như nút thường. */
+.ssControlDisabled:hover,
+.ssControlDisabled.ssMiddleButton:hover {
+  background-color: #1c1b1acc;
+  box-shadow: none;
+}
+
+/* Slide in from left — for navbar tiles */
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Fade in down — for stop header */
+@keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Fade in up — for splash elements */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Orb pulse for visited circles */
+@keyframes orbPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px #f9eec1;
+  }
+
+  50% {
+    box-shadow:
+      0 0 20px #f9eec1,
+      0 0 30px rgba(249, 238, 193, 0.5);
+  }
+}
+
+/* Slow zoom for background image */
+@keyframes slowZoom {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+/* Next button glow */
+@keyframes nextBtnGlow {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px 1px rgba(240, 232, 221, 0.2),
+      0 0 14px 3px rgba(240, 232, 221, 0.08);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow:
+      0 0 10px 3px rgba(240, 232, 221, 0.85),
+      0 0 14px 6px rgba(240, 232, 221, 0.85);
+    transform: scale(1.06);
+  }
+}
+
+/* Ping / Pulse Animation */
+.ping {
+  animation: ping 1.5s ease-in-out infinite;
+  background-color: unset;
+  border: solid 4px;
+  position: absolute;
+  color: #fff;
+  transform-origin: center;
+  pointer-events: none;
+  z-index: 30;
+}
+
+@keyframes ping {
+  0% {
+    -webkit-transform: scale(0.95);
+    transform: scale(0.95);
+    transform-origin: center;
+    opacity: 1;
+  }
+
+  80% {
+    -webkit-transform: scale(1.5);
+    transform: scale(1.5);
+    transform-origin: center;
+    opacity: 0;
+    border-width: 0px;
+  }
+
+  100% {
+    -webkit-transform: scale(2.3);
+    transform: scale(2.3);
+    transform-origin: center;
+    border-width: 0px;
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+
+  60% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 3s;
+}
+
+.fade-in-one {
+  animation: fadeIn 1s;
+}
+
+.fade-in-five {
+  animation: fadeIn 5s;
+}
+
+/* Glow Pulse */
+@keyframes glowPulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Start Button Glow */
+@keyframes startBtnGlow {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 6px 1px rgba(240, 232, 221, 0.2),
+      0 0 14px 3px rgba(240, 232, 221, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  50% {
+    box-shadow:
+      0 0 10px 3px rgba(240, 232, 221, 0.5),
+      0 0 18px 6px rgba(240, 232, 221, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Broadcast / Announcement Banner */
+.broadcast {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  position: absolute;
+  top: 10px;
+  left: 150px;
+  right: 150px;
+  margin: 0 auto;
+  width: fit-content;
+  z-index: 900;
+  padding: 17px 32px;
+  border-radius: 20px;
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Loading Spinner
+   ───────────────────────────────────────────────────────────── */
+
+.custom-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(240, 232, 221, 0.2);
+  border-top: 3px solid var(--title);
+  border-radius: 50%;
+  animation: spinnerRotate 1s linear infinite;
+}
+
+@keyframes spinnerRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Loading Bar (top)
+   ───────────────────────────────────────────────────────────── */
+
+.top_loading_bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 1000;
+  background: linear-gradient(90deg,
+      var(--UI-color-orange),
+      #ff6b35,
+      var(--UI-color-orange));
+  background-size: 200% 100%;
+  animation: loadingBarShimmer 1.5s ease-in-out infinite;
+}
+
+.top_loading_bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent);
+  animation: loadingBarSweep 2s ease-in-out infinite;
+}
+
+@keyframes loadingBarShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes loadingBarSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Scene Transition Overlay
+   ───────────────────────────────────────────────────────────── */
+
+.scene-transition-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  pointer-events: none;
+  z-index: 100;
+  transition: background 0.5s ease;
+}
+
+.scene-transition-overlay.active {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Responsive Adjustments
+   ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .stopNav {
+    left: -4px;
+    margin: 20px 0;
+  }
+
+  .ssNavBar {
+    width: 28px;
+    height: 26px;
+  }
+
+  .ssActiveNavBar {
+    width: 36px;
+  }
+
+  .ssNavBar::before {
+    font-size: var(--font-size-10);
+  }
+}
+
+@media (max-width: 510px) {
+  .stopNav {
+    left: -2px;
+    margin: 15px 0;
+  }
+
+  .ssNavBar {
+    width: 24px;
+    height: 22px;
+  }
+
+  .ssActiveNavBar {
+    width: 32px;
+  }
+
+  .ssNavBar::before {
+    font-size: var(--font-size-9);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Attribution Bar (bottom)
+   ───────────────────────────────────────────────────────────── */
+
+.attributionBar {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 20;
+  padding: 6px 12px;
+  font-size: var(--font-size-10);
+  color: rgba(240, 232, 221, 0.5);
+  background: var(--black-opacity-50);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 8px 0 0 0;
+  max-width: 50vw;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.attributionBar p {
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Loading Overlay
+   ───────────────────────────────────────────────────────────── */
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--black-opacity-80);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity 0.5s ease;
+}
+
+.loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner-ring {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(240, 232, 221, 0.15);
+  border-top: 3px solid var(--title);
+  border-radius: 50%;
+  animation: spinnerRotate 1s linear infinite;
+}
+
+.loading-text {
+  font-size: var(--font-size-13);
+  color: var(--title);
+  font-weight: 300;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Error Overlay
+   ───────────────────────────────────────────────────────────── */
+
+.error-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.5s ease;
+}
+
+.error-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.error-card {
+  max-width: 480px;
+  width: 90vw;
+  padding: 32px 36px;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(240, 232, 221, 0.07) 100%);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(240, 232, 221, 0.2);
+  border-radius: 16px;
+  box-shadow:
+    0 0 40px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-align: center;
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.error-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--title);
+  margin: 0 0 12px;
+  line-height: 1.3;
+}
+
+.error-message {
+  font-size: var(--font-size-13);
+  color: rgba(240, 232, 221, 0.8);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.error-hint {
+  font-size: var(--font-size-11);
+  color: rgba(240, 232, 221, 0.5);
+  line-height: 1.5;
+  white-space: pre-line;
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Viewer Viewport (Three.js canvas)
+   ───────────────────────────────────────────────────────────── */
+
+.viewerViewport {
+  position: fixed;
+  inset: 0;
+  width: 100% !important;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.viewerViewport canvas {
+  display: block;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Utility Classes
+   ───────────────────────────────────────────────────────────── */
+
+.unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.leftToRightText {
+  direction: ltr;
+}
+
+.rightToLeftText {
+  direction: rtl;
+}
+
+.displayBlock {
+  display: block;
+}
+
+.displayFlex {
+  display: flex;
+}
+
+.displayGrid {
+  display: grid;
+}
+
+.displayNone {
+  display: none;
+}
+
+.stripControls .navIconBg.mobileHamburgerBtn {
+  display: none;
+}
+
+.mobileGlassMenu,
+.mobileGlassBackdrop {
+  display: none;
+  position: fixed;
+}
+
+@media (max-width: 640px) {
+  .stripControls .infoControls {
+    display: none;
+  }
+
+  .systemControls>.navIconBg:not(.mobileHamburgerBtn),
+  .systemControls .additionalIcons {
+    display: none !important;
+  }
+
+  .stripControls .systemControls {
+    grid-column: 1 / -1;
+    /* Share the playback row; its empty right-hand slot leaves room for Menu. */
+    grid-row: 1;
+  }
+
+  .stripControls .navIconBg.mobileHamburgerBtn {
+    display: flex;
+  }
+
+  .mobileGlassBackdrop {
+    display: block;
+    inset: 0;
+    z-index: 1300;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
+  .mobileGlassMenu {
+    display: flex;
+    z-index: 1301;
+    bottom: calc(60px + env(safe-area-inset-bottom));
+    right: 8px;
+    background: rgba(28, 27, 26, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 6px 0;
+    min-width: 190px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 76px - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    flex-direction: column;
+  }
+
+  .mobileGlassMenu_logo {
+    display: flex;
+    justify-content: flex-start;
+    padding: 11px 17px 8px;
+    margin-bottom: 4px;
+  }
+
+  .mobileGlassMenu_logo img {
+    height: 14px;
+    width: auto;
+    opacity: 0.9;
+  }
+
+  .mobileGlassMenu_list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mobileGlassMenu_item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 12px;
+    padding: 10px 16px;
+    color: #fff;
+    font-size: var(--font-size-12);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: opacity 0.25s ease;
+  }
+
+  .mobileGlassMenu_item:active,
+  .mobileGlassMenu_logo:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .mobileGlassMenu_item:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .mobileGlassMenu_icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    flex-shrink: 0;
+    color: #fff;
+  }
+
+  .mobileGlassMenu_icon.captionIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .mobileGlassMenu_label {
+    white-space: nowrap;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   App wiring additions — splash toggle, disabled controls, toast
+   ───────────────────────────────────────────────────────────── */
+
+/* Splash fades in when revealed after load, and out when dismissed. */
+.splashPage {
+  transition:
+    opacity 0.5s ease,
+    visibility 0.5s ease;
+}
+
+.splashPage.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Scene-transition blackout — dips to black while the camera flies to
+   the next stop (CyArk Tapestry style crossfade). */
+.sceneFade {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 40;
+  /* Mở ra chậm hơn một chút để lộ cảnh mới mượt. */
+  transition: opacity 420ms ease-out;
+}
+
+/* Che màn (fade in) nhanh hơn lúc mở. */
+.sceneFadeActive {
+  opacity: 1;
+  transition: opacity 260ms ease-in;
+}
+
+/* Media-strip controls with no data to back them in this demo. */
+.stripControls .navIconBg.disabled {
+  opacity: 0.32;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Transient toast — share confirmation, settings feedback. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%) translateY(12px);
+  background-color: var(--black-opacity-60, rgba(0, 0, 0, 0.6));
+  color: #f0e8dd;
+  font-size: var(--font-size-12, 13px);
+  letter-spacing: 0.4px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(240, 232, 221, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    visibility 0.25s ease;
+  z-index: 600;
+  max-width: min(80vw, 480px);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================
+   Static UI overrides — show the scene chrome without native JS wiring
+   ============================================================ */
+
+.viewer .mediaStrip {
+  display: flex;
+  justify-content: center;
+}
+
+.viewer .ssPlayButton {
+  display: inline-flex;
+}
+
+.viewer .ssPlayButton,
+.viewer .ssPrevButton,
+.viewer .ssNextButton {
+  background-color: var(--gd-media-strip-bg);
+}
+
+.viewer .stopHeader {
+  display: flex;
+}
+
+.viewer .ssNavBar {
+  pointer-events: all;
+}
+
+.viewer .navIconBg {
+  display: flex;
+}
+
+.viewer-buttonReset {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Interactive Media Carousel
+   ───────────────────────────────────────────────────────────── */
+
+.carouselArrow {
+  border: none;
+  background-color: var(--gd-media-strip-bg);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.carouselArrow:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.08);
+}
+
+.carouselArrow_icon,
+.carouselArrowIcon {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  color: #fff;
+}
+
+.ping {
+  animation: pingRing 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes pingRing {
+
+  70%,
+  100% {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+}
+
+.rounded {
+  border-radius: 50%;
+}
+
+.rightToLeftText {
+  direction: ltr;
+}
+
+.intMediaCarousel {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.intCarouselViewport {
+  overflow: hidden;
+}
+
+.intMediaCarousel-items,
+.intMediaCarouselItems {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Playback Controls & Middle Button Group
+   ───────────────────────────────────────────────────────────── */
+
+.ssMiddleButtonPress,
+.middleButtonGroup {
+  display: flex;
+  height: 40px;
+  min-width: 46px;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.ssAudioButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ssSeekImg {
+  display: block;
+}
+
+.ssInnerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.viewer:not(.no-hover) .ssButtonPC:hover {
+  background-color: var(--gd-button-hover);
+  box-shadow: 0 0 0 1.2px rgba(255, 255, 255, .3);
+}
+
+.viewer:not(.no-hover) .ssButtonPC:hover .ssNavToolTip {
+  display: block;
+}
+
+.ringButtonGroup {
+  position: relative;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ssNextButtonRing {
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  border: 2px solid #ff9b2d;
+  pointer-events: none;
+}
+
+.additionalIcons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tutIcon {
+  /* Tutorial */
+}
+
+.viewer:not(.no-hover) .stripControls .ssMiddleButton:hover .ssNavToolTip {
+  display: block;
+}
+
+/* Nút Exit 3D Mode giờ là viên kính `.exitCorner-btn`; khối
+   `.exploreControls` cũ (panel tối 240px + hàng nút Zoom/Start/Standard/Free)
+   đã bị gỡ khỏi component nên xoá luôn cho khỏi CSS chết. */
+.exitCorner-btn:focus-visible {
+  outline: 2px solid #ff9b2d;
+  outline-offset: 3px;
+}
+
+/* Danh sách điểm của Dive Deeper — hiện chưa component nào render (đã chuyển
+   sang marker 3D), giữ lại vì README còn mô tả và dễ bật lại. */
+.exploreHighlights {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.exploreThumbnail {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 64px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #35312b;
+}
+
+.exploreThumbnail img {
+  object-fit: cover;
+}
+
+.explorePointTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.ssPlayButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hotspotPopup {
+  pointer-events: auto;
+}
+
+.playerError {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .exploreCorner {
+    top: 128px;
+  }
+
+  .exitCorner {
+    top: 128px;
+  }
+}
+
+@media (max-width: 640px) {
+  .exploreCorner {
+    top: 128px;
+    right: 16px;
+  }
+
+  .exploreCorner-btn {
+    padding: 18px;
+  }
+
+  .exploreCorner-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .exploreCorner-label {
+    font-size: 12px;
+  }
+
+  .exploreCorner-rays {
+    width: 350px;
+    height: 350px;
+    top: -100px;
+    right: -100px;
+  }
+
+  .exploreCorner-glowSvg {
+    width: 350px;
+    top: -40px;
+    right: -40px;
+  }
+
+  .exploreCorner-glow {
+    width: 80px;
+    height: 80px;
+  }
+
+  .footstepStrip {
+    scale: 0.6;
+    transform-origin: top center;
+  }
+
+  .exitCorner {
+    top: 128px;
+    right: 16px;
+  }
+
+  .exitCorner-btn {
+    padding: 18px;
+  }
+
+  .exitCorner-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .exitCorner-label {
+    font-size: 12px;
+  }
+}
+
+@media (max-height: 600px) {
+  .viewer:has(.hotspotPopup) .exitCorner {
+    visibility: hidden;
+  }
+
+  .hotspotPopup {
+    top: 128px;
+    bottom: auto;
+    box-sizing: border-box;
+    max-height: calc(100dvh - 248px);
+    overflow-y: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .exploreCorner *,
+  .exploreCorner *::before,
+  .exploreCorner *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .exploreCorner.active:hover .exploreCorner-tiltWrap {
+    transform: none;
+  }
+
+  .exploreCorner .footstep {
+    opacity: 0.8;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Panel điểm tương tác (hotspot) — surface kính playpen.
+
+   Giá trị dưới đây bám sát CSS của panel gốc. Khối `.hotspotPopup`
+   ở trên (dòng ~784) chỉ còn giữ vai trò định vị/z-index; mọi thứ
+   về nền, viền, bo góc, padding do `.playpenInfoParent` quyết định.
+
+   LƯU Ý độ ưu tiên: `.hotspotPopup h2` / `.hotspotPopup p` /
+   `.hotspotPopupMedia` đều là (0,1,1) hoặc (0,1,0) và có thể thắng
+   `.playpenInfo-Title` / `.playpenInfo-Desc` (0,1,0), nên các rule
+   dưới đây phải nêu lại giá trị gốc với selector đủ mạnh.
+   ───────────────────────────────────────────────────────────── */
+
+.hotspotPopup.playpenInfoParent {
+  z-index: 1300;
+  opacity: 1;
+  pointer-events: auto;
+  /* `.hotspotPopup` vẽ viền cam 1px cả 4 cạnh; surface playpen chỉ có
+     viền trái nên phải xoá hẳn rồi vẽ lại đúng một cạnh. */
+  border: 0;
+  border-left: 1px solid rgba(240, 232, 221, 0.12);
+}
+
+/* Panel giới thiệu của chế độ đi bộ dùng chung surface kính trên, chỉ khác là
+   không có media nào — nên vùng cuộn không cần cao bằng cả panel. */
+.exploreInfoPanel .infoInner {
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* Panel điểm đang mở thì nhường chỗ cho nút Exit 3D Mode ở góc trên phải. */
+.viewer:has(.hotspotPopup[data-collapsed="false"]) .exitCorner {
+  visibility: hidden;
+}
+
+/* Nhắc nhẹ khi panel đang thu gọn (khớp `@keyframes nudgeLeft` của bản gốc). */
+@keyframes nudgeLeft {
+
+  0%,
+  100% {
+    transform: translateX(calc(100% - 36px));
+  }
+
+  25% {
+    transform: translateX(calc(100% - 48px));
+  }
+
+  50% {
+    transform: translateX(calc(100% - 36px));
+  }
+
+  75% {
+    transform: translateX(calc(100% - 44px));
+  }
+}
+
+.playpenInfoParent.collapsed.nudge {
+  animation: nudgeLeft 0.5s ease-in-out;
+}
+
+/* ── Tiêu đề ──────────────────────────────────────────────────── */
+
+.hotspotPopup.playpenInfoParent h2 {
+  flex-shrink: 0;
+  width: 100%;
+  margin: 0 0 16px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  text-align: left;
+}
+
+/* ── Nút thu gọn: nằm NGOÀI panel, lơ lửng bên trái ───────────── */
+
+.infoCollapse {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: -48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  z-index: 3;
+  opacity: 0.8;
+  pointer-events: all;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.infoCollapse:hover {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 8px rgba(240, 232, 221, 0.6)) drop-shadow(0 0 20px rgba(240, 232, 221, 0.3));
+}
+
+.infoCollapseIcon {
+  width: 40px;
+  height: 40px;
+  /* Icon gốc là SVG đen → lọc thành trắng ngà cho khớp tông panel. */
+  filter: brightness(0) invert(0.93);
+}
+
+.infoCollapseIcon.collapseOut {
+  display: none;
+}
+
+.playpenInfoParent.collapsed .infoCollapseIcon.collapseIn {
+  display: none;
+}
+
+.playpenInfoParent.collapsed .infoCollapseIcon.collapseOut {
+  display: block;
+}
+
+/* ── Nút đóng: viên kính tròn ở góc trên trái panel ───────────── */
+
+.hotspotPopupClose {
+  position: absolute;
+  top: 20px;
+  left: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(240, 232, 221, 0.08) 40%,
+      rgba(240, 232, 221, 0.04) 60%,
+      rgba(200, 195, 188, 0.06) 100%);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  box-shadow:
+    0 0 12px 1px rgba(240, 232, 221, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  z-index: 2;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* `display: flex` ở trên đè mất `[hidden]` của UA nên phải chặn lại. */
+.hotspotPopupClose[hidden] {
+  display: none;
+}
+
+.hotspotPopupClose img {
+  width: 18px;
+  height: 18px;
+  filter: brightness(0) invert(0.93);
+}
+
+.hotspotPopupClose:hover {
+  transform: scale(1.1);
+  border-color: rgba(240, 232, 221, 0.45);
+  box-shadow:
+    0 0 20px 3px rgba(240, 232, 221, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ── Vùng cuộn ────────────────────────────────────────────────── */
+
+.infoInner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+.infoInner[hidden] {
+  display: none;
+}
+
+.infoInner::-webkit-scrollbar {
+  width: 3px;
+}
+
+.infoInner::-webkit-scrollbar-thumb {
+  background: rgba(240, 232, 221, 0.15);
+  border-radius: 2px;
+}
+
+.infoInner::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0);
+}
+
+/* ── Media: ảnh & video ───────────────────────────────────────── */
+
+/* Nêu lại toàn bộ thuộc tính: `.hotspotPopupMedia` gốc còn sót
+   `max-height: 160px` + `margin-bottom: 12px` + `object-fit: cover`. */
+.hotspotPopupMedia {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  margin: 0;
+  object-fit: contain;
+  border-radius: 12px;
+  filter: drop-shadow(0px 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.infoInner .playpenInfo-Vid {
+  max-height: 35vh;
+  background: #000;
+}
+
+/* Bản gốc ẩn cue gốc của trình duyệt; caption do UI của tour lo. */
+.infoInner .playpenInfo-Vid::cue {
+  opacity: 0;
+  line-height: 30;
+}
+
+.infoInner .playpenInfo-Img {
+  max-height: 35vh;
+  object-fit: cover;
+}
+
+/* ── Nhóm ảnh: icon mở rộng chỉ hiện khi hover ────────────────── */
+
+.infoImgGroup {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.infoImageButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.infoImgGroup:hover .hotspotPopupMedia {
+  filter: brightness(0.6);
+}
+
+/* Icon đặt absolute KHÔNG kèm offset ⇒ neo theo vị trí tĩnh, mà vị trí
+   tĩnh trong flex-center chính là giữa ảnh — đúng như bản gốc. */
+.infoExpandIcon {
+  display: none;
+  position: absolute;
+  width: 32px;
+  pointer-events: none;
+  filter: brightness(0) invert(0.9);
+}
+
+.infoImgGroup:hover .infoExpandIcon {
+  display: flex;
+}
+
+/* ── Thanh tiến trình media (bấm để tua) ──────────────────────── */
+
+.infoProgressBar {
+  width: 100%;
+  margin-top: 12px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* `margin-bottom: -4px` để thanh fill trượt lên đè đúng lên track. */
+.infoProgressFilled {
+  width: 100%;
+  height: 4px;
+  margin-bottom: -4px;
+  border-radius: 3px;
+  background-color: rgba(240, 232, 221, 0.2);
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.infoProgressFill {
+  width: 0;
+  height: 4px;
+  border-radius: 3px;
+  background-color: #f0e8dd;
+  box-shadow: 0 0 6px 1px rgba(240, 232, 221, 0.3);
+  pointer-events: none;
+}
+
+.infoInner audio {
+  width: 100%;
+  margin-top: 12px;
+  border-radius: 12px;
+}
+
+/* ── Nhóm mô tả ───────────────────────────────────────────────── */
+
+.infoDescGroup {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* `.hotspotPopup p` (0,1,1) thắng `.playpenInfo-Desc` (0,1,0) nên phải
+   nêu lại giá trị gốc: 14px/20px, lề trên 16px, clamp 7 dòng. */
+.infoInner .playpenInfo-Desc {
+  flex-shrink: 0;
+  width: 100%;
+  margin: 16px 0 0;
+  font-size: var(--font-size-14);
+  line-height: 20px;
+  text-align: left;
+  color: rgba(240, 232, 221, 0.82);
+  display: -webkit-box;
+  -webkit-line-clamp: 7;
+  -webkit-box-orient: vertical;
+  line-clamp: 7;
+  overflow: hidden;
+}
+
+.infoInner .playpenInfo-Desc:hover {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+
+.infoCredit {
+  padding-top: 6px;
+  width: 100%;
+  font-size: var(--font-size-8);
+  font-style: italic;
+  color: rgba(240, 232, 221, 0.6);
+  text-align: right;
+}
+
+/* ── Nhóm nút Read More / Read Less ───────────────────────────── */
+
+.infoDescButtons {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.infoReadMore {
+  padding: 6px 16px;
+  border: 1px solid rgba(240, 232, 221, 0.3);
+  border-radius: 999px;
+  background: rgba(240, 232, 221, 0.06);
+  color: #f0e8dd;
+  font: inherit;
+  font-size: var(--font-size-12);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.infoReadMore:hover {
+  box-shadow: 0 0 0 1.5px rgba(240, 232, 221, 0.6);
+  background: rgba(240, 232, 221, 0.14);
+}
+
+.infoReadLess {
+  color: rgba(240, 232, 221, 0.7);
+  border-color: rgba(240, 232, 221, 0.18);
+  background: none;
+}
+
+.infoButtonHidden {
+  display: none;
+}
+
+/* ── Orb tracker: ghim đáy panel, ngoài vùng cuộn ─────────────── */
+
+.infoTracker {
+  position: absolute;
+  left: 19px;
+  right: 0;
+  bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.orbTracker-allfound {
+  font-size: var(--font-size-10);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--title);
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(249, 238, 193, 0.6);
+  animation: orbPulse 2s ease-in-out infinite;
+}
+
+
+.infoImageDialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+
+  width: min(1100px, 90vw);
+  max-height: 90dvh;
+  padding: 48px 16px 16px;
+
+  border: 1px solid rgba(240, 232, 221, 0.25);
+  border-radius: 12px;
+  background: #1c1b1a;
+  color: #f0e8dd;
+}
+
+.infoImageDialog::backdrop {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.infoImageDialog img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(90dvh - 80px);
+  object-fit: contain;
+}
+
+.infoImageDialog button {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.infoCollapse:focus-visible,
+.infoImageButton:focus-visible,
+.infoReadMore:focus-visible,
+.hotspotPopupClose:focus-visible {
+  outline: 2px solid #ff9b2d;
+  outline-offset: 2px;
+}
+
+/* Màn hình thấp: nới trần vùng cuộn để panel còn chỗ thở. */
+@media (max-height: 600px) {
+  .infoInner {
+    max-height: calc(100vh - 120px);
+  }
+
+  .infoTracker {
+    bottom: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playpenInfoParent.collapsed.nudge {
+    animation: none;
+  }
+
+  .orbTracker-allfound {
+    animation: none;
+  }
+
+  .infoCollapse,
+  .hotspotPopupClose {
+    transition: none;
+  }
+}

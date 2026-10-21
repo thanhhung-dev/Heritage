@@ -1,0 +1,33 @@
+pipeline {
+  agent any
+  options { skipDefaultCheckout(true); timestamps(); disableConcurrentBuilds() }
+  parameters {
+    string(name: 'MODEL_REVISION', description: 'Immutable model or prompt revision')
+    string(name: 'METRIC_FILE', defaultValue: 'pipelines/evaluation/model-candidate-metrics.json')
+  }
+  stages {
+    stage('Checkout') { steps { checkout scm; script { env.GIT_COMMIT = sh(script: 'git rev-parse HEAD', returnStdout: true).trim() } } }
+    stage('Validate trusted rollout') { steps { sh '''jenkins/guard-release.sh model
+      test -n "$MODEL_REVISION"; test -f "$METRIC_FILE"; test -n "$MODEL_APPROVERS"; test -x "$MODEL_EVALUATOR"
+      python3.12 -m venv .ci-venv
+      .ci-venv/bin/pip install -r jenkins/requirements-ci.txt''' } }
+    stage('Evaluate candidate') { steps { sh '.ci-venv/bin/python jenkins/metric-gate.py "$METRIC_FILE" "$MODEL_REVISION"' } }
+    stage('Deploy 10%') { steps { script { deployModel(10, false) } } }
+    stage('Evaluate 10% canary') { steps { sh 'jenkins/evaluate-model-rollout.sh 10 reports/model-10.json && .ci-venv/bin/python jenkins/metric-gate.py reports/model-10.json "$MODEL_REVISION" 10' } }
+    stage('Approve 50%') { steps { script { input message: 'Promote model traffic to 50%?', submitter: env.MODEL_APPROVERS, submitterParameter: 'APPROVER' } } }
+    stage('Deploy 50%') { steps { script { deployModel(50, true) } } }
+    stage('Evaluate 50% canary') { steps { sh 'jenkins/evaluate-model-rollout.sh 50 reports/model-50.json && .ci-venv/bin/python jenkins/metric-gate.py reports/model-50.json "$MODEL_REVISION" 50' } }
+    stage('Approve 100%') { steps { script { input message: 'Promote model traffic to 100%?', submitter: env.MODEL_APPROVERS, submitterParameter: 'APPROVER' } } }
+    stage('Deploy 100%') { steps { script { deployModel(100, true) } } }
+  }
+  post { always { cleanWs(deleteDirs: true, disableDeferredWipeout: true) } }
+}
+
+void deployModel(int level, boolean approved) {
+  withEnv(["MODEL_LEVEL=${level}", 'METRIC_GATE_PASSED=true', "MANUAL_APPROVED=${approved}"]) {
+    sh 'jenkins/guard-release.sh promote'
+    withCredentials([aws(credentialsId: 'heritage-model-aws')]) {
+      sh 'jenkins/model-deploy.sh "$MODEL_LEVEL" "$MODEL_REVISION"'
+    }
+  }
+}

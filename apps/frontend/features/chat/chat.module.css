@@ -1,0 +1,247 @@
+﻿/* ===== App Shell ===== */
+.app {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ===== Top Bar ===== */
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  z-index: 10;
+}
+
+.topbarActions {
+  display: flex;
+  gap: 4px;
+}
+
+.topbarAuth {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== Buttons ===== */
+.btnIcon {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition);
+}
+
+.btnIcon:hover {
+  background: var(--bg-hover);
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  height: 32px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background var(--transition);
+}
+
+.btnGhost:hover {
+  background: var(--bg-hover);
+}
+
+.btnPrimary {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  height: 32px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  transition: opacity var(--transition);
+}
+
+.btnPrimary:hover {
+  opacity: 0.85;
+}
+
+/* ===== Landing ===== */
+.landing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 28px;
+  overflow-y: auto;
+}
+
+.landingInput {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* ===== Chat Messages (Ant X Bubble.List) ===== */
+.chatMessages {
+  flex: 1;
+  min-height: 0;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 80px 24px 24px;
+  /* clip the scroll box's extended right edge so its scrollbar sits off-screen */
+  overflow: hidden;
+}
+
+/* Push the scroll box's right edge past the visible column; the parent clips it,
+   so the scrollbar is hidden outside the screen. */
+.chatMessages :global(.ant-bubble-list-scroll-box) {
+  width: calc(100% + 40px);
+  padding-right: 40px;
+  scrollbar-width: none;
+}
+
+.chatMessages :global(.ant-bubble-list-scroll-box)::-webkit-scrollbar {
+  display: none;
+}
+
+.thinkingSpin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.thinkingSpinRing {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.thinkingLogo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thinkingSpinRing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 70%;
+  border: 5px solid var(--tl-15);
+  border-top-color: var(--accent);
+  animation: thinking-spin 1s linear infinite;
+}
+
+@keyframes thinking-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.thinkingSpinText {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.assistantFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* ===== Ant Design X Sender (input box) ===== */
+.antSender :global(.ant-sender) {
+  background: var(--bg-raised);
+}
+
+/* ===== Input Area (sticky bottom) ===== */
+.inputArea {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 24px 24px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 20%);
+  z-index: 5;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.inputAreaInner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.inputAreaDisclaimer {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ===== Help Button ===== */
+.helpBtn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 16px;
+  z-index: 20;
+  transition: background var(--transition);
+}
+
+.helpBtn:hover {
+  background: var(--bg-hover);
+}
+
