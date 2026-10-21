@@ -2,6 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
@@ -19,7 +20,7 @@ from apps.backend.core.observability import (
 )
 from apps.backend.db.base import configure_database, dispose_database
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 log = logging.getLogger(__name__)
 
 

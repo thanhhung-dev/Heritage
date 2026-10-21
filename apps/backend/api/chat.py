@@ -68,7 +68,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
     try:
         result = await repository.search_evidence(question)
     except Exception:
-        log.error("OpenSearch passage retrieval lỗi", exc_info=False)
+        log.exception("OpenSearch passage retrieval lỗi")
         return ChatResponse(
             answer="Kho dữ liệu hiện không khả dụng; tôi chưa thể trả lời có bằng chứng.",
             resolution_status="unavailable", answer_type="insufficient_evidence",
