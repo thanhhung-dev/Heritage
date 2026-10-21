@@ -64,12 +64,6 @@ const MONTHS = [
   "Dec",
 ];
 
-/**
- * Deterministic `YYYY-MM-DD` → `D Mon YYYY` formatting.
- *
- * Deliberately avoids `toLocaleDateString` so the server-rendered markup and
- * the hydrated client markup can never disagree.
- */
 function formatPublishDate(value: string | null | undefined): string | null {
   if (!value) return null;
   const [year, month, day] = value.slice(0, 10).split("-");
@@ -78,22 +72,18 @@ function formatPublishDate(value: string | null | undefined): string | null {
   return `${Number(day)} ${monthLabel} ${year}`;
 }
 
-/**
- * `/content/{slug}` — fullscreen heritage loading screen.
- *
- * The background and copy are rendered from the heritage payload while the
- * tour scene prepares; activating the glass loading bar opens the first scene.
- */
+
 export default function ContentLoadingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { payload } = useHeritageTour();
+  const { payload, isModelReady, modelError } = useHeritageTour();
   const heritage = payload.heritage;
   const splashImageUrl = heritage.splash_image_url ?? "";
   const splashImageRef = useRef<HTMLImageElement>(null);
   const [loadedSplashUrl, setLoadedSplashUrl] = useState<string | null>(null);
-  const [selectedLanguage, setSelectedLanguage] =
-    useState<PageLocale | null>(null);
-  const isReady = !splashImageUrl || loadedSplashUrl === splashImageUrl;
+  const [selectedLanguage, setSelectedLanguage] = useState<PageLocale | null>(
+    null,
+  );
+  const isReady = (!splashImageUrl || loadedSplashUrl === splashImageUrl) && isModelReady;
   const sourceLanguage: PageLocale = heritage.language1?.code
     .toLowerCase()
     .startsWith("vi")
@@ -118,10 +108,10 @@ export default function ContentLoadingPage() {
   const presentedByLogoUrl = heritage.presented_by_logo_url;
   const availableLanguages = [heritage.language1, heritage.language2];
   const englishLanguage = availableLanguages.find((language) =>
-    language?.code.toLowerCase().startsWith("en")
+    language?.code.toLowerCase().startsWith("en"),
   );
   const vietnameseLanguage = availableLanguages.find((language) =>
-    language?.code.toLowerCase().startsWith("vi")
+    language?.code.toLowerCase().startsWith("vi"),
   );
   const languages = [
     {
@@ -237,7 +227,9 @@ export default function ContentLoadingPage() {
             className={styles.bottomNav}
             href={`/content/${slug}/s0`}
             aria-label={
-              isReady ? "Start the heritage experience" : "Loading heritage assets"
+              isReady
+                ? "Start the heritage experience"
+                : "Loading heritage assets"
             }
             aria-disabled={!isReady}
             onClick={(event) => {
@@ -267,6 +259,10 @@ export default function ContentLoadingPage() {
               </span>
             </span>
           </Link>
+
+          {modelError ? (
+            <p className={styles.loadingError} role="alert">{modelError}</p>
+          ) : null}
         </div>
       </div>
     </main>

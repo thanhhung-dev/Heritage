@@ -170,6 +170,8 @@ def make_interactive(**overrides: Any) -> SimpleNamespace:
         "cam_pos": None,
         "cam_target": None,
         "explore_area": None,
+        "explore_title": None,
+        "explore_description": None,
         "highlights": [],
     }
     data.update(overrides)

@@ -1,0 +1,2019 @@
+{
+  "source": "Tapestry/CyArk — tapestry.html, chỉ dùng kiểm thử; asset vẫn nằm trên CDN nguồn",
+  "modelUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/petranew_lod0.glb",
+  "payload": {
+    "heritage": {
+      "id": 163,
+      "slug": "tapestry-test",
+      "title": "Ad-Deir, Petra Archaeological Park",
+      "tagline": "A Living Story Carved in Stone",
+      "description": "Climb high above the sandstone canyons of Petra to explore Ad-Deir, the largest carved monument in the ancient city.\n\nExperience the monastery by torchlight and hear the voices of those who know it best as they share how the Nabataeans carved a thriving city from stone, and how local communities continue to keep its spirit alive today.",
+      "region": "Ad-Deir Monastery, Petra Archaeological Park, Jordan",
+      "lat": 30.3285,
+      "lng": 35.4444,
+      "duration_seconds": 900,
+      "launch_date": "2025-11-19",
+      "publish_state": "preview",
+      "publish_date": null,
+      "headline": "Journey to Ad-Deir: Petra’s Largest Carved Monument",
+      "map_zoom": 12,
+      "hover_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/petra_hover_2_compressed.mp4",
+      "community_made": false,
+      "presented_by_logo_url": null,
+      "display_map": false,
+      "splash_image_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/multimedia/petra_splash1.jpeg",
+      "card_image_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/petra_card_2-1080x608.webp",
+      "language1": {
+        "code": "en",
+        "name": "English"
+      },
+      "language2": {
+        "code": "ar",
+        "name": "Arabic"
+      },
+      "voices": [
+        {
+          "id": 361,
+          "name": "Amal Saraheen",
+          "title": "Local Resident & Student",
+          "bio": null,
+          "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal_headshot-256x256.webp",
+          "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/00_Amal.mp4"
+        },
+        {
+          "id": 330,
+          "name": "Mamoun Nawafleh",
+          "title": "Tour Guide & Author",
+          "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+          "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+          "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+        },
+        {
+          "id": 362,
+          "name": "Dr. Majed Hasanat",
+          "title": "Expert in Cultural and Natural Heritage \nand Former Commissioner of the Petra Archaeological Reserve",
+          "bio": null,
+          "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed_headshot-256x256.jpg",
+          "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_00_optimized.mp4"
+        },
+        {
+          "id": 363,
+          "name": "Dr. Suleiman Al-Farajat",
+          "title": "Former Director General of the Baptism Site Authority and Director of the Petra Reserve",
+          "bio": null,
+          "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman-256x256.webp",
+          "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_Intro.mp4"
+        }
+      ],
+      "voice_length": 4
+    },
+    "overview": {
+      "id": 164,
+      "slug": "s0",
+      "title": "Ad Deir Monastery",
+      "description": "Explore Petra’s iconic Ad Deir Monastery through detailed 3D scenes and expert insights. Discover its architecture, cultural fusion, and spiritual legacy in this guided virtual experience.",
+      "sequence": -1,
+      "sky": null,
+      "camera": {
+        "node_name": null,
+        "start_position": [
+          72.361,
+          41.244,
+          -30.673
+        ],
+        "start_target": [
+          -4.888,
+          22.009,
+          8.943
+        ],
+        "zoom_position": [
+          20.072,
+          44.315,
+          -9.154
+        ],
+        "zoom_target": [
+          -9.006,
+          26.897,
+          7.69
+        ],
+        "instant_move": false
+      },
+      "voice_clips": [],
+      "models": [],
+      "media": [],
+      "interactive": [],
+      "highlights": []
+    },
+    "scenes": [
+      {
+        "id": 616,
+        "slug": "s1",
+        "title": "Where the Desert Came to Life",
+        "description": "Petra, once called Raqmu, thrived as a crossroads of trade where the Nabataeans turned desert into life. Masters of water and stone, they built hidden channels and vibrant architecture, reminders of a people who connected worlds through ingenuity and resilience.",
+        "sequence": 0,
+        "sky": null,
+        "camera": {
+          "node_name": null,
+          "start_position": [
+            46.15,
+            7.356,
+            -24.088
+          ],
+          "start_target": [
+            14.54,
+            8.074,
+            -1.886
+          ],
+          "zoom_position": [
+            6.539,
+            6.987,
+            -1.516
+          ],
+          "zoom_target": [
+            1.43,
+            7.161,
+            2.022
+          ],
+          "instant_move": false
+        },
+        "voice_clips": [
+          {
+            "id": 998,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/01_Amal_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "A magical place",
+            "sort_order": 0,
+            "voice": {
+              "id": 361,
+              "name": "Amal Saraheen",
+              "title": "Local Resident & Student",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/00_Amal.mp4"
+            }
+          },
+          {
+            "id": 937,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/01-Mamoun_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Holy stillness",
+            "sort_order": 1,
+            "voice": {
+              "id": 330,
+              "name": "Mamoun Nawafleh",
+              "title": "Tour Guide & Author",
+              "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+            }
+          },
+          {
+            "id": 1012,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_night_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Petra at night",
+            "sort_order": 2,
+            "voice": {
+              "id": 363,
+              "name": "Dr. Suleiman Al-Farajat",
+              "title": "Former Director General of the Baptism Site Authority and Director of the Petra Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_Intro.mp4"
+            }
+          }
+        ],
+        "models": [],
+        "media": [
+          {
+            "id": 958,
+            "type": "video",
+            "title": "Key Sites of Petra",
+            "caption": "Brief video showing several key sites in Petra, including the Treasury, the Monastery and the Theatre",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Scene_1_video_optimized.mp4",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/thumb_video.jpg",
+            "credit": null,
+            "sort_order": 1
+          },
+          {
+            "id": 832,
+            "type": "image",
+            "title": "Map of Petra and Silk Roads",
+            "caption": "This map shows the Nabatean Kingdom, with Petra at its center, and its key trade routes. The Nabateans connected the Mediterranean to the Silk Roads, linking goods from China, India, and Arabia with markets in Rome and beyond.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Map_Petra-1080x635.webp",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Map_Petra_thumb-256x151.webp",
+            "credit": null,
+            "sort_order": 2
+          },
+          {
+            "id": 957,
+            "type": "image",
+            "title": "Petra by Night",
+            "caption": "Petra by Night allows visitors to walk through the Siq lit by candles leading to the Treasury. The monument is illuminated by hundreds of candles while traditional Bedouin music plays under the night sky.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/petra_night.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/petra_night_thumb-256x171.webp",
+            "credit": null,
+            "sort_order": 3
+          }
+        ],
+        "interactive": [],
+        "highlights": [
+          {
+            "id": 233,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -9.054,
+              0.4,
+              0.944
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 234,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -1.7,
+              0.7,
+              12
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 235,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -16.04,
+              4.1,
+              -8.14
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 236,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              3.6,
+              3.8,
+              22.14
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 237,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -7.5899,
+              21.878,
+              8.4318
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 238,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -13.4522,
+              20.7132,
+              -2.1425
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 239,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -0.5,
+              20.4,
+              18
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 240,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -19,
+              3.35,
+              15
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 263,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -19.4,
+              2.29,
+              9.54
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.75,
+              0.75,
+              0.75
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 264,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+            "position": [
+              -14.01,
+              2.27,
+              16.54
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.75,
+              0.75,
+              0.75
+            ],
+            "animation_type": "LoopRepeat"
+          }
+        ]
+      },
+      {
+        "id": 617,
+        "slug": "s2",
+        "title": "Climbing to Purpose",
+        "description": "The climb to Ad Deir winds past sandstone alive with color and echoes of ancient trade. At the summit, its vast façade stirs awe, a reminder of Nabataean mastery. Beyond, trails descend into wadis, desert valleys that lie dry until rains briefly bring them to life.",
+        "sequence": 1,
+        "sky": null,
+        "camera": {
+          "node_name": null,
+          "start_position": [
+            3.405,
+            25.012,
+            -40.658
+          ],
+          "start_target": [
+            -6.656,
+            -3.514,
+            -18.168
+          ],
+          "zoom_position": [
+            50.028,
+            52.784,
+            -13.092
+          ],
+          "zoom_target": [
+            -8.551,
+            3.931,
+            7.052
+          ],
+          "instant_move": false
+        },
+        "voice_clips": [
+          {
+            "id": 999,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/02_Amal_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Honoring the dead",
+            "sort_order": 0,
+            "voice": {
+              "id": 361,
+              "name": "Amal Saraheen",
+              "title": "Local Resident & Student",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/00_Amal.mp4"
+            }
+          },
+          {
+            "id": 938,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/02-Mamoun_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "An inspiring walk",
+            "sort_order": 1,
+            "voice": {
+              "id": 330,
+              "name": "Mamoun Nawafleh",
+              "title": "Tour Guide & Author",
+              "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+            }
+          },
+          {
+            "id": 1005,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_02_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Testament to human ingenuity",
+            "sort_order": 2,
+            "voice": {
+              "id": 362,
+              "name": "Dr. Majed Hasanat",
+              "title": "Expert in Cultural and Natural Heritage \nand Former Commissioner of the Petra Archaeological Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed_headshot-256x256.jpg",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_00_optimized.mp4"
+            }
+          }
+        ],
+        "models": [],
+        "media": [
+          {
+            "id": 973,
+            "type": "image",
+            "title": "Scale of the Monastery",
+            "caption": "Ad Deir, or the Monastery, stands about 45 meters tall, with the person at its entrance showing its massive scale carved into Petra’s sandstone cliffs.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/scale.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/scale_thumb-256x171.webp",
+            "credit": null,
+            "sort_order": 1
+          },
+          {
+            "id": 833,
+            "type": "image",
+            "title": "Roman Amphitheatre at Petra",
+            "caption": "The Roman amphitheatre in Petra is a large, rock-carved structure built in the 1st century CE during the reign of the Nabataean king Aretas IV and later modified by the Romans. It could hold around 6,000 spectators and was used for public events and performances.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/roman_theatre.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/roman_theatre_thumb-255x170.webp",
+            "credit": null,
+            "sort_order": 2
+          }
+        ],
+        "interactive": [
+          {
+            "id": 332,
+            "mode": "standard",
+            "cam_pos": [
+              23.611,
+              36.992,
+              -10.734
+            ],
+            "cam_target": [
+              0.278,
+              30.348,
+              3.801
+            ],
+            "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
+            "highlights": [
+              {
+                "id": 639,
+                "popup_title": "Niches for statues",
+                "popup_text": "On either side of the doorway and between the columns above, you’ll see deep niches carved into the rock. These may have once held carved statues of important figures or deities like we see at the al-Khaznah or treasury building.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Niche_drawing-256x176.webp",
+                "media_type": "image",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": null,
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Niche_drawing.JPG",
+                "cam_pos": [
+                  2.4526704078726045,
+                  23.936304462561203,
+                  1.2837784139875956
+                ],
+                "cam_target": [
+                  1.3746704078726133,
+                  23.9403044625612,
+                  2.2157784139875893
+                ],
+                "lens_pos": [
+                  -6.343,
+                  25.314,
+                  7.299
+                ],
+                "lens_rot": [
+                  2.86,
+                  -0.5,
+                  2.63
+                ],
+                "lens_scale": [
+                  25.679,
+                  25.679,
+                  25.679
+                ],
+                "sort_order": 1
+              },
+              {
+                "id": 640,
+                "popup_title": "Urn",
+                "popup_text": "The freestanding urn sitting on top of the monument is especially eye-catching, it’s over 9 meters tall and carved from the same mountain rock.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/URN-255x158.webp",
+                "media_type": "video",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": null,
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/INTMamoun_urn.mp4",
+                "cam_pos": [
+                  3.48,
+                  42.138,
+                  -0.886
+                ],
+                "cam_target": [
+                  -4.23,
+                  40.688,
+                  6.016
+                ],
+                "lens_pos": [
+                  -8.155,
+                  42.989,
+                  8.651
+                ],
+                "lens_rot": [
+                  2.9,
+                  -0.57,
+                  2.96
+                ],
+                "lens_scale": [
+                  25.124,
+                  25.124,
+                  25.124
+                ],
+                "sort_order": 2
+              },
+              {
+                "id": 651,
+                "popup_title": "Distinct columns and capitals",
+                "popup_text": "The columns on both levels use unique Nabataean-style capitals (tops of columns). The lower ones are \"cupped\" and the upper ones are \"reverse-frustum\", shaped like upside-down cones.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/columns-256x209.webp",
+                "media_type": "image",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": null,
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/columns.jpg",
+                "cam_pos": [
+                  -1.571,
+                  15.569,
+                  -13.291
+                ],
+                "cam_target": [
+                  -9.528,
+                  14.507,
+                  -7.605
+                ],
+                "lens_pos": [
+                  -12.064,
+                  13.97,
+                  -6.245
+                ],
+                "lens_rot": [
+                  2.9,
+                  -0.14,
+                  2.63
+                ],
+                "lens_scale": [
+                  25,
+                  25,
+                  25
+                ],
+                "sort_order": 3
+              }
+            ]
+          }
+        ],
+        "highlights": []
+      },
+      {
+        "id": 618,
+        "slug": "s3",
+        "title": "The Stories of Trade",
+        "description": "From the hills above Petra, one can imagine caravans below, markets alive with voices, and goods from across the world. The Nabataeans thrived through trade and trust. Today, their descendants feel pride in this heritage and their role as its protectors.",
+        "sequence": 2,
+        "sky": null,
+        "camera": {
+          "node_name": null,
+          "start_position": [
+            28.941,
+            1.712,
+            -12.386
+          ],
+          "start_target": [
+            1.744,
+            6.042,
+            6.453
+          ],
+          "zoom_position": [
+            13.638655235269287,
+            3.233626251830076,
+            -3.3205650298317186
+          ],
+          "zoom_target": [
+            0.8654212134856483,
+            4.497514911010089,
+            4.521065872269378
+          ],
+          "instant_move": false
+        },
+        "voice_clips": [
+          {
+            "id": 1000,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/03_Amal_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Proud to be a daughter of this land",
+            "sort_order": 0,
+            "voice": {
+              "id": 361,
+              "name": "Amal Saraheen",
+              "title": "Local Resident & Student",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/00_Amal.mp4"
+            }
+          },
+          {
+            "id": 939,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/03-Mamoun_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Controlling the trade routes",
+            "sort_order": 1,
+            "voice": {
+              "id": 330,
+              "name": "Mamoun Nawafleh",
+              "title": "Tour Guide & Author",
+              "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+            }
+          },
+          {
+            "id": 1011,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_Trade_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Frankincense and myrhh",
+            "sort_order": 2,
+            "voice": {
+              "id": 363,
+              "name": "Dr. Suleiman Al-Farajat",
+              "title": "Former Director General of the Baptism Site Authority and Director of the Petra Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_Intro.mp4"
+            }
+          }
+        ],
+        "models": [],
+        "media": [
+          {
+            "id": 979,
+            "type": "image",
+            "title": "Frankincense and myrhh",
+            "caption": "Frankincense and myrrh are fragrant tree resins once worth more than gold. The Nabateans traded them through Petra, making the city rich by controlling this valuable trade across the desert.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/incense_image.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/incense_image_thumb-255x170.webp",
+            "credit": null,
+            "sort_order": 1
+          },
+          {
+            "id": 983,
+            "type": "image",
+            "title": "Strabo's Geography",
+            "caption": "Writing in the 1st century BCE, The Greek geographer Strabo devoted several chapters of his book Geography to the Nabataeans, describing Petra as a fortified city with flowing springs and gardens surrounded by desert.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Strabo.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/strabo_thumb-256x198.webp",
+            "credit": null,
+            "sort_order": 2
+          }
+        ],
+        "interactive": [
+          {
+            "id": 302,
+            "mode": "standard",
+            "cam_pos": [
+              32.05790851412059,
+              8.735267663634032,
+              6.411245973702641
+            ],
+            "cam_target": [
+              16.881,
+              8.115,
+              7.04
+            ],
+            "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
+            "highlights": [
+              {
+                "id": 557,
+                "popup_title": "Camel Caravans",
+                "popup_text": "Petra was a vital trade hub in the ancient world, linking Arabia with the Mediterranean. Its location along caravan routes made it a center for exchanging spices, textiles, and incense, with camels essential for carrying heavy loads across the desert.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/Camel%20Trade-256x187.webp",
+                "media_type": "video",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/Mamoun_INT_CAMEL_CARAVANS.vtt",
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/INTmamoun_camel_caravans.mp4",
+                "cam_pos": [
+                  23.51660817718836,
+                  5.006880412570415,
+                  6.312576200276341
+                ],
+                "cam_target": [
+                  17.544,
+                  4.751,
+                  7.618
+                ],
+                "lens_pos": [
+                  15.914,
+                  5.039,
+                  7.278
+                ],
+                "lens_rot": [
+                  -3.1416,
+                  -0.0536,
+                  2.9168
+                ],
+                "lens_scale": [
+                  15,
+                  15,
+                  15
+                ],
+                "sort_order": 1
+              }
+            ]
+          }
+        ],
+        "highlights": [
+          {
+            "id": 319,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_02%20(2).glb",
+            "position": [
+              10.7088,
+              0.5698,
+              5.0186
+            ],
+            "rotation": [
+              0.1865,
+              -1.0282,
+              0.0844
+            ],
+            "scale": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 320,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_03%20(2).glb",
+            "position": [
+              -5.545,
+              -0.132,
+              -5.484
+            ],
+            "rotation": [
+              -0.07,
+              -1,
+              0
+            ],
+            "scale": [
+              0.3,
+              0.3,
+              0.293
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 321,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_05%20(3).glb",
+            "position": [
+              4.2137,
+              -0.2221,
+              -1.8028
+            ],
+            "rotation": [
+              3.13,
+              1.07,
+              3.1
+            ],
+            "scale": [
+              0.3,
+              0.3,
+              0.3
+            ],
+            "animation_type": "LoopRepeat"
+          },
+          {
+            "id": 322,
+            "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_04%20(2).glb",
+            "position": [
+              4.808,
+              0.363,
+              8.172
+            ],
+            "rotation": [
+              3.09,
+              0.95,
+              -3.1
+            ],
+            "scale": [
+              0.388,
+              0.337,
+              0.3
+            ],
+            "animation_type": "LoopRepeat"
+          }
+        ]
+      },
+      {
+        "id": 622,
+        "slug": "s4",
+        "title": "The Silence Inside",
+        "description": "Inside Ad Deir, torchlight reveals interior features rarely seen clearly. Carved niches and subtle decorations suggest the chamber was used for rituals or contemplation, highlighting its spiritual importance to the Nabatean people.",
+        "sequence": 3,
+        "sky": null,
+        "camera": {
+          "node_name": null,
+          "start_position": [
+            -3.136,
+            8,
+            4.829
+          ],
+          "start_target": [
+            -17.322,
+            2.636,
+            16.322
+          ],
+          "zoom_position": [
+            -8.947,
+            7.49,
+            8.022
+          ],
+          "zoom_target": [
+            -18.359,
+            3.931,
+            15.647
+          ],
+          "instant_move": false
+        },
+        "voice_clips": [
+          {
+            "id": 994,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/04_mamoun_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "A place for ceremonies",
+            "sort_order": 0,
+            "voice": {
+              "id": 330,
+              "name": "Mamoun Nawafleh",
+              "title": "Tour Guide & Author",
+              "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+            }
+          },
+          {
+            "id": 1013,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_tombs_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Tombs of Petra",
+            "sort_order": 1,
+            "voice": {
+              "id": 363,
+              "name": "Dr. Suleiman Al-Farajat",
+              "title": "Former Director General of the Baptism Site Authority and Director of the Petra Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_Intro.mp4"
+            }
+          }
+        ],
+        "models": [],
+        "media": [
+          {
+            "id": 980,
+            "type": "video",
+            "title": "More than 850 tombs",
+            "caption": "Petra has more than 850 monumental tombs carved into its rose-red cliffs. Their scale and design reflect the Nabataeans’ wealth and artistry, as well as a complex relationship with death and the afterlife central to their culture.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/tomb.mp4",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/thumb-256x144.webp",
+            "credit": null,
+            "sort_order": 0
+          }
+        ],
+        "interactive": [
+          {
+            "id": 337,
+            "mode": "standard",
+            "cam_pos": [
+              -8.461,
+              9.827,
+              8.639
+            ],
+            "cam_target": [
+              -17.565,
+              1.656,
+              14.817
+            ],
+            "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
+            "highlights": [
+              {
+                "id": 642,
+                "popup_title": "Ceremonial space",
+                "popup_text": "At the back wall stands a deep niche with carved steps leading up to it and a roof-like feature above. This niche may have served a ceremonial or religious purpose.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/niche_ad_deir-256x160.webp",
+                "media_type": "image",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": null,
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/niche_ad_deir.JPG",
+                "cam_pos": [
+                  -12.465,
+                  6.585,
+                  10.47
+                ],
+                "cam_target": [
+                  -17.876,
+                  5.98,
+                  14.159
+                ],
+                "lens_pos": [
+                  -18.338,
+                  5.815,
+                  14.09
+                ],
+                "lens_rot": [
+                  0.15,
+                  -2.54,
+                  0
+                ],
+                "lens_scale": [
+                  10,
+                  10,
+                  10
+                ],
+                "sort_order": 1
+              },
+              {
+                "id": 643,
+                "popup_title": "Graffiti",
+                "popup_text": "Inside the room of Ad-Deir, traces of modern graffiti can be seen where visitors have carved or written their names into the stone. These markings damage the ancient surfaces and detract from the monument’s cultural and historical value.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/graffitti-256x171.webp",
+                "media_type": "image",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": null,
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/graffitti.jpg",
+                "cam_pos": [
+                  -9.088,
+                  7.951,
+                  10.372
+                ],
+                "cam_target": [
+                  -16.091,
+                  7.092,
+                  9.382
+                ],
+                "lens_pos": [
+                  -18.827,
+                  7.329,
+                  8.684
+                ],
+                "lens_rot": [
+                  -0.27,
+                  2.96,
+                  -0.09
+                ],
+                "lens_scale": [
+                  13,
+                  13,
+                  13
+                ],
+                "sort_order": 2
+              },
+              {
+                "id": 644,
+                "popup_title": "Raised platforms",
+                "popup_text": "On each side of the room in Ad-Deir, raised platforms are carved directly from the rock. These may have been used for seating, offerings, or other ceremonial functions.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/platform-256x143.webp",
+                "media_type": "image",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": null,
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/platform.JPG",
+                "cam_pos": [
+                  -9.56,
+                  6.097,
+                  6.728
+                ],
+                "cam_target": [
+                  -10.858,
+                  4.225,
+                  13.862
+                ],
+                "lens_pos": [
+                  -11.083,
+                  3.373,
+                  15.534
+                ],
+                "lens_rot": [
+                  0,
+                  -1.58,
+                  -0.39
+                ],
+                "lens_scale": [
+                  10,
+                  10,
+                  10
+                ],
+                "sort_order": 3
+              }
+            ]
+          }
+        ],
+        "highlights": []
+      },
+      {
+        "id": 623,
+        "slug": "s5",
+        "title": "Engineering the Impossible",
+        "description": "North of the Monastery, carved channels and hidden cisterns reveal engineering marvels. The Nabataeans captured every drop of rain, slowing floods with terraces and dams, turning desert to life. Today, as flash floods grow more severe, these ancient methods guide efforts to protect Petra’s future.",
+        "sequence": 4,
+        "sky": null,
+        "camera": {
+          "node_name": null,
+          "start_position": [
+            90.178,
+            28.411,
+            55.272
+          ],
+          "start_target": [
+            9.123,
+            14.475,
+            37.812
+          ],
+          "zoom_position": [
+            26.197,
+            24.855,
+            -38.731
+          ],
+          "zoom_target": [
+            13.338,
+            19.529,
+            14.749
+          ],
+          "instant_move": true
+        },
+        "voice_clips": [
+          {
+            "id": 1001,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/05_Amal_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Channels, cisterns and dams",
+            "sort_order": 0,
+            "voice": {
+              "id": 361,
+              "name": "Amal Saraheen",
+              "title": "Local Resident & Student",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/00_Amal.mp4"
+            }
+          },
+          {
+            "id": 940,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/05-Mamoun_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Experts in controlling water",
+            "sort_order": 1,
+            "voice": {
+              "id": 330,
+              "name": "Mamoun Nawafleh",
+              "title": "Tour Guide & Author",
+              "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+            }
+          },
+          {
+            "id": 1006,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_05_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Climate change in Petra",
+            "sort_order": 2,
+            "voice": {
+              "id": 362,
+              "name": "Dr. Majed Hasanat",
+              "title": "Expert in Cultural and Natural Heritage \nand Former Commissioner of the Petra Archaeological Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed_headshot-256x256.jpg",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_00_optimized.mp4"
+            }
+          },
+          {
+            "id": 1014,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_Engineering_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Defensive engineering",
+            "sort_order": 3,
+            "voice": {
+              "id": 363,
+              "name": "Dr. Suleiman Al-Farajat",
+              "title": "Former Director General of the Baptism Site Authority and Director of the Petra Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Suliman_Intro.mp4"
+            }
+          }
+        ],
+        "models": [],
+        "media": [
+          {
+            "id": 959,
+            "type": "image",
+            "title": "Water channel at Petra",
+            "caption": "Petra’s ancient water channels are a remarkable example of Nabataean engineering, designed to manage and conserve water in a harsh desert environment. Carved directly into the sandstone cliffs, these channels collected rainwater and spring water from surrounding mountains and directed it into cisterns and reservoirs throughout the city.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/water_channel.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/water_channel_thumb-256x171.webp",
+            "credit": null,
+            "sort_order": 0
+          },
+          {
+            "id": 981,
+            "type": "image",
+            "title": "Narrow Siq and water channel",
+            "caption": "The Siq at Petra is a narrow, winding gorge that forms the main entrance to the ancient city. On the lower left-hand side of the image, a carved water channel is visible, part of the Nabataeans’ ingenious system to drain and collect rainwater and prevent flooding during storms.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/siq.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/siq_thumb-204x255.webp",
+            "credit": null,
+            "sort_order": 0
+          },
+          {
+            "id": 982,
+            "type": "image",
+            "title": "Cistern at Petra",
+            "caption": "In Petra, the Nabataeans engineered an advanced water management system. Cisterns collected and stored rainwater, ensuring a reliable supply for residents, agriculture, and trade in the arid desert environment.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/cistern%20copy.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/cistern%20copy_thumb.jpg",
+            "credit": null,
+            "sort_order": 0
+          }
+        ],
+        "interactive": [
+          {
+            "id": 336,
+            "mode": "standard",
+            "cam_pos": [
+              98.046,
+              44.348,
+              17.483
+            ],
+            "cam_target": [
+              29.885,
+              18.102,
+              72.212
+            ],
+            "explore_area": null,
+            "explore_title": null,
+            "explore_description": null,
+            "highlights": [
+              {
+                "id": 645,
+                "popup_title": "Cistern",
+                "popup_text": "In Petra, the Nabataeans engineered an advanced water management system. Cisterns collected and stored rainwater, ensuring a reliable supply for residents, agriculture, and trade in the arid desert environment.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/cistern%20copy_thumb-256x192.webp",
+                "media_type": "video",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Beduins_still_using_cistern.vtt",
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Suliman/Beduins_still_using_cistern.mp4",
+                "cam_pos": [
+                  85.669,
+                  26.209,
+                  51.417
+                ],
+                "cam_target": [
+                  44.081,
+                  -1.47,
+                  81.111
+                ],
+                "lens_pos": [
+                  63.411,
+                  9.823,
+                  68.017
+                ],
+                "lens_rot": [
+                  0.15,
+                  -2.54,
+                  -0.15
+                ],
+                "lens_scale": [
+                  25,
+                  25,
+                  25
+                ],
+                "sort_order": 1
+              },
+              {
+                "id": 648,
+                "popup_title": "Flash flooding",
+                "popup_text": "Petra is highly vulnerable to flash floods due to its location in a narrow valley surrounded by steep cliffs. Sudden heavy rains can send torrents of water rushing through the Siq and into the city, threatening monuments and visitors alike.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/flooding_thumb-256x144.jpg",
+                "media_type": "video",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/INTMamoun_flooding.vtt",
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/INTMamoun_flooding.mp4",
+                "cam_pos": [
+                  75.863,
+                  45.55,
+                  41.606
+                ],
+                "cam_target": [
+                  17.465,
+                  37.369,
+                  81.462
+                ],
+                "lens_pos": [
+                  32.996,
+                  37.482,
+                  66.798
+                ],
+                "lens_rot": [
+                  -0.39,
+                  -2.43,
+                  -0.39
+                ],
+                "lens_scale": [
+                  25,
+                  25,
+                  25
+                ],
+                "sort_order": 2
+              },
+              {
+                "id": 649,
+                "popup_title": "Water channel",
+                "popup_text": "In Petra, the Nabataeans carved intricate water channels directly into the sandstone cliffs. These channels carried rainwater from the surrounding mountains and guided it through the city, supplying cisterns, reservoirs, and households.",
+                "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/channel-256x171.webp",
+                "media_type": "image",
+                "media_alt": null,
+                "media_credit": null,
+                "captions_url": null,
+                "audio_url": null,
+                "media_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/channel.jpg",
+                "cam_pos": [
+                  58.665,
+                  27.011,
+                  31.948
+                ],
+                "cam_target": [
+                  38.317,
+                  13.832,
+                  74.897
+                ],
+                "lens_pos": [
+                  46.246,
+                  11.338,
+                  56.833
+                ],
+                "lens_rot": [
+                  0,
+                  -2.19,
+                  -0.51
+                ],
+                "lens_scale": [
+                  30,
+                  30,
+                  30
+                ],
+                "sort_order": 3
+              }
+            ]
+          }
+        ],
+        "highlights": []
+      },
+      {
+        "id": 703,
+        "slug": "s6",
+        "title": "A Place Still Lived In",
+        "description": "Petra is more than stone, it has long been home. Bedouin families lived in its carved spaces, guided travelers, and passed down stories. Their roots run deep, like trees among the rocks. To protect Petra is also to honor its descendants -  proud stewards of this living heritage.",
+        "sequence": 5,
+        "sky": null,
+        "camera": {
+          "node_name": null,
+          "start_position": [
+            95.64,
+            13.621,
+            0.405
+          ],
+          "start_target": [
+            31.608,
+            20.821,
+            13.39
+          ],
+          "zoom_position": [
+            28.52205908146324,
+            27.3479695870387,
+            -21.108055743469613
+          ],
+          "zoom_target": [
+            -3.0678269313018185,
+            23.421626512374637,
+            3.4584139317291003
+          ],
+          "instant_move": false
+        },
+        "voice_clips": [
+          {
+            "id": 1003,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/06_Amal_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Enduring Bedouin connections",
+            "sort_order": 0,
+            "voice": {
+              "id": 361,
+              "name": "Amal Saraheen",
+              "title": "Local Resident & Student",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/00_Amal.mp4"
+            }
+          },
+          {
+            "id": 996,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/06-Mamoun_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "We inherited a lot",
+            "sort_order": 1,
+            "voice": {
+              "id": 330,
+              "name": "Mamoun Nawafleh",
+              "title": "Tour Guide & Author",
+              "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+            }
+          },
+          {
+            "id": 1007,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_6_revised_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Nabatean Legacy",
+            "sort_order": 2,
+            "voice": {
+              "id": 362,
+              "name": "Dr. Majed Hasanat",
+              "title": "Expert in Cultural and Natural Heritage \nand Former Commissioner of the Petra Archaeological Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed_headshot-256x256.jpg",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_00_optimized.mp4"
+            }
+          }
+        ],
+        "models": [],
+        "media": [
+          {
+            "id": 960,
+            "type": "image",
+            "title": "1842 Lithograph of Ad-Deir Monastery",
+            "caption": "This 1842 lithograph by David Roberts shows a group of Bedouins gathered in the foreground, dressed in traditional robes and holding long staffs. They sit and stand on rocky ground near the grand façade of Ad Deir (The Monastery) in Petra.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/painting.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/painting_thumb.jpg",
+            "credit": "David Roberts",
+            "sort_order": 0
+          },
+          {
+            "id": 970,
+            "type": "image",
+            "title": "Nabataean Script",
+            "caption": "The Nabataean script, developed from Aramaic, is a key precursor to Arabic. Its cursive, connected letters influenced the early forms of Arabic writing and mark an important step in the region’s script history.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/script.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/script_thumb-171x256.webp",
+            "credit": null,
+            "sort_order": 0
+          },
+          {
+            "id": 971,
+            "type": "image",
+            "title": "Bedouin people",
+            "caption": "The Bedouin people around Petra have a long connection to the site, known for their knowledge of the land, hospitality, and traditions. Many still preserve their heritage while welcoming visitors today.",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/tent.jpg",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/tent_thumb-255x170.webp",
+            "credit": null,
+            "sort_order": 0
+          }
+        ],
+        "interactive": [
+          {
+            "id": 428,
+            "mode": "free_explore",
+            "cam_pos": [
+              6.440005267262109,
+              4.775172746419311,
+              1.3487062647877028
+            ],
+            "cam_target": [
+              2.707031957339598,
+              4.746574739667308,
+              6.850369714740939
+            ],
+            "explore_area": {
+              "center": [
+                11.64311165921454,
+                2.539100054773748,
+                -2.11787469883124
+              ],
+              "extents": [
+                21.64741446885839,
+                5.202717165968831,
+                18.27377018855391
+              ],
+              "rotation": [
+                0,
+                -0.485726615362517,
+                0,
+                0.8741107796660978
+              ]
+            },
+            "explore_title": "Explore the Forecourt",
+            "explore_description": "Explore the forecourt in front of the Monastery and notice how the open space shapes your approach to the façade. Archaeologists believe this area was designed for gathering, likely in connection with ceremonies or other communal activity, making it an important part of the monument rather than simply the space before it. As you move through the forecourt, look at how the cleared ground and the scale of the setting frame the Monastery as a place of arrival and assembly.",
+            "highlights": []
+          }
+        ],
+        "highlights": []
+      },
+      {
+        "id": 704,
+        "slug": "s7",
+        "title": "Petra’s Future Is in Our Hands",
+        "description": "Petra’s future rests on choices we make today. Visitors help by walking marked trails, leaving no trace, and respecting its stones. True preservation also means valuing local communities, sharing food, music, and stories. To protect Petra is to honor both place and people.",
+        "sequence": 6,
+        "sky": null,
+        "camera": {
+          "node_name": null,
+          "start_position": [
+            103.188,
+            57.35,
+            -73.63
+          ],
+          "start_target": [
+            16.769,
+            53.913,
+            -1.185
+          ],
+          "zoom_position": [
+            33.94,
+            69.065,
+            -15.508
+          ],
+          "zoom_target": [
+            16.174,
+            54.494,
+            -1.652
+          ],
+          "instant_move": false
+        },
+        "voice_clips": [
+          {
+            "id": 1004,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/07_Amal_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "What visitors can do",
+            "sort_order": 0,
+            "voice": {
+              "id": 361,
+              "name": "Amal Saraheen",
+              "title": "Local Resident & Student",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Amal/00_Amal.mp4"
+            }
+          },
+          {
+            "id": 997,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/07-Mamoun_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "Experience local culture",
+            "sort_order": 1,
+            "voice": {
+              "id": 330,
+              "name": "Mamoun Nawafleh",
+              "title": "Tour Guide & Author",
+              "bio": "Mamoun Nawafleh is a Jordanian researcher, author, and expert in archaeoastronomy from Petra (Wadi Musa).",
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun_headshot-256x256.webp",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Mamoun/00-Mamoun_optimized.mp4"
+            }
+          },
+          {
+            "id": 1008,
+            "video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_7_revised_optimized.mp4",
+            "audio_url": null,
+            "bubble_text": "An invitation to Jordan",
+            "sort_order": 2,
+            "voice": {
+              "id": 362,
+              "name": "Dr. Majed Hasanat",
+              "title": "Expert in Cultural and Natural Heritage \nand Former Commissioner of the Petra Archaeological Reserve",
+              "bio": null,
+              "headshot_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed_headshot-256x256.jpg",
+              "intro_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Voices/Majed/Majed_00_optimized.mp4"
+            }
+          }
+        ],
+        "models": [],
+        "media": [
+          {
+            "id": 972,
+            "type": "image",
+            "title": "Learn more about the Petra National Trust",
+            "caption": "<p>\n  This image shows the homepage of the\n  <a href=\"https://petranationaltrust.org/\" target=\"_blank\" rel=\"noopener\">\n    Petra National Trust (PNT)\n  </a>, a non-profit dedicated to preserving Petra and cultural heritage across the MENA region.\n</p>",
+            "asset_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/PNT_info.JPG",
+            "thumb_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Multimedia/PNT_info-256x113.webp",
+            "credit": null,
+            "sort_order": 0
+          }
+        ],
+        "interactive": [],
+        "highlights": []
+      }
+    ]
+  },
+  "playback": {
+    "s0": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/Overview_revised_optimized.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/Overview_revised_optimized_cc.vtt",
+      "timedHighlights": [],
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
+    },
+    "s1": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/1_revised-final_sound.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/1%20revised-final%20sound.vtt",
+      "timedHighlights": [
+        {
+          "id": 233,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -9.054,
+            0.4,
+            0.944
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 1,
+          "endSeconds": null
+        },
+        {
+          "id": 234,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -1.7,
+            0.7,
+            12
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 2,
+          "endSeconds": null
+        },
+        {
+          "id": 235,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -16.04,
+            4.1,
+            -8.14
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 3,
+          "endSeconds": null
+        },
+        {
+          "id": 236,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            3.6,
+            3.8,
+            22.14
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 4,
+          "endSeconds": null
+        },
+        {
+          "id": 237,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -7.5899,
+            21.878,
+            8.4318
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 5,
+          "endSeconds": null
+        },
+        {
+          "id": 238,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -13.4522,
+            20.7132,
+            -2.1425
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 6,
+          "endSeconds": null
+        },
+        {
+          "id": 239,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -0.5,
+            20.4,
+            18
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 7,
+          "endSeconds": null
+        },
+        {
+          "id": 240,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -19,
+            3.35,
+            15
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 12,
+          "endSeconds": null
+        },
+        {
+          "id": 263,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -19.4,
+            2.29,
+            9.54
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.75,
+            0.75,
+            0.75
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 10,
+          "endSeconds": null
+        },
+        {
+          "id": 264,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-demo/models/candle_light_001.glb",
+          "position": [
+            -14.01,
+            2.27,
+            16.54
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.75,
+            0.75,
+            0.75
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 11,
+          "endSeconds": null
+        }
+      ],
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
+    },
+    "s2": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/2_revised-finalsound.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/2%20revised-finalsound.vtt",
+      "timedHighlights": [],
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
+    },
+    "s3": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/3_revised_finalsound.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/3%20revised%20finalsound.vtt",
+      "timedHighlights": [
+        {
+          "id": 319,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_02%20(2).glb",
+          "position": [
+            10.7088,
+            0.5698,
+            5.0186
+          ],
+          "rotation": [
+            0.1865,
+            -1.0282,
+            0.0844
+          ],
+          "scale": [
+            0.3,
+            0.3,
+            0.3
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 3,
+          "endSeconds": null
+        },
+        {
+          "id": 320,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_03%20(2).glb",
+          "position": [
+            -5.545,
+            -0.132,
+            -5.484
+          ],
+          "rotation": [
+            -0.07,
+            -1,
+            0
+          ],
+          "scale": [
+            0.3,
+            0.3,
+            0.293
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 4,
+          "endSeconds": null
+        },
+        {
+          "id": 321,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_05%20(3).glb",
+          "position": [
+            4.2137,
+            -0.2221,
+            -1.8028
+          ],
+          "rotation": [
+            3.13,
+            1.07,
+            3.1
+          ],
+          "scale": [
+            0.3,
+            0.3,
+            0.3
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 5,
+          "endSeconds": null
+        },
+        {
+          "id": 322,
+          "model_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Assets/Camels/revised/camel_04%20(2).glb",
+          "position": [
+            4.808,
+            0.363,
+            8.172
+          ],
+          "rotation": [
+            3.09,
+            0.95,
+            -3.1
+          ],
+          "scale": [
+            0.388,
+            0.337,
+            0.3
+          ],
+          "animation_type": "LoopRepeat",
+          "startSeconds": 6,
+          "endSeconds": null
+        }
+      ],
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
+    },
+    "s4": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/4-revised.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/4-revised.vtt",
+      "timedHighlights": [],
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
+    },
+    "s5": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/5-revised.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/5-revised.vtt",
+      "timedHighlights": [],
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
+    },
+    "s6": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/6-revised.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/6-revised.vtt",
+      "timedHighlights": [],
+      "exploreArea": {
+        "center": [
+          11.64311165921454,
+          2.539100054773748,
+          -2.11787469883124
+        ],
+        "extents": [
+          21.64741446885839,
+          5.202717165968831,
+          18.27377018855391
+        ],
+        "rotation": [
+          0,
+          -0.485726615362517,
+          0,
+          0.8741107796660978
+        ]
+      },
+      "exploreTitle": "Explore the Forecourt",
+      "exploreDescription": "Explore the forecourt in front of the Monastery and notice how the open space shapes your approach to the façade. Archaeologists believe this area was designed for gathering, likely in connection with ceremonies or other communal activity, making it an important part of the monument rather than simply the space before it. As you move through the forecourt, look at how the cleared ground and the scale of the setting frame the Monastery as a place of arrival and assembly."
+    },
+    "s7": {
+      "narrationUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/7-revised.mp3",
+      "captionsUrl": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Narration/Revised/7-revised.vtt",
+      "timedHighlights": [],
+      "exploreArea": null,
+      "exploreTitle": null,
+      "exploreDescription": null
+    }
+  }
+}
