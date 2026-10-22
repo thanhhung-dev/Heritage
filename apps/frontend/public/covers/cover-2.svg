@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#052e2b"/>
+      <stop offset="0.5" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#99f6e4"/>
+    </linearGradient>
+    <linearGradient id="t1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#065f46"/>
+      <stop offset="1" stop-color="#022c22"/>
+    </linearGradient>
+    <linearGradient id="t2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#047857"/>
+      <stop offset="1" stop-color="#064e3b"/>
+    </linearGradient>
+    <linearGradient id="t3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#sky)"/>
+  <circle cx="230" cy="118" r="56" fill="#ccfbf1" opacity="0.75"/>
+  <path d="M0 210 Q200 120 420 196 T860 176 T1200 204 V400 H0 Z" fill="url(#t1)"/>
+  <path d="M0 248 Q240 168 480 236 T920 218 T1200 246 V400 H0 Z" fill="url(#t2)"/>
+  <path d="M0 292 Q260 216 520 280 T960 264 T1200 288 V400 H0 Z" fill="url(#t3)"/>
+  <path d="M0 340 Q300 272 600 332 T1200 330 V400 H0 Z" fill="#022c22"/>
+  <g fill="none" stroke="#a7f3d0" stroke-width="2" opacity="0.3">
+    <path d="M0 238 Q240 158 480 226 T920 208 T1200 236"/>
+    <path d="M0 282 Q260 206 520 270 T960 254 T1200 278"/>
+    <path d="M0 330 Q300 262 600 322 T1200 320"/>
+  </g>
+  <g stroke="#ecfdf5" stroke-width="4" stroke-linecap="round" opacity="0.8">
+    <path d="M710 268 v40"/>
+    <path d="M710 268 l22 -16 M710 268 l-22 -16 M710 268 l0 -24"/>
+  </g>
+  <rect x="702" y="306" width="16" height="10" rx="2" fill="#064e3b"/>
+</svg>

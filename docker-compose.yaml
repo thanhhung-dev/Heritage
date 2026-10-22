@@ -1,0 +1,11 @@
+name: heritage-local
+
+# PostgreSQL và OpenSearch đã chạy bởi compose project "heritagegraph".
+# File này chỉ ghi nhận endpoint cho backend local; không tạo container mới.
+# Backend kết nối qua host ports:
+#   OpenSearch: http://127.0.0.1:9200
+#   PostgreSQL: postgresql+psycopg://heritagegraph:local-only-password@127.0.0.1:5433/heritagegraph
+#
+# Không chạy "docker compose up" với file này.
+services: {}
+

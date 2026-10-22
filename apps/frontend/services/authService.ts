@@ -2,7 +2,8 @@
 
 import { message } from 'antd';
 import { API_BASE_URL } from '@/config/api';
-import { setAuthTokens, type AuthTokens, type User } from '@/lib/auth';
+import { decodeGoogleIdToken } from '@/lib/googleAuth';
+import { setAuthTokens, type User } from '@/lib/auth';
 
 export interface RegisterData {
   email: string;
@@ -11,7 +12,7 @@ export interface RegisterData {
 }
 
 export interface LoginData {
-  username_or_email: string;
+  email: string;
   password: string;
 }
 
@@ -48,14 +49,14 @@ export async function registerUser(data: RegisterData): Promise<RegisterResponse
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Đăng ký thất bại');
+    throw new Error(error.detail || 'Registration failed.');
   }
 
   return json as RegisterResponse;
 }
 
 /**
- * Login with username/email and password
+ * Login with email and password
  */
 export async function loginUser(data: LoginData): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -70,7 +71,7 @@ export async function loginUser(data: LoginData): Promise<LoginResponse> {
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Đăng nhập thất bại');
+    throw new Error(error.detail || 'Could not sign in.');
   }
 
   return json as LoginResponse;
@@ -85,10 +86,10 @@ export async function handleRegister(
 ): Promise<void> {
   try {
     const response = await registerUser(data);
-    message.success(response.message || 'Đăng ký thành công!');
+    message.success(response.message || 'Registration successful.');
     if (onSuccess) onSuccess();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Đăng ký thất bại';
+    const errorMessage = error instanceof Error ? error.message : 'Registration failed.';
     message.error(errorMessage);
     throw error;
   }
@@ -107,10 +108,10 @@ export async function handleLogin(
     // Store tokens and user info
     setAuthTokens(response);
     
-    message.success('Đăng nhập thành công!');
+    message.success('Signed in successfully.');
     if (onSuccess) onSuccess();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
+    const errorMessage = error instanceof Error ? error.message : 'Could not sign in.';
     message.error(errorMessage);
     throw error;
   }
@@ -132,10 +133,22 @@ export async function loginWithGoogle(idToken: string): Promise<LoginResponse> {
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Đăng nhập Google thất bại');
+    throw new Error(error.detail || 'Google sign-in failed.');
   }
 
   return json as LoginResponse;
+}
+
+/** Only allow https URLs (Google profile photos always use https). */
+function getSafeAvatarUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -147,15 +160,72 @@ export async function handleGoogleLogin(
 ): Promise<void> {
   try {
     const response = await loginWithGoogle(idToken);
+    const claims = decodeGoogleIdToken(idToken);
+
+    // The auth API only returns account fields, so hydrate the display name
+    // and Google profile photo from the verified ID token claims.
+    const user: User = {
+      ...response.user,
+      display_name:
+        claims.name?.trim() || response.user.display_name || response.user.username,
+      avatar_url: getSafeAvatarUrl(claims.picture) ?? response.user.avatar_url,
+    };
+
+    // Store tokens and user info (including the Google avatar).
+    setAuthTokens({ ...response, user });
     
-    // Store tokens and user info
-    setAuthTokens(response);
-    
-    message.success('Đăng nhập bằng Google thành công!');
+    message.success('Signed in with Google.');
     if (onSuccess) onSuccess();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Đăng nhập Google thất bại';
+    const errorMessage = error instanceof Error ? error.message : 'Google sign-in failed.';
     message.error(errorMessage);
     throw error;
   }
+}
+
+/**
+ * Request password reset link
+ */
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    const error = json as ErrorResponse;
+    throw new Error(error.detail || 'Could not send the request.');
+  }
+
+  return json as { message: string };
+}
+
+/**
+ * Reset password with token
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+
+  const json = await response.json();
+
+  if (!response.ok) {
+    const error = json as ErrorResponse;
+    throw new Error(error.detail || 'Could not reset your password.');
+  }
+
+  return json as { message: string };
 }

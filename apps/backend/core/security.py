@@ -16,6 +16,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
 
 # Password hasher using argon2id
 ph = PasswordHasher()
@@ -130,3 +131,67 @@ async def get_current_user(
         )
     
     return payload
+
+def require_admin(current_user: dict = Depends(get_current_user)) -> dict[str, Any]:
+    """Allow only accounts carrying the ADMIN role claim."""
+    if str(current_user.get("role", "")).lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền quản trị.",
+        )
+    return current_user
+
+
+def create_password_reset_token(email: str) -> str:
+    """Create a JWT token for password reset.
+
+    Args:
+        email: Email address to encode in the token's `sub` claim.
+
+    Returns:
+        Encoded JWT token string for password reset, valid for
+        PASSWORD_RESET_TOKEN_EXPIRE_MINUTES minutes. Uses an explicit
+        UTC-aware timestamp (`datetime.now(timezone.utc)`) when computing
+        the expiration so verification is not affected by the server's
+        local timezone.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    to_encode = {
+        "sub": email,
+        "type": "reset",
+        "exp": expire,
+    }
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def verify_reset_password_token(token: str) -> str | None:
+    """Verify a password reset token and extract the email.
+
+    Args:
+        token: JWT token string to verify.
+
+    Returns:
+        Email address (the `sub` claim) if the token is valid and not
+        expired, or None if the token is invalid, malformed, of the
+        wrong type, or expired.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+        # Verify token type
+        if payload.get("type") != "reset":
+            return None
+
+        email = payload.get("sub")
+        if email is None:
+            return None
+
+        return email
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None
+
+
+# Backward-compatible alias (previous name used elsewhere in the codebase)
+verify_password_reset_token = verify_reset_password_token
+

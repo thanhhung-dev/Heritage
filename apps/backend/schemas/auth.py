@@ -22,9 +22,9 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """Request schema for user login."""
-    
-    username_or_email: str = Field(..., description="Username or email address")
+    """Request schema for email/password login."""
+
+    email: EmailStr = Field(..., description="Email address")
     password: str = Field(..., description="Password")
 
 
@@ -43,7 +43,7 @@ class RegisterResponse(BaseModel):
     account_id: str = Field(..., description="Account UUID")
     email: str = Field(..., description="Email address")
     username: str = Field(..., description="Username")
-    message: str = Field(default="Đăng ký thành công", description="Success message")
+    message: str = Field(default="Registration successful", description="Success message")
 
 
 class LoginResponse(BaseModel):
@@ -70,3 +70,33 @@ class ErrorResponse(BaseModel):
     """Error response schema."""
     
     detail: str = Field(..., description="Error message")
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request schema for forgot password."""
+    
+    email: EmailStr = Field(..., description="Email address")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request schema for reset password."""
+    
+    token: str = Field(..., description="Password reset token")
+    new_password: str = Field(..., min_length=12, description="New password (minimum 12 characters)")
+    
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        """Validate password complexity."""
+        if len(v) < 12:
+            raise ValueError("Password must be at least 12 characters long")
+        
+        has_upper = any(c.isupper() for c in v)
+        has_lower = any(c.islower() for c in v)
+        has_digit = any(c.isdigit() for c in v)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
+        
+        if not (has_upper and has_lower and has_digit and has_special):
+            raise ValueError("Password must include uppercase, lowercase, number, and special characters")
+        
+        return v

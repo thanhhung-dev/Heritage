@@ -110,4 +110,8 @@ Thumbs.db
 .agents
 .opencode
 _bmad/
-_bmad-uotput
+_bmap-output
+
+infra/
+*.tfstate
+*.tfstate.*

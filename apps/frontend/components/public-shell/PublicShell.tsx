@@ -5,10 +5,11 @@ import type { ReactNode } from "react";
 import { PublicNavigation } from "./PublicNavigation";
 import { PublicFooter } from "./PublicFooter";
 import { PublicFooterSlot } from "./PublicFooterSlot";
-import { AuthNavigation } from "@/features/auth/AuthNavigation";
+import { HeaderAccountActions } from "./HeaderAccountActions";
 import styles from "./public-shell.module.css";
 import { LogoText } from "../LogoText";
 import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
+import type { PublicAccount } from "@/features/account/types";
 
 interface PublicShellProps {
   children: ReactNode;
@@ -48,7 +49,7 @@ export function PublicShell({ children, account }: PublicShellProps) {
             />
           </div>
           <PublicNavigation />
-          <AuthNavigation />
+          <HeaderAccountActions />
         </div>
       </header>
 

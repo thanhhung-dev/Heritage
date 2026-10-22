@@ -4,28 +4,28 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import authEye from "@/access/icons/auth-eye.svg";
-import { Button, Input, type InputRef } from "antd";
+import { Alert, Button, Input, type InputRef } from "antd";
 import { handleRegister } from "@/services/authService";
 import styles from "./auth.module.css";
 
 function emailError(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return "Nhập địa chỉ email của bạn.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Nhập địa chỉ email hợp lệ.";
+  if (!trimmed) return "Enter your email.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Enter a valid email address.";
   return "";
 }
 
 function usernameError(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return "Nhập tên đăng nhập của bạn.";
-  if (trimmed.length < 3) return "Tên đăng nhập phải có ít nhất 3 ký tự.";
-  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return "Tên đăng nhập chỉ được chứa chữ cái, số, _ và -.";
+  if (!trimmed) return "Enter a username.";
+  if (trimmed.length < 3) return "Username must be at least 3 characters.";
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return "Username can only contain letters, numbers, _ and -.";
   return "";
 }
 
 function passwordError(value: string) {
-  if (!value) return "Nhập mật khẩu của bạn.";
-  if (value.length < 8) return "Mật khẩu phải có ít nhất 8 ký tự.";
+  if (!value) return "Enter your password.";
+  if (value.length < 6) return "Password must be at least 6 characters.";
   return "";
 }
 
@@ -42,6 +42,7 @@ export function SignUpForm() {
   const [visible, setVisible] = useState(false);
   const [touched, setTouched] = useState({ email: false, username: false, password: false });
   const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
   
   const emailErr = touched.email ? emailError(email) : "";
   const usernameErr = touched.username ? usernameError(username) : "";
@@ -50,6 +51,7 @@ export function SignUpForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTouched({ email: true, username: true, password: true });
+    setApiError(""); // Clear previous API errors
     
     // Validation
     if (emailError(email)) { emailRef.current?.focus(); return; }
@@ -69,9 +71,11 @@ export function SignUpForm() {
           router.push("/sign-in");
         }
       );
-    } catch (error) {
-      // Error already displayed by handleRegister
-      console.error("Registration failed:", error);
+    } catch (err: any) {
+      // Extract specific error message from API response
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Something went wrong. Please try again.";
+      setApiError(errorMessage);
+      console.error("Registration failed:", err);
     } finally {
       setSubmitting(false);
     }
@@ -79,6 +83,16 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={submit} noValidate className={styles.form}>
+      {apiError && (
+        <Alert
+          showIcon
+          type="error"
+          message={apiError}
+          className={styles.alert}
+          closable
+          onClose={() => setApiError("")}
+        />
+      )}
       <div className={styles.field}>
         <label htmlFor={`${id}-email`}>Email</label>
         <Input
@@ -101,7 +115,7 @@ export function SignUpForm() {
       </div>
       
       <div className={styles.field}>
-        <label htmlFor={`${id}-username`}>Tên đăng nhập</label>
+        <label htmlFor={`${id}-username`}>Username</label>
         <Input
           ref={usernameRef}
           id={`${id}-username`}
@@ -121,7 +135,7 @@ export function SignUpForm() {
       </div>
       
       <div className={styles.field}>
-        <label htmlFor={`${id}-password`}>Mật khẩu</label>
+        <label htmlFor={`${id}-password`}>Password</label>
         <div className={styles.passwordField}>
           <Input
             ref={passwordRef}
@@ -140,7 +154,7 @@ export function SignUpForm() {
           <button
             type="button"
             className={styles.eye}
-            aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            aria-label={visible ? "Hide password" : "Show password"}
             aria-pressed={visible}
             onClick={() => setVisible(previous => !previous)}
           >
@@ -158,7 +172,7 @@ export function SignUpForm() {
           disabled={!email.trim() || !username.trim() || !password || submitting}
           loading={submitting}
         >
-          Đăng ký
+          Sign Up
         </Button>
       </div>
     </form>

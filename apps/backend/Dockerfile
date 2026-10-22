@@ -8,7 +8,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY apps/backend/requirements.docker.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch==2.9.1+cpu \
+    && pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY apps/__init__.py /app/apps/__init__.py
 COPY apps/backend /app/apps/backend

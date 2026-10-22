@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e1b4b"/>
+      <stop offset="0.5" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#fb923c"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f3f46"/>
+      <stop offset="1" stop-color="#18181b"/>
+    </linearGradient>
+    <linearGradient id="gate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#7c2d12"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#sky)"/>
+  <circle cx="330" cy="128" r="62" fill="#fed7aa" opacity="0.85"/>
+  <circle cx="330" cy="128" r="110" fill="#fb923c" opacity="0.16"/>
+  <path d="M0 270 Q180 214 340 256 T700 246 T1040 268 T1200 248 V400 H0 Z" fill="#312e81" opacity="0.55"/>
+  <rect y="292" width="1200" height="108" fill="url(#wall)"/>
+  <g fill="#27272a">
+    <rect x="40" y="268" width="70" height="24"/>
+    <rect x="150" y="268" width="70" height="24"/>
+    <rect x="260" y="268" width="70" height="24"/>
+    <rect x="880" y="268" width="70" height="24"/>
+    <rect x="990" y="268" width="70" height="24"/>
+    <rect x="1100" y="268" width="70" height="24"/>
+  </g>
+  <g transform="translate(560 224)">
+    <path d="M0 176 V44 L78 0 L156 44 V176 Z" fill="url(#wall)"/>
+    <path d="M40 176 V112 Q78 82 116 112 V176 Z" fill="url(#gate)"/>
+    <path d="M-16 46 Q78 -8 172 46 L156 34 Q78 -6 0 34 Z" fill="#f97316" opacity="0.9"/>
+    <path d="M20 30 V-8 M78 12 V-24 M136 30 V-8" stroke="#fbbf24" stroke-width="3"/>
+    <path d="M20 -8 h26 v14 h-26 Z M65 -24 h26 v14 h-26 Z M110 -8 h26 v14 h-26 Z" fill="#dc2626"/>
+  </g>
+  <g fill="#fbbf24" opacity="0.35">
+    <rect x="62" y="300" width="12" height="16"/>
+    <rect x="172" y="300" width="12" height="16"/>
+    <rect x="902" y="300" width="12" height="16"/>
+    <rect x="1012" y="300" width="12" height="16"/>
+    <rect x="600" y="310" width="10" height="14"/>
+    <rect x="666" y="310" width="10" height="14"/>
+  </g>
+</svg>
