@@ -35,6 +35,7 @@ import { useTourPlayer } from "./player/useTourPlayer";
 import ExploreControls from "./components/ExploreControls";
 import ExploreInfoPanel from "./components/ExploreInfoPanel";
 import ExploreTooltip from "./components/ExploreTooltip";
+import MobileJoystick from "./components/MobileJoystick";
 import HighlightPanel from "./components/HighlightPanel";
 import Replay from "@/access/icons/replay.svg"
 import skip_voicer from "@/access/icons/skip_voicer.svg"
@@ -42,6 +43,7 @@ import styles from "./styles.module.css";
 import next_scene from "@/access/icons/next_scene.svg"
 
 const INTERACTIVE_ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/nav_bar";
+const UI_ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/icons";
 
 export default function HeritageViewer({ interactiveRoute = false }: { interactiveRoute?: boolean }) {
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
@@ -152,6 +154,13 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   const showPrev = (isEnded && index > 0) || arrivalPrev;
   const showNextScene = isEnded;
 
+  // Trên mobile, nút "Dive Deeper" ở góc bị ẩn (xem CSS `.exploreCorner`), nên
+  // CTA được đưa vào chính thanh playback — chỗ 3 nút 15s/Play/Pause đã bị ẩn.
+  // Phải gate bằng `isEnded` giống CTA ở góc trên desktop: chỉ khi narration
+  // của scene đã chạy xong mới được vào chế độ 3D.
+  const showDiveInline = isEnded && player.interactive !== null && player.exploreMode === null;
+  const diveLabel = player.initialExploreMode === "walk" ? "Explore in 3D" : "Dive Deeper";
+
   // Vào/ra chế độ điểm tương tác là ĐỔI URL, không phải đổi state: đuôi `/int` là
   // nguồn sự thật duy nhất cho trạng thái đó (`lib/tour-routes.ts`). `useTourPlayer`
   // đọc lại URL rồi mới điều khiển engine, nên chỉ có một chiều dữ liệu.
@@ -227,7 +236,11 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   };
 
   const handleSeek = player.seekBy;
-  const hotspotPlayback = player.exploreMode !== null && player.selectedHighlight !== null;
+  // Đang ở Dive Deeper (URL `/int`) hay không — tách riêng khỏi `hotspotPlayback`
+  // vì mobile cần thay cả thanh điều khiển ngay khi vào chế độ 3D, chưa cần
+  // chọn hotspot nào.
+  const exploreActive = player.exploreMode !== null;
+  const hotspotPlayback = exploreActive && player.selectedHighlight !== null;
 
   const scrollCarousel = (ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) => {
     ref.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
@@ -457,45 +470,14 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
             <div
               className={`${styles.playbackControls} ${hotspotPlayback ? styles.interactivePlaybackControls : ""}`}
               data-playback-mode={hotspotPlayback ? "interactive" : "scene"}
+              data-explore={exploreActive ? "1" : undefined}
+              data-playpen={hotspotPlayback ? "1" : undefined}
+              data-cta={showDiveInline ? "1" : undefined}
             >
-              {hotspotPlayback ? (
-                <>
-                  <button
-                    aria-label="Reset camera"
-                    className={`${styles.intResetButton} ${styles.intButton} ${styles.ssButton} ${styles["intBtn--scene"]}`}
-                    id="intResetButton"
-                    type="button"
-                    onClick={player.resetExplore}
-                  >
-                    <Image
-                      className={styles.intButtonImg}
-                      src={`${INTERACTIVE_ICONS}/playpen_restart.svg`}
-                      alt="Reset camera"
-                      width={24}
-                      height={24}
-                      unoptimized
-                    />
-                    <div className={styles.intNavToolTip}>Reset camera</div>
-                  </button>
-                  <button
-                    aria-label="Go back"
-                    className={`${styles.intExitButton} ${styles.intButton} ${styles.ssButton} ${styles["intBtn--scene"]}`}
-                    id="intExitButton"
-                    type="button"
-                    onClick={exitExplore}
-                  >
-                    <Image
-                      className={styles.intButtonImg}
-                      src={`${INTERACTIVE_ICONS}/playpen_exit.svg`}
-                      alt="Go back"
-                      width={24}
-                      height={24}
-                      unoptimized
-                    />
-                    <div className={styles.intNavToolTip}>Go back</div>
-                  </button>
-                </>
-              ) : <>
+              {/* Cụm narration của scene. Trên mobile khi đang ở Dive Deeper
+                  CSS ẩn hẳn cụm này để nhường chỗ cho cặp nút playpen. */}
+              {!hotspotPlayback && (
+              <div className={styles.scenePlaybackGroup}>
               {/* Previous scene / Replay scene (cùng một nút) */}
               <button
                 id="prev-replay"
@@ -515,6 +497,10 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
                 </div>
               </button>
 
+              {/* Cụm 3 nút 15s + Play/Pause. Desktop: `display: contents` nên
+                  vẫn nằm phẳng trong thanh. Mobile: ẩn hẳn (xem `.seekGroup`)
+                  để nhường chỗ cho CTA "Dive Deeper" nằm ngay trong thanh. */}
+              <div className={styles.seekGroup}>
               {/* Back 15 — làm mờ & khóa khi narration đã hết */}
               <button
                 tabIndex={0}
@@ -646,6 +632,42 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
                 </svg>
                 <div className={styles.ssNavToolTip}>Forward 15 seconds</div>
               </button>
+              </div>
+
+              {/* CTA "Dive Deeper" nằm trong thanh playback — chỉ hiện ở mobile,
+                  thay đúng chỗ 3 nút vừa bị ẩn (CSS `.diveDeeperInline`). */}
+              {showDiveInline && (
+                <button
+                  type="button"
+                  id="diveDeeperInline"
+                  className={styles.diveDeeperInline}
+                  aria-label={diveLabel}
+                  onClick={enterExplore}
+                >
+                  {/* Chế độ đi bộ ("Explore in 3D") dùng dải dấu chân, không
+                      dùng icon lens — giống `.exploreCorner.free-explore` của
+                      nút góc trên desktop (ở đó lens bị `visibility: hidden`).
+                      "Dive Deeper" mới dùng lens. */}
+                  {player.initialExploreMode === "walk" ? (
+                    <span className={styles.diveDeeperFootsteps} aria-hidden="true">
+                      {Array.from({ length: 3 }, (_, index) => (
+                        <Image
+                          key={index}
+                          className={`${styles.footstepMini} ${styles[index % 2 === 0 ? "footstepMini-l" : "footstepMini-r"]}`}
+                          src={`${UI_ICONS}/icon_footstep_${index % 2 === 0 ? "l" : "r"}.svg`}
+                          width={14}
+                          height={32}
+                          alt=""
+                          unoptimized
+                        />
+                      ))}
+                    </span>
+                  ) : (
+                    <Image src={`${UI_ICONS}/explore_lens.svg`} width={24} height={24} alt="" aria-hidden="true" unoptimized />
+                  )}
+                  <span>{diveLabel}</span>
+                </button>
+              )}
 
               {/* Next scene / Skip */}
               <div className={styles.ringButtonGroup}>
@@ -681,7 +703,54 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
                   style={{ display: "none" }}
                 />
               </div>
-              </>}
+              </div>
+              )}
+
+              {/* Reset camera / Go back — cặp nút playpen của bản gốc.
+                  Desktop: chỉ hiện khi đang mở một hotspot. Mobile: hiện ngay
+                  khi vào Dive Deeper (xem CSS `.playpenPlayback`). */}
+              {exploreActive && (
+                <div className={styles.playpenPlayback}>
+                  <button
+                    aria-label="Reset camera"
+                    className={`${styles.intResetButton} ${styles.intButton} ${styles.ssButton} ${styles["intBtn--scene"]}`}
+                    id="intResetButton"
+                    type="button"
+                    // Chưa mở badge nào thì chưa có gì để "reset" — khoá nút lại,
+                    // CSS làm mờ đi. Chọn một lens badge xong mới bật lại.
+                    disabled={!hotspotPlayback}
+                    aria-disabled={!hotspotPlayback}
+                    onClick={player.resetExplore}
+                  >
+                    <Image
+                      className={styles.intButtonImg}
+                      src={`${INTERACTIVE_ICONS}/playpen_restart.svg`}
+                      alt="Reset camera"
+                      width={24}
+                      height={24}
+                      unoptimized
+                    />
+                    <div className={styles.intNavToolTip}>Reset camera</div>
+                  </button>
+                  <button
+                    aria-label="Go back"
+                    className={`${styles.intExitButton} ${styles.intButton} ${styles.ssButton} ${styles["intBtn--scene"]}`}
+                    id="intExitButton"
+                    type="button"
+                    onClick={exitExplore}
+                  >
+                    <Image
+                      className={styles.intButtonImg}
+                      src={`${INTERACTIVE_ICONS}/playpen_exit.svg`}
+                      alt="Go back"
+                      width={24}
+                      height={24}
+                      unoptimized
+                    />
+                    <div className={styles.intNavToolTip}>Go back</div>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* System controls */}
@@ -856,6 +925,10 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       {player.exploreMode === "walk" && <ExploreTooltip key={`tip-${playbackKey}`} />}
       {player.exploreMode === "walk" && <ExploreInfoPanel key={`info-${playbackKey}`}
         title={player.exploreTitle} description={player.exploreDescription} />}
+      {/* Đi bộ trên mobile: không có WASD nên thay bằng cần gạt ảo. CSS chỉ bật
+          ở ≤768px, nên desktop vào chế độ này vẫn không thấy gì. */}
+      {player.exploreMode === "walk" && <MobileJoystick
+        onChange={player.setWalkStick} onRelease={player.releaseWalkStick} />}
       <HighlightPanel key={player.interactive?.id} highlight={player.selectedHighlight}
         highlights={player.interactive?.highlights} onClose={player.closeHighlight} />
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}

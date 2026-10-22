@@ -262,6 +262,16 @@ export function createTourEngine(
       explore.setArea(area);
       invalidate();
     },
+    /**
+     * Cần gạt ảo trên mobile. Không gọi `invalidate()`: `updateWalk()` trả về
+     * `true` khi camera dịch chuyển và vòng lặp render đã tự vẽ frame đó.
+     */
+    setWalkStick(x: number, y: number) {
+      explore.setWalkStick(x, y);
+    },
+    releaseWalkStick() {
+      explore.releaseWalkStick();
+    },
     resetExplore(duration = 0) {
       cameraController.clearDollyTarget();
       explore.reset(duration);

@@ -47,6 +47,7 @@ export function createExploreController(
     if (!walk) return;
     walk = null;
     boundaryVisible = false;
+    input?.releaseStick();
     input?.detach();
     controls.enableRotate = entryRotate;
     controls.enablePan = entryPan;
@@ -69,6 +70,15 @@ export function createExploreController(
     },
 
     isWalking: () => walk !== null,
+
+    /** Cần gạt ảo trên mobile — chỉ có tác dụng khi đang đi bộ. */
+    setWalkStick(x: number, y: number) {
+      input?.setStick(x, y);
+    },
+
+    releaseWalkStick() {
+      input?.releaseStick();
+    },
 
     enter(mode: ExploreMode, eyeHeight?: number) {
       if (!entry) {

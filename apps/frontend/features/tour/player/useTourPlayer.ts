@@ -241,6 +241,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       if (pose) engine?.restoreCameraPose(pose, 1.2);
     },
     selectHighlight(id: number) { engine?.selectHighlight(id); },
+    /** Cần gạt ảo (mobile) — toạ độ đã chuẩn hoá `[-1, 1]`. */
+    setWalkStick(x: number, y: number) { engine?.setWalkStick(x, y); },
+    releaseWalkStick() { engine?.releaseWalkStick(); },
     restart() { void narration.replay(); },
     skipVoiceover: narration.skipToEnd,
     seekBy: (seconds: number) => seek(narration.currentTime + seconds),
