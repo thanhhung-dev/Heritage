@@ -122,6 +122,9 @@ export function createExploreController(
       }
 
       stopWalk();
+      // Scene view khoá zoom (chỉ kéo xoay), nhưng vào chế độ 3D thì cần zoom
+      // để ngắm kỹ chi tiết. `exit()` trả lại `entryZoom` (false) như cũ.
+      controls.enableZoom = true;
       controls.maxPolarAngle =
         mode === "free" ? Math.PI : Math.max(Math.PI / 2, controls.getPolarAngle());
     },
@@ -142,6 +145,10 @@ export function createExploreController(
       if (entry) {
         cameraController.restore(entry, duration);
         controls.maxPolarAngle = entryMaxPolarAngle;
+        // Trả lại đúng bộ cờ của scene view (zoom/pan đã bị khoá ở đó).
+        controls.enableRotate = entryRotate;
+        controls.enablePan = entryPan;
+        controls.enableZoom = entryZoom;
         entry = null;
       }
     },

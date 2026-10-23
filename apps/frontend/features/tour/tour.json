@@ -111,7 +111,39 @@
         "title": "Where the Desert Came to Life",
         "description": "Petra, once called Raqmu, thrived as a crossroads of trade where the Nabataeans turned desert into life. Masters of water and stone, they built hidden channels and vibrant architecture, reminders of a people who connected worlds through ingenuity and resilience.",
         "sequence": 0,
-        "sky": null,
+        "sky": {
+          "id": 8,
+          "name": "Nighttime",
+          "turbidity": 5,
+          "rayleigh": 0.1,
+          "mieCoefficient": 0.001,
+          "mieDirectionalG": 0.8,
+          "elevation": -10,
+          "azimuth": 0,
+          "exposure": 0.1,
+          "cloudCoverage": 0,
+          "cloudDensity": 0,
+          "stars": 0.75,
+          "light_settings": {
+            "dir": {
+              "color": "#527fc7",
+              "position": {
+                "x": 0,
+                "y": 1000,
+                "z": 0
+              },
+              "intensity": 1.05
+            },
+            "fog": {
+              "color": "#151e27"
+            },
+            "hemi": {
+              "color": "#527fc7",
+              "intensity": 7.2,
+              "groundColor": "#25416f"
+            }
+          }
+        },
         "camera": {
           "node_name": null,
           "start_position": [
@@ -426,7 +458,39 @@
         "title": "Climbing to Purpose",
         "description": "The climb to Ad Deir winds past sandstone alive with color and echoes of ancient trade. At the summit, its vast façade stirs awe, a reminder of Nabataean mastery. Beyond, trails descend into wadis, desert valleys that lie dry until rains briefly bring them to life.",
         "sequence": 1,
-        "sky": null,
+        "sky": {
+          "id": 2,
+          "name": "Sunrise",
+          "turbidity": 4,
+          "rayleigh": 3,
+          "mieCoefficient": 0.008,
+          "mieDirectionalG": 0.8,
+          "elevation": 1.8,
+          "azimuth": -90,
+          "exposure": 0.68,
+          "cloudCoverage": 0.25,
+          "cloudDensity": 0.45,
+          "stars": 0,
+          "light_settings": {
+            "dir": {
+              "color": "#FFB16A",
+              "position": {
+                "x": -1000,
+                "y": 500,
+                "z": 0
+              },
+              "intensity": 2.21
+            },
+            "fog": {
+              "color": "#584341"
+            },
+            "hemi": {
+              "color": "#FFB98A",
+              "intensity": 2.21,
+              "groundColor": "#5A3427"
+            }
+          }
+        },
         "camera": {
           "node_name": null,
           "start_position": [
@@ -664,7 +728,39 @@
         "title": "The Stories of Trade",
         "description": "From the hills above Petra, one can imagine caravans below, markets alive with voices, and goods from across the world. The Nabataeans thrived through trade and trust. Today, their descendants feel pride in this heritage and their role as its protectors.",
         "sequence": 2,
-        "sky": null,
+        "sky": {
+          "id": 5,
+          "name": "Afternoon",
+          "turbidity": 6,
+          "rayleigh": 1.2,
+          "mieCoefficient": 0.004,
+          "mieDirectionalG": 0.8,
+          "elevation": 50,
+          "azimuth": 90,
+          "exposure": 1,
+          "cloudCoverage": 0.4,
+          "cloudDensity": 0.55,
+          "stars": 0,
+          "light_settings": {
+            "dir": {
+              "color": "#ffd49a",
+              "position": {
+                "x": 1000,
+                "y": 750,
+                "z": 0
+              },
+              "intensity": 3
+            },
+            "fog": {
+              "color": "#eaecec"
+            },
+            "hemi": {
+              "color": "#c9e2ff",
+              "intensity": 2,
+              "groundColor": "#7a5a3e"
+            }
+          }
+        },
         "camera": {
           "node_name": null,
           "start_position": [
@@ -907,7 +1003,39 @@
         "title": "The Silence Inside",
         "description": "Inside Ad Deir, torchlight reveals interior features rarely seen clearly. Carved niches and subtle decorations suggest the chamber was used for rituals or contemplation, highlighting its spiritual importance to the Nabatean people.",
         "sequence": 3,
-        "sky": null,
+        "sky": {
+          "id": 6,
+          "name": "Sunset",
+          "turbidity": 8,
+          "rayleigh": 3.5,
+          "mieCoefficient": 0.005,
+          "mieDirectionalG": 0.75,
+          "elevation": 1.2,
+          "azimuth": 90,
+          "exposure": 1.5,
+          "cloudCoverage": 0.3,
+          "cloudDensity": 0.5,
+          "stars": 0,
+          "light_settings": {
+            "dir": {
+              "color": "#ff7a3d",
+              "position": {
+                "x": 1000,
+                "y": 500,
+                "z": 0
+              },
+              "intensity": 2
+            },
+            "fog": {
+              "color": "#271721"
+            },
+            "hemi": {
+              "color": "#ff9a6b",
+              "intensity": 0.67,
+              "groundColor": "#4a241f"
+            }
+          }
+        },
         "camera": {
           "node_name": null,
           "start_position": [
@@ -1120,7 +1248,39 @@
         "title": "Engineering the Impossible",
         "description": "North of the Monastery, carved channels and hidden cisterns reveal engineering marvels. The Nabataeans captured every drop of rain, slowing floods with terraces and dams, turning desert to life. Today, as flash floods grow more severe, these ancient methods guide efforts to protect Petra’s future.",
         "sequence": 4,
-        "sky": null,
+        "sky": {
+          "id": 4,
+          "name": "Midday",
+          "turbidity": 8,
+          "rayleigh": 0.92,
+          "mieCoefficient": 0.003,
+          "mieDirectionalG": 0.8,
+          "elevation": 90,
+          "azimuth": 0,
+          "exposure": 0.5,
+          "cloudCoverage": 0.3,
+          "cloudDensity": 0.5,
+          "stars": 0,
+          "light_settings": {
+            "dir": {
+              "color": "#ffdfc2",
+              "position": {
+                "x": 0,
+                "y": 1000,
+                "z": 0
+              },
+              "intensity": 4
+            },
+            "fog": {
+              "color": "#c3cdd4"
+            },
+            "hemi": {
+              "color": "#d8ecff",
+              "intensity": 5,
+              "groundColor": "#7a735f"
+            }
+          }
+        },
         "camera": {
           "node_name": null,
           "start_position": [
@@ -1383,7 +1543,39 @@
         "title": "A Place Still Lived In",
         "description": "Petra is more than stone, it has long been home. Bedouin families lived in its carved spaces, guided travelers, and passed down stories. Their roots run deep, like trees among the rocks. To protect Petra is also to honor its descendants -  proud stewards of this living heritage.",
         "sequence": 5,
-        "sky": null,
+        "sky": {
+          "id": 4,
+          "name": "Midday",
+          "turbidity": 8,
+          "rayleigh": 0.92,
+          "mieCoefficient": 0.003,
+          "mieDirectionalG": 0.8,
+          "elevation": 90,
+          "azimuth": 0,
+          "exposure": 0.5,
+          "cloudCoverage": 0.3,
+          "cloudDensity": 0.5,
+          "stars": 0,
+          "light_settings": {
+            "dir": {
+              "color": "#ffdfc2",
+              "position": {
+                "x": 0,
+                "y": 1000,
+                "z": 0
+              },
+              "intensity": 4
+            },
+            "fog": {
+              "color": "#c3cdd4"
+            },
+            "hemi": {
+              "color": "#d8ecff",
+              "intensity": 5,
+              "groundColor": "#7a735f"
+            }
+          }
+        },
         "camera": {
           "node_name": null,
           "start_position": [
@@ -1533,7 +1725,39 @@
         "title": "Petra’s Future Is in Our Hands",
         "description": "Petra’s future rests on choices we make today. Visitors help by walking marked trails, leaving no trace, and respecting its stones. True preservation also means valuing local communities, sharing food, music, and stories. To protect Petra is to honor both place and people.",
         "sequence": 6,
-        "sky": null,
+        "sky": {
+          "id": 6,
+          "name": "Sunset",
+          "turbidity": 8,
+          "rayleigh": 3.5,
+          "mieCoefficient": 0.005,
+          "mieDirectionalG": 0.75,
+          "elevation": 1.2,
+          "azimuth": 90,
+          "exposure": 1.5,
+          "cloudCoverage": 0.3,
+          "cloudDensity": 0.5,
+          "stars": 0,
+          "light_settings": {
+            "dir": {
+              "color": "#ff7a3d",
+              "position": {
+                "x": 1000,
+                "y": 500,
+                "z": 0
+              },
+              "intensity": 2
+            },
+            "fog": {
+              "color": "#271721"
+            },
+            "hemi": {
+              "color": "#ff9a6b",
+              "intensity": 0.67,
+              "groundColor": "#4a241f"
+            }
+          }
+        },
         "camera": {
           "node_name": null,
           "start_position": [

@@ -35,6 +35,7 @@ import { useTourPlayer } from "./player/useTourPlayer";
 import ExploreControls from "./components/ExploreControls";
 import ExploreInfoPanel from "./components/ExploreInfoPanel";
 import ExploreTooltip from "./components/ExploreTooltip";
+import LookAroundHint from "./components/LookAroundHint";
 import MobileJoystick from "./components/MobileJoystick";
 import HighlightPanel from "./components/HighlightPanel";
 import Replay from "@/access/icons/replay.svg"
@@ -916,6 +917,10 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
 
       {/* Transient toast */}
       <div className={styles.toast} role="status" aria-live="polite" />
+      {/* Gợi ý kéo để xoay: chỉ hiện khi narration đã xong và đang ở scene view
+          (vào chế độ 3D thì đã có tooltip điều khiển riêng). Tự tắt sau cú kéo
+          canvas đầu tiên — xem `LookAroundHint`. */}
+      <LookAroundHint hidden={!isEnded || player.exploreMode !== null} />
       {isEnded && <ExploreControls interactive={player.interactive} mode={player.exploreMode}
         onEnter={enterExplore} onReset={player.resetExplore} onExit={exitExplore}
         initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}

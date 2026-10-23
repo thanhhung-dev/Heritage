@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import styles from "../styles.module.css";
+
+const UI_ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/icons";
+
 export default function ExploreTooltip() {
   const [visible, setVisible] = useState(true);
 
@@ -22,19 +25,27 @@ export default function ExploreTooltip() {
                   Chọn bằng CSS để không phải đo breakpoint trong JS. */}
               <Image className={`${styles.exploreTooltipIcon} ${styles.desktopOnly}`} src="/images/icon_wasd.png" alt="" width={128} height={128} unoptimized />
               <Image className={`${styles.exploreTooltipIcon} ${styles["exploreTooltipIcon--glow"]} ${styles.desktopOnly}`} src="/images/icon_wasd_h.png" alt="" width={128} height={128} unoptimized />
-              <svg
-                className={`${styles.exploreTooltipIcon} ${styles["exploreTooltipIcon--joystick"]} ${styles.mobileOnly}`}
-                viewBox="0 0 128 128"
-                fill="none"
-                aria-hidden="true"
-              >
-                <circle cx="64" cy="64" r="46" stroke="#fef1d7" strokeWidth="3" opacity="0.45" />
-                <circle cx="64" cy="64" r="30" stroke="#fef1d7" strokeWidth="2" opacity="0.2" />
-                <circle cx="78" cy="50" r="17" stroke="#fef1d7" strokeWidth="4" fill="rgba(254, 241, 215, 0.14)" />
-              </svg>
+              {/* Cần gạt ảo: dùng đúng 2 asset gốc của bản thiết kế — đĩa nền
+                  và núm chồng lên nhau, núm lệch lên phải (đang được đẩy). */}
+              <Image
+                className={styles.joystickTooltipBase}
+                src={`${UI_ICONS}/icon_joystick_base.svg`}
+                alt=""
+                width={64}
+                height={64}
+                unoptimized
+              />
+              <Image
+                className={styles.joystickTooltipTop}
+                src={`${UI_ICONS}/icon_joystick_top.svg`}
+                alt=""
+                width={32}
+                height={32}
+                unoptimized
+              />
             </div>
             <span className={styles.desktopOnly}>Move with WASD keys</span>
-            <span className={styles.mobileOnly}>Use the joystick to move</span>
+            <span className={styles.mobileOnly}>Use the joystick to explore the space</span>
           </div>
           {/* Mobile đã có cần gạt ảo để đi, nên gợi ý "drag to look around" và
               icon chuột bị ẩn (xem `.desktopOnly`). */}

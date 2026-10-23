@@ -79,6 +79,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     // Biên đi bộ thuộc về CẢNH, không thuộc lần vào/ra chế độ — đặt ở đây để đổi
     // cảnh là biên đổi theo, kể cả khi đang ở sẵn trong chế độ đi bộ.
     engine?.setExploreArea(exploreArea);
+    // Bầu trời + đèn + sương mù là thuộc tính của CẢNH (`threeJS_skySet`), đổi
+    // cảnh là đổi luôn ánh sáng.
+    engine?.setSky(currentScene?.sky ?? null);
     void engine?.setSceneHighlights(scenePlayback?.timedHighlights ?? []).catch((error: unknown) => {
       if (!cancelled) setSceneError(error instanceof Error ? error.message : "Không tải được highlight.");
     });

@@ -1,13 +1,8 @@
-/* ============================================================
-   Elephanta Caves Heritage Viewer
-   Design system: CyArk Tapestry
-   ============================================================ */
+
 
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
-/* ─────────────────────────────────────────────────────────────
-   Accessibility Primitives
-   ───────────────────────────────────────────────────────────── */
+
 
 .sr-only {
   position: absolute !important;
@@ -856,7 +851,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 800px) {
   .stopHeader {
     width: 80vw;
   }
@@ -1191,19 +1186,15 @@
   animation: mouseDrag 2.5s ease-in-out infinite;
 }
 
-/* Cần gạt ảo thay cho bàn phím WASD ở mobile. */
-.exploreTooltipIcon--joystick {
-  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 12px rgba(200, 180, 140, 0.55));
-  animation: joystickNudge 2.4s ease-in-out infinite;
-}
 
-/* Hai bộ nội dung song song: CSS chọn bộ phù hợp, không cần đo breakpoint
-   trong JS nên không lệch hydration. */
 .mobileOnly {
   display: none;
 }
 
-@media (max-width: 768px) {
+/* Ngưỡng này phải khớp với `@media (max-width: 1000px)` của `.mobileJoystick`:
+   nếu tooltip đổi sang gợi ý joystick muộn hơn thì có khoảng màn hình hiện
+   joystick mà vẫn bảo "Move with WASD keys" (và ngược lại). */
+@media (max-width: 1000px) {
   .desktopOnly {
     display: none;
   }
@@ -1212,11 +1203,37 @@
     display: block;
   }
 
-  /* `span` mặc định là inline; khối text cần inline-block để giữ padding của
-     `.exploreTooltipItem span`. */
+
   .exploreTooltipItem span.mobileOnly {
     display: inline-block;
   }
+}
+
+/* Cần gạt ảo trong tooltip (mobile): 2 asset gốc chồng lên nhau — đĩa nền
+   `icon_joystick_base.svg` và núm `icon_joystick_top.svg`. Núm đặt giữa rồi
+   lắc lên phải để thấy rõ nó đang được đẩy, đúng cảm giác "dùng joystick".
+   `composes` phải khai báo sau `.mobileOnly` (css-loader tra class theo thứ
+   tự trong file) và phải đứng đầu khối. */
+.joystickTooltipBase {
+  composes: mobileOnly;
+  position: absolute;
+  inset: 0;
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.35)) drop-shadow(0 0 12px rgba(200, 180, 140, 0.45));
+}
+
+.joystickTooltipTop {
+  composes: mobileOnly;
+  position: absolute;
+  top: calc(50% - 26px);
+  left: calc(50% - 26px);
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+  animation: joystickNudge 2.4s ease-in-out infinite;
 }
 
 @keyframes wasdGlow {
@@ -1248,7 +1265,7 @@
   }
 
   50% {
-    transform: translate(3px, -3px);
+    transform: translate(6px, -6px);
   }
 }
 
@@ -1264,6 +1281,83 @@
   height: 100%;
   width: 100%;
   pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Gợi ý "Drag to Look Around" (scene view, sau khi hết narration)
+   Số đo lấy nguyên từ bản gốc (`/stylesheets/index.min.*.css`): pill cao
+   18px chữ, icon bàn tay 72px lắc ngang, cả cụm thu nhỏ 0.81 và nằm cách
+   đáy 195px. `pointer-events: none` để không chặn cú kéo canvas bên dưới.
+   ───────────────────────────────────────────────────────────── */
+.interactionHint {
+  position: fixed;
+  top: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
+}
+
+.lookaroundHint {
+  position: absolute;
+  bottom: 195px;
+  scale: 0.81;
+}
+
+.lookaroundHintText {
+  width: max-content;
+  margin: auto;
+  padding: 6px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 30px;
+  background-color: var(--white-opacity-6, rgba(255, 255, 255, 0.06));
+  backdrop-filter: blur(5px) saturate(1.2);
+  -webkit-backdrop-filter: blur(5px) saturate(1.2);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+  color: #fef1d7;
+  font-size: 18px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.lookaroundHintIcon {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.lookaroundHintIcon img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  opacity: 0.85;
+  animation: shakeHand 2.4s ease-in-out infinite;
+}
+
+@keyframes shakeHand {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-10px);
+  }
+
+  40% {
+    transform: translateX(10px);
+  }
+
+  60% {
+    transform: translateX(-8px);
+  }
+
+  80% {
+    transform: translateX(8px);
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1315,9 +1409,6 @@
 
 @media (max-width: 511px) {
   .mobileJoystick {
-    /* Giữ `bottom: 100px` của bản gốc thay vì 20px: thanh playback là
-       `position: fixed; bottom: 0` cao ~100px, hạ xuống 20px sẽ đè lên nút
-       Prev/Next. */
     left: 20px;
     bottom: 100px;
   }
@@ -1344,9 +1435,7 @@
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Orb Tracker (bottom-left discovery circles)
-   ───────────────────────────────────────────────────────────── */
+
 
 .orbTracker {
   position: absolute;
@@ -1417,9 +1506,7 @@
   font-weight: 600;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Bottom Navigation Controls
-   ───────────────────────────────────────────────────────────── */
+
 
 .buttomNavParent {
   display: flex;
@@ -2250,15 +2337,13 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   display: flex;
 }
 
-@media (max-width: 768px) {
-  /* Mobile, đang xem scene: ẩn CTA "Dive Deeper" ở góc (nó chuyển xuống thanh
-     playback), ẩn 3 nút 15s/Play-Pause và hiện CTA ngay tại chỗ đó. */
+@media (max-width: 900px) {
+
   .exploreCorner {
     display: none !important;
   }
 
-  /* Chỉ ẩn 3 nút 15s/Play-Pause khi CTA "Dive Deeper" thực sự chiếm chỗ đó.
-     Scene không có điểm tương tác thì không có CTA ⇒ giữ nguyên 3 nút. */
+  
   .playbackControls[data-cta="1"] .seekGroup {
     display: none;
   }
@@ -2267,9 +2352,7 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
     display: inline-flex;
   }
 
-  /* Mobile + Dive Deeper: bỏ toàn bộ nút scene (Prev/Replay, 15s, Play/Pause,
-     Next/Skip), chỉ còn Reset camera + Go back. `display: none` cũng đưa các
-     nút này ra khỏi tab order nên không còn focus ẩn. */
+  
   .playbackControls[data-explore="1"] .scenePlaybackGroup {
     display: none;
   }
@@ -3982,9 +4065,7 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   }
 }
 
-@media (max-width: 768px) {
-  /* Trên mobile, "Go back" trong thanh playback đã đảm nhận việc thoát 3D nên
-     nút Exit ở góc trên phải là trùng chức năng — ẩn đi. */
+@media (max-width: 900px) {
   .exitCorner {
     display: none;
   }

@@ -43,6 +43,24 @@ export interface HeritageSkyPreset {
   elevation: number | null;
   azimuth: number | null;
   exposure: number | null;
+  /**
+   * Các tham số tán xạ bổ sung của shader Sky (bản gốc có trong `threeJS_skySet`
+   * nhưng bảng `sky_preset` chưa lưu ⇒ để optional, thiếu thì dùng mặc định của
+   * three.js). `mieDirectionalG` bị đánh vần sai (`mieDirctionalG`) trong dữ liệu
+   * nguồn nên bộ nạp dữ liệu phải chấp nhận cả hai khoá.
+   */
+  mieCoefficient?: number | null;
+  mieDirectionalG?: number | null;
+  /** Mây — `Sky` của three r186 dựng được trực tiếp từ hai tham số này. */
+  cloudCoverage?: number | null;
+  cloudDensity?: number | null;
+  /** Sao đêm: shader riêng của bản gốc, chưa dựng lại — giữ để dành. */
+  stars?: number | null;
+  /**
+   * Mật độ sương mù (`FogExp2`). Bản gốc để ở `threeJS_sets.fog_density` chứ
+   * không nằm trong preset; thiếu thì không dựng sương mù.
+   */
+  fogDensity?: number | null;
   light_settings: Record<string, unknown> | null;
 }
 

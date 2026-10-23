@@ -487,8 +487,9 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       camera.position.copy(sphere.center).addScaledVector(new THREE.Vector3(1, 0.8, 1).normalize(), distance);
       // `near = radius / 1000` cho model lớn (Petra: bán kính ~24.618) ra ~24,6 — LỚN HƠN
       // cả khoảng cách hover (~11) ⇒ cả quad badge bị mặt phẳng cắt gần xén sạch, badge
-      // "biến mất" khi camera dí sát. `far = distance + radius * 100` thì rộng vô ích vì
-      // không có skybox (`scene.background` chỉ là màu phẳng) — chỉ cần phủ hết model.
+      // "biến mất" khi camera dí sát. `far` chỉ cần phủ hết model: bầu trời đã được
+      // nướng thành cubemap làm `scene.background` (xem `environment`) nên không
+      // còn khối trời nào để `far` phải nới ra cho chứa.
       camera.near = Math.max(sphere.radius / 20000, 0.01);
       camera.far = distance + sphere.radius * 2;
       controls.minDistance = sphere.radius * 0.05;

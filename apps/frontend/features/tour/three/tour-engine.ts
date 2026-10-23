@@ -4,8 +4,9 @@ import type {
   ExploreArea,
   HeritageCamera,
   HeritageInteractiveHighlight,
+  HeritageSkyPreset,
 } from "@/types/heritage";
-import { setupEnvironment } from "./environment";
+import { createEnvironment } from "./environment";
 import { createModelLoader } from "./model-loader";
 import { createCameraController } from "./camera-controller";
 import { createExploreBoundary } from "./explore-area";
@@ -21,6 +22,31 @@ import {
 } from "./scene-highlights";
 
 export const HOVER_POINTER_EPSILON = 0.02;
+
+/**
+ * Trần tỉ lệ điểm ảnh. Model là lưới photogrammetry phủ kín màn hình nên chi phí
+ * gần như tuyến tính theo SỐ PIXEL: màn 2x mà render 1.5x đã là 2.25 lần số pixel
+ * so với CSS. 1.5 là mức còn phân biệt được với 1.0 trên ảnh tĩnh.
+ */
+const MAX_PIXEL_RATIO_CAP = 1.5;
+
+/** Sàn tỉ lệ điểm ảnh — dưới mức này ảnh đã nhoè rõ, thà chấp nhận ít frame hơn. */
+const MIN_PIXEL_RATIO = 0.8;
+
+/** Bước hạ/nâng tỉ lệ điểm ảnh mỗi lần thích ứng. */
+const PIXEL_RATIO_STEP = 0.2;
+
+/** Số frame gom lại mới đánh giá một lần (đủ dài để bỏ qua dao động từng frame). */
+const ADAPT_WINDOW = 40;
+
+/** Ngưỡng hạ: trung bình > 24 ms/frame (dưới ~42 fps). */
+const ADAPT_DOWN_SECONDS = 0.024;
+
+/** Ngưỡng nâng: trung bình < 15 ms/frame (trên ~66 fps) mới dám thử lại. */
+const ADAPT_UP_SECONDS = 0.015;
+
+/** Số frame chờ sau mỗi lần đổi tỉ lệ trước khi đánh giá tiếp (chống dao động). */
+const ADAPT_COOLDOWN = 60;
 
 
 export function shouldEvaluateHover(
@@ -40,21 +66,32 @@ export function createTourEngine(
   onStatus: (message: string | null) => void,
   onError: (error: unknown) => void,
 ) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    // Máy có hai GPU (laptop) sẽ dùng GPU rời thay vì GPU tích hợp — chênh nhau
+    // vài lần khung hình với model photogrammetry cỡ này.
+    powerPreference: "high-performance",
+  });
+  /** Trần tỉ lệ điểm ảnh của máy đang chạy (đọc lúc khởi tạo, không đọc ở SSR). */
+  const maxPixelRatio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO_CAP);
+  renderer.setPixelRatio(maxPixelRatio);
   renderer.domElement.setAttribute(
     "aria-label",
-    "Model 3D — kéo để xoay, cuộn để zoom",
+    "Model 3D — kéo ngang để xoay",
   );
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  setupEnvironment(scene, renderer);
-
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+  const environment = createEnvironment(scene, renderer);
+
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.maxPolarAngle = Math.PI / 2;
+  // Scene view chỉ "kéo để nhìn quanh": không zoom, không pan. Chế độ 3D
+  // (`enterExplore`) tự bật lại zoom — xem `explore-controller`.
+  controls.enableZoom = false;
+  controls.enablePan = false;
 
   const cameraController = createCameraController(camera, controls);
   const boundary = createExploreBoundary(scene);
@@ -91,12 +128,59 @@ export function createTourEngine(
   let glbCameras: THREE.Camera[] = [];
   let disposed = false;
 
+  /** Chỉ đồng bộ drawing buffer theo tỉ lệ điểm ảnh hiện tại (không đụng camera). */
+  const syncDrawingBuffer = () => {
+    const { width, height } = host.getBoundingClientRect();
+    if (!width || !height) return;
+    renderer.setSize(width, height);
+  };
+
   const resize = () => {
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
     explore.resize(cameraController.resize(width, height));
     renderer.setSize(width, height);
     invalidate();
+  };
+
+  /**
+   * Thích ứng độ phân giải render theo sức máy.
+   *
+   * Vòng lặp chỉ vẽ khi có gì đó đổi, nên chỉ số frame interval của những frame
+   * THỰC SỰ vẽ mới phản ánh tải GPU (frame nhàn rỗi thì `delta` vống lên vài trăm
+   * ms, đem so sẽ hạ độ phân giải vô cớ). Vì vậy chỉ gọi `trackFrame` trong nhánh
+   * có `renderer.render`, và bỏ qua các frame khựng bất thường (tải model, compile
+   * shader) để chúng không kéo trung bình xuống.
+   */
+  let pixelRatio = maxPixelRatio;
+  const adapt = { frames: 0, seconds: 0, cooldown: 0 };
+  const trackFrame = (delta: number) => {
+    if (delta <= 0 || delta > 0.25) return;
+    if (adapt.cooldown > 0) {
+      adapt.cooldown -= 1;
+      return;
+    }
+    adapt.frames += 1;
+    adapt.seconds += delta;
+    if (adapt.frames < ADAPT_WINDOW) return;
+    const average = adapt.seconds / adapt.frames;
+    adapt.frames = 0;
+    adapt.seconds = 0;
+
+    let next = pixelRatio;
+    if (average > ADAPT_DOWN_SECONDS && pixelRatio > MIN_PIXEL_RATIO) {
+      next = Math.max(MIN_PIXEL_RATIO, pixelRatio - PIXEL_RATIO_STEP);
+    } else if (average < ADAPT_UP_SECONDS && pixelRatio < maxPixelRatio) {
+      next = Math.min(maxPixelRatio, pixelRatio + PIXEL_RATIO_STEP);
+    }
+    if (Math.abs(next - pixelRatio) < 1e-3) return;
+    pixelRatio = next;
+    renderer.setPixelRatio(pixelRatio);
+    // `setPixelRatio` chỉ ghi nhận tỉ lệ, drawing buffer đổi ở lần `setSize` kế tiếp.
+    // Cố tình KHÔNG gọi `resize()`: hàm đó chỉnh lại khoảng cách camera theo tỉ lệ
+    // khung hình, mà ở đây khung hình không đổi — chỉ độ phân giải đổi.
+    syncDrawingBuffer();
+    adapt.cooldown = ADAPT_COOLDOWN;
   };
 
   resize();
@@ -114,6 +198,10 @@ export function createTourEngine(
       cameraController.fit(gltf.scene);
       invalidate();
       onStatus(null);
+      // Biên dịch shader của model song song (KHR_parallel_shader_compile) thay vì
+      // để frame đầu tiên vừa vẽ vừa compile — cú khựng đó rơi đúng lúc người dùng
+      // vừa vào cảnh và dễ bị hiểu là "cảnh này lag".
+      void renderer.compileAsync(scene, camera).catch(() => undefined);
     } catch (error) {
       if (!disposed) onError(error);
     }
@@ -190,6 +278,7 @@ export function createTourEngine(
     if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating) {
       renderer.render(scene, camera);
       needsRender = false;
+      trackFrame(delta);
     }
   });
 
@@ -260,6 +349,11 @@ export function createTourEngine(
 
     setExploreArea(area: ExploreArea | null) {
       explore.setArea(area);
+      invalidate();
+    },
+    /** Bầu trời + đèn + sương mù của cảnh hiện tại (preset `threeJS_skySet`). */
+    setSky(preset: HeritageSkyPreset | null) {
+      environment.apply(preset);
       invalidate();
     },
     /**
@@ -358,6 +452,7 @@ export function createTourEngine(
       highlights.dispose();
       timedHighlights.dispose();
       boundary.dispose();
+      environment.dispose();
       controls.dispose();
       loader.dispose();
       renderer.dispose();
