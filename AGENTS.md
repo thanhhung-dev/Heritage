@@ -1,64 +1,110 @@
 # AGENTS.md
 
-## 1. Project Overview & Architecture
+## 1. Tổng quan dự án & Kiến trúc
 
-Project là monorepo gồm 2 applications độc lập hoàn toàn (riêng biệt dependencies, build, tests, configs):
+**HeritageGraph** là nền tảng khám phá di sản văn hóa, tích hợp GraphRAG, chatbot AI và trải nghiệm tham quan 3D tương tác.
 
-- `frontend/`: Frontend application (Next.js)
-- `backend/`: Backend application (Spring Boot)
+Project là monorepo gồm 2 applications độc lập (riêng biệt dependencies, build, tests, configs):
 
-**Nguyên tắc**: Tuyệt đối KHÔNG tạo coupling giữa `fe/` và `be/`. Task thuộc phạm vi nào chỉ thao tác trong thư mục tương ứng.
+* `apps/frontend/`: Frontend application (Next.js).
+* `apps/backend/`: Backend application (FastAPI).
+
+**Nguyên tắc:** Không tạo coupling trực tiếp giữa Frontend và Backend. Hai ứng dụng chỉ giao tiếp thông qua REST API. Task thuộc phạm vi nào chỉ thao tác trong thư mục tương ứng, trừ khi yêu cầu liên quan đến cả hai.
 
 ```text
 /
 ├── AGENTS.md
-├── apps/frontend/               # Next.js App Router (src/app, components, hooks, lib, services, types)
-└── apps/backend/               # Spring Boot (src/main/java/.../web_api, resources, test)
+├── apps/
+│   ├── frontend/           # Next.js App Router, React, TypeScript, Three.js
+│   └── backend/            # FastAPI, GraphRAG, LLM, Database
+└── docker-compose.yml
 ```
 
-## 2. Frontend Conventions (`fe/`)
+## 2. Frontend Conventions (`apps/frontend/`)
 
-- **Tech Stack**: Next.js 16 (App Router), React 19, TypeScript strict, Zod 4, Jest + RTL, Storybook 10 + Vitest, CSS Modules.
-- **Server Components mặc định**: Chỉ dùng `'use client'` khi cần React state, event listeners hoặc browser APIs.
-- **TypeScript & Validation**: Strict mode, tuyệt đối không dùng `any`. Runtime validation dùng Zod cho API responses và forms.
-- **Cấu trúc & Colocation**:
-  - Dùng path alias `@/*` (trỏ đến `fe/src/*`).
-  - Đặt component con trong `_components/`, tests trong `__tests__/`, stories tại `*.stories.tsx` colocate cùng component.
-  - Không thêm library State Management (Redux/Zustand) khi React State hoặc URL State đã đáp ứng đủ.
+* **Tech Stack:** Next.js 14 (App Router), React, TypeScript, CSS Modules, Three.js, React Three Fiber.
+* **Server Components mặc định:** Chỉ dùng `'use client'` khi cần React state, event listeners, hooks hoặc browser APIs.
+* **TypeScript:** Ưu tiên strict typing, không sử dụng `any` khi có thể xác định kiểu dữ liệu.
+* **Cấu trúc & Colocation:**
+  * Tuân thủ cấu trúc thư mục và path alias hiện có.
+  * Đặt components, hooks, services và types theo convention của dự án.
+  * Ưu tiên tái sử dụng components trước khi tạo mới.
+  * Không thêm thư viện State Management nếu React State hoặc URL State đã đáp ứng đủ.
+* **Three.js & 3D:**
 
-## 3. Backend Conventions (`be/`)
+  * Sử dụng React Three Fiber để tích hợp Three.js với React.
+  * Tránh khởi tạo lại renderer, geometry, material và texture không cần thiết.
+  * Cleanup resources, event listeners và animation frames khi component unmount.
+  * Không tự ý thay đổi camera controls, scene interactions hoặc logic tải mô hình 3D.
+* **Styling:** Sử dụng CSS Modules, đảm bảo responsive và tuân thủ thiết kế hiện tại và hãy viết cách truy cập module CSS là kiểu alias.
 
-- **Tech Stack**: Spring Boot 4, Java 17, Spring Web, SpringDoc OpenAPI, Spring Data JPA, Hibernate, MySQL 8 (chính), H2 (in-memory test/local), Lombok, Gradle.
-- **API Boundary & DTO**:
-  - Luôn nhận Request DTO và trả về Response DTO; tuyệt đối không expose JPA Entities ra API.
-  - Dùng Bean Validation (`@Valid`, `@NotNull`, `@NotBlank`, v.v.) tại Request DTOs.
-  - Chuẩn hóa response: HTTP status chuẩn (200, 201, 204); xử lý lỗi tập trung qua `@RestControllerAdvice` (`exception/`).
-- **Layers & Dependency Injection**:
-  - Dùng Constructor Injection (`@RequiredArgsConstructor`).
-  - Business logic và transaction (`@Transactional`) đặt tại Service layer, không viết trong Controller.
-  - Repository theo feature đặt tại `<api>/repository/`; repository dùng chung đặt tại `repository/`.
+## 3. Backend Conventions (`apps/backend/`)
+
+* **Tech Stack:** Python, FastAPI, Pydantic, SQLAlchemy, Alembic, PostgreSQL 16, pgvector, llama.cpp, Qwen2.5, BGE-M3.
+* **Architecture:** Hexagonal Architecture (Ports & Adapters).
+* **API Boundary & DTO:**
+
+  * Sử dụng Pydantic models cho Request và Response.
+  * Không expose trực tiếp ORM entities qua API.
+  * Sử dụng HTTP status chuẩn (200, 201, 204, 400, 404, 500).
+  * Xử lý exceptions tập trung và nhất quán.
+* **Layers & Dependency Injection:**
+
+  * API Router chỉ xử lý HTTP requests/responses.
+  * Business logic đặt tại Application/Service layer.
+  * Domain không phụ thuộc trực tiếp vào FastAPI, SQLAlchemy hoặc infrastructure.
+  * Infrastructure triển khai các interfaces/ports theo kiến trúc hiện tại.
+  * Sử dụng FastAPI Dependency Injection theo convention dự án.
+* **AI & GraphRAG:**
+
+  * Retrieval hiện tại: BM25 Word + Character N-gram → RRF → Graph Reranking (optional) → BGE-M3 → pgvector → Evidence Filtering → LLM.
+  * LLM inference sử dụng llama.cpp với mô hình Qwen2.5 Fine-tuned.
+  * Câu trả lời phải có citation hợp lệ theo Answer Gate.
+  * Không tạo thông tin lịch sử không có căn cứ.
+  * Không tự ý thay đổi retrieval strategy, embedding model hoặc inference backend.
+  * Ưu tiên tối ưu latency, memory và token usage nhưng không đánh đổi tính chính xác khi chưa được phê duyệt.
 
 ## 4. API Contract, Database & Security
 
-- **Quy trình đổi API**: Thống nhất contract -> Cập nhật BE + OpenAPI docs -> Cập nhật FE (types, schemas, services) + tests. Đảm bảo backward compatibility.
-- **Database**:
-  - MySQL 8: Database chính (môi trường staging/prod dùng `ddl-auto: validate` hoặc migration).
-  - H2: In-memory database cho automated tests hoặc local dev khi MySQL chưa sẵn sàng (`ddl-auto: update` hoặc `create-drop`).
-- **Security**: Tuyệt đối không commit secrets, API keys, credentials. Dùng `.env` (FE) và environment variables (BE).
+* **Quy trình đổi API:** Thống nhất contract → Cập nhật Backend + OpenAPI docs → Cập nhật Frontend (types, services) + tests. Đảm bảo backward compatibility.
+* **Database:**
+
+  * PostgreSQL 16 là database chính và nguồn dữ liệu chuẩn (source of truth).
+  * pgvector phục vụ semantic/vector search.
+  * SQLAlchemy quản lý database access.
+  * Alembic quản lý database migrations.
+  * Không tự ý chỉnh sửa schema hoặc dữ liệu production.
+  * Không sử dụng `create_all()` để thay thế migrations trong staging/production.
+* **Object Storage:** Cloudflare R2 lưu trữ các tài nguyên media và mô hình 3D.
+* **Infrastructure:** Docker Compose, AWS, Jenkins, Terraform, OpenTelemetry và Prometheus.
+* **Security:** Tuyệt đối không commit secrets, API keys, credentials hoặc private keys. Sử dụng `.env` và environment variables. Không tự ý thay đổi production configurations.
 
 ## 5. Commands & Quy tắc an toàn (Command Safety)
 
 ### Lệnh thực thi
 
-- **Frontend** (`apps/frontend/`): `npm run dev` | `npm run build` | `npm run test` | `npm run lint` | `npm run storybook`
-- **Backend** (`apps/backend/`): `./gradlew bootRun` | `./gradlew build` | `./gradlew test`
+* **Frontend** (`apps/frontend/`): `npm run dev` | `npm run build` | `npm run lint` | `npm run test` (nếu script tồn tại).
+* **Backend** (`apps/backend/`): Sử dụng lệnh FastAPI/Uvicorn, pytest và các công cụ quản lý dependencies theo cấu hình thực tế của dự án.
+* **Docker:** `docker compose up -d` | `docker compose ps` | `docker compose logs`.
+* **Database Migration:** `alembic upgrade head` (chỉ khi được phê duyệt).
 
 ### An toàn thực thi (BẮT BUỘC)
 
-- **KHÔNG TỰ Ý CHẠY TEST/BUILD NẶNG**: Khi đang ở bước đọc hiểu, phân tích, lập kế hoạch hoặc trả lời câu hỏi, Agent **tuyệt đối không chạy** lệnh tốn tài nguyên hoặc full test suite/build.
-- **Chỉ chạy test/build khi**:
-  1. Đang ở bước `Test` của task code thực tế có sửa đổi source code liên quan.
+* **KHÔNG TỰ Ý CHẠY TEST/BUILD NẶNG:** Khi đang ở bước đọc hiểu, phân tích, lập kế hoạch hoặc trả lời câu hỏi, Agent **tuyệt đối không chạy** full test suite, full build hoặc các lệnh tốn tài nguyên.
+
+* **Chỉ chạy test/build khi:**
+
+  1. Đang ở bước `Test` của task code thực tế đã được phê duyệt và có sửa đổi source code liên quan.
   2. Người dùng yêu cầu chạy lệnh cụ thể.
+
+* **Quy tắc bổ sung:**
+
+  * Ưu tiên targeted tests thay vì full test suite.
+  * Không tự ý cài đặt hoặc nâng cấp dependencies.
+  * Không tự ý chạy database migrations.
+  * Không tự ý khởi động toàn bộ Docker services.
+  * Không tự ý deploy hoặc thay đổi infrastructure.
+  * Không thực hiện destructive commands như `git reset --hard`, `git clean -fd`, `docker compose down -v`, `DROP TABLE` hoặc `terraform destroy` khi chưa được phê duyệt.
 
 ## 6. Agentic Workflow & Nguyên tắc thực thi
 
@@ -68,15 +114,22 @@ Project là monorepo gồm 2 applications độc lập hoàn toàn (riêng biệ
 Understand ──> Analyze ──> Plan ──> Implement ──> Test ──> Review
 ```
 
-1. **Understand & Analyze**: Nắm rõ yêu cầu, kiến trúc và phạm vi ảnh hưởng tối thiểu.
-2. **Plan**: Lập kế hoạch rõ ràng (danh sách file, giải pháp, rủi ro). **BẮT BUỘC user phê duyệt trước khi viết code**.
-3. **Implement**: Chỉ sửa đúng phạm vi đã duyệt. Không tự ý thêm tính năng hay refactor ngoài lề.
-4. **Test**: Chạy automated tests liên quan trực tiếp đến thay đổi để xác nhận. Tự fix lỗi nếu test/build fail.
-5. **Review**: Tự rà soát: tính chính xác, bảo mật, clean code, không để lại file rác. Cập nhật tài liệu nếu có thay đổi contract.
+1. **Understand:** Nắm rõ yêu cầu, mục tiêu và phạm vi task. Không tự suy diễn requirements.
+2. **Analyze:** Kiểm tra source code, kiến trúc, dependencies và các thành phần liên quan. Ưu tiên giải pháp có sẵn.
+3. **Plan:** Lập kế hoạch rõ ràng (danh sách file, giải pháp, phạm vi ảnh hưởng, rủi ro). **BẮT BUỘC user phê duyệt trước khi viết code.**
+4. **Implement:** Chỉ sửa đúng phạm vi đã duyệt. Không tự ý thêm tính năng, dependencies hoặc refactor ngoài lề. Nếu cần thay đổi ngoài kế hoạch, phải xin phê duyệt bổ sung.
+5. **Test:** Chạy automated tests liên quan trực tiếp đến thay đổi. Tự sửa lỗi do thay đổi hiện tại gây ra. Không sửa test chỉ để làm test pass.
+6. **Review:** Tự rà soát tính chính xác, bảo mật, clean code và Git diff. Không để lại debug code hoặc file rác. Cập nhật tài liệu nếu thay đổi API contract.
 
 ### Thứ tự ưu tiên cốt lõi
 
-`Existing convention > Simple solution (KISS/YAGNI) > Small focused change > New abstraction > New dependency`
+`Correctness & Security > User Requirements > Existing Conventions > KISS/YAGNI > Small Focused Change > New Abstraction > New Dependency`
 
-- Không tự bịa requirements (hallucinate).
-- Không tối ưu hóa sớm cho các kịch bản tương lai xa.
+* Không tự bịa requirements hoặc giả định code/API tồn tại khi chưa kiểm tra.
+* Không tối ưu hóa sớm cho các kịch bản tương lai xa.
+* Không thay đổi kiến trúc hiện tại nếu chưa được yêu cầu.
+* Không tạo abstraction không cần thiết.
+* Không sửa file ngoài phạm vi task.
+* Không tự ý thay đổi API contract, database schema hoặc AI pipeline.
+* Không tuyên bố test/build thành công nếu chưa thực sự chạy.
+* Khi hoàn thành, báo cáo ngắn gọn các file đã thay đổi, kết quả kiểm thử và vấn đề còn tồn tại.
