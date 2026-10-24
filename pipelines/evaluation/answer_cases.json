@@ -51,7 +51,55 @@
       "question": "chùa thiên mụ ở đà nẵng hả",
       "min_sentences": 1,
       "expected_terms": [["Huế"], ["không", "nhầm"]],
-      "rubric": "Đính chính Đà Nẵng một cách tự nhiên, nêu vị trí Huế. Không đồng ý tiền đề sai."
+      "rubric": "Đính chính Đà Nẵng một cách tự nhiên, nêu vị trí Huế. Không đồng ý tiền đề sai. Đi thẳng vào nội dung, không mở đầu máy móc bằng 'Theo tài liệu'."
+    },
+    {
+      "id": "true-city",
+      "source": "location",
+      "question": "chùa thiên mụ ở huế đúng không bạn",
+      "min_sentences": 1,
+      "expected_terms": [["Huế"]],
+      "rubric": "Xác nhận tự nhiên rằng chùa ở Huế. Không cố phản biện thông tin đúng hoặc mở đầu bằng 'Không hẳn đúng'."
+    },
+    {
+      "id": "false-year",
+      "source": "stele",
+      "question": "bia Ngự kiến Thiên Mụ Tự có niên đại năm 1815 đúng không",
+      "min_sentences": 1,
+      "expected_terms": [["1715"], ["không", "nhầm"]],
+      "rubric": "Đính chính trực tiếp nhưng nhẹ nhàng: 1715 chứ không phải 1815. Không biến năm user nêu thành sự thật, không trả lời bằng một mẫu lời dẫn tài liệu cứng nhắc."
+    },
+    {
+      "id": "true-year",
+      "source": "stele",
+      "question": "bia Ngự kiến Thiên Mụ Tự có niên đại năm 1715 đúng không",
+      "min_sentences": 1,
+      "expected_terms": [["1715"]],
+      "rubric": "Xác nhận năm 1715, không đính chính giả hoặc tỏ ra nghi ngờ điều nguồn đã xác nhận. Trả lời ngắn gọn như đang trò chuyện."
+    },
+    {
+      "id": "partly-correct-premise",
+      "source": "stele",
+      "question": "bia Ngự kiến Thiên Mụ Tự có niên đại năm 1715 và phần thân làm bằng gỗ đúng không",
+      "min_sentences": 1,
+      "expected_terms": [["1715"], ["sa thạch"]],
+      "rubric": "Phân biệt hai dữ kiện: năm 1715 đúng, phần thân làm bằng sa thạch chứ không phải gỗ. Không phủ định toàn bộ câu hỏi. Có thể dùng 'Bạn nhớ đúng năm rồi, nhưng...' mà không rập khuôn."
+    },
+    {
+      "id": "unsupported-birth-year",
+      "source": "phuc_chu",
+      "question": "Nguyễn Phúc Chu sinh năm 1700 đúng không",
+      "min_sentences": 1,
+      "expected_terms": [["chưa", "không"]],
+      "rubric": "Nguồn không có năm sinh: nói chưa xác nhận được năm sinh, không khẳng định 1700 đúng hay sai và không lấy kiến thức ngoài nguồn để sửa. Diễn đạt tự nhiên, không bắt buộc nguyên câu 'Tài liệu hiện có chưa đủ thông tin để trả lời câu hỏi này'."
+    },
+    {
+      "id": "false-premise-with-follow-up",
+      "source": "location",
+      "question": "chùa thiên mụ ở đà nẵng thì đi xe buýt nào tới đó",
+      "min_sentences": 1,
+      "expected_terms": [["Huế"], ["chưa", "không"]],
+      "rubric": "Đính chính chùa ở Huế, không ở Đà Nẵng, rồi nói chưa có thông tin tuyến xe buýt. Không bỏ sót ý hỏi chính hoặc bịa tuyến xe. Giọng tự nhiên, không trách móc người hỏi."
     },
     {
       "id": "missing-district",
