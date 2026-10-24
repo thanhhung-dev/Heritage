@@ -10,6 +10,9 @@
     },
     "location": {
       "context": "Hiện nay, chùa Thiên Mụ tọa lạc tại phường Kim Long, thành phố Huế."
+    },
+    "location_landscape": {
+      "context": "Chùa Thiên Mụ còn được gọi là chùa Linh Mụ, được chúa Nguyễn Hoàng cho xây dựng vào năm 1601, cũng là ngôi chùa được xây dựng sớm nhất ở Huế. Trong một lần cưỡi ngựa dọc sông Hương, ông bắt gặp một ngọn đồi nhỏ tên là Hà Khê. Nhận thấy nó giống như một con rồng đang quay đầu nên năm 1601, chúa đã cho xây trên đồi một ngôi chùa hướng ra mặt sông và đặt tên là Thiên Mụ."
     }
   },
   "cases": [
@@ -50,8 +53,16 @@
       "source": "location",
       "question": "chùa thiên mụ ở đà nẵng hả",
       "min_sentences": 1,
-      "expected_terms": [["Huế"], ["không", "nhầm"]],
-      "rubric": "Đính chính Đà Nẵng một cách tự nhiên, nêu vị trí Huế. Không đồng ý tiền đề sai. Đi thẳng vào nội dung, không mở đầu máy móc bằng 'Theo tài liệu'."
+      "expected_terms": [["Huế"], ["không", "nhầm"], ["Kim Long"]],
+      "rubric": "Đính chính Đà Nẵng tự nhiên, bổ sung vị trí phường Kim Long trong nguồn thay vì chỉ phủ định. Không thêm lời mời tham quan hoặc mở đầu máy móc bằng 'Theo tài liệu'."
+    },
+    {
+      "id": "false-city-with-landscape-detail",
+      "source": "location_landscape",
+      "question": "Chùa Thiên Mụ ở Đà Nẵng đúng không?",
+      "min_sentences": 1,
+      "expected_terms": [["Huế"], ["không", "nhầm"], ["Hà Khê"], ["sông Hương"]],
+      "rubric": "Đính chính ngắn gọn rồi bổ sung vị trí trên đồi Hà Khê, hướng ra sông Hương. Không tự thêm phường Kim Long vì đoạn nguồn này không có thông tin phường; không mời tham quan hoặc trách người hỏi là sai."
     },
     {
       "id": "true-city",
