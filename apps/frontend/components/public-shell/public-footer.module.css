@@ -1,31 +1,49 @@
+/* ==========================================================================
+   public-footer.module.css
+   Footer: Nền đen #07080A, Viền trên siêu mỏng border-top: 1px solid rgba(255, 255, 255, 0.06)
+   Khung Footer Container: Tràn viền 100% (width: 100%; max-width: 100%; padding: 40px 32px 24px;)
+   Two Ends Alignment: Cột trái bám sát mép trái, Cột phải bám sát mép phải
+   ========================================================================== */
+
 .footer {
   width: 100%;
-  padding: 48px clamp(24px, 2.45vw, 48px);
-  border-top: 1px solid var(--public-footer-border);
-  background: var(--public-footer-background);
-  font-family: var(--font-brand);
+  background-color: #07080a;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
 }
 
 .inner {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 48px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 40px 32px 24px;
+  box-sizing: border-box;
 }
 
+.topRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Khối bên trái: Căn sát mép góc trái ngoài cùng */
 .identity {
-  width: 240px;
-  max-width: 100%;
+  margin-left: 0;
+  text-align: left;
+  max-width: 340px;
+  width: 100%;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-strong);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.18em;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-decoration: none;
 }
 
@@ -34,76 +52,128 @@
   width: 13px;
   height: 15px;
   flex: none;
-  mask-image: url("../../access/icons/heritage-logo-mask.svg");
-  mask-size: 100% 100%;
-  mask-repeat: no-repeat;
 }
 
-.description {
-  margin-top: 16px;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-normal);
-  line-height: 1.7;
+.slogan {
+  margin: 12px 0 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 280px;
 }
 
-.socialMark {
-  display: block;
-  margin-top: 20px;
-  color: var(--text-tertiary);
-  font-size: var(--text-sm);
+.socialRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
+.socialIconLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.55);
+  transition: color 0.2s ease, transform 0.2s ease;
+  text-decoration: none;
+}
+
+.socialIconLink:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.socialIconLink:focus-visible {
+  outline: 2px solid #ff6422;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Khối bên phải: Bám sát mép góc phải ngoài cùng, gap giữa 2 cột là 48px */
 .groups {
   display: flex;
-  align-items: flex-start;
-  gap: 64px;
+  gap: 48px;
+  margin-left: auto;
+  margin-right: 0;
 }
 
-.group h2 {
-  font-size: 0.6875rem;
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.5;
-  letter-spacing: 0.12em;
-  color: var(--text-secondary);
+.group {
+  min-width: 120px;
 }
 
-.group ul {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
+.groupTitle {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 12px;
+}
+
+.groupList {
   list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .link,
 .pendingLink {
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-normal);
-  line-height: 1.5;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
+  transition: color 0.2s ease;
+  line-height: 1.4;
+  display: inline-block;
 }
 
 .link:hover {
-  color: var(--accent);
+  color: #ffffff;
 }
 
-.brand:focus-visible,
-.link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 5px;
+.link:focus-visible,
+.brand:focus-visible {
+  outline: 2px solid #ff6422;
+  outline-offset: 4px;
   border-radius: 2px;
 }
 
-@media (max-width: 640px) {
-  .footer { padding: 32px 24px; }
-  .inner { flex-direction: column; gap: 32px; }
-  .groups { width: 100%; justify-content: space-between; gap: 24px; }
-  .group li { min-height: 28px; display: flex; align-items: center; }
-  .link { display: inline-flex; align-items: center; min-height: 44px; }
+/* Dòng Copyright ở đáy */
+.bottomBar {
+  width: 100%;
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/* The current develop shell uses fixed bottom navigation on small screens. */
-@media (max-width: 760px) {
-  .footer { padding-bottom: calc(32px + 76px + env(safe-area-inset-bottom)); }
+.copyright {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+  text-align: center;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .inner {
+    padding: 32px 20px 20px;
+  }
+
+  .topRow {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .groups {
+    gap: 32px;
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
 }

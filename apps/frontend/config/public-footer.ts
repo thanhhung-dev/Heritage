@@ -6,7 +6,6 @@ export interface FooterLink {
   href: string | null;
 }
 
-// Unconfirmed destinations remain text until their URLs are approved.
 export const PUBLIC_FOOTER = {
   description:
     "This platform is nothing without its visiting agent. Heal every story you step.",
@@ -26,13 +25,16 @@ export const PUBLIC_FOOTER = {
       key: "socials",
       label: "Socials",
       links: [
-        { key: "x", label: "X (Twitter)", href: null },
-        { key: "linkedin", label: "LinkedIn", href: null },
-        { key: "tiktok", label: "TikTok", href: null },
-        { key: "instagram", label: "Instagram", href: null },
+        { key: "x", label: "X (Twitter)", href: "https://x.com" },
+        { key: "linkedin", label: "LinkedIn", href: "https://linkedin.com" },
+        { key: "tiktok", label: "TikTok", href: "https://tiktok.com" },
+        { key: "instagram", label: "Instagram", href: "https://instagram.com" },
       ] satisfies FooterLink[],
     },
   ],
 };
 
-export const PUBLIC_FOOTER_PATHS: readonly string[] = PUBLIC_NAVIGATION_ITEMS.map((route) => route.href);
+export const PUBLIC_FOOTER_PATHS: readonly string[] = [
+  ...PUBLIC_NAVIGATION_ITEMS.map((route) => route.href),
+  "/preview",
+];

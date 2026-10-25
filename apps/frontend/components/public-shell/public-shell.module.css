@@ -42,21 +42,21 @@
   justify-content: space-between;
   align-items: center;
   box-sizing: border-box;
-  width: 100% !important;
-  max-width: none !important;
-  padding: 24px 48px !important;
-  margin: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
+  width: 100%;
+  max-width: 1680px;
+  padding: 24px 40px;
+  margin: 0 auto;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .brand {
-  width: 136px;
+  width: auto;
   height: 40px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 9px;
   color: var(--text);
   font-size: var(--text-sm);
