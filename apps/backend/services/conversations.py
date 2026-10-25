@@ -12,11 +12,15 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from apps.backend.models.admin import AdminAccount
 from apps.backend.models.chat import ChatMessage, Conversation, MessageCitation
 from apps.backend.models.heritage import Heritage
-from apps.backend.schemas.chat import ChatMessageCreate, ChatResponse, MessageCitationResponse
+from apps.backend.schemas.chat import (
+    ChatMessageCreate, ChatMessageResponse, ChatResponse, ConversationDetailResponse,
+    ConversationResponse, MessageCitationResponse,
+)
 
 CHAT_TIMEOUT_SECONDS = 30
 
@@ -90,6 +94,39 @@ class ConversationService:
         if conversation.account_id != account_id:
             raise ChatServiceError("forbidden", "Bạn không có quyền truy cập cuộc trò chuyện này.")
         return conversation
+
+    async def list_conversations(self, account_id: int, *, limit: int = 50, offset: int = 0) -> list[ConversationResponse]:
+        await self.require_account(account_id)
+        rows = await self.db.execute(
+            select(Conversation).where(Conversation.account_id == account_id)
+            .order_by(Conversation.updated_at.desc(), Conversation.id.desc()).limit(limit).offset(offset)
+        )
+        return [ConversationResponse.model_validate(row) for row in rows.scalars().all()]
+
+    async def get_detail(
+        self, conversation_id: UUID, account_id: int, *, limit: int = 100, offset: int = 0,
+    ) -> ConversationDetailResponse:
+        await self.require_account(account_id)
+        conversation = await self.require_owned(conversation_id, account_id)
+        rows = await self.db.execute(
+            select(ChatMessage).where(ChatMessage.conversation_id == conversation_id)
+            .options(selectinload(ChatMessage.citation_records))
+            .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc()).limit(limit).offset(offset)
+        )
+        return ConversationDetailResponse(
+            **ConversationResponse.model_validate(conversation).model_dump(),
+            messages=[ChatMessageResponse.model_validate(row) for row in rows.scalars().all()],
+        )
+
+    async def delete_conversation(self, conversation_id: UUID, account_id: int) -> None:
+        try:
+            await self.require_account(account_id)
+            conversation = await self.require_owned(conversation_id, account_id, lock=True)
+            await self.db.delete(conversation)
+            await self.db.commit()
+        except BaseException:
+            await self.db.rollback()
+            raise
 
     async def send(
         self, request: ChatMessageCreate, account_id: int | None,

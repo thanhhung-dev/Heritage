@@ -43,3 +43,23 @@ answer cannot write to the request's database transaction.
 
 Database changes require the reviewed Alembic migration described in
 `migrations/README.md`. This task does not apply migrations to a live database.
+
+## Account conversation management
+
+All management routes require a valid JWT and an active account:
+
+- `GET /api/chat/conversations`: own conversations only, newest activity first.
+  `limit` defaults to 50 (maximum 100); `offset` defaults to 0.
+- `GET /api/chat/conversations/{conversation_id}/messages`: conversation metadata
+  and a `messages` array, oldest first with deterministic ID tie-breaking.
+  `limit` defaults to 100 (maximum 500); `offset` defaults to 0. Each message
+  includes its normalized citations, eagerly loaded without async lazy access.
+- `DELETE /api/chat/conversations/{conversation_id}`: ownership checked before
+  deletion; success returns `204` with no body. Database cascades remove the
+  conversation's messages, citations and any associated legacy feedback.
+
+Missing conversations return `404`. Another account's or a guest-owned
+conversation returns `403`, including attempts to append through the POST
+endpoint. Missing/invalid authentication returns `401` (or the existing bearer
+scheme's unauthenticated status). Guest conversations never appear in an
+account's list. Management routes do not open an AI/retrieval dependency.

@@ -6,9 +6,11 @@ import json
 import logging
 import os
 import time
+from contextlib import contextmanager
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi import Request
+from fastapi import Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
@@ -19,6 +21,7 @@ from apps.backend.services.passages import PassageRepository
 from apps.backend.core.security import get_current_user
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.schemas.chat import ChatMessageCreate, ChatResponse as PersistedChatResponse
+from apps.backend.schemas.chat import ConversationDetailResponse, ConversationResponse
 from apps.backend.services.conversations import ChatServiceError, ConversationService, GroundedAnswer
 
 log = logging.getLogger(__name__)
@@ -61,6 +64,21 @@ def get_conversation_service(db=Depends(get_chat_db)) -> ConversationService:
 def conversation_http_error(error: ChatServiceError) -> HTTPException:
     statuses = {"unauthorized": 401, "forbidden": 403, "not_found": 404, "bad_request": 400, "timeout": 504, "inference": 500}
     return HTTPException(status_code=statuses.get(error.code, 500), detail=error.detail)
+
+
+@contextmanager
+def conversation_errors():
+    try:
+        yield
+    except ChatServiceError as error:
+        raise conversation_http_error(error) from None
+    except Exception:
+        log.exception("Không thể xử lý cuộc trò chuyện")
+        raise HTTPException(status_code=500, detail="Không thể xử lý cuộc trò chuyện. Vui lòng thử lại.") from None
+
+
+def get_authenticated_account_id(current_user: dict = Depends(get_current_user)) -> int:
+    return account_id_from_claims(current_user)
 
 
 class ChatRequest(BaseModel):
@@ -109,13 +127,42 @@ async def create_chat_message(
             resolution_status=response.resolution_status, answer_type=response.answer_type,
         )
 
-    try:
+    with conversation_errors():
         return await service.send(request, account_id, answerer)
-    except ChatServiceError as error:
-        raise conversation_http_error(error) from None
-    except Exception:
-        log.exception("Không thể lưu cuộc trò chuyện")
-        raise HTTPException(status_code=500, detail="Không thể xử lý cuộc trò chuyện. Vui lòng thử lại.") from None
+
+
+@router.get("/chat/conversations", response_model=list[ConversationResponse])
+async def list_conversations(
+    account_id: int = Depends(get_authenticated_account_id),
+    service: ConversationService = Depends(get_conversation_service),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    with conversation_errors():
+        return await service.list_conversations(account_id, limit=limit, offset=offset)
+
+
+@router.get("/chat/conversations/{conversation_id}/messages", response_model=ConversationDetailResponse)
+async def conversation_messages(
+    conversation_id: UUID,
+    account_id: int = Depends(get_authenticated_account_id),
+    service: ConversationService = Depends(get_conversation_service),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+):
+    with conversation_errors():
+        return await service.get_detail(conversation_id, account_id, limit=limit, offset=offset)
+
+
+@router.delete("/chat/conversations/{conversation_id}", status_code=204, response_class=Response)
+async def delete_conversation(
+    conversation_id: UUID,
+    account_id: int = Depends(get_authenticated_account_id),
+    service: ConversationService = Depends(get_conversation_service),
+):
+    with conversation_errors():
+        await service.delete_conversation(conversation_id, account_id)
+    return Response(status_code=204)
 
 
 @router.post("/chat", response_model=ChatResponse)
