@@ -33,21 +33,25 @@ export function PublicShell({ children, account }: PublicShellProps) {
         </Link>
 
         <div className={styles.controls}>
-          <div
+          <form
             className={styles.searchField}
+            action="/search"
+            method="get"
             role="search"
             aria-label="Search heritage collections"
           >
-            <Image src={searchIcon} alt="" width={16} height={16} />
+            <button type="submit" className={styles.searchSubmit} aria-label="Tìm kiếm di sản">
+              <Image src={searchIcon} alt="" width={16} height={16} />
+            </button>
             <input
               className={styles.searchInput}
               type="search"
-              name="heritage-search"
+              name="q"
               autoComplete="off"
               aria-label="Search Heritages…"
               placeholder="Search Heritages…"
             />
-          </div>
+          </form>
           <PublicNavigation />
           <HeaderAccountActions />
         </div>
