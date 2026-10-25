@@ -63,3 +63,22 @@ conversation returns `403`, including attempts to append through the POST
 endpoint. Missing/invalid authentication returns `401` (or the existing bearer
 scheme's unauthenticated status). Guest conversations never appear in an
 account's list. Management routes do not open an AI/retrieval dependency.
+
+## Automated verification
+
+From the repository root:
+
+```powershell
+python -m pytest apps/backend/tests/test_chat_conversation.py
+```
+
+Tests use `unittest.TestCase`, `TestClient`, real JWT validation and SQLAlchemy
+transactions against an isolated in-memory SQLite database. Only the AI boundary
+is mocked. They cover creation/continuation, normalized citations, guest access,
+ownership on read/append/delete, pagination, authentication, context validation,
+both retrieval/inference timeouts, AI/storage errors and atomic rollback. A late
+inference result cannot persist data after a timeout. Legacy session retention
+and cascade/parent constraints are checked as well.
+
+SQLite tests do not replace PostgreSQL migration/integration verification. This
+task renders the migration offline and does not run it on an application database.
