@@ -1,0 +1,150 @@
+"""Transactional conversation persistence around the existing grounded-answer pipeline."""
+from __future__ import annotations
+
+import asyncio
+import json
+import math
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlsplit
+from uuid import UUID, uuid4
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.backend.models.admin import AdminAccount
+from apps.backend.models.chat import ChatMessage, Conversation, MessageCitation
+from apps.backend.models.heritage import Heritage
+from apps.backend.schemas.chat import ChatMessageCreate, ChatResponse, MessageCitationResponse
+
+CHAT_TIMEOUT_SECONDS = 30
+
+
+class ChatServiceError(Exception):
+    """Application error translated into HTTP only at the router boundary."""
+
+    def __init__(self, code: str, detail: str):
+        self.code = code
+        self.detail = detail
+        super().__init__(detail)
+
+
+@dataclass(frozen=True)
+class GroundedAnswer:
+    answer: str
+    sources: list[dict] = field(default_factory=list)
+    resolution_status: str | None = None
+    answer_type: str | None = None
+
+
+def question_with_context(request: ChatMessageCreate) -> str:
+    """UI context qualifies the question; it is never added to source evidence."""
+    parts = [request.message]
+    for label, value in (("Di sản đang xem", request.heritage_context), ("Cảnh đang xem", request.scene_context)):
+        if value:
+            text = json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else value
+            parts.append(f"{label} (bối cảnh do người dùng cung cấp): {text}")
+    return "\n\n".join(parts)
+
+
+def citation_from_source(source: dict, message_id: UUID) -> MessageCitation:
+    url = source.get("url") or None
+    if url:
+        try:
+            parsed = urlsplit(url)
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
+                url = None
+        except (TypeError, ValueError):
+            url = None
+    score = source.get("score")
+    if not isinstance(score, (int, float)) or isinstance(score, bool) or not math.isfinite(score):
+        score = None
+    return MessageCitation(
+        id=uuid4(), message_id=message_id,
+        source_title=str(source.get("doc") or f"Passage {source.get('passage_id', '')}").strip(),
+        source_url=url, relevance_score=score,
+    )
+
+
+class ConversationService:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def require_account(self, account_id: int) -> None:
+        account = (await self.db.execute(
+            select(AdminAccount.id, AdminAccount.is_active).where(AdminAccount.id == account_id)
+        )).first()
+        if account is None or not account.is_active:
+            raise ChatServiceError("unauthorized", "Tài khoản không tồn tại hoặc đã bị khóa.")
+
+    async def require_owned(self, conversation_id: UUID, account_id: int | None, *, lock: bool = False) -> Conversation:
+        if account_id is None:
+            raise ChatServiceError("forbidden", "Bạn cần đăng nhập để truy cập cuộc trò chuyện đã lưu.")
+        query = select(Conversation).where(Conversation.id == conversation_id)
+        if lock:
+            query = query.with_for_update()
+        conversation = (await self.db.execute(query)).scalar_one_or_none()
+        if conversation is None:
+            raise ChatServiceError("not_found", "Không tìm thấy cuộc trò chuyện.")
+        if conversation.account_id != account_id:
+            raise ChatServiceError("forbidden", "Bạn không có quyền truy cập cuộc trò chuyện này.")
+        return conversation
+
+    async def send(
+        self, request: ChatMessageCreate, account_id: int | None,
+        answerer: Callable[[str], Awaitable[GroundedAnswer]],
+    ) -> ChatResponse:
+        try:
+            if account_id is not None:
+                await self.require_account(account_id)
+            if request.conversation_id is not None:
+                conversation = await self.require_owned(request.conversation_id, account_id, lock=True)
+                if request.heritage_id is not None and request.heritage_id != conversation.heritage_id:
+                    raise ChatServiceError("bad_request", "Di sản không khớp với cuộc trò chuyện hiện tại.")
+            else:
+                if request.heritage_id is not None:
+                    heritage = (await self.db.execute(
+                        select(Heritage.id).where(Heritage.id == request.heritage_id, Heritage.publish_state == "published")
+                    )).scalar_one_or_none()
+                    if heritage is None:
+                        raise ChatServiceError("not_found", "Không tìm thấy di sản đã công bố.")
+                conversation = Conversation(
+                    id=uuid4(), account_id=account_id, title=request.message[:200], heritage_id=request.heritage_id,
+                )
+                self.db.add(conversation)
+
+            answer = await asyncio.wait_for(answerer(question_with_context(request)), timeout=CHAT_TIMEOUT_SECONDS)
+            if not answer.answer.strip() or answer.resolution_status == "unavailable":
+                raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.")
+            if answer.answer_type == "answered" and not answer.sources:
+                raise ChatServiceError("inference", "Câu trả lời chưa có bằng chứng hợp lệ. Vui lòng thử lại.")
+
+            now = datetime.now(timezone.utc)
+            user_message = ChatMessage(
+                id=uuid4(), conversation_id=conversation.id, role="user", content=request.message,
+                citations=[], abstained=False, created_at=now, citation_records=[],
+            )
+            assistant_message = ChatMessage(
+                id=uuid4(), conversation_id=conversation.id, role="assistant", content=answer.answer,
+                citations=answer.sources, abstained=not answer.sources,
+                retrieval_strategy="opensearch_hybrid", created_at=now + timedelta(microseconds=1),
+            )
+            assistant_message.citation_records = [citation_from_source(source, assistant_message.id) for source in answer.sources]
+            conversation.updated_at = assistant_message.created_at
+            self.db.add_all([user_message, assistant_message])
+            await self.db.flush()
+            response = ChatResponse(
+                conversation_id=conversation.id, message_id=assistant_message.id, answer=answer.answer,
+                citations=[MessageCitationResponse.model_validate(citation) for citation in assistant_message.citation_records],
+                resolution_status=answer.resolution_status, answer_type=answer.answer_type,
+            )
+            # Both turns and every citation commit as one unit before the response is sent.
+            await self.db.commit()
+            return response
+        except TimeoutError:
+            await self.db.rollback()
+            raise ChatServiceError("timeout", "AI xử lý quá thời gian 30 giây. Vui lòng thử lại.") from None
+        except BaseException:
+            await self.db.rollback()
+            raise
