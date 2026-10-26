@@ -198,6 +198,50 @@ class HeritageContentOut(BaseModel):
     scenes: list[SceneDetailOut] = Field(default_factory=list)
 
 
+# ── Tour playback ──────────────────────────────────────────────────
+#
+# `playback` mirror 1:1 the `playback` map of the Tapestry `tour.json` fixture
+# that the frontend player consumes (`features/tour/tour-data.ts` →
+# `ScenePlayback`). Field names stay camelCase on purpose: the client reads
+# `narrationUrl`, `timedHighlights`, `startSeconds`, ... verbatim.
+
+class TimedHighlightOut(BaseModel):
+    """Scene highlight gắn mốc thời gian trên timeline của narration."""
+
+    id: int
+    model_url: str
+    position: dict[str, Any] | list[Any]
+    rotation: dict[str, Any] | list[Any]
+    scale: dict[str, Any] | list[Any]
+    animation_type: str | None = None
+    startSeconds: float = 0.0
+    endSeconds: float | None = None
+
+
+class ScenePlaybackOut(BaseModel):
+    """Audio + timing cho một scene, khoá theo scene key ("s0".."sN")."""
+
+    narrationUrl: str | None = None
+    captionsUrl: str | None = None
+    timedHighlights: list[TimedHighlightOut] = Field(default_factory=list)
+    exploreArea: dict[str, Any] | list[Any] | None = None
+    exploreTitle: str | None = None
+    exploreDescription: str | None = None
+
+
+class TourContentOut(BaseModel):
+    """GET /api/heritages/{heritage_slug}/tour — payload + playback.
+
+    Same shape as the `tour.json` fixture the tour player was built against:
+    one request returns the model URL, the full content payload and the
+    per-scene audio map.
+    """
+
+    modelUrl: str | None = None
+    payload: HeritageContentOut
+    playback: dict[str, ScenePlaybackOut] = Field(default_factory=dict)
+
+
 # ── Error schema ───────────────────────────────────────────────────
 
 class ErrorDetail(BaseModel):

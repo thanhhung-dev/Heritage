@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import styles from "./HeritageCarouselSection.module.css";
 
@@ -37,15 +37,6 @@ function DiamondIcon() {
   );
 }
 
-/**
- * Component Carousel hàng ngang danh mục di sản Figma:
- * - sectionBackdropContainer: Lớp nền mờ chuyển màu sâu (Cinematic Ambient Backdrop)
- *   + ambientImageBlur: Ảnh nền mờ lấy theo thẻ đang chọn hoặc thẻ đầu tiên
- *   + ambientRadialGlow: Quầng sáng màu xanh biển đặc trưng như Figma
- *   + ambientDarkFade: Lớp gradient tối chuyển tiếp giữa các section
- * - sectionHeader & scrollContainer: position: relative; z-index: 2;
- * - Card: 200px x 320px, border kính mờ backdrop-filter: blur(8px)
- */
 export function HeritageCarouselSection({
   title,
   description,
@@ -61,6 +52,13 @@ export function HeritageCarouselSection({
     "/images/featured-bg.jpg";
 
   const [activeImageUrl, setActiveImageUrl] = useState<string>(defaultImage);
+
+  useEffect(() => {
+    const firstImg = items[0]?.card_image_url || items[0]?.splash_image_url;
+    if (firstImg) {
+      setActiveImageUrl(firstImg);
+    }
+  }, [items]);
 
   const handleCardHover = (item: HeritageItem) => {
     const img = item.card_image_url || item.splash_image_url;

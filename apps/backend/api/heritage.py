@@ -30,7 +30,10 @@ from apps.backend.schemas.heritage import (
     ModelAssetOut,
     SceneDetailOut,
     SceneHighlightOut,
+    ScenePlaybackOut,
     SkyPresetOut,
+    TimedHighlightOut,
+    TourContentOut,
     VoiceClipOut,
     VoiceOut,
 )
@@ -171,6 +174,83 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
 
 
 
+def _content_out(data) -> HeritageContentOut:
+    """Serialize the service payload into the single-load content response."""
+    heritage_out = _heritage_out(data["heritage"], data["voices"], data["voice_length"])
+    policy = asset_policy()
+    overview_out = (
+        _scene_detail_out(data["overview"], policy)
+        if data["overview"] is not None
+        else None
+    )
+    scenes_out = [_scene_detail_out(sc, policy) for sc in data["scenes"]]
+    return HeritageContentOut(
+        heritage=heritage_out,
+        overview=overview_out,
+        scenes=scenes_out,
+    )
+
+
+def _scene_playback(scene: SceneDetailOut) -> ScenePlaybackOut:
+    """Derive the audio/timing entry for one scene from its serialized payload.
+
+    - ``narrationUrl``: audio của voice_clip đầu tiên (theo ``sort_order``) có URL.
+    - ``captionsUrl``: DB chưa có nguồn phụ đề ⇒ ``None``.
+    - ``timedHighlights``: bảng ``scene_highlight`` chưa lưu mốc thời gian nên
+      highlight bắt đầu ở 0s và kéo dài hết narration (``endSeconds = None``).
+    - ``explore*``: lấy từ interactive đầu tiên có ``explore_area``.
+    """
+    narration_url = next(
+        (clip.audio_url for clip in scene.voice_clips if clip.audio_url), None
+    )
+    explore = next(
+        (item for item in scene.interactive if item.explore_area is not None), None
+    )
+    return ScenePlaybackOut(
+        narrationUrl=narration_url,
+        captionsUrl=None,
+        timedHighlights=[
+            TimedHighlightOut(
+                id=highlight.id,
+                model_url=highlight.model_url,
+                position=highlight.position,
+                rotation=highlight.rotation,
+                scale=highlight.scale,
+                animation_type=highlight.animation_type,
+                startSeconds=0.0,
+                endSeconds=None,
+            )
+            for highlight in scene.highlights
+        ],
+        exploreArea=explore.explore_area if explore is not None else None,
+        exploreTitle=explore.explore_title if explore is not None else None,
+        exploreDescription=(
+            explore.explore_description if explore is not None else None
+        ),
+    )
+
+
+def _playback_map(content: HeritageContentOut) -> dict[str, ScenePlaybackOut]:
+    """Build the "s0".."sN" playback map that the tour player indexes by key."""
+    playback: dict[str, ScenePlaybackOut] = {}
+    if content.overview is not None:
+        playback["s0"] = _scene_playback(content.overview)
+    for index, scene in enumerate(content.scenes):
+        playback[f"s{index + 1}"] = _scene_playback(scene)
+    return playback
+
+
+def _model_url(content: HeritageContentOut) -> str | None:
+    """Tour-wide GLB: first model asset of the overview, else of the first scene."""
+    candidates = ([content.overview] if content.overview is not None else []) + list(
+        content.scenes
+    )
+    for scene in candidates:
+        if scene.models:
+            return scene.models[0].file_url
+    return None
+
+
 @router.get("", response_model=list[HeritageOut])
 async def list_heritages(service: HeritageService = Depends(get_service)):
     """Homepage — list published heritages."""
@@ -199,20 +279,31 @@ async def get_heritage_content(
     if data is None:
         return _error(404, "HERITAGE_NOT_FOUND", f"Heritage '{heritage_slug}' not found")
 
-    heritage_out = _heritage_out(data["heritage"], data["voices"], data["voice_length"])
-    policy = asset_policy()
-    overview_out = (
-        _scene_detail_out(data["overview"], policy)
-        if data["overview"] is not None
-        else None
-    )
-    scenes_out = [
-        _scene_detail_out(sc, policy)
-        for sc in data["scenes"]
-    ]
+    return _content_out(data)
 
-    return HeritageContentOut(
-        heritage=heritage_out,
-        overview=overview_out,
-        scenes=scenes_out,
+
+@router.get(
+    "/{heritage_slug}/tour",
+    response_model=TourContentOut,
+    responses={404: {"model": ErrorResponse}},
+)
+async def get_heritage_tour(
+    heritage_slug: str,
+    service: HeritageService = Depends(get_service),
+):
+    """Tour payload + per-scene audio, shaped like the `tour.json` fixture.
+
+    One request returns everything the tour player needs: the tour-wide GLB,
+    the full content payload and the "s0".."sN" playback map (narration URL,
+    captions, timed highlights, explore area).
+    """
+    data = await service.get_content_by_slug(heritage_slug)
+    if data is None:
+        return _error(404, "HERITAGE_NOT_FOUND", f"Heritage '{heritage_slug}' not found")
+
+    content = _content_out(data)
+    return TourContentOut(
+        modelUrl=_model_url(content),
+        payload=content,
+        playback=_playback_map(content),
     )

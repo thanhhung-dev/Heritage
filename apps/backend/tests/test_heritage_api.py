@@ -597,6 +597,100 @@ class AssetUrlPolicyApiTests(HeritageApiTestBase):
         )
 
 
+# ── Tour playback: GET /api/heritages/{slug}/tour ───────────────────────────
+
+class TourContentTests(HeritageApiTestBase):
+    """`playback` mirrors the Tapestry `tour.json` fixture the player consumes."""
+
+    def _rows(self):
+        overview = make_scene(
+            id=99,
+            sequence=-1,
+            title="Chùa Thiên Mụ",
+            model_assets=[
+                make_model_asset(
+                    id=101, file_url="https://cdn.example.com/tour/thien-mu.glb"
+                )
+            ],
+            voice_clips=[
+                make_voice_clip(
+                    id=201, audio_url="https://cdn.example.com/audio/overview.mp3"
+                )
+            ],
+        )
+        scenes = [
+            make_scene(
+                id=10,
+                sequence=0,
+                title="Tam Quan",
+                voice_clips=[
+                    make_voice_clip(
+                        id=203,
+                        audio_url="https://cdn.example.com/audio/s1-late.mp3",
+                        sort_order=1,
+                    ),
+                    make_voice_clip(
+                        id=202,
+                        audio_url="https://cdn.example.com/audio/s1.mp3",
+                        sort_order=0,
+                    ),
+                ],
+                scene_highlights=[
+                    make_scene_highlight(
+                        id=600,
+                        model_url="https://cdn.example.com/highlights/bell.glb",
+                    )
+                ],
+            ),
+            make_scene(id=11, sequence=1, title="Tháp Phước Duyên", voice_clips=[]),
+        ]
+        return [make_row(make_heritage(), scenes, overview=overview)]
+
+    def test_tour_returns_model_url_and_playback_per_scene(self) -> None:
+        self._install_service(self._rows())
+
+        response = self.client.get("/api/heritages/chua-thien-mu/tour")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+
+        self.assertEqual(
+            body["modelUrl"], "https://cdn.example.com/tour/thien-mu.glb"
+        )
+        self.assertEqual(body["payload"]["heritage"]["slug"], "chua-thien-mu")
+
+        # s0 = overview, s1..sN = scenes theo index.
+        self.assertEqual(sorted(body["playback"]), ["s0", "s1", "s2"])
+        self.assertEqual(
+            body["playback"]["s0"]["narrationUrl"],
+            "https://cdn.example.com/audio/overview.mp3",
+        )
+        # Voice clip sort_order 0 là narration chính, không phải clip thêm sau.
+        self.assertEqual(
+            body["playback"]["s1"]["narrationUrl"],
+            "https://cdn.example.com/audio/s1.mp3",
+        )
+        self.assertIsNone(body["playback"]["s1"]["captionsUrl"])
+
+        highlight = body["playback"]["s1"]["timedHighlights"][0]
+        self.assertEqual(highlight["id"], 600)
+        self.assertEqual(highlight["startSeconds"], 0.0)
+        self.assertIsNone(highlight["endSeconds"])
+
+        # Scene không có audio vẫn có entry, narrationUrl null.
+        self.assertIn("s2", body["playback"])
+        self.assertIsNone(body["playback"]["s2"]["narrationUrl"])
+        self.assertEqual(body["playback"]["s2"]["timedHighlights"], [])
+
+    def test_tour_returns_404_for_unknown_slug(self) -> None:
+        self._install_service([])
+
+        response = self.client.get("/api/heritages/khong-ton-tai/tour")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"]["code"], "HERITAGE_NOT_FOUND")
+
+
 # ── R2 / CORS startup config ─────────────────────────────────────────────────
 
 class R2StartupConfigTests(unittest.TestCase):

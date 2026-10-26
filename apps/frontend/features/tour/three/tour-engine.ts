@@ -60,6 +60,63 @@ export function shouldEvaluateHover(
   return Math.hypot(pointer.x - lastPointer.x, pointer.y - lastPointer.y) >= epsilon;
 }
 
+/**
+ * Chuẩn hoá tên camera để so khớp: bỏ hết dấu phân cách và hạ chữ.
+ * `Cam_S0`, `cam s0`, `CAM-S0`, `Camera_S0` → cùng một khoá.
+ */
+export function normalizeCameraName(name: string) {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Đầu vào cho `useGLBCameraForScene`: cảnh nào, trong tổng số bao nhiêu cảnh.
+ *
+ * `sequence` theo đúng quy ước DB (`-1` = overview, `0..N-1` = scene), `sceneCount`
+ * là số cảnh nội dung (không tính overview) — dùng cho nhánh "GLB có đúng bằng số
+ * cảnh thì lấy theo thứ tự node".
+ */
+export interface GLBCameraSceneSpec {
+  sequence: number;
+  sceneCount: number;
+}
+
+/** Các cách đặt tên được chấp nhận cho cảnh `sequence`. */
+function cameraNameCandidates(sequence: number) {
+  const names =
+    sequence < 0
+      ? ["Cam_Overview", "Camera_Overview", "Overview_Cam", "Overview_Camera"]
+      : [
+          `Cam_S${sequence}`,
+          `Camera_S${sequence}`,
+          `S${sequence}_Cam`,
+          `S${sequence}_Camera`,
+          `Camera_${sequence}`,
+          `Camera${sequence}`,
+          `Cam_${sequence}`,
+          `Cam${sequence}`,
+        ];
+  return new Set(names.map(normalizeCameraName));
+}
+
+/**
+ * Chọn camera trong GLB cho một cảnh — hàm thuần để test được không cần WebGL.
+ *
+ * Thứ tự:
+ *  1. tên theo quy ước của cảnh (`Cam_S2`, `Camera_2`, `S2_Cam`…), không phân biệt
+ *     hoa thường và dấu phân cách;
+ *  2. nếu GLB có ĐÚNG bằng số cảnh thì lấy theo đúng thứ tự node — cách này để
+ *     người dựng model không phải đổi tên gì, nhưng chỉ dùng khi số lượng khớp
+ *     tuyệt đối, tránh chọn nhầm camera của cảnh khác;
+ *  3. `-1` = không tìm được.
+ */
+export function pickGLBCamera(names: string[], sequence: number, sceneCount: number) {
+  const candidates = cameraNameCandidates(sequence);
+  const byName = names.findIndex((name) => candidates.has(normalizeCameraName(name)));
+  if (byName >= 0) return byName;
+  if (sceneCount === names.length && sequence >= 0 && sequence < names.length) return sequence;
+  return -1;
+}
+
 export function createTourEngine(
   host: HTMLDivElement,
   modelUrl: string,
@@ -126,6 +183,8 @@ export function createTourEngine(
   };
 
   let glbCameras: THREE.Camera[] = [];
+  /** Gốc model đã nạp — cần để tìm node đích và bắn tia khi đọc camera từ GLB. */
+  let glbRoot: THREE.Object3D | null = null;
   let disposed = false;
 
   /** Chỉ đồng bộ drawing buffer theo tỉ lệ điểm ảnh hiện tại (không đụng camera). */
@@ -194,6 +253,7 @@ export function createTourEngine(
       );
       if (disposed) return;
       scene.add(gltf.scene);
+      glbRoot = gltf.scene;
       glbCameras = gltf.cameras;
       cameraController.fit(gltf.scene);
       invalidate();
@@ -337,6 +397,75 @@ export function createTourEngine(
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
 
+  /** Tên node rỗng được coi là "điểm ngắm" của mọi camera trong GLB. */
+  const CAMERA_TARGET_NAMES = ["cam_target", "camera_target", "cameratarget", "target"];
+
+  /** Camera nhúng trong GLB theo tên (không phân biệt hoa thường). */
+  const findGLBCamera = (name: string) => {
+    const wanted = name.trim().toLowerCase();
+    const hit =
+      glbCameras.find((item) => item.name === name) ??
+      glbCameras.find((item) => item.name.trim().toLowerCase() === wanted);
+    // Chỉ camera phối cảnh mới có `fov`; camera trực giao trong GLB bị bỏ qua.
+    return hit instanceof THREE.PerspectiveCamera ? hit : null;
+  };
+
+  /**
+   * Điểm ngắm cho camera đọc từ GLB — thứ OrbitControls quay quanh.
+   *
+   * Camera trong glTF chỉ có vị trí và hướng; nếu lấy `position + hướng` làm target
+   * thì camera quay quanh một điểm cách nó đúng 1 m, với model cỡ vài trăm mét thì
+   * mỗi lần kéo chuột là model văng khỏi màn hình. Ưu tiên:
+   *   1. node rỗng tên `<tên camera>_target` / `CAM_Target` — tác giả đặt đúng tâm
+   *      muốn quay quanh, chính xác nhất;
+   *   2. tia bắn từ camera vào model, lấy điểm trúng ĐẦU TIÊN — với model scan thì
+   *      đó đúng là thứ camera đang nhìn;
+   *   3. `null` ⇒ controller lùi về điểm cách 1 m theo hướng nhìn.
+   */
+  const resolveCameraTarget = (source: THREE.PerspectiveCamera, name: string) => {
+    const wanted = new Set(
+      [`${name}_target`, `${name}.target`, ...CAMERA_TARGET_NAMES].map((item) =>
+        item.trim().toLowerCase(),
+      ),
+    );
+    const hits: THREE.Object3D[] = [];
+    glbRoot?.traverse((object) => {
+      if (hits.length > 0 || object === glbRoot) return;
+      if (wanted.has(object.name.trim().toLowerCase())) hits.push(object);
+    });
+    const first = hits[0];
+    if (first) {
+      const point = first.getWorldPosition(new THREE.Vector3());
+      camLog("glb-cam", `target theo node ${first.name} → ${fmtVec(point)}`);
+      return point;
+    }
+
+    if (!glbRoot) return null;
+    const origin = source.getWorldPosition(new THREE.Vector3());
+    const direction = source.getWorldDirection(new THREE.Vector3());
+    // Raycaster riêng: dùng chung `raycaster` của hover sẽ ghi đè trạng thái con trỏ.
+    const probe = new THREE.Raycaster(origin, direction);
+    const hit = probe.intersectObject(glbRoot, true)[0];
+    if (hit) {
+      camLog("glb-cam", `target theo tia chiếu → ${fmtVec(hit.point)} (${hit.distance.toFixed(1)} m)`);
+      return hit.point.clone();
+    }
+    camWarn("glb-cam", "không có node đích và tia chiếu trượt model ⇒ quay quanh điểm cách 1 m");
+    return null;
+  };
+
+  /** Đặt camera theo `source` và báo cho vòng lặp render. */
+  const applyGLBCamera = (source: THREE.PerspectiveCamera, duration: number) => {
+    const target = resolveCameraTarget(source, source.name);
+    cameraController.useGLBCamera(source, target, duration);
+    camLog(
+      "glb-cam",
+      `dùng camera ${source.name} · pos=${fmtVec(source.getWorldPosition(new THREE.Vector3()))} · fov=${source.fov.toFixed(1)} · target=${fmtVec(target)}`,
+    );
+    invalidate();
+    return true;
+  };
+
   return {
  
     enterExplore(mode: ExploreMode, eyeHeight?: number) {
@@ -415,12 +544,46 @@ export function createTourEngine(
       invalidate();
     },
     isCameraFlying: cameraController.isFlying,
-    useGLBCamera(name: string) {
-      const source = glbCameras.find((camera) => camera.name === name);
-      if (!(source instanceof THREE.PerspectiveCamera)) return false;
-      cameraController.useGLBCamera(source);
-      invalidate();
-      return true;
+    /**
+     * Đặt camera theo camera nướng sẵn trong GLB, chọn theo TÊN (`camera_node_name`).
+     *
+     * Dùng khi cảnh KHÔNG có toạ độ tác giả (`cam_start_pos/cam_start_target`) —
+     * toạ độ trong DB luôn thắng, vì nó không phụ thuộc vào việc model được xuất
+     * lại với tên node khác.
+     *
+     * Trả `false` khi GLB không có camera tên đó để nơi gọi còn lùi về preset/fit.
+     */
+    useGLBCamera(name: string, duration = 0) {
+      const source = findGLBCamera(name);
+      if (!source) {
+        camWarn(
+          "glb-cam",
+          `GLB không có camera phối cảnh tên ${JSON.stringify(name)} (đang có: ${glbCameras.map((c) => c.name).join(", ") || "không có"})`,
+        );
+        return false;
+      }
+      return applyGLBCamera(source, duration);
+    },
+    /**
+     * Mỗi cảnh tự lấy camera của mình trong GLB.
+     *
+     * Khác `useGLBCamera` ở chỗ không cần biết tên: tên được suy theo `sequence`
+     * (`Cam_S2`, `Camera_2`, `S2_Cam`…) hoặc, khi GLB có đúng bằng số cảnh, theo
+     * đúng thứ tự node. Nhờ vậy chỉ cần export GLB có camera đặt tên đúng là mỗi
+     * cảnh có góc riêng, không phải sửa DB.
+     */
+    useGLBCameraForScene(spec: GLBCameraSceneSpec, duration = 0) {
+      const names = glbCameras.map((camera) => camera.name);
+      const index = pickGLBCamera(names, spec.sequence, spec.sceneCount);
+      const source = index >= 0 ? glbCameras[index] : null;
+      if (!(source instanceof THREE.PerspectiveCamera)) {
+        camWarn(
+          "glb-cam",
+          `không chọn được camera cho cảnh ${spec.sequence} (GLB có: ${names.join(", ") || "không camera nào"})`,
+        );
+        return false;
+      }
+      return applyGLBCamera(source, duration);
     },
     setInteractiveHighlights(items: HeritageInteractiveHighlight[]) {
       // Danh sách điểm đổi ⇒ chuyến dí cũ (nếu có) hết hiệu lực.

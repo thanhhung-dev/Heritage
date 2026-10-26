@@ -1,23 +1,49 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   HeroSection,
   DiscoverMoreSection,
   HeritageCarouselSection,
   type HeritageItem,
 } from "@/features/home";
+import type { TriptychCardData } from "@/components/TriptychCard/TriptychCard";
+import { fetchHeritages } from "@/lib/heritage";
 import mockData from "@/mocks/heritage-mock.json";
 
 export default function HeritagePreviewPage() {
-  const allMocks = mockData as unknown as HeritageItem[];
+  const router = useRouter();
+  const fallbackMocks = mockData as unknown as HeritageItem[];
 
-  const featuredItems = allMocks.slice(0, 10);
-  const artifactItems = allMocks.slice(8, 18);
-  const traditionItems = allMocks.slice(14, 24);
-  const festivalItems = allMocks.slice(20, 30);
+  const [apiItems, setApiItems] = useState<TriptychCardData[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchHeritages()
+      .then((data) => {
+        if (active && Array.isArray(data) && data.length > 0) {
+          setApiItems(data);
+        }
+      })
+      .catch(() => {
+        // Fallback sang mockData khi API lỗi
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const sourceList: HeritageItem[] =
+    apiItems.length > 0 ? (apiItems as unknown as HeritageItem[]) : fallbackMocks;
+
+  const featuredItems = sourceList.slice(0, 10);
+  const artifactItems = sourceList.slice(8, 18);
+  const traditionItems = sourceList.slice(14, 24);
+  const festivalItems = sourceList.slice(20, 30);
 
   const handleCardClick = (slug: string) => {
-    window.alert(`Mở chi tiết di sản: ${slug}`);
+    router.push(`/content/${slug}`);
   };
 
   return (
@@ -30,8 +56,11 @@ export default function HeritagePreviewPage() {
         backgroundColor: "#0b0c0e",
       }}
     >
-      {/* 1. HeroSection */}
-      <HeroSection onInfo={handleCardClick} />
+      {/* 1. HeroSection (3 Featured Cards: Lăng Tự Đức, Cung An Định, Ngũ Hành Sơn) */}
+      <HeroSection
+        items={apiItems.length > 0 ? apiItems : undefined}
+        onInfo={handleCardClick}
+      />
 
       {/* 2. Featured Experiences Carousel */}
       <HeritageCarouselSection

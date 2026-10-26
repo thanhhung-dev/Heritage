@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type CSSProperties } from "react";
 import TriptychCard, {
   type TriptychCardData,
 } from "@/components/TriptychCard/TriptychCard";
-import mockData from "@/mocks/heritage-mock.json";
+import triptychStyles from "@/components/TriptychCard/TriptychCard.module.css";
+import { fetchHeritages } from "@/lib/heritage";
 import styles from "./HeroSection.module.css";
 
 export interface HeroTileProps {
@@ -15,12 +16,6 @@ export interface HeroTileProps {
   className?: string;
 }
 
-/**
- * Component bên trái: HeroTile
- * - text-align: left; align-items: flex-start;
- * - Tiêu đề ngắt dòng chuẩn Figma: Every Place Has a <br /> Story
- * - 2 đoạn mô tả 14px, color: rgba(255, 255, 255, 0.7), không text shadow
- */
 export function HeroTile({
   eyebrow,
   title,
@@ -35,15 +30,29 @@ export function HeroTile({
   );
 
   return (
-    <div className={[styles.heroTile, className].filter(Boolean).join(" ")}>
-      {eyebrow ? <p className={styles.heroTileEyebrow}>{eyebrow}</p> : null}
-      <h1 className={styles.heroTitle}>{renderedTitle}</h1>
-      {description ? (
-        <p className={styles.heroDescription}>{description}</p>
-      ) : null}
-      {subDescription ? (
-        <p className={styles.heroSubDescription}>{subDescription}</p>
-      ) : null}
+    <div
+      className={[styles.heroTile, styles.hp_hero_left, className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className={styles.hp_hero_headline_area}>
+        {eyebrow ? <p className={styles.heroTileEyebrow}>{eyebrow}</p> : null}
+        <h1 className={`${styles.heroTitle} ${styles.hp_hero_h1}`}>
+          {renderedTitle}
+        </h1>
+        {description ? (
+          <p className={`${styles.heroDescription} ${styles.hp_hero_tagline}`}>
+            {description}
+          </p>
+        ) : null}
+        {subDescription ? (
+          <p
+            className={`${styles.heroSubDescription} ${styles.hp_hero_tagline}`}
+          >
+            {subDescription}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -64,47 +73,118 @@ export interface HeroSectionProps {
 
 const LOCAL_FALLBACK_IMAGE = "/images/cung-an-dinh.jpg";
 
-/**
- * Lấy 3 di sản chuẩn khớp mẫu thiết kế Figma (An Định, Tự Đức, Ngũ Hành Sơn)
- */
-function getDefaultHeroItems(): TriptychCardData[] {
-  const typedMocks = mockData as unknown as TriptychCardData[];
-  const targetSlugs = ["an-dinh-palace", "tu-duc-tomb", "marble-mountains"];
-  const matched = targetSlugs
-    .map((slug) => typedMocks.find((item) => item.slug === slug))
-    .filter((item): item is TriptychCardData => Boolean(item));
+export const FEATURED_HERO_SLUGS = [
+  ["lang-tu-duc", "tu-duc-tomb"],
+  ["cung-an-dinh", "an-dinh-palace"],
+  ["ngu-hanh-son", "marble-mountains"],
+] as const;
 
-  const items =
-    matched.length >= 3 ? matched.slice(0, 3) : typedMocks.slice(0, 3);
-
-  // Đảm bảo card Cung An Định luôn có ảnh local thực tế tuyệt đẹp và ổn định
-  return items.map((item) => {
-    if (item.slug === "an-dinh-palace") {
-      return {
-        ...item,
-        card_image_url: LOCAL_FALLBACK_IMAGE,
-        splash_image_url: LOCAL_FALLBACK_IMAGE,
-      };
-    }
-    return item;
-  });
-}
+export const DEFAULT_HERO_ITEMS: TriptychCardData[] = [
+  {
+    id: 1,
+    slug: "lang-tu-duc",
+    title: "Lăng Tự Đức",
+    region: "Huế",
+    publish_date: "2026-10-26",
+    description:
+      "Khám phá Khiêm Lăng, công trình gắn liền với vua Tự Đức, thông qua không gian 3D, văn bia Khiêm Cung Ký và khu lăng mộ.",
+    hover_video_url:
+      "https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/storage/TuDuc/tuc-duc-hover.mp4",
+    splash_image_url:
+      "https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/storage/TuDuc/splash-tu-duc.jpg",
+    card_image_url:
+      "https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/storage/TuDuc/card-tu-duc.jpg",
+    language1: { code: "vi", name: "Vietnamese" },
+    language2: { code: "en", name: "English" },
+    href: "/content/lang-tu-duc",
+  },
+  {
+    id: 5,
+    slug: "cung-an-dinh",
+    title: "Cung An Định",
+    region: "Huế",
+    publish_date: "2026-10-26",
+    description:
+      "Cung An Định được vua Khải Định cho xây dựng đầu thế kỷ 20 bên bờ sông An Cựu, mang kiến trúc cung đình kết hợp phong cách châu Âu. Sau này cung gắn với cuộc đời Nam Phương hoàng hậu – vị hoàng hậu cuối cùng của Việt Nam.",
+    splash_image_url:
+      "https://images.unsplash.com/photo-1696147861445-9fdebe294c6b?auto=format&fit=crop&w=1600&h=900&q=80",
+    card_image_url:
+      "https://images.unsplash.com/photo-1696147861445-9fdebe294c6b?auto=format&fit=crop&w=800&h=600&q=80",
+    language1: { code: "vi", name: "Vietnamese" },
+    language2: { code: "en", name: "English" },
+    href: "/content/cung-an-dinh",
+  },
+  {
+    id: 22,
+    slug: "ngu-hanh-son",
+    title: "Ngũ Hành Sơn",
+    region: "Đà Nẵng",
+    publish_date: "2026-10-26",
+    description:
+      "Ngũ Hành Sơn gồm năm ngọn núi đá cẩm thạch với hệ thống động, chùa và am miếu. Hằng năm, lễ hội Quán Thế Âm diễn ra tại chùa Quán Thế Âm vào ngày 19 tháng 2 âm lịch, thu hút đông đảo Phật tử và du khách.",
+    splash_image_url:
+      "https://images.unsplash.com/photo-1464809142576-df63ca4ed7f0?auto=format&fit=crop&w=1600&h=900&q=80",
+    card_image_url:
+      "https://images.unsplash.com/photo-1464809142576-df63ca4ed7f0?auto=format&fit=crop&w=800&h=600&q=80",
+    language1: { code: "vi", name: "Vietnamese" },
+    language2: { code: "en", name: "English" },
+    href: "/content/ngu-hanh-son",
+  },
+];
 
 function getCardImageUrl(item?: TriptychCardData): string {
   if (!item) return LOCAL_FALLBACK_IMAGE;
-  if (item.slug === "an-dinh-palace") {
-    return LOCAL_FALLBACK_IMAGE;
-  }
   return item.splash_image_url || item.card_image_url || LOCAL_FALLBACK_IMAGE;
 }
 
-/**
- * Component khung chính: HeroSection (HomeSection)
- * 1. heroBlurredBg: Lớp nền mờ đằng sau (Blurred Heritage Background) theo currentBg
- * 2. heroOverlayGradient: Lớp gradient phủ tối để làm nổi bật chữ
- * 3. heroLayout: Container max-width 1680px, padding 0 40px, align-items: flex-start
- * 4. 3 TriptychCard: Chiều cao cố định 780px, border-radius 24px, active flex: 2.5
- */
+function selectFeaturedTriptychItems(
+  sourceItems?: TriptychCardData[]
+): TriptychCardData[] {
+  if (!sourceItems || sourceItems.length === 0) {
+    return DEFAULT_HERO_ITEMS;
+  }
+
+  // Ưu tiên chọn đúng 3 di sản: Lăng Tự Đức, Cung An Định, Ngũ Hành Sơn
+  const picked: TriptychCardData[] = [];
+  for (let i = 0; i < FEATURED_HERO_SLUGS.length; i++) {
+    const slugCandidates = FEATURED_HERO_SLUGS[i];
+    const fallback = DEFAULT_HERO_ITEMS[i];
+    const matched = sourceItems.find((item) =>
+      (slugCandidates as readonly string[]).includes(item.slug)
+    );
+    if (matched) {
+      picked.push({
+        ...matched,
+        card_image_url:
+          matched.card_image_url ||
+          matched.splash_image_url ||
+          fallback.card_image_url,
+        splash_image_url:
+          matched.splash_image_url ||
+          matched.card_image_url ||
+          fallback.splash_image_url,
+        href: matched.href || `/content/${matched.slug}`,
+      });
+    } else if (sourceItems.length === 3 && sourceItems[i]) {
+      const item = sourceItems[i];
+      picked.push({
+        ...item,
+        card_image_url:
+          item.card_image_url || item.splash_image_url || fallback.card_image_url,
+        splash_image_url:
+          item.splash_image_url ||
+          item.card_image_url ||
+          fallback.splash_image_url,
+        href: item.href || `/content/${item.slug}`,
+      });
+    } else {
+      picked.push(fallback);
+    }
+  }
+
+  return picked.slice(0, 3);
+}
+
 export function HeroSection({
   items,
   title,
@@ -112,49 +192,101 @@ export function HeroSection({
   subDescription,
   eyebrow,
   onInfo,
-  exploreLabel = "Khám phá",
-  infoLabel = "Chi tiết",
+  exploreLabel = "Explore",
+  infoLabel = "Info",
   className,
 }: HeroSectionProps) {
-  const displayItems = useMemo(() => {
-    if (items && items.length > 0) {
-      return items.slice(0, 3);
-    }
-    return getDefaultHeroItems();
+  const [fetchedItems, setFetchedItems] = useState<TriptychCardData[] | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (items && items.length > 0) return;
+    let active = true;
+    fetchHeritages()
+      .then((data) => {
+        if (active && Array.isArray(data) && data.length > 0) {
+          setFetchedItems(data);
+        }
+      })
+      .catch(() => {
+        // Fallback sang DEFAULT_HERO_ITEMS khi API chưa bật
+      });
+    return () => {
+      active = false;
+    };
   }, [items]);
 
-  const defaultBg = getCardImageUrl(displayItems[0]);
+  const displayItems = useMemo(() => {
+    const source = items && items.length > 0 ? items : fetchedItems ?? undefined;
+    return selectFeaturedTriptychItems(source);
+  }, [items, fetchedItems]);
 
-  // State lưu trữ đường dẫn ảnh của card đang active/hover (mặc định lấy ảnh card 1)
-  const [currentBg, setCurrentBg] = useState<string>(defaultBg);
+  const [activeBgIndex, setActiveBgIndex] = useState<number>(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isAnimating, setIsAnimating] = useState<boolean>(false);
 
-  const handleCardHover = (item: TriptychCardData) => {
-    const url = getCardImageUrl(item);
-    if (url && url !== currentBg) {
-      setCurrentBg(url);
-    }
+  const handleCardActivate = (_item: TriptychCardData, index: number) => {
+    setIsAnimating(true);
+    setActiveIndex(index);
+    setActiveBgIndex(index);
+  };
+
+  const handleMouseLeave = () => {
+    setIsAnimating(true);
+    setActiveIndex(null);
   };
 
   return (
     <section
-      className={[styles.heroSection, className].filter(Boolean).join(" ")}
+      className={[
+        styles.heroSection,
+        styles.hp_hero_triptych,
+        styles.hp_hero_ready,
+        triptychStyles.hp_hero_triptych,
+        triptychStyles.hp_hero_ready,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label="Heritage Hero"
     >
-      {/* 1. Lớp ảnh nền mờ đằng sau (Blurred Heritage Background) */}
-      <div
-        className={styles.heroBlurredBg}
-        style={{
-          backgroundImage: `url(${currentBg || LOCAL_FALLBACK_IMAGE})`,
-        }}
-        aria-hidden="true"
-      />
+      {/* 1. Các lớp ảnh nền mờ (.hp_hero_bg_layer) chuyển mượt bằng opacity */}
+      {displayItems.map((item, idx) => {
+        const bgUrl = getCardImageUrl(item);
+        const isCurrentBg = activeBgIndex === idx;
+        return (
+          <div
+            key={`bg-${item.slug}-${idx}`}
+            className={[
+              styles.hp_hero_bg_layer,
+              isCurrentBg ? styles.hp_hero_bg_layer_active : "",
+              idx === 0 && !isAnimating ? styles.hp_hero_bg_layer_ssr : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={{
+              backgroundImage: `url(${bgUrl || LOCAL_FALLBACK_IMAGE})`,
+            }}
+            aria-hidden="true"
+          />
+        );
+      })}
 
       {/* 2. Lớp gradient phủ tối để làm nổi bật chữ */}
       <div className={styles.heroOverlayGradient} aria-hidden="true" />
 
-      {/* Container nội dung */}
-      <div className={styles.heroLayout}>
-        {/* Cột bên trái: HeroTile */}
+      {/* Container nội dung (.hp_hero_content) */}
+      <div
+        className={[
+          styles.heroLayout,
+          styles.hp_hero_content,
+          isAnimating ? triptychStyles.hp_triptych_animating : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {/* Cột bên trái: HeroTile (.hp_hero_left) */}
         <HeroTile
           eyebrow={eyebrow}
           title={title}
@@ -162,24 +294,35 @@ export function HeroSection({
           subDescription={subDescription}
         />
 
-        {/* Cột bên phải: 3 Triptych Cards */}
-        <div className={styles.triptychList}>
-          {displayItems.map((item) => (
-            <div
-              key={`hero-${item.slug}`}
-              className={styles.triptychCard}
-              onMouseEnter={() => handleCardHover(item)}
-              onFocus={() => handleCardHover(item)}
-            >
-              <TriptychCard
-                item={item}
-                exploreLabel={exploreLabel}
-                infoLabel={infoLabel}
-                onInfo={onInfo}
-              />
-            </div>
+        {/* Cột bên phải: Triptych Section (.hp_triptych) */}
+        <section
+          className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
+          id="hp_triptych"
+          aria-label="Featured Experiences"
+          style={
+            {
+              "--hp-tt-n": displayItems.length,
+            } as CSSProperties
+          }
+          onMouseLeave={handleMouseLeave}
+        >
+          {displayItems.map((item, idx) => (
+            <TriptychCard
+              key={`hero-${item.slug}-${idx}`}
+              item={item}
+              index={idx}
+              cardId={`card-${idx + 1}`}
+              isActive={activeIndex === idx}
+              isCollapsed={activeIndex !== null && activeIndex !== idx}
+              onMouseEnter={() => handleCardActivate(item, idx)}
+              onFocus={() => handleCardActivate(item, idx)}
+              onClick={() => handleCardActivate(item, idx)}
+              exploreLabel={exploreLabel}
+              infoLabel={infoLabel}
+              onInfo={onInfo}
+            />
           ))}
-        </div>
+        </section>
       </div>
     </section>
   );

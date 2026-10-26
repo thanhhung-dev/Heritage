@@ -75,7 +75,7 @@ function formatPublishDate(value: string | null | undefined): string | null {
 
 export default function ContentLoadingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { payload, isModelReady, modelError } = useHeritageTour();
+  const { payload, modelError } = useHeritageTour();
   const heritage = payload.heritage;
   const splashImageUrl = heritage.splash_image_url ?? "";
   const splashImageRef = useRef<HTMLImageElement>(null);
@@ -83,7 +83,9 @@ export default function ContentLoadingPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<PageLocale | null>(
     null,
   );
-  const isReady = (!splashImageUrl || loadedSplashUrl === splashImageUrl) && isModelReady;
+  // Chỉ chờ ảnh splash: nội dung scene lấy từ DB nên vào tour được ngay cả khi
+  // model 3D chưa có trên R2 (xem `layout.tsx`).
+  const isReady = !splashImageUrl || loadedSplashUrl === splashImageUrl;
   const sourceLanguage: PageLocale = heritage.language1?.code
     .toLowerCase()
     .startsWith("vi")

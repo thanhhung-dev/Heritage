@@ -1471,3 +1471,42 @@ test("đổi vùng đi bộ giữa chừng thì frame sau đã kẹp theo biên 
     harness.restore();
   }
 });
+
+test("camera nướng trong GLB: đọc vị trí/hướng/fov và dùng điểm ngắm truyền vào", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  const controller = createCameraController(camera, controls);
+
+  const source = new THREE.PerspectiveCamera(38, 1, 0.1, 1000);
+  source.name = "Cam_S1";
+  source.position.set(30, 12, -8);
+  source.lookAt(2, 4, 1);
+  source.updateMatrixWorld(true);
+
+  const second = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+  second.position.set(0, 0, 5);
+  second.lookAt(0, 0, 0);
+  second.updateMatrixWorld(true);
+
+  try {
+    // Có target: OrbitControls quay quanh đúng điểm tác giả đặt trong GLB.
+    controller.useGLBCamera(source, new THREE.Vector3(2, 4, 1));
+    assert.deepEqual(camera.position.toArray(), [30, 12, -8]);
+    assert.deepEqual(controls.target.toArray(), [2, 4, 1]);
+    assert.equal(camera.fov, 38);
+    assert.ok(camera.up.distanceTo(new THREE.Vector3(0, 1, 0)) < 1e-8);
+
+    // Không có target: lùi về điểm cách 1 m theo hướng nhìn, không phải gốc toạ độ.
+    controller.useGLBCamera(second, null);
+    assert.deepEqual(camera.position.toArray(), [0, 0, 5]);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(0, 0, 4)) < 1e-8,
+      `target sai: ${controls.target.toArray()}`);
+    assert.equal(camera.fov, 50);
+  } finally {
+    controls.dispose();
+  }
+});

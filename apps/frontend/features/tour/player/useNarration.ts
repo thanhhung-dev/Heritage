@@ -45,9 +45,18 @@ export function useNarration(url: string | null, muted = false) {
       await audio.play();
       if (audioRef.current === audio) setState((previous) => ({ ...previous, error: null }));
     } catch (cause) {
+      // Autoplay bị chặn (chưa có thao tác của người dùng) KHÔNG phải lỗi: tour tự
+      // phát narration khi vào scene nên trình duyệt hay chặn. Giữ im lặng và để
+      // nút play của người dùng khởi động lại, thay vì hiện thông báo tiếng Anh
+      // của Chrome ("play() failed because the user didn't interact…").
+      const blocked = cause instanceof DOMException && cause.name === "NotAllowedError";
       if (audioRef.current === audio) setState((previous) => ({
         ...previous, isPlaying: false,
-        error: cause instanceof Error ? cause.message : "Không phát được narration.",
+        error: blocked
+          ? null
+          : cause instanceof Error
+            ? cause.message
+            : "Không phát được narration.",
       }));
     }
   }, []);

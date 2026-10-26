@@ -1,11 +1,49 @@
-name: heritage-local
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
 
-# PostgreSQL và OpenSearch đã chạy bởi compose project "heritagegraph".
-# File này chỉ ghi nhận endpoint cho backend local; không tạo container mới.
-# Backend kết nối qua host ports:
-#   OpenSearch: http://127.0.0.1:9200
-#   PostgreSQL: postgresql+psycopg://heritagegraph:local-only-password@127.0.0.1:5433/heritagegraph
-#
-# Không chạy "docker compose up" với file này.
-services: {}
+    image: heritage-backend:local
+    container_name: heritage-backend
+    restart: unless-stopped
 
+    env_file:
+      - .env
+
+    environment:
+      LLAMA_SERVER_URL: ${LLAMA_SERVER_URL_DOCKER:-http://host.docker.internal:8080}
+      HEALTHCHECK_SKIP_MODEL: ${HEALTHCHECK_SKIP_MODEL:-0}
+
+      # .env dùng DATABASE_URL trỏ 127.0.0.1:5433 (đúng khi chạy backend trên host).
+      # Trong container 127.0.0.1 là chính container nên phải gọi Postgres theo tên
+      # service trên network chung (xem DB_HOST bên dưới).
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@heritagegraph-db-1:5432/${POSTGRES_DB}
+
+      DB_HOST: heritagegraph-db-1
+      DB_PORT: 5432
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+
+    networks:
+      - heritage-network
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+networks:
+  heritage-network:
+    external: true
+    name: heritagegraph_heritage-network
