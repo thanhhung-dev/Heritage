@@ -4,11 +4,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(24px, 5vw, 72px) clamp(16px, 4vw, 64px);
-  background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(255, 155, 45, 0.14), transparent 60%),
-    radial-gradient(900px 500px at 0% 110%, rgba(196, 0, 29, 0.12), transparent 55%),
-    #0a0e14;
+  background: #0b0c0e;
   color: #fff;
 }
 
@@ -60,6 +56,7 @@
 
 .moreRow {
   display: flex;
-  gap: 16px;
-  margin-top: 48px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
 }

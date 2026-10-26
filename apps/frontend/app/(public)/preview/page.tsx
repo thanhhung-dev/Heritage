@@ -1,50 +1,72 @@
 "use client";
 
-import TriptychCard, { type TriptychCardData } from "@/components/TriptychCard/TriptychCard";
-import PortraitCard, { type PortraitCardData } from "@/components/PortraitCard/PortraitCard";
-import { Button } from "@/components/Button/Button";
+import {
+  HeroSection,
+  DiscoverMoreSection,
+  HeritageCarouselSection,
+  type HeritageItem,
+} from "@/features/home";
 import mockData from "@/mocks/heritage-mock.json";
-import styles from "./preview.module.css";
 
 export default function HeritagePreviewPage() {
-  const items = mockData.slice(0, 5) as unknown as TriptychCardData[];
+  const allMocks = mockData as unknown as HeritageItem[];
+
+  const featuredItems = allMocks.slice(0, 10);
+  const artifactItems = allMocks.slice(8, 18);
+  const traditionItems = allMocks.slice(14, 24);
+  const festivalItems = allMocks.slice(20, 30);
+
+  const handleCardClick = (slug: string) => {
+    window.alert(`Mở chi tiết di sản: ${slug}`);
+  };
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.head}>
-        <p className={styles.eyebrow}>HeritageGraph · Preview</p>
-        <h1>Di sản Đà Nẵng — Huế</h1>
-        <p>Triptych card · hover vào card để mở rộng hiện thông tin · 5 địa điểm đầu từ mock API</p>
-      </div>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        minHeight: "100vh",
+        overflowX: "hidden",
+        backgroundColor: "#0b0c0e",
+      }}
+    >
+      {/* 1. HeroSection */}
+      <HeroSection onInfo={handleCardClick} />
 
-      <div className={styles.hero}>
-        {items.map((item) => (
-          <TriptychCard
-            key={item.slug}
-            item={item}
-            exploreLabel="Explore"
-            infoLabel="Info"
-            onInfo={(slug: string) => window.alert(`Mở chi tiết: ${slug}`)}
-          />
-        ))}
-      </div>
+      {/* 2. Featured Experiences Carousel */}
+      <HeritageCarouselSection
+        title="Featured Experiences"
+        description="Curated virtual journeys and immersive stories"
+        items={featuredItems}
+        onCardClick={handleCardClick}
+      />
 
-      <div className={styles.grid}>
-        {items.map((item) => (
-          <PortraitCard
-            key={`portrait-${item.slug}`}
-            item={item as unknown as PortraitCardData}
-            exploreLabel="Explore"
-            infoLabel="Info"
-            onInfo={(slug) => window.alert(`Mở chi tiết: ${slug}`)}
-          />
-        ))}
-      </div>
+      {/* 3. Artifacts & Treasures Carousel */}
+      <HeritageCarouselSection
+        title="Artifacts & Treasures"
+        description="The tools, art, and objects that shape human history"
+        items={artifactItems}
+        onCardClick={handleCardClick}
+      />
 
-      <div className={styles.moreRow}>
-        <Button href="/library">Browse Library</Button>
-        <Button>Browse Library (button)</Button>
-      </div>
+      {/* 4. People & Traditions Carousel */}
+      <HeritageCarouselSection
+        title="People & Traditions"
+        description="Community members share personal stories and memories"
+        items={traditionItems}
+        onCardClick={handleCardClick}
+      />
+
+      {/* 5. Festivals & Community Practices Carousel */}
+      <HeritageCarouselSection
+        title="Festivals & Community Practices"
+        description="The rituals and customs that bring heritage to life"
+        items={festivalItems}
+        onCardClick={handleCardClick}
+      />
+
+      {/* 6. Discover More CTA Section */}
+      <DiscoverMoreSection />
     </div>
   );
 }
