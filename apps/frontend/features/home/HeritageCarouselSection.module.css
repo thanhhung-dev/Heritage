@@ -1,201 +1,156 @@
-/* ==========================================================================
-   HeritageCarouselSection.module.css
-   Cinematic Ambient Blurred Backdrop (sectionBackdropContainer)
-   - ambientImageBlur: Nền mờ lấy theo thẻ đang hover/active (blur 80px)
-   - ambientRadialGlow: Quầng sáng xanh biển đặc trưng Figma (Ocean Cyan Glow)
-   - ambientDarkFade: Gradient tối chuyển tiếp giữa các section
-   ========================================================================== */
-
 .carouselSection {
-  width: 100%;
   position: relative;
+  width: 100%;
+  padding: 60px 0;
   overflow: hidden;
-  margin-top: 40px;
-  box-sizing: border-box;
+  background-color: #0b0c0e;
 }
 
-/* Khung chứa lớp nền mờ chuyển màu sâu (Cinematic Ambient Backdrop) */
+/* Lớp nền mờ Ambient Backdrop */
 .sectionBackdropContainer {
   position: absolute;
   inset: 0;
-  overflow: hidden;
-  z-index: 0;
   pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
 }
 
-/* 1. Lớp ảnh nền mờ sâu */
 .ambientImageBlur {
   position: absolute;
-  inset: -40px;
+  inset: -20px;
   background-size: cover;
   background-position: center;
-  filter: blur(80px) brightness(0.3) saturate(1.25);
-  transform: scale(1.15) translateZ(0);
-  transition: background-image 0.7s ease-in-out;
-  will-change: transform, filter;
+  filter: blur(80px) brightness(0.25);
+  opacity: 0.6;
+  transition: background-image 0.5s ease-in-out;
 }
 
-/* 2. Quầng sáng màu xanh biển đặc trưng như Figma (Ocean Cyan Glow) */
 .ambientRadialGlow {
   position: absolute;
-  top: 5%;
-  right: 5%;
-  width: 750px;
-  height: 480px;
-  background: radial-gradient(
-    circle,
-    rgba(0, 168, 204, 0.2) 0%,
-    rgba(14, 116, 144, 0.12) 40%,
-    rgba(11, 12, 14, 0) 70%
-  );
-  filter: blur(80px);
-  pointer-events: none;
-  transform: translateZ(0);
-  will-change: transform;
+  top: 0;
+  left: 20%;
+  width: 60%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 100, 34, 0.08) 0%, rgba(11, 12, 14, 0) 70%);
 }
 
-/* 3. Lớp gradient tối chuyển tiếp giữa các section */
 .ambientDarkFade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(11, 12, 14, 0.7) 0%,
-    rgba(11, 12, 14, 0.35) 50%,
-    #0b0c0e 100%
-  );
-  pointer-events: none;
+  background: linear-gradient(180deg, rgba(11, 12, 14, 0.8) 0%, transparent 40%, rgba(11, 12, 14, 0.95) 100%);
 }
 
-/* Nội dung nổi bật bên trên (z-index: 2) */
+/* Header danh mục */
 .sectionHeader {
   position: relative;
   z-index: 2;
-  transform: translateZ(0);
+  max-width: 1680px;
+  margin: 0 auto 24px auto;
+  padding: 0 40px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  padding: 0 32px;
-  margin-bottom: 8px;
-  box-sizing: border-box;
 }
 
 .headerLeft {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .titleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* Fix kích thước icon hình thoi nhỏ gọn chuẩn Figma */
 .diamondIcon {
-  display: inline-flex;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
   color: #ff6422;
   flex-shrink: 0;
 }
 
 .sectionTitle {
-  font-size: 20px;
+  font-size: 1.75rem;
   font-weight: 700;
-  line-height: 1.2;
   color: #ffffff;
   margin: 0;
-  letter-spacing: -0.01em;
 }
 
 .sectionDescription {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 6px 0 0;
-  line-height: 1.4;
-  padding-left: 22px;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
 }
 
-/* Cặp nút mũi tên tròn điều hướng 32px */
+/* Cặp nút tròn điều hướng */
 .navButtons {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .navButton {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #ffffff;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-  padding: 0;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
 }
 
 .navButton:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: scale(1.05);
+  background: rgba(255, 100, 34, 0.8);
+  border-color: #ff6422;
 }
 
-.navButton:active {
-  transform: scale(0.95);
-}
-
-/* Danh sách cuộn ngang (Horizontal Scroll Carousel) */
+/* Container cuộn ngang các thẻ */
 .scrollContainer {
   position: relative;
   z-index: 2;
-  transform: translateZ(0);
   display: flex;
-  gap: 16px;
+  flex-direction: row;
+  gap: 20px;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 16px 32px 32px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  box-sizing: border-box;
+  scroll-behavior: smooth;
+  padding: 10px 40px 30px 40px;
+  width: 100%;
+  scrollbar-width: none; /* Ẩn thanh cuộn trên Firefox */
 }
 
 .scrollContainer::-webkit-scrollbar {
-  display: none;
+  display: none; /* Ẩn thanh cuộn trên Chrome/Safari */
 }
 
-/* Card di sản: 200px x 320px, border kính mờ */
+/* Card di sản */
 .card {
   flex: 0 0 200px;
   width: 200px;
   height: 320px;
-  border-radius: 18px;
-  overflow: hidden;
   position: relative;
-  scroll-snap-align: start;
+  border-radius: 16px;
+  overflow: hidden;
   cursor: pointer;
-  background-color: rgba(22, 24, 29, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-  text-decoration: none;
-  display: block;
+  background-color: #1a1c20;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.18);
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(255, 100, 34, 0.6);
 }
 
 .cardImage {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -203,70 +158,52 @@
 }
 
 .card:hover .cardImage {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
-/* Lớp phủ đáy thẻ */
 .cardOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0) 45%,
-    rgba(0, 0, 0, 0.4) 65%,
-    rgba(0, 0, 0, 0.88) 100%
-  );
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(11, 12, 14, 0.95) 100%);
   pointer-events: none;
-  z-index: 1;
 }
 
-/* Chữ ở đáy card */
 .cardContent {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 16px 14px;
+  padding: 16px;
   z-index: 2;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 
 .cardTitle {
-  font-size: 14px;
+  font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
-  line-height: 1.3;
-  margin: 0 0 4px;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
 .cardRegion {
-  font-size: 12px;
+  font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-@media (max-width: 640px) {
+/* Mobile & Tablet */
+@media (max-width: 768px) {
   .sectionHeader {
     padding: 0 20px;
   }
-
   .scrollContainer {
-    padding: 12px 20px 24px;
+    padding: 10px 20px 20px 20px;
   }
-
   .card {
-    flex: 0 0 170px;
-    width: 170px;
-    height: 270px;
+    flex: 0 0 160px;
+    width: 160px;
+    height: 260px;
   }
 }

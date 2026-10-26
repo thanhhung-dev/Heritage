@@ -1,9 +1,9 @@
 /* ==========================================================================
    HeroSection.module.css
    HeritageGraph Homepage Hero Section
-   Blurred Heritage Background (heroBlurredBg) & Gradient Overlay (heroOverlayGradient)
    Container: max-width: 1680px, padding: 0 40px (Aligned with Header Logo)
    Cards: height: 780px (min-height: 760px), border-radius: 24px, active flex: 2.5
+   Background: Dynamic Blurred Hero Background & Dark Overlay (rgba(12, 12, 15, 0.5))
    Typography: Left-aligned, 52px Heading, 14px Descriptions, no text-shadow
    ========================================================================== */
 
@@ -24,21 +24,19 @@
 }
 
 /* --------------------------------------------------------------------------
-   1. Lớp ảnh nền mờ đằng sau (Blurred Heritage Background)
-   filter: blur(60px) brightness(0.45) saturate(1.2), transform: scale(1.12)
+   1. Lớp nền mờ động (Dynamic Background Blur)
+   filter: blur(70px) brightness(0.4), transform: scale(1.1)
    -------------------------------------------------------------------------- */
-.heroBlurredBg,
-.heroblurredbg,
 .heroBackground,
 .herobackground,
 .heroLayer,
 .herolayer {
   position: absolute;
-  inset: -50px;
+  inset: -40px;
   background-size: cover;
   background-position: center;
-  filter: blur(60px) brightness(0.45) saturate(1.2);
-  transform: scale(1.12);
+  filter: blur(70px) brightness(0.4);
+  transform: scale(1.1);
   z-index: 0;
   pointer-events: none;
   transition: background-image 0.5s ease-in-out;
@@ -46,20 +44,13 @@
 }
 
 /* --------------------------------------------------------------------------
-   2. Lớp gradient phủ tối để làm nổi bật chữ (heroOverlayGradient)
+   2. Lớp phủ tối (Hero Overlay - rgba(12, 12, 15, 0.5))
    -------------------------------------------------------------------------- */
-.heroOverlayGradient,
-.herooverlaygradient,
 .heroOverlay,
 .herooverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(12, 12, 15, 0.35) 0%,
-    rgba(12, 12, 15, 0.55) 45%,
-    rgba(12, 12, 15, 0.85) 100%
-  );
+  background: rgba(12, 12, 15, 0.5);
   z-index: 1;
   pointer-events: none;
 }
@@ -82,7 +73,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Cột trái: Hero Tile (Căn sát lề trái, ngang tầm với đỉnh 3 card)
+   Cột trái: Hero Tile (Căn sát lề trái, ngang tầm với đỉnh của 3 thẻ card)
    -------------------------------------------------------------------------- */
 .heroTile,
 .herotile {
@@ -257,6 +248,7 @@
     gap: 24px;
   }
 
+  .heroTitle,
   .heroTileTitle {
     font-size: 32px;
     margin-bottom: 16px;
