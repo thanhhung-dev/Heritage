@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import TriptychCard, {
   type TriptychCardData,
 } from "@/components/TriptychCard/TriptychCard";
 import mockData from "@/mocks/heritage-mock.json";
 import styles from "./HeroSection.module.css";
+import { HeritageDetailModal, type HeritageItem } from "./HeritageDetailModal";
 
 export interface HeroTileProps {
   eyebrow?: string;
@@ -116,6 +118,8 @@ export function HeroSection({
   infoLabel = "Chi tiết",
   className,
 }: HeroSectionProps) {
+  const router = useRouter();
+
   const displayItems = useMemo(() => {
     if (items && items.length > 0) {
       return items.slice(0, 3);
@@ -128,11 +132,42 @@ export function HeroSection({
   // State lưu trữ đường dẫn ảnh của card đang active/hover (mặc định lấy ảnh card 1)
   const [currentBg, setCurrentBg] = useState<string>(defaultBg);
 
+  // State quản lý Modal Info
+  const [selectedHeritage, setSelectedHeritage] = useState<HeritageItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleCardHover = (item: TriptychCardData) => {
     const url = getCardImageUrl(item);
     if (url && url !== currentBg) {
       setCurrentBg(url);
     }
+  };
+
+  // Hàm mở Modal Info khi bấm nút Chi tiết hoặc click card
+  const handleOpenInfoModal = (item: TriptychCardData) => {
+    if (onInfo) {
+      onInfo(item.slug);
+    }
+
+    const anyItem = item as any;
+    setSelectedHeritage({
+      id: item.slug,
+      title: anyItem.title || anyItem.name || "Di sản văn hóa",
+      category: anyItem.category || anyItem.type || "Di tích lịch sử",
+      period: anyItem.period || anyItem.era || "Việt Nam",
+      description:
+        anyItem.description ||
+        anyItem.short_description ||
+        "Khám phá câu chuyện lịch sử và vẻ đẹp kiến trúc đặc sắc của di sản này.",
+      imageUrl: getCardImageUrl(item),
+    });
+    setIsModalOpen(true);
+  };
+
+  // Điều hướng sang trang chi tiết khi bấm nút trong Modal
+  const handleNavigateDetail = (slug: string) => {
+    setIsModalOpen(false);
+    router.push(`/preview?id=${slug}`);
   };
 
   return (
@@ -175,12 +210,20 @@ export function HeroSection({
                 item={item}
                 exploreLabel={exploreLabel}
                 infoLabel={infoLabel}
-                onInfo={onInfo}
+                onInfo={() => handleOpenInfoModal(item)}
               />
             </div>
           ))}
         </div>
       </div>
+
+      {/* 3. Modal hiển thị thông tin di sản */}
+      <HeritageDetailModal
+        isOpen={isModalOpen}
+        item={selectedHeritage}
+        onClose={() => setIsModalOpen(false)}
+        onNavigate={handleNavigateDetail}
+      />
     </section>
   );
 }
