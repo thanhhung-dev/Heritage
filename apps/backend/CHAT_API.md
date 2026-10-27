@@ -159,7 +159,18 @@ The Gemini adapter follows the official
 [generateContent REST contract](https://ai.google.dev/api/generate-content).
 
 On Windows, Psycopg's async driver requires a selector event loop. With the
-project's Uvicorn version, run from the repository root:
+project's Uvicorn version, the recommended repository-root launch commands are:
+
+```powershell
+.\start-backend.ps1 -Port 8000
+# Or, without PowerShell script execution policy requirements:
+.\start-backend.bat --port 8000
+```
+
+The wrappers use the repository virtualenv or the existing parent-workspace
+virtualenv. `scripts/run-backend.py` loads `.env` before API/auth imports,
+honors `BACKEND_PORT` (default 8000) and selects the Windows-compatible loop.
+Swagger is available at `http://127.0.0.1:8000/docs`. To run directly:
 
 ```powershell
 python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --loop asyncio:SelectorEventLoop
@@ -193,7 +204,7 @@ account's list. Management routes do not open an AI/retrieval dependency.
 From the repository root:
 
 ```powershell
-python -m pytest apps/backend/tests/test_chat_conversation.py apps/backend/tests/test_chat_fallback.py apps/backend/tests/test_startup_config.py
+python -m pytest apps/backend/tests/test_chat_api.py apps/backend/tests/test_chat_conversation.py apps/backend/tests/test_chat_fallback.py apps/backend/tests/test_chat_integration.py -q
 ```
 
 Tests use `unittest.TestCase`, `TestClient`, real JWT validation and SQLAlchemy
@@ -208,3 +219,9 @@ Fallback tests also cover Gemini request headers/payloads, dependency failures,
 deadlines, demo labelling, persistence and account isolation. Gemini HTTP is
 stubbed in automated tests; a real key is needed to verify its live availability.
 SQLite tests do not replace PostgreSQL migration/integration verification.
+
+`test_chat_integration.py` covers the real prompt/provider HTTP adapter, JWTs,
+persistence, restoration and continuation; only retrieval and the model HTTP
+response are stubbed. Empty/truncated model output is rejected, and restored
+citations retain their response order. See [the task audit](CHAT_TASK_AUDIT.md)
+for the latest checklist, local PostgreSQL/HTTP verification and runtime limits.
