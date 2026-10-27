@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useMemo, type CSSProperties } from "react";
+import { useState, useMemo, type CSSProperties } from "react";
 import TriptychCard, {
   type TriptychCardData,
 } from "@/components/TriptychCard/TriptychCard";
 import triptychStyles from "@/components/TriptychCard/TriptychCard.module.css";
-import { fetchHeritages } from "@/lib/heritage";
 import styles from "./HeroSection.module.css";
 
 export interface HeroTileProps {
@@ -73,64 +72,15 @@ export interface HeroSectionProps {
 
 const LOCAL_FALLBACK_IMAGE = "/images/cung-an-dinh.jpg";
 
+/**
+ * Ba di sản được ưu tiên lên hero, theo thứ tự. Chỉ là *thứ tự chọn* trong danh
+ * sách lấy từ API — không kèm dữ liệu nào, để hero luôn phản ánh DB.
+ */
 export const FEATURED_HERO_SLUGS = [
   ["lang-tu-duc", "tu-duc-tomb"],
   ["cung-an-dinh", "an-dinh-palace"],
   ["ngu-hanh-son", "marble-mountains"],
 ] as const;
-
-export const DEFAULT_HERO_ITEMS: TriptychCardData[] = [
-  {
-    id: 1,
-    slug: "lang-tu-duc",
-    title: "Lăng Tự Đức",
-    region: "Huế",
-    publish_date: "2026-10-26",
-    description:
-      "Khám phá Khiêm Lăng, công trình gắn liền với vua Tự Đức, thông qua không gian 3D, văn bia Khiêm Cung Ký và khu lăng mộ.",
-    hover_video_url:
-      "https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/storage/TuDuc/tuc-duc-hover.mp4",
-    splash_image_url:
-      "https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/storage/TuDuc/splash-tu-duc.jpg",
-    card_image_url:
-      "https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/storage/TuDuc/card-tu-duc.jpg",
-    language1: { code: "vi", name: "Vietnamese" },
-    language2: { code: "en", name: "English" },
-    href: "/content/lang-tu-duc",
-  },
-  {
-    id: 5,
-    slug: "cung-an-dinh",
-    title: "Cung An Định",
-    region: "Huế",
-    publish_date: "2026-10-26",
-    description:
-      "Cung An Định được vua Khải Định cho xây dựng đầu thế kỷ 20 bên bờ sông An Cựu, mang kiến trúc cung đình kết hợp phong cách châu Âu. Sau này cung gắn với cuộc đời Nam Phương hoàng hậu – vị hoàng hậu cuối cùng của Việt Nam.",
-    splash_image_url:
-      "https://images.unsplash.com/photo-1696147861445-9fdebe294c6b?auto=format&fit=crop&w=1600&h=900&q=80",
-    card_image_url:
-      "https://images.unsplash.com/photo-1696147861445-9fdebe294c6b?auto=format&fit=crop&w=800&h=600&q=80",
-    language1: { code: "vi", name: "Vietnamese" },
-    language2: { code: "en", name: "English" },
-    href: "/content/cung-an-dinh",
-  },
-  {
-    id: 22,
-    slug: "ngu-hanh-son",
-    title: "Ngũ Hành Sơn",
-    region: "Đà Nẵng",
-    publish_date: "2026-10-26",
-    description:
-      "Ngũ Hành Sơn gồm năm ngọn núi đá cẩm thạch với hệ thống động, chùa và am miếu. Hằng năm, lễ hội Quán Thế Âm diễn ra tại chùa Quán Thế Âm vào ngày 19 tháng 2 âm lịch, thu hút đông đảo Phật tử và du khách.",
-    splash_image_url:
-      "https://images.unsplash.com/photo-1464809142576-df63ca4ed7f0?auto=format&fit=crop&w=1600&h=900&q=80",
-    card_image_url:
-      "https://images.unsplash.com/photo-1464809142576-df63ca4ed7f0?auto=format&fit=crop&w=800&h=600&q=80",
-    language1: { code: "vi", name: "Vietnamese" },
-    language2: { code: "en", name: "English" },
-    href: "/content/ngu-hanh-son",
-  },
-];
 
 function getCardImageUrl(item?: TriptychCardData): string {
   if (!item) return LOCAL_FALLBACK_IMAGE;
@@ -138,48 +88,28 @@ function getCardImageUrl(item?: TriptychCardData): string {
 }
 
 function selectFeaturedTriptychItems(
-  sourceItems?: TriptychCardData[]
+  sourceItems: TriptychCardData[]
 ): TriptychCardData[] {
-  if (!sourceItems || sourceItems.length === 0) {
-    return DEFAULT_HERO_ITEMS;
+  if (sourceItems.length === 0) {
+    return [];
   }
 
-  // Ưu tiên chọn đúng 3 di sản: Lăng Tự Đức, Cung An Định, Ngũ Hành Sơn
   const picked: TriptychCardData[] = [];
   for (let i = 0; i < FEATURED_HERO_SLUGS.length; i++) {
     const slugCandidates = FEATURED_HERO_SLUGS[i];
-    const fallback = DEFAULT_HERO_ITEMS[i];
     const matched = sourceItems.find((item) =>
       (slugCandidates as readonly string[]).includes(item.slug)
     );
-    if (matched) {
-      picked.push({
-        ...matched,
-        card_image_url:
-          matched.card_image_url ||
-          matched.splash_image_url ||
-          fallback.card_image_url,
-        splash_image_url:
-          matched.splash_image_url ||
-          matched.card_image_url ||
-          fallback.splash_image_url,
-        href: matched.href || `/content/${matched.slug}`,
-      });
-    } else if (sourceItems.length === 3 && sourceItems[i]) {
-      const item = sourceItems[i];
-      picked.push({
-        ...item,
-        card_image_url:
-          item.card_image_url || item.splash_image_url || fallback.card_image_url,
-        splash_image_url:
-          item.splash_image_url ||
-          item.card_image_url ||
-          fallback.splash_image_url,
-        href: item.href || `/content/${item.slug}`,
-      });
-    } else {
-      picked.push(fallback);
-    }
+    // Không khớp slug ưu tiên: chỉ lấy theo đúng thứ tự khi API trả về đúng 3 mục,
+    // tránh gán nhầm di sản của vị trí khác.
+    const item = matched ?? (sourceItems.length === 3 ? sourceItems[i] : undefined);
+    if (!item) continue;
+    picked.push({
+      ...item,
+      card_image_url: item.card_image_url || item.splash_image_url,
+      splash_image_url: item.splash_image_url || item.card_image_url,
+      href: item.href || `/content/${item.slug}`,
+    });
   }
 
   return picked.slice(0, 3);
@@ -196,31 +126,13 @@ export function HeroSection({
   infoLabel = "Info",
   className,
 }: HeroSectionProps) {
-  const [fetchedItems, setFetchedItems] = useState<TriptychCardData[] | null>(
-    null
+  // Thuần trình bày: danh sách do nơi gọi truyền vào (đã fetch từ API). Không tự
+  // fetch và không có card mặc định — trước đây component tự gọi API rồi rơi về
+  // `DEFAULT_HERO_ITEMS`, khiến hero hiện dữ liệu không đến từ DB.
+  const displayItems = useMemo(
+    () => selectFeaturedTriptychItems(items ?? []),
+    [items]
   );
-
-  useEffect(() => {
-    if (items && items.length > 0) return;
-    let active = true;
-    fetchHeritages()
-      .then((data) => {
-        if (active && Array.isArray(data) && data.length > 0) {
-          setFetchedItems(data);
-        }
-      })
-      .catch(() => {
-        // Fallback sang DEFAULT_HERO_ITEMS khi API chưa bật
-      });
-    return () => {
-      active = false;
-    };
-  }, [items]);
-
-  const displayItems = useMemo(() => {
-    const source = items && items.length > 0 ? items : fetchedItems ?? undefined;
-    return selectFeaturedTriptychItems(source);
-  }, [items, fetchedItems]);
 
   const [activeBgIndex, setActiveBgIndex] = useState<number>(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -294,35 +206,38 @@ export function HeroSection({
           subDescription={subDescription}
         />
 
-        {/* Cột bên phải: Triptych Section (.hp_triptych) */}
-        <section
-          className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
-          id="hp_triptych"
-          aria-label="Featured Experiences"
-          style={
-            {
-              "--hp-tt-n": displayItems.length,
-            } as CSSProperties
-          }
-          onMouseLeave={handleMouseLeave}
-        >
-          {displayItems.map((item, idx) => (
-            <TriptychCard
-              key={`hero-${item.slug}-${idx}`}
-              item={item}
-              index={idx}
-              cardId={`card-${idx + 1}`}
-              isActive={activeIndex === idx}
-              isCollapsed={activeIndex !== null && activeIndex !== idx}
-              onMouseEnter={() => handleCardActivate(item, idx)}
-              onFocus={() => handleCardActivate(item, idx)}
-              onClick={() => handleCardActivate(item, idx)}
-              exploreLabel={exploreLabel}
-              infoLabel={infoLabel}
-              onInfo={onInfo}
-            />
-          ))}
-        </section>
+        {/* Cột bên phải: Triptych Section (.hp_triptych). Ẩn khi chưa có dữ liệu
+            để layout `--hp-tt-n: 0` không tạo ra khung rỗng. */}
+        {displayItems.length > 0 ? (
+          <section
+            className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
+            id="hp_triptych"
+            aria-label="Featured Experiences"
+            style={
+              {
+                "--hp-tt-n": displayItems.length,
+              } as CSSProperties
+            }
+            onMouseLeave={handleMouseLeave}
+          >
+            {displayItems.map((item, idx) => (
+              <TriptychCard
+                key={`hero-${item.slug}-${idx}`}
+                item={item}
+                index={idx}
+                cardId={`card-${idx + 1}`}
+                isActive={activeIndex === idx}
+                isCollapsed={activeIndex !== null && activeIndex !== idx}
+                onMouseEnter={() => handleCardActivate(item, idx)}
+                onFocus={() => handleCardActivate(item, idx)}
+                onClick={() => handleCardActivate(item, idx)}
+                exploreLabel={exploreLabel}
+                infoLabel={infoLabel}
+                onInfo={onInfo}
+              />
+            ))}
+          </section>
+        ) : null}
       </div>
     </section>
   );

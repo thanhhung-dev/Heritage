@@ -18,10 +18,13 @@ export interface HeritageTourContextValue {
   heritageSlug: string;
   currentSceneKey: string;
   currentScene: HeritageScene | null;
-  status: "demo" | "ready";
   error: string | null;
   isModelReady: boolean;
   modelError: string | null;
+  /** 0..1 — tiến độ tải GLB. `0` khi tour không có model hoặc chưa bắt đầu. */
+  modelProgress: number;
+  /** Tour này có model 3D để tải hay không (`modelUrl` khác null). */
+  hasModel: boolean;
   engine: TourEngine | null;
   scenePlayback: ScenePlayback | null;
 }
@@ -34,10 +37,11 @@ interface HeritageTourProviderProps {
   payload: HeritagePayload;
   heritageSlug: string;
   currentSceneKey: string;
-  status: "demo" | "ready";
   error: string | null;
   engine: TourEngine | null;
   modelError: string | null;
+  modelProgress?: number;
+  hasModel?: boolean;
   playback?: Record<string, ScenePlayback>;
   children: ReactNode;
 }
@@ -46,10 +50,11 @@ export function HeritageTourProvider({
   payload,
   heritageSlug,
   currentSceneKey,
-  status,
   error,
   engine,
   modelError,
+  modelProgress = 0,
+  hasModel = false,
   playback,
   children,
 }: HeritageTourProviderProps) {
@@ -64,14 +69,26 @@ export function HeritageTourProvider({
       heritageSlug,
       currentSceneKey,
       currentScene,
-      status,
       error,
       isModelReady: engine !== null,
       modelError,
+      modelProgress,
+      hasModel,
       engine,
       scenePlayback: playback?.[currentSceneKey] ?? null,
     }),
-    [payload, heritageSlug, currentSceneKey, currentScene, status, error, engine, modelError, playback]
+    [
+      payload,
+      heritageSlug,
+      currentSceneKey,
+      currentScene,
+      error,
+      engine,
+      modelError,
+      modelProgress,
+      hasModel,
+      playback,
+    ]
   );
 
   return (

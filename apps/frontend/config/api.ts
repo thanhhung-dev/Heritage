@@ -3,6 +3,20 @@ export const API_BASE_URL =
 
 const FALLBACK_API_BASE_URL = "http://localhost:8000/api";
 
+/**
+ * Lỗi HTTP từ API kèm `status` để nơi gọi phân biệt được 404 (không tồn tại) với
+ * lỗi mạng / 5xx mà không phải parse chuỗi message.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export async function apiClient<T>(
   endpoint: string,
   options?: RequestInit
@@ -36,7 +50,10 @@ export async function apiClient<T>(
   }
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.statusText} (${response.status})`);
+    throw new ApiError(
+      `API error: ${response.statusText} (${response.status})`,
+      response.status
+    );
   }
 
   return response.json();

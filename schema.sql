@@ -88,9 +88,14 @@ CREATE TABLE sky_preset (
     name TEXT NOT NULL UNIQUE,
     turbidity DOUBLE PRECISION,
     rayleigh DOUBLE PRECISION,
+    mie_coefficient DOUBLE PRECISION,
+    mie_directional_g DOUBLE PRECISION,
     elevation DOUBLE PRECISION,
     azimuth DOUBLE PRECISION,
     exposure DOUBLE PRECISION,
+    cloud_coverage DOUBLE PRECISION,
+    cloud_density DOUBLE PRECISION,
+    stars DOUBLE PRECISION,
     light_settings JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -107,6 +112,7 @@ CREATE TABLE scene (
     cam_start_target JSONB,
     cam_zoom_pos JSONB,
     cam_zoom_target JSONB,
+    camera_path_url TEXT,
     instant_move BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_scene_heritage_sequence UNIQUE (heritage_id, sequence),

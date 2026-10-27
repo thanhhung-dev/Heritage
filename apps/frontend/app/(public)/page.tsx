@@ -10,11 +10,9 @@ import {
 } from "@/features/home";
 import type { TriptychCardData } from "@/components/TriptychCard/TriptychCard";
 import { fetchHeritages } from "@/lib/heritage";
-import mockData from "@/mocks/heritage-mock.json";
 
 export default function HomePage() {
   const router = useRouter();
-  const fallbackMocks = mockData as unknown as HeritageItem[];
 
   const [apiItems, setApiItems] = useState<TriptychCardData[]>([]);
 
@@ -22,20 +20,21 @@ export default function HomePage() {
     let active = true;
     fetchHeritages()
       .then((data) => {
-        if (active && Array.isArray(data) && data.length > 0) {
+        if (active && Array.isArray(data)) {
           setApiItems(data);
         }
       })
       .catch(() => {
-        // Fallback sang mockData khi API chưa chạy hoặc lỗi mạng
+        // API lỗi ⇒ để trống, các section tự ẩn. Không còn dữ liệu mock thay thế.
       });
     return () => {
       active = false;
     };
   }, []);
 
-  const sourceList: HeritageItem[] =
-    apiItems.length > 0 ? (apiItems as unknown as HeritageItem[]) : fallbackMocks;
+  // `TriptychCardData` (hero) và `HeritageItem` (carousel) là hai shape cho cùng
+  // dữ liệu API; cast một lần ở đây thay vì nới kiểu ở cả hai component.
+  const sourceList = apiItems as unknown as HeritageItem[];
 
   const featuredItems = sourceList.slice(0, 10);
   const artifactItems = sourceList.slice(8, 18);

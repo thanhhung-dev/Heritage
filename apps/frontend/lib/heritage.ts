@@ -16,16 +16,6 @@ export async function fetchHeritages(): Promise<HeritageSummary[]> {
   return apiClient<HeritageSummary[]>("/heritages");
 }
 
-/**
- * Fetch the full single-load heritage payload for a slug.
- *
- * Contract: `GET /api/heritages/{slug}` → { heritage, overview, scenes }
- * Overview is the intro scene (sequence -1, slug "s0").
- */
-export async function fetchHeritagePayload(slug: string): Promise<HeritagePayload> {
-  return apiClient<HeritagePayload>(`/heritages/${encodeURIComponent(slug)}`);
-}
-
 /** Highlight có mốc thời gian trên timeline narration (giây). */
 export type TimedHighlightData = HeritageSceneHighlight & {
   startSeconds: number;

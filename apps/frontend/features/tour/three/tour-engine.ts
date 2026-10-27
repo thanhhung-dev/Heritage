@@ -7,8 +7,9 @@ import type {
   HeritageSkyPreset,
 } from "@/types/heritage";
 import { createEnvironment } from "./environment";
-import { createModelLoader } from "./model-loader";
+import { createModelLoader, type ModelProgress } from "./model-loader";
 import { createCameraController } from "./camera-controller";
+import { createCameraPath, type CameraPath } from "./camera-path";
 import { createExploreBoundary } from "./explore-area";
 import {
   createExploreController,
@@ -122,6 +123,7 @@ export function createTourEngine(
   modelUrl: string,
   onStatus: (message: string | null) => void,
   onError: (error: unknown) => void,
+  onProgress?: (progress: ModelProgress) => void,
 ) {
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
@@ -187,6 +189,21 @@ export function createTourEngine(
   let glbRoot: THREE.Object3D | null = null;
   let disposed = false;
 
+  /**
+   * Quỹ đạo camera của cảnh hiện tại (`scene.camera_path_url`).
+   *
+   * Đây là "nguồn ghi" thứ tư của camera, cùng nhóm với `timeline`: nó tiến theo
+   * `playbackClock` nên pause/tua audio là camera theo đúng, và nó nhường quyền
+   * ngay khi có chuyến bay hoặc người dùng chủ động đổi góc.
+   */
+  let cameraPath: CameraPath | null = null;
+  let cameraPathUrl: string | null = null;
+  /** Tăng mỗi lần đổi path: lần nạp về MUỘN của cảnh cũ không được chiếm quyền. */
+  let cameraPathToken = 0;
+  /** Thời điểm đã sample — cùng một `seconds` thì không tính lại. */
+  let cameraPathTime = Number.NaN;
+  let cameraPathNeedsSync = false;
+
   /** Chỉ đồng bộ drawing buffer theo tỉ lệ điểm ảnh hiện tại (không đụng camera). */
   const syncDrawingBuffer = () => {
     const { width, height } = host.getBoundingClientRect();
@@ -248,14 +265,22 @@ export function createTourEngine(
 
   async function load() {
     try {
-      const gltf = await loader.load(modelUrl, () =>
-        onStatus("Đang giải mã model và texture…"),
+      const gltf = await loader.load(
+        modelUrl,
+        () => onStatus("Đang giải mã model và texture…"),
+        onProgress,
       );
       if (disposed) return;
       scene.add(gltf.scene);
       glbRoot = gltf.scene;
       glbCameras = gltf.cameras;
       cameraController.fit(gltf.scene);
+      // `fit()` vừa ghi đè camera. Nếu quỹ đạo path đã áp pose trước đó (path nạp
+      // xong trước model) thì `cameraPathTime` vẫn bằng `playbackClock` và vòng
+      // lặp sẽ bỏ qua — camera kẹt ở góc `fit()` cho tới khi audio đổi thời điểm.
+      // Hạ mốc thời gian để frame sau áp lại pose của path.
+      cameraPathTime = Number.NaN;
+    cameraPathNeedsSync = false;
       invalidate();
       onStatus(null);
       // Biên dịch shader của model song song (KHR_parallel_shader_compile) thay vì
@@ -293,7 +318,8 @@ export function createTourEngine(
     const cameraFlying = cameraController.update(delta);
     const dollyMoved = cameraController.updateDolly(delta);
     const timelineMoved = cameraController.updateTimeline(playbackClock);
-    const cameraDriven = cameraFlying || dollyMoved || timelineMoved;
+    const pathMoved = updateCameraPath(playbackClock);
+    const cameraDriven = cameraFlying || dollyMoved || timelineMoved || pathMoved;
 
  
     const walking = explore.isWalking();
@@ -313,7 +339,7 @@ export function createTourEngine(
         camWarn("conflict", "flight VÀ dolly cùng ghi pose trong một frame (chuyến bay chuyển cảnh chưa nhường hover)");
       }
      
-      const writer = walking ? "walk" : timelineMoved ? "timeline" : dollyMoved ? "dolly" : cameraFlying ? "flight" : "controls";
+      const writer = walking ? "walk" : pathMoved ? "path" : timelineMoved ? "timeline" : dollyMoved ? "dolly" : cameraFlying ? "flight" : "controls";
       const now = performance.now();
       // Log mỗi 250ms, hoặc ngay khi đổi nguồn ghi để thấy rõ lúc bàn giao.
       if (writer !== lastWriter || now - lastDebugAt > 250) {
@@ -454,8 +480,64 @@ export function createTourEngine(
     return null;
   };
 
+  /** Buông quỹ đạo camera hiện tại. Trả `true` khi thật sự có thứ để buông. */
+  const releaseCameraPath = () => {
+    cameraPathTime = Number.NaN;
+    cameraPathNeedsSync = false;
+    cameraPathUrl = null;
+    if (!cameraPath) return false;
+    cameraPath.dispose();
+    cameraPath = null;
+    return true;
+  };
+
+  /**
+   * Áp quỹ đạo camera tại `seconds` — gọi mỗi frame từ vòng lặp render.
+   *
+   * Nhường ngay khi đang có chuyến bay: chuyến bay chuyển cảnh do
+   * `cameraController.update()` ghi, áp thêm pose của path trong cùng frame là
+   * hai nguồn cùng viết ⇒ giật. Chuyến bay luôn kết thúc đúng tại `path(0)` nên
+   * buông ra là khớp, không nhảy.
+   */
+  const updateCameraPath = (seconds: number) => {
+    if (!cameraPath) return false;
+    if (cameraController.isFlying()) return false;
+    if (seconds === cameraPathTime) {
+      if (cameraPathNeedsSync) {
+        cameraPathNeedsSync = false;
+        cameraController.finishPathPose();
+      }
+      return false;
+    }
+    const pose = cameraPath.sample(seconds);
+    if (!pose) return false;
+    cameraPathTime = seconds;
+    cameraController.applyPathPose(pose.position, pose.target, pose.fov);
+    cameraPathNeedsSync = true;
+    return true;
+  };
+
+  /** Bay tới pose của quỹ đạo tại `seconds` (dùng chung cho vào cảnh / thoát Explore). */
+  const flyToPathTime = (seconds: number, duration = 0) => {
+    if (!cameraPath) return false;
+    const pose = cameraPath.sample(seconds);
+    if (!pose) return false;
+    cameraController.restore(
+      {
+        position: pose.position,
+        target: pose.target,
+        up: new THREE.Vector3(0, 1, 0),
+        fov: pose.fov,
+      },
+      duration,
+    );
+    invalidate();
+    return true;
+  };
+
   /** Đặt camera theo `source` và báo cho vòng lặp render. */
   const applyGLBCamera = (source: THREE.PerspectiveCamera, duration: number) => {
+    releaseCameraPath();
     const target = resolveCameraTarget(source, source.name);
     cameraController.useGLBCamera(source, target, duration);
     camLog(
@@ -525,11 +607,14 @@ export function createTourEngine(
       invalidate();
     },
     applyCameraPreset(preset: HeritageCamera, zoom = false) {
+      // Pose đặt tay thắng quỹ đạo tự động — nếu không, frame sau path kéo camera về.
+      releaseCameraPath();
       const applied = cameraController.applyPreset(preset, zoom);
       invalidate();
       return applied;
     },
     flyCameraPreset(preset: HeritageCamera, zoom = false, duration = 1.6) {
+      releaseCameraPath();
       const applied = cameraController.flyToPreset(preset, zoom, duration);
       invalidate();
       return applied;
@@ -543,6 +628,77 @@ export function createTourEngine(
       cameraController.stopTimeline();
       invalidate();
     },
+    /**
+     * Nạp quỹ đạo camera của cảnh (`scene.camera_path_url`) — GLB chỉ chứa
+     * camera + animation clip, không mesh.
+     *
+     * Trả `true` khi có clip dùng được. `false` (URL rỗng, tải lỗi, file không có
+     * camera/clip) nghĩa là nơi gọi phải lùi về preset A/B như trước.
+     *
+     * Nạp lại cùng một URL là no-op: đổi cảnh rồi quay lại không tải lại file.
+     */
+    async setCameraPath(url: string | null): Promise<boolean> {
+      if (!url) {
+        cameraPathToken += 1;
+        if (releaseCameraPath()) invalidate();
+        return false;
+      }
+      if (cameraPath && cameraPathUrl === url) return true;
+
+      const token = ++cameraPathToken;
+      try {
+        // Dùng chung loader (và cache) với model: file path chỉ vài chục KB nên
+        // nằm lại cache cũng không đáng kể, đổi lại là đổi cảnh không tải lại.
+        const gltf = await loader.load(url);
+        // Cảnh đã đổi (hoặc engine đã đóng) trong lúc chờ ⇒ lần nạp này vô nghĩa.
+        if (disposed || token !== cameraPathToken) return false;
+        releaseCameraPath();
+        const path = createCameraPath(gltf, url, glbRoot);
+        if (!path) return false;
+        cameraPath = path;
+        cameraPathUrl = url;
+        cameraPathTime = Number.NaN;
+    cameraPathNeedsSync = false;
+        camLog(
+          "path",
+          `nạp ${url} · clip=${path.clipName} · ${path.duration.toFixed(2)}s · camera=${path.cameraName} · target=${path.targetSource()}`,
+        );
+        invalidate();
+        return true;
+      } catch (error) {
+        if (!disposed && token === cameraPathToken) {
+          camWarn("path", `không nạp được quỹ đạo camera ${url}`, error);
+        }
+        return false;
+      }
+    },
+    /**
+     * Bay từ góc đang thấy tới pose của quỹ đạo tại `seconds`.
+     *
+     * Cùng vai trò với chuyến bay vào preset lúc đổi cảnh: khung đầu của clip
+     * chính là góc mở đầu cảnh, nên path và chuyến bay kết thúc ở cùng một pose —
+     * buông chuyến bay ra là path tiếp quản, không nhảy.
+     */
+    applyCameraPathStart(duration = 0) {
+      return flyToPathTime(duration <= 0 ? playbackClock : 0, duration);
+    },
+    /**
+     * Quay lại quỹ đạo tại ĐÚNG thời điểm audio đang phát.
+     *
+     * Dùng khi thoát Explore: tua về khung đầu sẽ lệch với lời thuyết minh đang
+     * chạy dở, nên phải bám đồng hồ playback hiện tại.
+     */
+    resumeCameraPath(duration = 1.2) {
+      return flyToPathTime(playbackClock, duration);
+    },
+    /** Trả quyền camera lại cho preset/người dùng (khi rời cảnh hoặc vào Explore). */
+    stopCameraPath() {
+      cameraPathToken += 1;
+      if (releaseCameraPath()) invalidate();
+    },
+    hasCameraPath: () => cameraPath !== null,
+    /** Thời lượng clip quỹ đạo (giây) — 0 khi cảnh không có path. */
+    getCameraPathDuration: () => cameraPath?.duration ?? 0,
     isCameraFlying: cameraController.isFlying,
     /**
      * Đặt camera theo camera nướng sẵn trong GLB, chọn theo TÊN (`camera_node_name`).
@@ -606,6 +762,7 @@ export function createTourEngine(
     },
     dispose() {
       disposed = true;
+      releaseCameraPath();
       observer.disconnect();
       renderer.setAnimationLoop(null);
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
