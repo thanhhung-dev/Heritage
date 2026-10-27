@@ -33,7 +33,7 @@ def development_fallback_enabled() -> bool:
     return os.environ.get("APP_ENVIRONMENT", "local").strip().lower() == "local"
 
 
-async def _gemini_answer(question: str, context: str, api_key: str) -> str:
+async def _gemini_answer(question: str, context: str, api_key: str, *, history: list[dict] | None = None) -> str:
     model = os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip() or DEFAULT_GEMINI_MODEL
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{quote(model, safe='')}:generateContent"
     async with httpx.AsyncClient(timeout=GEMINI_TIMEOUT_SECONDS) as client:
@@ -48,7 +48,10 @@ async def _gemini_answer(question: str, context: str, api_key: str) -> str:
                     "Không tự tạo sự kiện lịch sử, URL hoặc trích dẫn. "
                     "Nếu nguồn là dữ liệu mô phỏng Development, phải nói rõ đây là minh họa."
                 )}]},
-                "contents": [{"role": "user", "parts": [{"text": (
+                "contents": [*[
+                    {"role": "model" if message["role"] == "assistant" else "user",
+                     "parts": [{"text": message["content"]}]} for message in history or []
+                ], {"role": "user", "parts": [{"text": (
                     f"NGUỒN:\n{context}\n\nCÂU HỎI:\n{question}"
                 )}]}],
                 "generationConfig": {"temperature": 0, "maxOutputTokens": 768},
@@ -78,7 +81,7 @@ async def _gemini_answer(question: str, context: str, api_key: str) -> str:
 
 
 async def development_answer(
-    question: str, *, context: str = "", sources: list[dict] | None = None,
+    question: str, *, context: str = "", sources: list[dict] | None = None, history: list[dict] | None = None,
 ) -> GroundedAnswer:
     if not development_fallback_enabled():
         raise RuntimeError("Development fallback is disabled outside the local environment")
@@ -90,7 +93,8 @@ async def development_answer(
     if api_key:
         try:
             answer = await asyncio.wait_for(
-                _gemini_answer(question, evidence, api_key), timeout=GEMINI_TIMEOUT_SECONDS,
+                _gemini_answer(question, evidence, api_key, **({"history": history} if history else {})),
+                timeout=GEMINI_TIMEOUT_SECONDS,
             )
             if has_evidence:
                 return GroundedAnswer(

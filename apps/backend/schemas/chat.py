@@ -8,12 +8,31 @@ from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, JsonValue, field_validator
 
+MAX_CONTEXT_MESSAGES = 6
+MAX_CONTEXT_MESSAGE_CHARS = 2000
+MAX_CONTEXT_CHARS = 6000
+
+
+class ChatContextMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=MAX_CONTEXT_MESSAGE_CHARS)
+
 
 class ChatContextFields(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="forbid", str_strip_whitespace=True)
 
     heritage_context: str | dict[str, JsonValue] | None = None
     scene_context: str | dict[str, JsonValue] | None = None
+    conversation_context: list[ChatContextMessage] = Field(default_factory=list, max_length=MAX_CONTEXT_MESSAGES)
+
+    @field_validator("conversation_context")
+    @classmethod
+    def bound_conversation(cls, value: list[ChatContextMessage]):
+        if sum(len(message.content) for message in value) > MAX_CONTEXT_CHARS:
+            raise ValueError(f"Ngữ cảnh hội thoại không được vượt quá {MAX_CONTEXT_CHARS} ký tự.")
+        return value
 
     @field_validator("heritage_context", "scene_context")
     @classmethod

@@ -82,6 +82,7 @@ class DevelopmentAnswerTests(unittest.IsolatedAsyncioTestCase):
     async def test_gemini_http_contract_uses_key_header_and_rejects_incomplete_output(self):
         real_client = httpx.AsyncClient
         finish_reason = "STOP"
+        history = []
 
         def handle(request):
             self.assertEqual(request.method, "POST")
@@ -90,7 +91,9 @@ class DevelopmentAnswerTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("test-key", str(request.url))
             self.assertTrue(request.url.path.endswith("/models/test-model:generateContent"))
             body = json.loads(request.content)
-            self.assertIn("NGUỒN:\nEvidence", body["contents"][0]["parts"][0]["text"])
+            self.assertIn("NGUỒN:\nEvidence", body["contents"][-1]["parts"][0]["text"])
+            self.assertEqual([item["role"] for item in body["contents"]],
+                             ["user", "model", "user"] if history else ["user"])
             self.assertEqual(body["generationConfig"]["temperature"], 0)
             return httpx.Response(200, json={"candidates": [{
                 "finishReason": finish_reason,
@@ -102,9 +105,11 @@ class DevelopmentAnswerTests(unittest.IsolatedAsyncioTestCase):
             side_effect=lambda **kwargs: real_client(transport=httpx.MockTransport(handle), **kwargs),
         ):
             self.assertEqual(await chat_fallback._gemini_answer("Question", "Evidence", "test-key"), "Answer")
+            history = [{"role": "user", "content": "Previous question"}, {"role": "assistant", "content": "Previous answer"}]
+            self.assertEqual(await chat_fallback._gemini_answer("Question", "Evidence", "test-key", history=history), "Answer")
             finish_reason = "MAX_TOKENS"
             with self.assertRaises(ValueError):
-                await chat_fallback._gemini_answer("Question", "Evidence", "test-key")
+                await chat_fallback._gemini_answer("Question", "Evidence", "test-key", history=history)
 
 
 class LocalConversationFallbackTests(unittest.TestCase):

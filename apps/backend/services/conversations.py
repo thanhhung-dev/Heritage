@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import math
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
@@ -17,10 +16,11 @@ from apps.backend.models.admin import AdminAccount
 from apps.backend.models.chat import ChatMessage, Conversation, MessageCitation
 from apps.backend.models.heritage import Heritage
 from apps.backend.schemas.chat import (
-    ChatAnswer as GroundedAnswer, ChatMessageCreate, ChatMessageResponse, ChatOutcome,
-    ChatResponse, ConversationDetailResponse, LegacyChatRequest,
+    ChatAnswer as GroundedAnswer, ChatContextMessage, ChatMessageCreate, ChatMessageResponse, ChatOutcome,
+    ChatResponse, ConversationDetailResponse, MAX_CONTEXT_MESSAGES,
     ConversationResponse, MessageCitationResponse,
 )
+from apps.backend.services.chat_context import bounded_history
 
 CHAT_TIMEOUT_SECONDS = 30
 
@@ -32,16 +32,6 @@ class ChatServiceError(Exception):
         self.code = code
         self.detail = detail
         super().__init__(detail)
-
-
-def question_with_context(request: ChatMessageCreate | LegacyChatRequest) -> str:
-    """UI context qualifies the question; it is never added to source evidence."""
-    parts = [request.message]
-    for label, value in (("Di sản đang xem", request.heritage_context), ("Cảnh đang xem", request.scene_context)):
-        if value:
-            text = json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else value
-            parts.append(f"{label} (bối cảnh do người dùng cung cấp): {text}")
-    return "\n\n".join(parts)
 
 
 def citation_from_source(source: dict, message_id: UUID) -> MessageCitation:
@@ -133,7 +123,7 @@ class ConversationService:
 
     async def send(
         self, request: ChatMessageCreate, account_id: int | None,
-        answerer: Callable[[ChatMessageCreate], Awaitable[GroundedAnswer]],
+        answerer: Callable[[ChatMessageCreate, list[ChatContextMessage]], Awaitable[GroundedAnswer]],
     ) -> ChatResponse:
         try:
             if account_id is not None:
@@ -142,19 +132,38 @@ class ConversationService:
                 conversation = await self.require_owned(request.conversation_id, account_id, lock=True)
                 if request.heritage_id is not None and request.heritage_id != conversation.heritage_id:
                     raise ChatServiceError("bad_request", "Di sản không khớp với cuộc trò chuyện hiện tại.")
+                if request.conversation_context:
+                    raise ChatServiceError("bad_request", "Hội thoại đã lưu sử dụng lịch sử từ máy chủ; không nhận lịch sử thay thế.")
+                rows = (await self.db.execute(
+                    select(ChatMessage.role, ChatMessage.content)
+                    .where(ChatMessage.conversation_id == conversation.id)
+                    .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()).limit(MAX_CONTEXT_MESSAGES)
+                )).all()
+                history = bounded_history(rows)
             else:
-                if request.heritage_id is not None:
-                    heritage = (await self.db.execute(
-                        select(Heritage.id).where(Heritage.id == request.heritage_id, Heritage.publish_state == "published")
-                    )).scalar_one_or_none()
-                    if heritage is None:
-                        raise ChatServiceError("not_found", "Không tìm thấy di sản đã công bố.")
                 conversation = Conversation(
                     id=uuid4(), account_id=account_id, title=request.message[:200], heritage_id=request.heritage_id,
                 )
+                history = request.conversation_context
+
+            effective_request = request
+            if conversation.heritage_id is not None:
+                heritage = (await self.db.execute(
+                    select(Heritage.id, Heritage.title, Heritage.region).where(
+                        Heritage.id == conversation.heritage_id, Heritage.publish_state == "published",
+                    )
+                )).first()
+                if heritage is None:
+                    raise ChatServiceError("not_found", "Không tìm thấy di sản đã công bố.")
+                if not request.heritage_context:
+                    effective_request = request.model_copy(update={
+                        "heritage_context": {"title": heritage.title, "region": heritage.region},
+                    })
+
+            if request.conversation_id is None:
                 self.db.add(conversation)
 
-            answer = await asyncio.wait_for(answerer(request), timeout=CHAT_TIMEOUT_SECONDS)
+            answer = await asyncio.wait_for(answerer(effective_request, history), timeout=CHAT_TIMEOUT_SECONDS)
             if not answer.answer.strip() or answer.resolution_status == "unavailable":
                 raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.")
             if answer.answer_type == "answered" and not answer.sources:

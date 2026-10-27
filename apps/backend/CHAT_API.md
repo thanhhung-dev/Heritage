@@ -61,8 +61,53 @@ Heritage IDs must refer to published heritage. Optional heritage/scene context
 qualifies the question; it is not inserted into the source evidence. Empty or
 oversized messages/context are rejected with `422`.
 
+## Bounded conversation context
+
+Both request formats accept optional `conversation_context`:
+
+```json
+{
+  "message": "Còn kiến trúc?",
+  "conversation_id": null,
+  "heritage_context": {"title": "Chùa Thiên Mụ"},
+  "scene_context": "Cổng chính",
+  "conversation_context": [
+    {"role": "user", "content": "Chùa Thiên Mụ ở đâu?"},
+    {"role": "assistant", "content": "Chùa ở Huế."}
+  ]
+}
+```
+
+The example uses the persisted endpoint. Omit `conversation_id` for the
+stateless compatibility endpoint. Context accepts at most 6 messages, 2,000
+characters per message and 6,000 total content characters. Only `user` and
+`assistant` roles are accepted; extra fields and system/developer/tool messages
+are rejected. It is prompt context, never citation evidence or imported history.
+
+For an existing account-owned `conversation_id`, the backend checks ownership,
+then loads only the most recent 6 stored messages and applies the same character
+budget. Clients must omit `conversation_context` when resuming saved history;
+attempting to replace it returns `400`. Another account or a guest receives
+`403` before history reaches retrieval or inference.
+
+The model receives previous messages separately from newly retrieved source
+passages. Referencing follow-up questions can use the latest previous user
+question to qualify retrieval, without treating previous assistant text as
+evidence. Explicit topic changes keep a fresh retrieval query. Both llama.cpp
+and the optional Gemini development fallback receive the bounded context.
+
+When a conversation has `heritage_id` and a request omits `heritage_context`,
+the backend loads the published heritage title/region to qualify the request.
+An embedded chat should send its current `scene_context` with every question;
+the backend does not invent a scene or infer private scene state.
+
+Guest requests create independent guest conversations and can carry bounded
+client context between turns. Client context itself is not persisted as extra
+messages and does not grant access to any saved conversation.
+
 The complete answer pipeline is awaited with a 30-second timeout (`504`);
-outside local development, inference/dependency failures return a Vietnamese `500` response. A missing DB
+the stateless compatibility route uses the same deadline.
+Outside local development, persisted inference/dependency failures return a Vietnamese `500` response. A missing DB
 configuration returns `503`. The conversation, both messages, and citations
 commit atomically before `201`; timeout, cancellation or failure rolls them back.
 Python cannot forcibly stop an already running inference thread, but a late
