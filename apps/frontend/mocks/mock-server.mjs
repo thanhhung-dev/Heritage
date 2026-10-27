@@ -24,9 +24,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.MOCK_API_PORT || 8001);
 const DELAY_MS = Number(process.env.MOCK_API_DELAY_MS || 150);
 
+const categories = JSON.parse(readFileSync(join(__dirname, "heritage-categories.json"), "utf-8"));
 const items = JSON.parse(
   readFileSync(join(__dirname, "heritage-mock.json"), "utf-8"),
-);
+).map((item) => ({ ...item, category: categories[item.slug] ?? null }));
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
