@@ -223,6 +223,22 @@ class ChatConversationTests(unittest.TestCase):
         self.assertEqual(restored["intent"], result["intent"])
         self.assertFalse(restored["abstained"])
 
+    def test_multiple_citations_keep_response_order_when_history_is_restored(self):
+        self.retrieval.evidence.append(SimpleNamespace(
+            id="43", text="Second source evidence.",
+            to_source=lambda: {"passage_id": "43", "doc": "Second source", "url": "https://example.org/second"},
+        ))
+        original = conversation_service.citation_from_source
+        remaining = [UUID("ffffffff-ffff-4fff-afff-fffffffffff2"), UUID("aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaa1")]
+        def descending_ids(source, message_id):
+            citation = original(source, message_id)
+            citation.id = remaining.pop(0)
+            return citation
+        with patch.object(conversation_service, "citation_from_source", side_effect=descending_ids):
+            response = self.create_conversation()
+        restored = self.history(response["conversation_id"]).json()["messages"][1]
+        self.assertEqual(restored["citations"], response["citations"])
+
     def test_valid_maximum_message_and_ui_context_are_not_revalidated_as_one_oversized_message(self):
         result = self.create_conversation(message="a" * 8000, heritage_context="b" * 2000, scene_context="c" * 2000)
         self.assertEqual(result["answer_type"], "answered")

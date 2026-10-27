@@ -13,6 +13,7 @@ from botocore.exceptions import ClientError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 
 class MemoryS3:
@@ -91,7 +92,9 @@ class AdminKnowledgeTests(unittest.TestCase):
             'R2_UPLOAD_MAX_BYTES': '100', 'CORS_ORIGINS': '',
         }))
         self.temp = self.enterContext(tempfile.TemporaryDirectory())
-        self.engine = create_async_engine(f'sqlite+aiosqlite:///{Path(self.temp) / "test.db"}')
+        # Setup, TestClient and cleanup use different event loops. Do not retain
+        # pooled SQLite handles across those loops (Windows locks the test file).
+        self.engine = create_async_engine(f'sqlite+aiosqlite:///{Path(self.temp) / "test.db"}', poolclass=NullPool)
         self.addCleanup(lambda: asyncio.run(self.engine.dispose()))
         async def create():
             async with self.engine.begin() as conn:

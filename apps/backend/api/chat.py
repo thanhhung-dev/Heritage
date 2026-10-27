@@ -249,10 +249,12 @@ async def _chat(req: ChatRequest, repository: PassageRepository, *, development_
             answer, details = await asyncio.wait_for(
                 asyncio.to_thread(generate), timeout=chat_fallback.LOCAL_INFERENCE_TIMEOUT_SECONDS,
             )
-            if not answer.strip():
-                raise ValueError("Local model returned an empty answer")
         else:
             answer, details = await asyncio.to_thread(generate)
+        if not isinstance(answer, str) or not answer.strip():
+            raise ValueError("Model returned an empty answer")
+        if getattr(details, "finish_reason", None) in {"length", "content_filter"}:
+            raise ValueError("Model did not return a complete answer")
     except Exception:
         if development_fallback:
             log.warning("Local generation unavailable; using development chat fallback")

@@ -7,20 +7,23 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from apps.backend.api import admin_knowledge, auth, chat, graphrag, health, heritage, profile
-from apps.backend.core.assets import configure_asset_policy
-from apps.backend.core.config import cors_origins, validate_startup_config
-from apps.backend.core.email import EmailConfig, init_email_service
-from apps.backend.core.observability import (
+
+# Authentication reads JWT configuration at import time, so load .env first.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
+from apps.backend.api import admin_knowledge, auth, chat, graphrag, health, heritage, profile  # noqa: E402
+from apps.backend.core.assets import configure_asset_policy  # noqa: E402
+from apps.backend.core.config import cors_origins, validate_startup_config  # noqa: E402
+from apps.backend.core.email import EmailConfig, init_email_service  # noqa: E402
+from apps.backend.core.observability import (  # noqa: E402
     configure_logging,
     correlation_middleware,
     metrics_response,
     setup_tracing,
     shutdown_tracing,
 )
-from apps.backend.db.base import configure_database, dispose_database
+from apps.backend.db.base import configure_database, dispose_database  # noqa: E402
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 log = logging.getLogger(__name__)
 
 

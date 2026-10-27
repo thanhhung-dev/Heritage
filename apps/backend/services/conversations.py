@@ -54,13 +54,17 @@ def citation_from_source(source: dict, message_id: UUID) -> MessageCitation:
 
 
 def message_response(message: ChatMessage) -> ChatMessageResponse:
+    metadata = message.response_metadata or {}
     outcome = ChatOutcome.model_validate({
-        **(message.response_metadata or {}), "abstained": message.abstained,
+        **metadata, "abstained": message.abstained,
     })
+    citation_order = metadata.get("citation_order", [])
+    positions = {value: index for index, value in enumerate(citation_order)} if isinstance(citation_order, list) else {}
+    citations = sorted(message.citation_records, key=lambda item: (positions.get(str(item.id), len(positions)), str(item.id)))
     return ChatMessageResponse(
         **outcome.outcome_data(), id=message.id, conversation_id=message.conversation_id,
         role=message.role, content=message.content, created_at=message.created_at,
-        citations=message.citation_records,
+        citations=citations,
     )
 
 
@@ -181,6 +185,7 @@ class ConversationService:
                 created_at=now + timedelta(microseconds=1),
             )
             assistant_message.citation_records = [citation_from_source(source, assistant_message.id) for source in answer.sources]
+            assistant_message.response_metadata["citation_order"] = [str(item.id) for item in assistant_message.citation_records]
             conversation.updated_at = assistant_message.created_at
             self.db.add_all([user_message, assistant_message])
             await self.db.flush()
