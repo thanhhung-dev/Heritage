@@ -51,7 +51,7 @@ from apps.backend.core.corpus import load_docs  # noqa: E402
 from apps.backend.core.prompt import NER_QUESTION, NER_TYPES, SYSTEM, chat_messages  # noqa: E402
 from pipelines.training.train_hf import load_config  # noqa: E402
 
-TRAIN_CONFIG = ROOT / "training" / "lora_config.yaml"
+TRAIN_CONFIG = Path(__file__).with_name("lora_config.yaml")
 DEFAULT_TRAINING_CONFIG = load_config(TRAIN_CONFIG)
 BASE_MODEL = str(DEFAULT_TRAINING_CONFIG["model_id"])
 DEFAULT_ADAPTER_PATH = Path(DEFAULT_TRAINING_CONFIG["output_dir"])
@@ -88,6 +88,9 @@ def adapter_identity(
         checkpoint = f"checkpoint-{checkpoint}"
         selected_path = adapter_path / checkpoint
     weights_path = selected_path / "adapter_model.safetensors"
+    legacy_weights = selected_path / "adapters.safetensors"
+    if not weights_path.is_file() and legacy_weights.is_file():
+        weights_path = legacy_weights
     return {
         "path": _display_path(selected_path),
         "checkpoint": checkpoint or "best",

@@ -24,6 +24,7 @@ import sys
 import unittest
 
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from apps.backend.app import app
 from apps.backend.db.base import configure_database, dispose_database
@@ -31,6 +32,20 @@ from apps.backend.db.base import configure_database, dispose_database
 
 class ProfileConsentAPITests(unittest.TestCase):
     """Test suite for User Profile, Personalization Consent, and Gamification APIs."""
+
+    @classmethod
+    def _delete_test_accounts(cls) -> None:
+        from apps.backend.db.base import AsyncSessionLocal
+
+        async def remove():
+            async with AsyncSessionLocal() as session:
+                for account_id, username in cls._test_accounts:
+                    await session.execute(
+                        text("DELETE FROM account WHERE id = :id AND username = :username"),
+                        {"id": account_id, "username": username},
+                    )
+                await session.commit()
+        asyncio.run(remove())
 
     @classmethod
     def _create_test_tables(cls) -> None:
@@ -71,6 +86,9 @@ class ProfileConsentAPITests(unittest.TestCase):
 
         database_url = os.environ.get("DATABASE_URL", "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/heritagegraph")
         configure_database(database_url)
+        cls.addClassCleanup(lambda: asyncio.run(dispose_database()))
+        cls._test_accounts = []
+        cls.addClassCleanup(cls._delete_test_accounts)
 
         cls._create_test_tables()
 
@@ -86,19 +104,15 @@ class ProfileConsentAPITests(unittest.TestCase):
         )
         assert register_response.status_code == 201, register_response.text
         cls.account_id = register_response.json()["account_id"]
+        cls._test_accounts.append((int(cls.account_id), cls.test_username))
 
         login_response = client.post(
             "/api/auth/login",
-            json={"username_or_email": cls.test_username, "password": cls.test_password},
+            json={"email": cls.test_email, "password": cls.test_password},
         )
         assert login_response.status_code == 200, login_response.text
         cls.access_token = login_response.json()["access_token"]
         cls.auth_headers = {"Authorization": f"Bearer {cls.access_token}"}
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        """Clean up database configuration after all tests."""
-        asyncio.run(dispose_database())
 
     def setUp(self) -> None:
         """Set up test client before each test."""
@@ -182,10 +196,11 @@ class ProfileConsentAPITests(unittest.TestCase):
             json={"email": other_email, "username": other_username, "password": other_password},
         )
         self.assertEqual(register_response.status_code, 201)
+        self._test_accounts.append((int(register_response.json()["account_id"]), other_username))
 
         login_response = other_client.post(
             "/api/auth/login",
-            json={"username_or_email": other_username, "password": other_password},
+            json={"email": other_email, "password": other_password},
         )
         self.assertEqual(login_response.status_code, 200)
         other_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}

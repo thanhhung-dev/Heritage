@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, String, text
+from sqlalchemy import BigInteger, Boolean, ForeignKey, String, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -10,6 +10,15 @@ from apps.backend.db.base import Base, TimestampMixin
 
 def _uuid_pk():
     return mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
+
+
+class AccountRole(Base):
+    """Role lookup used by the current account/auth compatibility model."""
+
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
 class AdminAccount(Base, TimestampMixin):

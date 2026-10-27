@@ -1,4 +1,4 @@
--r ../apps/backend/requirements.txt
+-r ../apps/backend/requirements-test.txt
 greenlet==3.2.4
 mypy==1.18.2
 PyYAML==6.0.2

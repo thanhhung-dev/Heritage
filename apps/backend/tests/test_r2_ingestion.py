@@ -49,7 +49,7 @@ class R2IngestionTests(unittest.TestCase):
     def test_download_to_valid_package_with_overlap_checksums_and_no_signature(self):
         with self.client() as client:
             package_path = run_ingestion(self.config, self.output, client=client)
-        package = json.loads(package_path.read_text())
+        package = json.loads(package_path.read_text(encoding="utf-8"))
         validate_package(package)
         self.assertEqual(package["release_status"], "draft")
         doc = package["documents"][0]
@@ -66,13 +66,13 @@ class R2IngestionTests(unittest.TestCase):
             self.assertGreater(following["char_start"], previous["char_start"])
             self.assertLess(following["char_start"], previous["char_end"])
         self.assertTrue(all(i in covered for i, c in enumerate(self.text) if not c.isspace()))
-        manifest = json.loads((self.output / "manifest.json").read_text())
+        manifest = json.loads((self.output / "manifest.json").read_text(encoding="utf-8"))
         for entry in manifest["objects"]:
             data = (self.output / entry["local_path"]).read_bytes()
             self.assertEqual(hashlib.sha256(data).hexdigest(), entry["sha256"])
             self.assertEqual(len(data), entry["size"])
         for file in self.output.rglob("*.json"):
-            self.assertNotIn("SECRET", file.read_text())
+            self.assertNotIn("SECRET", file.read_text(encoding="utf-8"))
 
     def test_repeated_run_is_identical_and_distinct_sources_are_not_deduplicated(self):
         second = dict(self.config["documents"][0],
@@ -86,7 +86,7 @@ class R2IngestionTests(unittest.TestCase):
         after = {str(p.relative_to(self.output)): p.read_bytes()
                  for p in self.output.rglob("*") if p.is_file()}
         self.assertEqual(before, after)
-        package = json.loads(path.read_text())
+        package = json.loads(path.read_text(encoding="utf-8"))
         self.assertEqual(len(package["documents"]), 2)
         self.assertNotEqual(package["documents"][0]["key"], package["documents"][1]["key"])
 
@@ -95,7 +95,7 @@ class R2IngestionTests(unittest.TestCase):
         with self.client(b"<nav>MENU</nav><h1>History</h1><p>Built in 1601.</p>"
                          b"<script>EVIL</script>", content_type="text/html") as client:
             path = run_ingestion(self.config, self.output, client=client)
-        text = json.loads(path.read_text())["documents"][0]["raw_text"]
+        text = json.loads(path.read_text(encoding="utf-8"))["documents"][0]["raw_text"]
         self.assertIn("Built in 1601.", text)
         self.assertNotIn("MENU", text)
         self.assertNotIn("EVIL", text)
@@ -149,7 +149,7 @@ class R2IngestionTests(unittest.TestCase):
         writer.write(pdf)
         with self.client(pdf.getvalue()) as client:
             path = run_ingestion(self.config, self.output, client=client)
-        self.assertEqual(json.loads(path.read_text())["documents"][0]["raw_text"], "Built in 1601.")
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["documents"][0]["raw_text"], "Built in 1601.")
 
     def test_cli_over_real_http_and_invalid_config_is_controlled(self):
         text = self.text.encode()
@@ -205,7 +205,7 @@ class R2IngestionTests(unittest.TestCase):
     def test_long_unbroken_word_does_not_create_one_chunk_per_character(self):
         with self.client(b"x" * 1000) as client:
             path = run_ingestion(self.config, self.output, client=client)
-        passages = json.loads(path.read_text())["passages"]
+        passages = json.loads(path.read_text(encoding="utf-8"))["passages"]
         self.assertLessEqual(len(passages), 8)
         self.assertEqual(passages[0]["char_start"], 0)
         self.assertEqual(passages[-1]["char_end"], 1000)

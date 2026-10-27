@@ -7,7 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from apps.backend.api import auth, chat, health, heritage, profile
+from apps.backend.api import admin_knowledge, auth, chat, graphrag, health, heritage, profile
 from apps.backend.core.assets import configure_asset_policy
 from apps.backend.core.config import cors_origins, validate_startup_config
 from apps.backend.core.email import EmailConfig, init_email_service
@@ -77,6 +77,8 @@ app.middleware("http")(correlation_middleware)
 app.include_router(auth.router)  # prefix="/api/auth" already in router
 app.include_router(health.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(graphrag.router, prefix="/api")
+app.include_router(admin_knowledge.router, prefix="/api")
 app.include_router(heritage.router, prefix="/api")
 app.include_router(profile.router)
 

@@ -67,8 +67,16 @@ def user_msg(source: str, question: str) -> str:
     return f"Nguồn: {source.strip() or '(không có)'}\n\nCâu hỏi: {question.strip()}"
 
 
-def chat_messages(source: str, question: str) -> list[dict[str, str]]:
+def chat_messages(
+    source: str, question: str, *, history: list[dict[str, str]] | None = None,
+) -> list[dict[str, str]]:
+    turns = []
+    for message in history or []:
+        if message.get("role") not in {"user", "assistant"} or not isinstance(message.get("content"), str):
+            raise ValueError("History must contain only user/assistant text messages")
+        turns.append({"role": message["role"], "content": message["content"]})
     return [
         {"role": "system", "content": SYSTEM},
+        *turns,
         {"role": "user", "content": user_msg(source, question)},
     ]
