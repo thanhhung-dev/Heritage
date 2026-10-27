@@ -179,6 +179,18 @@ python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --loop async
 This explicitly selects the compatible loop for direct local startup. Linux
 can keep its usual Uvicorn command.
 
+If registration returns `500` with `NoReferencedTableError` in the server log,
+check whether the API process predates the account/role mapping update. An
+existing PostgreSQL `roles` table does not register that table in SQLAlchemy
+metadata. The `AdminAccount.role_id` mapping now binds directly to `AccountRole.id`.
+Stop the old API process and restart with the launcher above to load that mapping;
+changing `.env`, creating another roles table or re-running migrations is not
+required for this stale-process error.
+
+Registration regression tests live in `apps/backend/tests/test_auth_api.py` and
+run with `python -m pytest apps/backend/tests/test_auth_api.py -v`. They use a
+disposable database with real ORM flushes, Argon2 hashing and JWT authentication.
+
 ## Account conversation management
 
 All management routes require a valid JWT and an active account:

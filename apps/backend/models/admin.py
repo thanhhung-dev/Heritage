@@ -35,5 +35,5 @@ class AdminAccount(Base, TimestampMixin):
     updated_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     username: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     role_id: Mapped[int | None] = mapped_column(
-        ForeignKey("roles.id", ondelete="RESTRICT"), nullable=True
+        ForeignKey(AccountRole.id, ondelete="RESTRICT"), nullable=True
     )
