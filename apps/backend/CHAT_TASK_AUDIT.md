@@ -69,6 +69,47 @@ lời của model thật.
 Các account/conversation chỉ được tạo cho lần kiểm thử đã được xóa theo đúng ID
 và owner; server tạm được dừng sau kiểm tra.
 
+## Xác nhận QA hoàn tất cho Task 2
+
+Ngày xác nhận: **2026-10-28**. Người kiểm thử thủ công: **Cao Văn Khoa**.
+Phạm vi xác nhận là **Complete the Chat Backend and Account-Based Conversation
+Management**. Cao Văn Khoa xác nhận đã hoàn thành manual QA và automated QA;
+các trường hợp ownership isolation, Guest, cascade delete và fallback đều pass.
+Đây là xác nhận của người kiểm thử trong phiên làm việc, không thay thế bằng
+chứng đánh giá chất lượng model thật.
+
+| Nhóm chức năng | Kết quả QA được xác nhận |
+| --- | --- |
+| Contract và gửi chat | Request hợp lệ được xử lý; response có answer, citations và outcome fields; request sai bị từ chối. |
+| Context | Hỗ trợ heritage/scene, giới hạn conversation context và lấy history đã lưu sau ownership check. |
+| Persistence và history | Lưu user/assistant/citations, list hội thoại theo account và khôi phục lịch sử để tiếp tục. |
+| Account isolation | User B không thể đọc, gửi thêm hoặc xóa hội thoại User A. |
+| Guest và authentication | Guest tạo hội thoại với account null; saved UUID không cấp quyền truy cập; JWT sai bị từ chối. |
+| Xóa hội thoại | Chủ sở hữu xóa thành công; messages/citations bị cascade; dữ liệu account khác được giữ. |
+| Resilience | Timeout, lỗi inference/persistence và local fallback có test kiểm chứng; không commit dữ liệu dở dang. |
+
+### Bằng chứng automated và HTTP đã ghi nhận
+
+- Bộ bốn file Chat API/conversation/integration/fallback đã chạy thành công:
+  **76 passed, 31 subtests passed**.
+- Sau sửa auth, lệnh lọc `auth or register` trong `apps/backend/tests/` có
+  **20 passed, 9 subtests passed**, gồm 10 tests auth regression mới.
+- Bộ conversation và integration sau sửa auth có **50 passed,
+  19 subtests passed**. Các nhóm này có test trùng với các lượt chạy trên;
+  không cộng số lượng thành tổng tests riêng biệt.
+- Kiểm tra HTTP thực tế trên cổng `8000` với Postgres local sau khi restart
+  server: register **201**, duplicate email/username **400**, invalid input
+  **422**, login/me **200**, account-owned chat **201**, list **200**, delete
+  conversation kiểm thử **204**. Dữ liệu kiểm thử tạm đã được dọn theo đúng ID.
+- Lỗi register `NoReferencedTableError` do server cũ giữ ORM mapping trước bản
+  sửa đã được xử lý; mapping trực tiếp `AccountRole.id` và regression tests
+  được ghi nhận tại commit `a7ac404`.
+
+Các kết quả full Backend/Profile ở mục trước là báo cáo của lượt chạy trước,
+không phải tuyên bố toàn bộ Backend đều pass trong lần chốt Task 2 này. Local
+AI đã kiểm tra dùng development fallback; model/corpus thật cần đánh giá riêng.
+Không chạy lại full suite, migration hoặc thay đổi cấu hình khi ghi nhận sign-off.
+
 ## Chạy localhost
 
 Từ thư mục `Heritage`, giữ Postgres local hoạt động và chạy:
