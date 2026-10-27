@@ -71,7 +71,17 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     // Metadata audio đến sau sẽ bật timeline mà không hủy chuyến bay này.
     if (scenePlayback && currentScene) {
       engine?.stopCameraTimeline();
-      engine?.flyCameraPreset(currentScene.camera, false, currentScene.camera.instant_move ? 0 : 1.6);
+      const camera = currentScene.camera;
+      const duration = camera.instant_move ? 0 : 1.6;
+      // Thứ tự ưu tiên góc mở đầu:
+      //  1. toạ độ tác giả ghi trong DB (`cam_start_pos/cam_start_target`);
+      //  2. camera nướng sẵn trong GLB (`camera_node_name`);
+      //  3. không có gì ⇒ giữ nguyên góc `fit()` đang thấy.
+      // Toạ độ DB đứng trước vì nó không gãy khi model được xuất lại đổi tên node.
+      const usedGLB = !(camera.start_position && camera.start_target) && camera.node_name
+        ? engine?.useGLBCamera(camera.node_name, duration) === true
+        : false;
+      if (!usedGLB) engine?.flyCameraPreset(camera, false, duration);
     } else {
       engine?.stopCameraTimeline();
     }

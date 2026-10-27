@@ -9,7 +9,7 @@ import HeritageViewer from "@/features/tour/HeritageViewer";
 import HeritageCanvas from "@/features/tour/three/HeritageCanvas";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
 import { DEMO_HERITAGE_PAYLOAD } from "@/lib/demo-heritage";
-import { fetchHeritagePayload } from "@/lib/heritage";
+import { fetchTourContent, sceneKeys, type TourPlayback } from "@/lib/heritage";
 import { isInteractivePath } from "@/lib/tour-routes";
 import type { HeritagePayload } from "@/types/heritage";
 import { TEST_TOUR } from "@/features/tour/tour-data";
@@ -17,12 +17,11 @@ import styles from "./content-shell.module.css";
 
 type TourState = {
   payload: HeritagePayload;
-  status: "ready";
+  status: "ready" | "demo";
   error: string | null;
-} | {
-  payload: HeritagePayload;
-  status: "demo";
-  error: string | null;
+  /** Audio + timing theo scene, lấy từ `GET /api/heritages/{slug}/tour`. */
+  playback?: Record<string, TourPlayback>;
+  modelUrl: string | null;
 };
 
 /**
@@ -49,35 +48,58 @@ export default function HeritageContentLayout({
   const fixture = slug === "tapestry-test" ? TEST_TOUR : null;
   const [engine, setEngine] = useState<TourEngine | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
-  const isModelReady = engine !== null;
-
-  useEffect(() => {
-    if (params.sceneKey && !isModelReady) {
-      router.replace(`/content/${slug}`);
-    }
-  }, [params.sceneKey, isModelReady, router, slug]);
 
   const [state, setState] = useState<TourState>({
     payload: fixture?.payload ?? DEMO_HERITAGE_PAYLOAD,
     status: fixture ? "ready" : "demo",
     error: null,
+    playback: fixture?.playback,
+    modelUrl: fixture?.modelUrl ?? null,
   });
+
+  // Scene lấy từ DB (`GET /api/heritages/{slug}/tour`) nên KHÔNG phụ thuộc model 3D:
+  // model có thể chưa có trên R2 mà nội dung scene vẫn phải mở được. Chỉ chặn khi
+  // payload thật đã về và sceneKey không tồn tại (deep-link sai).
+  const sceneKeyValid =
+    !params.sceneKey ||
+    state.status !== "ready" ||
+    sceneKeys(state.payload).includes(params.sceneKey);
+
+  useEffect(() => {
+    if (params.sceneKey && !sceneKeyValid) {
+      router.replace(`/content/${slug}`);
+    }
+  }, [params.sceneKey, sceneKeyValid, router, slug]);
 
   useEffect(() => {
     if (fixture) return;
     let cancelled = false;
 
-    fetchHeritagePayload(slug)
-      .then((payload) => {
+    fetchTourContent(slug)
+      .then((tour) => {
         if (cancelled) return;
+        const payload = tour?.payload;
         // Only use the real payload when it actually has scenes to show.
         // Otherwise keep the embedded demo so the UI is always visible.
-        const hasContent = !!payload && (!!payload.overview || payload.scenes.length > 0);
-        setState(
-          hasContent
-            ? { payload, status: "ready", error: null }
-            : { payload: DEMO_HERITAGE_PAYLOAD, status: "demo", error: null }
-        );
+        const hasContent =
+          !!payload && (!!payload.overview || payload.scenes.length > 0);
+        if (!payload || !hasContent) {
+          setState({
+            payload: DEMO_HERITAGE_PAYLOAD,
+            status: "demo",
+            error: null,
+            playback: undefined,
+            modelUrl: null,
+          });
+          return;
+        }
+        setState({
+          payload,
+          status: "ready",
+          error: null,
+          playback: tour.playback,
+          modelUrl: tour.modelUrl ?? null,
+        });
       })
       .catch((err) => {
         if (!cancelled) {
@@ -106,14 +128,17 @@ export default function HeritageContentLayout({
         error={fixture ? null : state.error}
         engine={engine}
         modelError={modelError}
-        playback={fixture?.playback}
+        playback={fixture?.playback ?? state.playback}
       >
         <HeritageCanvas
           onReady={setEngine}
           onError={setModelError}
-          modelUrl={fixture?.modelUrl}
+          // `null` (không phải `undefined`) để báo rõ "chưa có model": HeritageCanvas
+          // chỉ dựng engine khi có URL, còn không thì hiện ảnh splash làm nền.
+          modelUrl={fixture?.modelUrl ?? state.modelUrl ?? null}
+          fallbackImageUrl={(fixture?.payload ?? state.payload).heritage.splash_image_url}
         />
-        {params.sceneKey && isModelReady ? <HeritageViewer interactiveRoute={interactiveRoute} /> : null}
+        {params.sceneKey ? <HeritageViewer interactiveRoute={interactiveRoute} /> : null}
         {children}
       </HeritageTourProvider>
     </div>

@@ -1,0 +1,312 @@
+/* ==========================================================================
+   HeroSection.module.css
+   HeritageGraph Homepage Hero & Triptych Section
+   ========================================================================== */
+
+.heroSection,
+.herosection,
+.hp_hero_triptych {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 77vh;
+  height: 77dvh;
+  max-height: 77vh;
+  max-height: 77dvh;
+  min-height: 500px;
+  overflow: hidden;
+  background-color: #0a0e14;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding-top: 82px;
+}
+
+.hp_hero_ready {
+  position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   1. Lớp ảnh nền mờ đằng sau (.hp_hero_bg_layer)
+   -------------------------------------------------------------------------- */
+.hp_hero_bg_layer,
+.heroBlurredBg,
+.heroblurredbg,
+.heroBackground,
+.herobackground,
+.heroLayer,
+.herolayer {
+  position: absolute;
+  inset: -20px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(40px) saturate(1.2);
+  transform: scale(1.1);
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+  will-change: opacity, transform, filter;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hp_hero_bg_layer.hp_hero_bg_layer_active {
+  opacity: 1;
+}
+
+.hp_hero_bg_layer.hp_hero_bg_layer_ssr {
+  opacity: 1;
+  transition: none;
+}
+
+/* --------------------------------------------------------------------------
+   2. Lớp gradient phủ tối để làm nổi bật chữ (heroOverlayGradient)
+   -------------------------------------------------------------------------- */
+.heroOverlayGradient,
+.herooverlaygradient,
+.heroOverlay,
+.herooverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 14, 20, 0.35) 0%,
+    rgba(10, 14, 20, 0.55) 45%,
+    rgba(10, 14, 20, 0.88) 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   3. Bố cục Container (.hp_hero_content)
+   -------------------------------------------------------------------------- */
+.heroLayout,
+.hp_hero_content,
+.hp_hero_triptych .hp_hero_content {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 4px 0 20px;
+  min-height: 0;
+  gap: 0;
+  height: 100%;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Cột trái: .hp_hero_left & .hp_hero_headline_area
+   -------------------------------------------------------------------------- */
+.heroTile,
+.herotile,
+.hp_hero_left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 0 0 48px;
+  min-width: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.hp_hero_headline_area {
+  text-align: left;
+  width: 100%;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.hp_hero_triptych.hp_hero_ready .hp_hero_headline_area {
+  animation: hp_triptych_headline_in 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s
+    forwards;
+}
+
+@keyframes hp_triptych_headline_in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.heroTileEyebrow {
+  margin: 0 0 12px 0;
+  font-family: "Poppins", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ff9b2d;
+  text-align: left;
+}
+
+.heroTitle,
+.heroTileTitle,
+.hp_hero_h1 {
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(24px, 3vw, 48px);
+  font-weight: 500;
+  line-height: 1.2;
+  color: #fff;
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.heroDescription,
+.heroTileDesc,
+.hp_hero_tagline {
+  font-size: clamp(14px, 1.2vw, 16px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 12px;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.heroSubDescription,
+.heroTileSubDesc {
+  font-size: clamp(14px, 1.2vw, 16px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   Cột phải: Triptych Container (.hp_triptych)
+   -------------------------------------------------------------------------- */
+.heroTriptych {
+  flex: 2;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0 48px 0 32px;
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Media Queries (khớp mẫu 950px & 640px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 950px) {
+  .hp_hero_triptych {
+    min-height: 400px;
+    padding-top: 76px;
+  }
+
+  .hp_hero_triptych .hp_hero_content {
+    padding: 0;
+    flex-direction: column;
+    gap: 0;
+    max-width: 100%;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .hp_hero_left {
+    flex: 0 0 auto;
+    padding: 0 32px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .hp_hero_headline_area {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .hp_hero_headline_area .hp_hero_h1,
+  .hp_hero_headline_area .hp_hero_tagline {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .heroTriptych {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    padding: 20px 32px 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hp_hero_triptych {
+    min-height: 350px;
+    padding-top: 68px;
+  }
+
+  .hp_hero_triptych .hp_hero_content {
+    padding: 0;
+    flex-direction: column;
+    gap: 0;
+    max-width: 100%;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .hp_hero_left {
+    padding: 0 24px;
+    max-width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .hp_hero_headline_area {
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .hp_hero_headline_area .hp_hero_h1,
+  .hp_hero_headline_area .hp_hero_tagline {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .hp_hero_h1 {
+    font-size: 7vw;
+  }
+
+  .hp_hero_tagline {
+    font-size: 13px;
+  }
+
+  .heroTriptych {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    padding: 20px 20px 20px 24px;
+  }
+}

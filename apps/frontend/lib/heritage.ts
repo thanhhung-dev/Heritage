@@ -1,5 +1,20 @@
 import { apiClient } from "@/config/api";
-import type { HeritagePayload, HeritageScene } from "@/types/heritage";
+import type {
+  ExploreArea,
+  HeritagePayload,
+  HeritageScene,
+  HeritageSceneHighlight,
+  HeritageSummary,
+} from "@/types/heritage";
+
+/**
+ * Fetch published heritages for the homepage.
+ *
+ * Contract: `GET /api/heritages` → HeritageSummary[]
+ */
+export async function fetchHeritages(): Promise<HeritageSummary[]> {
+  return apiClient<HeritageSummary[]>("/heritages");
+}
 
 /**
  * Fetch the full single-load heritage payload for a slug.
@@ -9,6 +24,42 @@ import type { HeritagePayload, HeritageScene } from "@/types/heritage";
  */
 export async function fetchHeritagePayload(slug: string): Promise<HeritagePayload> {
   return apiClient<HeritagePayload>(`/heritages/${encodeURIComponent(slug)}`);
+}
+
+/** Highlight có mốc thời gian trên timeline narration (giây). */
+export type TimedHighlightData = HeritageSceneHighlight & {
+  startSeconds: number;
+  endSeconds: number | null;
+};
+
+/**
+ * Audio + timing của một scene — mirror `playback` trong `tour.json`.
+ * Cùng cấu trúc với `ScenePlayback` của player nên truyền thẳng vào context.
+ */
+export interface TourPlayback {
+  narrationUrl: string | null;
+  captionsUrl: string | null;
+  timedHighlights: TimedHighlightData[];
+  exploreArea: ExploreArea | null;
+  exploreTitle: string | null;
+  exploreDescription: string | null;
+}
+
+/** Toàn bộ dữ liệu tour trong một request — giống fixture `tour.json`. */
+export interface TourContent {
+  modelUrl: string | null;
+  payload: HeritagePayload;
+  playback: Record<string, TourPlayback>;
+}
+
+/**
+ * Fetch payload + playback cho tour.
+ *
+ * Contract: `GET /api/heritages/{slug}/tour` → { modelUrl, payload, playback }
+ * `playback` được khoá theo scene key ("s0".."sN"), đúng thứ tự route.
+ */
+export async function fetchTourContent(slug: string): Promise<TourContent> {
+  return apiClient<TourContent>(`/heritages/${encodeURIComponent(slug)}/tour`);
 }
 
 /**

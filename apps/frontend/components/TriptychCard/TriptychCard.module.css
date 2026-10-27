@@ -1,3 +1,37 @@
+.hp_hero_triptych.hp_hero_ready .hp_triptych {
+    animation: hp_triptych_in .8s cubic-bezier(0.25, 0.46, 0.45, 0.94) .6s forwards
+}
+
+@keyframes hp_triptych_in {
+    from {
+        opacity: 0;
+        transform: translateY(30px)
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0)
+    }
+}
+
+.hp_triptych {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+    box-sizing: border-box;
+    --font-size-13: 13px;
+    --font-size-12: 12px;
+    --font-size-11: 11px;
+    --font-size-10: 10px
+}
+
+.hp_triptych_card_has_video {
+    position: relative
+}
+
 .hp_triptych_card {
     flex-shrink: 0;
     width: 220px;
@@ -18,6 +52,7 @@
     --font-size-13: 13px;
     --font-size-12: 12px;
     --font-size-11: 11px;
+    --font-size-10: 10px;
     flex: 1
 }
 
@@ -67,11 +102,11 @@
     filter: contrast(1.06) saturate(1.08)
 }
 
-.hp_triptych_card_active .hp_triptych_card_video {
+.hp_triptych_card.hp_triptych_card_video_playing .hp_triptych_card_video {
     opacity: 1
 }
 
-.hp_triptych_card_active .hp_triptych_card_img {
+.hp_triptych_card.hp_triptych_card_video_playing .hp_triptych_card_img {
     opacity: 0
 }
 
@@ -102,16 +137,6 @@
     transform: translateZ(0)
 }
 
-.hp_triptych_card_text {
-    display: flex;
-    flex-direction: column
-}
-
-.hp_triptych_card_heading {
-    display: flex;
-    flex-direction: column
-}
-
 .hp_triptych_card_title {
     font-family: "Poppins",sans-serif;
     font-size: 20px;
@@ -127,10 +152,6 @@
     display: none
 }
 
-.hp_triptych_card_title .hp_triptych_card_title_full {
-    display: inline
-}
-
 .hp_triptych_card_location {
     font-size: var(--font-size-13);
     color: rgba(255,255,255,.8);
@@ -141,24 +162,13 @@
 .hp_triptych_card_details {
     max-height: 0;
     opacity: 0;
-    overflow: hidden;
+    overflow: visible;
     transition: max-height .4s ease,opacity .4s ease
 }
 
-/* Hiển thị thông tin chi tiết ngay khi hover (không cần click) */
-.hp_triptych_card:hover .hp_triptych_card_details,
-.hp_triptych_card:focus-within .hp_triptych_card_details,
-.hp_triptych_card_active .hp_triptych_card_details {
+.hp_triptych_card_active .hp_triptych_card_details,.hp_triptych_card:focus-within .hp_triptych_card_details {
     max-height: 200px;
     opacity: 1
-}
-
-.hp_triptych_card:hover .hp_triptych_card_img::before {
-    transform: scale(1.05)
-}
-
-.hp_triptych_card:hover .hp_triptych_card_overlay {
-    opacity: .9
 }
 
 .hp_triptych_card_meta {
@@ -261,8 +271,186 @@
     z-index: 10
 }
 
-/* Hover-based: card bình thường thu (flex:1), hover/di chuột vào tự doãn ra (flex:3) và hiện chi tiết */
-.hp_triptych_card:hover {
-    flex: 3;
-    box-shadow: 0 16px 48px rgba(0,0,0,.5),0 0 24px rgba(255,155,45,.2),0 0 48px rgba(255,155,45,.1)
+@media(max-width: 950px) {
+    .hp_triptych {
+        flex: 1;
+        min-height: 0;
+        padding: 20px 32px 24px;
+        gap: 12px
+    }
+
+    .hp_triptych_card {
+        width: 200px
+    }
+
+    .hp_triptych_card_content {
+        padding: 18px
+    }
+
+    .hp_triptych_card_title {
+        font-size: clamp(14px,1.3vw,18px)
+    }
+}
+
+@media(max-width: 640px) {
+    .hp_triptych {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 16px;
+        padding: 20px 20px 20px 24px;
+        flex: 1;
+        min-height: 0;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        scroll-padding-inline: 24px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        align-items: stretch
+    }
+
+    .hp_triptych::-webkit-scrollbar {
+        display: none
+    }
+
+    .hp_triptych_card {
+        flex: 0 0 auto;
+        width: 280px;
+        min-width: 280px;
+        height: 100%;
+        min-height: 0;
+        scroll-snap-align: start;
+        box-shadow: 0 8px 32px rgba(0,0,0,.35)
+    }
+}
+
+@media(max-width: 640px)and (hover: hover)and (pointer: fine) {
+    .hp_triptych_card:not(.hp_triptych_card_active):hover,.hp_triptych_card:not(.hp_triptych_card_active):focus-within {
+        box-shadow:0 12px 40px rgba(0,0,0,.45)
+    }
+}
+
+@media(max-width: 640px) {
+    .hp_triptych_card_title .hp_triptych_card_title_short {
+        display:none
+    }
+
+    .hp_triptych_card_title .hp_triptych_card_title_full {
+        display: block
+    }
+
+    .hp_triptych_card_title {
+        font-size: 18px;
+        min-width: 0
+    }
+
+    .hp_triptych_card_location {
+        display: block;
+        font-size: var(--font-size-13)
+    }
+
+    .hp_triptych_card_desc {
+        font-size: var(--font-size-12)
+    }
+
+    .hp_triptych_card_cta {
+        padding: 6px 14px;
+        font-size: var(--font-size-12)
+    }
+}
+
+@supports(width: 1cqw) {
+    @media(min-width: 641px)and (hover: hover)and (pointer: fine) {
+        .hp_triptych {
+            --hp-tt-gap: 16px;
+            --hp-tt-avail: (100cqw - (var(--hp-tt-n, 3) - 1) * var(--hp-tt-gap));
+            --hp-tt-equal: max(160px, var(--hp-tt-avail) / var(--hp-tt-n, 3));
+            --hp-tt-narrow: max(160px, var(--hp-tt-avail) / (var(--hp-tt-n, 3) + 2));
+            --hp-tt-wide: (var(--hp-tt-avail) - (var(--hp-tt-n, 3) - 1) * var(--hp-tt-narrow));
+            display: grid;
+            grid-template: minmax(0, 1fr)/minmax(0, 1fr);
+            container-type: inline-size
+        }
+    }
+
+    @media(min-width: 641px)and (hover: hover)and (pointer: fine)and (max-width: 950px) {
+        .hp_triptych {
+            --hp-tt-gap: 12px
+        }
+    }
+
+    @media(min-width: 641px)and (hover: hover)and (pointer: fine) {
+        .hp_triptych>.hp_triptych_card {
+            --hp-tt-i: 0;
+            --hp-tt-after: 0;
+            grid-area: 1/1;
+            justify-self: start;
+            width: var(--hp-tt-equal);
+            min-width: 0;
+            transform: translateX(calc(var(--hp-tt-i) * (var(--hp-tt-equal) + var(--hp-tt-gap))));
+            transition: box-shadow .4s ease;
+            will-change: transform
+        }
+
+        .hp_triptych_animating>.hp_triptych>.hp_triptych_card {
+            transition: width .6s cubic-bezier(0.25, 0.1, 0.25, 1),transform .6s cubic-bezier(0.25, 0.1, 0.25, 1),box-shadow .4s ease
+        }
+
+        .hp_triptych>.hp_triptych_card:nth-child(2) {
+            --hp-tt-i: 1
+        }
+
+        .hp_triptych>.hp_triptych_card:nth-child(3) {
+            --hp-tt-i: 2
+        }
+
+        .hp_triptych>.hp_triptych_card.hp_triptych_card_active {
+            width: calc(var(--hp-tt-wide));
+            transform: translateX(calc(var(--hp-tt-i) * (var(--hp-tt-narrow) + var(--hp-tt-gap))))
+        }
+
+        .hp_triptych>.hp_triptych_card.hp_triptych_card_collapsed {
+            width: var(--hp-tt-narrow);
+            transform: translateX(calc(var(--hp-tt-i) * (var(--hp-tt-narrow) + var(--hp-tt-gap)) + var(--hp-tt-after) * (var(--hp-tt-wide) - var(--hp-tt-narrow))))
+        }
+
+        .hp_triptych>.hp_triptych_card_active~.hp_triptych_card_collapsed {
+            --hp-tt-after: 1
+        }
+
+        .hp_triptych_card_text {
+            position: absolute;
+            inset-inline: 20px;
+            top: calc(100% - 20px);
+            transition: translate .4s ease
+        }
+    }
+
+    @media(min-width: 641px)and (hover: hover)and (pointer: fine)and (max-width: 950px) {
+        .hp_triptych_card_text {
+            inset-inline:18px;
+            top: calc(100% - 18px)
+        }
+    }
+
+    @media(min-width: 641px)and (hover: hover)and (pointer: fine) {
+        .hp_triptych_card_heading {
+            position:absolute;
+            inset-inline: 0;
+            top: 0;
+            translate: 0 -100%
+        }
+
+        .hp_triptych_card_active .hp_triptych_card_text,.hp_triptych_card:focus-within .hp_triptych_card_text {
+            translate: 0 -100%
+        }
+
+        .hp_triptych_card_details {
+            max-height: 200px;
+            transition: opacity .4s ease
+        }
+    }
 }

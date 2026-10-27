@@ -42,21 +42,21 @@
   justify-content: space-between;
   align-items: center;
   box-sizing: border-box;
-  width: 100% !important;
-  max-width: none !important;
-  padding: 24px 48px !important;
-  margin: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
+  width: 100%;
+  max-width: none;
+  padding: 20px 48px;
+  margin: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .brand {
-  width: 136px;
+  width: auto;
   height: 40px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 9px;
   color: var(--text);
   font-size: var(--text-sm);
@@ -133,10 +133,6 @@
     background var(--transition),
     border-color var(--transition);
 }
-
-
-
-
 
 .searchField img {
   width: 16px;
@@ -286,6 +282,7 @@
   border-color: #ffffff47;
   background: #ffffff0d;
 }
+
 .notificationWrap {
   position: relative;
   display: inline-flex;
@@ -615,7 +612,6 @@
 @media (max-width: 1100px) {
   .header {
     gap: 16px;
-    padding-inline: 24px;
   }
 
   .controls {
@@ -624,6 +620,12 @@
 
   .searchField {
     display: none;
+  }
+}
+
+@media (max-width: 950px) {
+  .header {
+    padding: 20px 32px;
   }
 }
 

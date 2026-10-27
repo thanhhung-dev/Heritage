@@ -74,6 +74,8 @@ CREATE TABLE heritage (
     card_image_url TEXT,
     splash_image_url TEXT,
     hover_video_url TEXT,
+    community_made BOOLEAN NOT NULL DEFAULT FALSE,
+    presented_by_logo_url TEXT,
     language1_id BIGINT REFERENCES language(id) ON DELETE SET NULL,
     language2_id BIGINT REFERENCES language(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

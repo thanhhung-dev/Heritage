@@ -536,12 +536,34 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       restore({ position, target, up: new THREE.Vector3(0, 1, 0), fov: camera.fov });
       return true;
     },
-    useGLBCamera(source: THREE.Camera) {
+    /**
+     * Đặt camera theo một camera NƯỚNG SẴN trong file GLB (`scene.camera_node_name`).
+     *
+     * Camera trong glTF chỉ có vị trí + hướng nhìn, còn OrbitControls cần một ĐIỂM
+     * NGẮM (`target`) để quay quanh. Vì vậy `target` được truyền vào từ ngoài — nơi
+     * biết model (node đích trong GLB, hoặc điểm tia chiếu trúng model). Không có
+     * `target` thì lùi về điểm cách 1 m theo hướng nhìn: với model vài trăm mét,
+     * quỹ đạo quay sẽ bám sát camera và rất khó dùng, nhưng vẫn hơn là không có gì.
+     */
+    useGLBCamera(source: THREE.Camera, target: THREE.Vector3 | null = null, duration = 0) {
       source.updateWorldMatrix(true, false);
       const position = source.getWorldPosition(new THREE.Vector3());
-      const target = position.clone().add(source.getWorldDirection(new THREE.Vector3()));
-      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(source.getWorldQuaternion(new THREE.Quaternion()));
-      restore({ position, target, up, fov: source instanceof THREE.PerspectiveCamera ? source.fov : camera.fov });
+      const direction = source.getWorldDirection(new THREE.Vector3());
+      const sourceUp = new THREE.Vector3(0, 1, 0).applyQuaternion(
+        source.getWorldQuaternion(new THREE.Quaternion()),
+      );
+      // KHÔNG bê `up` của camera trong GLB vào: OrbitControls dựng hệ quay quanh
+      // `camera.up`, nên một up nghiêng (camera có roll) sẽ làm cả quỹ đạo quay
+      // lệch theo. Preset trong DB cũng luôn dùng (0, 1, 0) — giữ nhất quán.
+      if (sourceUp.angleTo(upY) > 0.02) {
+        camWarn("glb-cam", `camera GLB có roll ${THREE.MathUtils.radToDeg(sourceUp.angleTo(upY)).toFixed(1)}° ⇒ bỏ qua, dùng trục Y thế giới`);
+      }
+      const aim = target && target.distanceTo(position) > 1e-3
+        ? target.clone()
+        : position.clone().add(direction);
+      const fov = source instanceof THREE.PerspectiveCamera ? source.fov : camera.fov;
+      noteAuthoredDistance(position, aim);
+      restore({ position, target: aim, up: upY.clone(), fov }, duration);
     },
     /**
      * Gắn tín hiệu "chuột đang được kéo" lên canvas của renderer. Nghe ở capture để
