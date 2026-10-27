@@ -41,6 +41,11 @@ chat prompt history with a guard against system/developer/tool role injection.
 Docker configuration tests now check the merged root Compose contract: external
 services are managed by another project, so root Compose has no services or
 managed database volumes. No containers were started by the test suite.
+Following approval, Docker Desktop and a separate OpenSearch 3.3.0 test node
+were started with `docker-compose.search-test.yaml`. It binds only
+`127.0.0.1:9200`, uses a dedicated test volume and is limited to 2 GiB / 2 CPU.
+Existing containers and volumes were preserved. The node reports `green` cluster
+health and a healthy Docker healthcheck. See [local test instructions](opensearch-local-tests.md).
 
 ## Results and practical limits
 
@@ -51,10 +56,12 @@ fallback, Heritage API, GraphRAG boundaries and R2 administration/ingestion.
 Full command:
 
 ```powershell
+$env:OPENSEARCH_TEST_URL = 'http://127.0.0.1:9200'
 python -m pytest apps/backend/tests/ -q --tb=short
 ```
 
-Full-suite result: **181 passed, 47 subtests passed, 8 failed, 6 skipped**.
+Full-suite result with real OpenSearch: **187 passed, 47 subtests passed,
+8 failed, 0 skipped** (40.21 seconds).
 Every remaining failure is in `test_profile_consent.py`:
 
 - `test_get_badges`
@@ -72,13 +79,14 @@ fail with `uuid = integer`; Profile GET also reads a missing legacy `profiles`
 table. Existing Profile data must be preserved in a separately reviewed
 identity migration. Tests do not suppress or skip these failures.
 
-The six skipped tests are `OpenSearchIntegrationTests`, gated by
-`OPENSEARCH_TEST_URL`. Neither localhost:9200 nor Docker Desktop's Linux daemon
-was available during verification. These cover real indexing, lexical/vector
-retrieval, cosine thresholding, context budgets and source isolation; they
-cannot be claimed as passed without a real test node.
+The earlier six skipped `OpenSearchIntegrationTests` now all pass against the
+real local node. `test_opensearch.py` reports **9 passed in 14.26 seconds**:
+3 transport tests and 6 integration tests, with no skips. The integration tests
+cover real indexing, lexical/vector retrieval, cosine thresholding, context
+budgets, embedding model filtering and source isolation. Embedding vectors are
+deterministic test fixtures; this does not measure the quality of a live BGE model.
 
-After an OpenSearch test node is ready, run:
+Run the Search tests independently:
 
 ```powershell
 $env:OPENSEARCH_TEST_URL = 'http://127.0.0.1:9200'
@@ -86,7 +94,8 @@ python -m pytest apps/backend/tests/test_opensearch.py -q
 ```
 
 The integration fixture creates unique `heritage-test-*` indexes and removes
-only those test indexes and their matching search pipelines.
+only those test indexes and their matching search pipelines. No test indexes or
+search pipelines remained after verification.
 
 ## API smoke checks with the actual local database
 
@@ -97,5 +106,5 @@ Using the current FastAPI app via TestClient and the migrated Postgres database:
   one normalized citation. Retrieval/model services were unavailable, so this
   validates the labelled local fallback rather than live model quality.
 
-The full Backend suite is **not yet 100% green**. Profile migration scope and a
-working OpenSearch test endpoint remain outstanding.
+The full Backend suite is **not yet 100% green**. The remaining issue is the
+Profile identity/schema migration; its scope is awaiting confirmation.
