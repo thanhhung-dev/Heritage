@@ -74,6 +74,9 @@ export function HeritageCarouselSection({
     }
   };
 
+  // Chưa có dữ liệu (API đang tải hoặc lỗi) ⇒ không render section rỗng.
+  if (items.length === 0) return null;
+
   return (
     <section
       className={[styles.carouselSection, className].filter(Boolean).join(" ")}

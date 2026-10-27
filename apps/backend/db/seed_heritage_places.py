@@ -1,7 +1,8 @@
 """Seed 30 heritage places (Huế / Đà Nẵng / Quảng Nam) for HeritageGraph.
 
-Companion to ``seed_homepage_mock.py`` but with curated Vietnamese content,
-OpenStreetMap coordinates and Unsplash photography.
+Curated Vietnamese content, OpenStreetMap coordinates and Unsplash photography.
+Scene skeletons for places that have none are added by
+``seed_heritage_scenes.py`` (run this script first).
 
 Run from the project root:
     apps/backend/.venv/bin/python apps/backend/db/seed_heritage_places.py

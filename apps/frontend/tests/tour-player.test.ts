@@ -153,8 +153,8 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
     const currentScene = override ?? [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
     renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
       payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
-      currentScene, status: "ready", error: null, isModelReady: true,
-      modelError: null,
+      currentScene, error: null, isModelReady: true,
+      modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
     } }, createElement(Probe)));
     return result;
@@ -209,8 +209,8 @@ test("chế độ điểm tương tác suy ra từ URL /int, không giữ state 
     const currentScene = [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
     renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
       payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
-      currentScene, status: "ready", error: null, isModelReady: true,
-      modelError: null,
+      currentScene, error: null, isModelReady: true,
+      modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
     } }, createElement(Probe, { interactiveRoute })));
     return result;
