@@ -75,7 +75,8 @@ function formatPublishDate(value: string | null | undefined): string | null {
 
 export default function ContentLoadingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { payload, isModelReady, modelError } = useHeritageTour();
+  const { payload, modelError, isModelReady, modelProgress, hasModel } =
+    useHeritageTour();
   const heritage = payload.heritage;
   const splashImageUrl = heritage.splash_image_url ?? "";
   const splashImageRef = useRef<HTMLImageElement>(null);
@@ -83,7 +84,15 @@ export default function ContentLoadingPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<PageLocale | null>(
     null,
   );
-  const isReady = (!splashImageUrl || loadedSplashUrl === splashImageUrl) && isModelReady;
+  // Chờ ảnh splash + model 3D. Tour không có model (hoặc model lỗi) vẫn cho vào
+  // vì nội dung scene lấy từ DB — chỉ chặn khi đang tải dở, để người dùng không
+  // vào scene rồi nhìn khung 3D trống.
+  const splashReady = !splashImageUrl || loadedSplashUrl === splashImageUrl;
+  const waitingForModel = hasModel && !isModelReady && !modelError;
+  const isReady = splashReady && !waitingForModel;
+  const loadedPercent = Math.round(modelProgress * 100);
+  // Chỉ hiện % khi server trả Content-Length; không thì giữ hiệu ứng chạy qua lại.
+  const showRealProgress = waitingForModel && modelProgress > 0;
   const sourceLanguage: PageLocale = heritage.language1?.code
     .toLowerCase()
     .startsWith("vi")
@@ -229,7 +238,9 @@ export default function ContentLoadingPage() {
             aria-label={
               isReady
                 ? "Start the heritage experience"
-                : "Loading heritage assets"
+                : showRealProgress
+                  ? `Loading 3D model ${loadedPercent}%`
+                  : "Loading heritage assets"
             }
             aria-disabled={!isReady}
             onClick={(event) => {
@@ -246,8 +257,15 @@ export default function ContentLoadingPage() {
                 className={`${styles.loadingBarFill} ${
                   isReady
                     ? styles.loadingBarFillReady
-                    : styles.loadingBarFillLoading
+                    : showRealProgress
+                      ? ""
+                      : styles.loadingBarFillLoading
                 }`}
+                style={
+                  showRealProgress
+                    ? { width: `${Math.max(loadedPercent, 2)}%` }
+                    : undefined
+                }
                 aria-hidden="true"
               />
               <span
@@ -255,7 +273,11 @@ export default function ContentLoadingPage() {
                   isReady ? styles.loadingBarTextReady : ""
                 }`}
               >
-                {isReady ? "Start" : "Loading…"}
+                {isReady
+                  ? "Start"
+                  : showRealProgress
+                    ? `Loading… ${loadedPercent}%`
+                    : "Loading…"}
               </span>
             </span>
           </Link>

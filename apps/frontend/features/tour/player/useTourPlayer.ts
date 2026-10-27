@@ -70,10 +70,40 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     // Bay từ góc hiện tại tới góc mở đầu; chỉ instant_move mới đặt ngay.
     // Metadata audio đến sau sẽ bật timeline mà không hủy chuyến bay này.
     if (scenePlayback && currentScene) {
+      // Timeline preset của cảnh TRƯỚC phải tắt trước: nó ghi pose mỗi frame nên
+      // nếu để chạy trong lúc chờ nạp path thì camera sẽ nhảy về quỹ đạo cũ.
       engine?.stopCameraTimeline();
-      engine?.flyCameraPreset(currentScene.camera, false, currentScene.camera.instant_move ? 0 : 1.6);
+      const camera = currentScene.camera;
+      const duration = camera.instant_move ? 0 : 1.6;
+      /** Góc mở đầu theo dữ liệu tĩnh: preset DB → camera nướng trong model → `fit()`. */
+      const startWithPreset = () => {
+        const usedGLB = !(camera.start_position && camera.start_target) && camera.node_name
+          ? engine?.useGLBCamera(camera.node_name, duration) === true
+          : false;
+        if (!usedGLB) engine?.flyCameraPreset(camera, false, duration);
+      };
+      // Thứ tự ưu tiên góc mở đầu:
+      //  1. quỹ đạo camera trong GLB riêng (`camera.path_url`) — clip lo TOÀN BỘ
+      //     chuyển động của cảnh, khung đầu clip chính là góc mở đầu;
+      //  2. toạ độ tác giả ghi trong DB (`cam_start_pos/cam_start_target`);
+      //  3. camera nướng sẵn trong model (`camera_node_name`);
+      //  4. không có gì ⇒ giữ nguyên góc `fit()` đang thấy.
+      // Path nạp bất đồng bộ (file chỉ vài chục KB): xong thì bay tới khung đầu,
+      // lỗi/không có clip thì lùi về preset — không để cảnh đứng hình chờ.
+      if (camera.path_url) {
+        const url = camera.path_url;
+        void engine?.setCameraPath(url).then((ready) => {
+          if (cancelled) return;
+          if (ready) engine?.applyCameraPathStart(0);
+          else startWithPreset();
+        });
+      } else {
+        engine?.stopCameraPath();
+        startWithPreset();
+      }
     } else {
       engine?.stopCameraTimeline();
+      engine?.stopCameraPath();
     }
     engine?.setInteractiveHighlights(interactive?.highlights ?? []);
     // Biên đi bộ thuộc về CẢNH, không thuộc lần vào/ra chế độ — đặt ở đây để đổi
@@ -114,6 +144,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   useEffect(() => {
     if (!hasAudio || !currentScene || !scenePlayback) return;
     if (currentScene.camera.instant_move) return;
+    // Cảnh có quỹ đạo camera riêng: clip tự bám `playbackClock` nên KHÔNG được
+    // bật thêm timeline preset — hai nguồn cùng ghi pose mỗi frame là giật.
+    if (engine?.hasCameraPath()) return;
     // Chưa biết thời lượng thì chưa bật được; chờ lần cập nhật kế tiếp.
     if (!narration.duration) return;
     if (timelineSceneKey.current === currentSceneKey) return;
@@ -172,12 +205,21 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       exploreActive.current = false;
       engine.exitExplore(1.2);
       timelineSceneKey.current = null;
-      // Trả quyền lại cho timeline khi rời Explore (bỏ qua cảnh instant_move và
-      // cảnh chưa biết thời lượng clip). Đánh dấu cảnh đã bật để effect bên trên
-      // không bật lại lần nữa và kéo camera giật về pose start.
-      if (currentScene && !currentScene.camera.instant_move && narration.duration) {
-        if (engine.startCameraTimeline(currentScene.camera, narration.duration)) {
-          timelineSceneKey.current = currentSceneKey;
+      // Trả quyền lại cho camera tự động khi rời Explore (bỏ qua cảnh instant_move
+      // và cảnh chưa biết thời lượng clip). Đánh dấu cảnh đã bật để effect bên
+      // trên không bật lại lần nữa và kéo camera giật về pose start.
+      if (currentScene && !currentScene.camera.instant_move) {
+        if (currentScene.camera.path_url) {
+          // Quỹ đạo clip đã bị buông lúc vào Explore ⇒ nạp lại và bám ĐÚNG thời
+          // điểm audio đang phát (không tua về đầu clip).
+          const url = currentScene.camera.path_url;
+          void engine.setCameraPath(url).then((ready) => {
+            if (ready) engine.resumeCameraPath(1.2);
+          });
+        } else if (narration.duration) {
+          if (engine.startCameraTimeline(currentScene.camera, narration.duration)) {
+            timelineSceneKey.current = currentSceneKey;
+          }
         }
       }
       return;
@@ -186,9 +228,10 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     if (exploreActive.current) return;
     exploreActive.current = true;
     pause();
-    // Explore là để người dùng tự do xoay — timeline phải nhường quyền, nếu không
-    // camera sẽ bị kéo về quỹ đạo mỗi frame.
+    // Explore là để người dùng tự do xoay — timeline và quỹ đạo clip đều phải
+    // nhường quyền, nếu không camera sẽ bị kéo về quỹ đạo mỗi frame.
     engine.stopCameraTimeline();
+    engine.stopCameraPath();
     // Metadata tải trễ không được giành camera từ thao tác chủ động này.
     timelineSceneKey.current = currentSceneKey;
     if (exploreMode === "walk") {

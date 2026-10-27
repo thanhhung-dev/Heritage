@@ -29,6 +29,16 @@ class SkyPreset(Base):
         nullable=True,
     )
 
+    mie_coefficient: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    mie_directional_g: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
     elevation: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
@@ -40,6 +50,21 @@ class SkyPreset(Base):
     )
 
     exposure: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    cloud_coverage: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    cloud_density: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    stars: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
     )

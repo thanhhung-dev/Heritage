@@ -1,11 +1,18 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import styles from "./TriptychCard.module.css";
 
+export interface TriptychLanguage {
+  code?: string;
+  name?: string;
+}
+
 export interface TriptychCardData {
+  id?: number | string;
   slug: string;
   title: string;
+  title_short?: string | null;
   description?: string | null;
   region?: string | null;
   duration_seconds?: number | null;
@@ -14,66 +21,133 @@ export interface TriptychCardData {
   splash_image_url?: string | null;
   hover_video_url?: string | null;
   published?: string | null;
+  publish_date?: string | null;
   language_label?: string | null;
+  language1?: TriptychLanguage | null;
+  language2?: TriptychLanguage | null;
   href?: string | null;
 }
 
 export interface TriptychCardProps {
   item: TriptychCardData;
+  index?: number;
+  cardId?: string;
+  isActive?: boolean;
+  isCollapsed?: boolean;
+  onMouseEnter?: () => void;
+  onFocus?: () => void;
+  onClick?: () => void;
   onInfo?: (slug: string) => void;
   exploreLabel?: string;
   infoLabel?: string;
   style?: CSSProperties;
 }
 
-function formatDuration(seconds?: number | null): string {
-  if (!seconds || seconds <= 0) return "";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
-  if (h > 0) return `${h} giờ ${m} phút`;
-  return `${m} phút`;
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trimEnd()}…`;
 }
 
 export function TriptychCard({
   item,
+  index = 0,
+  cardId,
+  isActive = false,
+  isCollapsed = false,
+  onMouseEnter,
+  onFocus,
+  onClick,
   onInfo,
   exploreLabel = "Explore",
   infoLabel = "Info",
   style,
 }: TriptychCardProps) {
-  const { hover_video_url: video } = item;
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+
+  const video = item.hover_video_url;
   const hasVideo = Boolean(video);
 
-  const meta = [
-    item.published,
-    formatDuration(item.duration_seconds),
-    item.language_label,
-  ].filter(Boolean);
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl || !hasVideo) return;
 
-  const videoClass = hasVideo ? styles.hp_triptych_card_has_video : "";
+    if (isActive) {
+      const playPromise = videoEl.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsVideoPlaying(true);
+          })
+          .catch(() => {
+            setIsVideoPlaying(false);
+          });
+      }
+    } else {
+      videoEl.pause();
+      videoEl.currentTime = 0;
+      setIsVideoPlaying(false);
+    }
+  }, [isActive, hasVideo]);
+
+  const publishedText =
+    item.published ||
+    (item.publish_date ? `Published ${item.publish_date.slice(0, 4)}` : null);
+
+  const languageText =
+    item.language_label ||
+    [item.language1?.name, item.language2?.name].filter(Boolean).join(", ") ||
+    null;
+
+  const meta = [publishedText, languageText].filter((v): v is string =>
+    Boolean(v)
+  );
+
+  const shortTitle = item.title_short || truncateText(item.title, 30);
+  const shortDesc = item.description
+    ? truncateText(item.description, 100)
+    : null;
+  const exploreHref = item.href || `/content/${item.slug}`;
+  const cardImage =
+    item.card_image_url || item.splash_image_url || "/images/cung-an-dinh.jpg";
+
+  const cardClasses = [
+    styles.hp_triptych_card,
+    hasVideo ? styles.hp_triptych_card_has_video : "",
+    isActive ? styles.hp_triptych_card_active : "",
+    isCollapsed ? styles.hp_triptych_card_collapsed : "",
+    isVideoPlaying ? styles.hp_triptych_card_video_playing : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <article
-      className={[styles.hp_triptych_card, videoClass].filter(Boolean).join(" ")}
+    <div
+      className={cardClasses}
+      data-index={index}
+      data-card-id={cardId ?? `card-${index + 1}`}
       style={style}
+      onMouseEnter={onMouseEnter}
+      onFocus={onFocus}
+      onClick={onClick}
     >
       <div
         className={styles.hp_triptych_card_img}
-        style={
-          item.card_image_url
-            ? { backgroundImage: `url(${item.card_image_url})` }
-            : undefined
-        }
+        style={{ backgroundImage: `url(${cardImage})` }}
       />
 
       {hasVideo ? (
         <video
+          ref={videoRef}
           className={styles.hp_triptych_card_video}
+          data-src={video || undefined}
           src={video || undefined}
           muted
           loop
           playsInline
           preload="metadata"
+          onPlaying={() => setIsVideoPlaying(true)}
+          onPause={() => setIsVideoPlaying(false)}
         />
       ) : null}
 
@@ -83,11 +157,17 @@ export function TriptychCard({
         <div className={styles.hp_triptych_card_text}>
           <div className={styles.hp_triptych_card_heading}>
             <h2 className={styles.hp_triptych_card_title}>
-              <span className={styles.hp_triptych_card_title_full}>{item.title}</span>
-              <span className={styles.hp_triptych_card_title_short}>{item.title}</span>
+              <span className={styles.hp_triptych_card_title_full}>
+                {item.title}
+              </span>
+              <span className={styles.hp_triptych_card_title_short}>
+                {shortTitle}
+              </span>
             </h2>
             {item.region ? (
-              <div className={styles.hp_triptych_card_location}>{item.region}</div>
+              <div className={styles.hp_triptych_card_location}>
+                {item.region}
+              </div>
             ) : null}
           </div>
 
@@ -95,32 +175,33 @@ export function TriptychCard({
             {meta.length > 0 ? (
               <div className={styles.hp_triptych_card_meta}>
                 {meta.map((text, i) => (
-                  <span key={i}>
-                    {i > 0 && (
+                  <Fragment key={i}>
+                    {i > 0 ? (
                       <span className={styles.hp_triptych_card_meta_sep}>·</span>
-                    )}
-                    {text}
-                  </span>
+                    ) : null}
+                    <span>{text}</span>
+                  </Fragment>
                 ))}
               </div>
             ) : null}
 
-            {item.description ? (
-              <p className={styles.hp_triptych_card_desc}>{item.description}</p>
+            {shortDesc ? (
+              <p className={styles.hp_triptych_card_desc}>{shortDesc}</p>
             ) : null}
 
             <div className={styles.hp_triptych_card_buttons}>
               <a
-                href={item.href || "#"}
+                href={exploreHref}
                 className={`${styles.hp_triptych_card_cta} ${styles.hp_triptych_card_explore_btn}`}
                 target="_blank"
                 rel="noopener"
+                onClick={(e) => e.stopPropagation()}
               >
                 {exploreLabel}
               </a>
               <button
                 type="button"
-                className={`${styles.hp_triptych_card_cta} ${styles.hp_triptych_card_info_btn} ${styles.hp_triptych_card_cta_secondary}`}
+                className={`${styles.hp_triptych_card_cta} ${styles.hp_triptych_card_cta_secondary} ${styles.hp_triptych_card_info_btn}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onInfo?.(item.slug);
@@ -132,7 +213,7 @@ export function TriptychCard({
           </div>
         </div>
       </div>
-    </article>
+    </div>
   );
 }
 

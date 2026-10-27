@@ -16,20 +16,16 @@ interface PublicShellProps {
   account?: PublicAccount | null;
 }
 
-export function PublicShell({ children, account }: PublicShellProps) {
+export function PublicShell({ children }: PublicShellProps) {
   return (
     <div className={styles.shell}>
-      <a className={styles.skipLink} href="#public-content">
-        Bỏ qua điều hướng
-      </a>
-
       <header className={styles.header}>
         <Link
           className={styles.brand}
           href={PUBLIC_ROUTE_BY_KEY.home.href}
           aria-label="Heritage - Trang chủ"
         >
-          <LogoText size={120}/>
+          <LogoText size={120} />
         </Link>
 
         <div className={styles.controls}>
@@ -60,7 +56,9 @@ export function PublicShell({ children, account }: PublicShellProps) {
       <main className={styles.main} id="public-content" tabIndex={-1}>
         {children}
       </main>
-      <PublicFooterSlot><PublicFooter /></PublicFooterSlot>
+      <PublicFooterSlot>
+        <PublicFooter />
+      </PublicFooterSlot>
     </div>
   );
 }

@@ -6,6 +6,58 @@
   color: #fff;
 }
 
+/* ── Màn hình chờ / lỗi khi chưa có payload tour ── */
+
+.statusScreen {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  font-family: "Poppins", "Avenir Next", Avenir, sans-serif;
+}
+
+.statusTitle {
+  margin: 0;
+  font-size: clamp(18px, 2vw, 22px);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: #fef0d7;
+}
+
+.statusHint {
+  margin: 0;
+  max-width: min(30rem, 80vw);
+  font-size: var(--font-size-11);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.statusLink {
+  margin-top: 4px;
+  padding: 10px 22px;
+  border: 1px solid rgba(240, 232, 221, 0.32);
+  border-radius: 26px;
+  color: #fef0d7;
+  font-size: var(--font-size-12);
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.statusLink:hover {
+  background-color: rgba(240, 232, 221, 0.12);
+  border-color: rgba(254, 240, 215, 0.52);
+}
+
+.statusLink:focus-visible {
+  outline: 2px solid #fef0d7;
+  outline-offset: 3px;
+}
+
 
 .loading {
   width: 100%;

@@ -1,22 +1,30 @@
-# Heritage Backend API Startup Script
-Write-Host "Starting Heritage Backend API..." -ForegroundColor Cyan
-Write-Host ""
+# Heritage Backend API Startup Script (Windows)
+#
+# Dung scripts/run-backend.py thay vi goi uvicorn truc tiep: uvicorn dat lai event
+# loop policy ve Proactor (mac dinh cua Windows) va psycopg async nem
+# InterfaceError ngay query DB dau tien. Script do cung doc BACKEND_PORT trong .env.
+#
+#   .\start-backend.ps1              # cong theo .env (mac dinh 8000)
+#   .\start-backend.ps1 -Port 8001
 
-# Check if virtual environment exists
-if (-not (Test-Path ".venv/Scripts/Activate.ps1")) {
-    Write-Host "ERROR: Virtual environment not found!" -ForegroundColor Red
-    Write-Host "Please run: python -m venv .venv" -ForegroundColor Yellow
+param(
+    [int]$Port = 0,
+    [string]$HostAddress = "127.0.0.1"
+)
+
+$ErrorActionPreference = "Stop"
+Set-Location -Path $PSScriptRoot
+
+$python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+if (-not (Test-Path $python)) {
+    Write-Host "ERROR: khong thay .venv\Scripts\python.exe" -ForegroundColor Red
+    Write-Host "  python -m venv .venv" -ForegroundColor Yellow
+    Write-Host "  .venv\Scripts\pip install -r apps\backend\requirements.txt" -ForegroundColor Yellow
     exit 1
 }
 
-# Activate virtual environment (for current session context)
-Write-Host "Using virtual environment: .venv" -ForegroundColor Green
+$cliArgs = @((Join-Path $PSScriptRoot "scripts\run-backend.py"), "--host", $HostAddress)
+if ($Port -gt 0) { $cliArgs += @("--port", "$Port") }
 
-# Start backend server
-Write-Host "Backend will run on http://127.0.0.1:8000" -ForegroundColor Green
-Write-Host "API endpoints: http://localhost:8000/api" -ForegroundColor Green
-Write-Host ""
-Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Yellow
-Write-Host ""
-
-python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --reload
+Write-Host "Starting Heritage Backend API..." -ForegroundColor Cyan
+& $python @cliArgs

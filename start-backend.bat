@@ -1,13 +1,22 @@
 @echo off
-REM Script to start Heritage Backend API
+REM Chay Heritage Backend API tren Windows.
+REM Phai dung scripts\run-backend.py: uvicorn truc tiep se dat lai event loop ve
+REM Proactor (mac dinh cua Windows) va psycopg async nem InterfaceError ngay query
+REM dau tien. Script do cung doc BACKEND_PORT trong .env.
+
+setlocal
+cd /d "%~dp0"
+
+if not exist ".venv\Scripts\python.exe" (
+    echo [x] Khong thay .venv\Scripts\python.exe
+    echo     Tao moi truong:  python -m venv .venv
+    echo     Cai thu vien:    .venv\Scripts\pip install -r apps\backend\requirements.txt
+    exit /b 1
+)
+
 echo Starting Heritage Backend API...
 echo.
 
-REM Activate virtual environment
-call .venv\Scripts\activate.bat
+".venv\Scripts\python.exe" scripts\run-backend.py %*
 
-REM Start backend server
-echo Backend will run on http://127.0.0.1:8000
-echo API endpoints: http://localhost:8000/api
-echo.
-python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --reload
+endlocal

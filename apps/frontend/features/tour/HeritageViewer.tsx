@@ -49,7 +49,7 @@ const UI_ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-e
 export default function HeritageViewer({ interactiveRoute = false }: { interactiveRoute?: boolean }) {
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
   const router = useRouter();
-  const { payload, currentScene } = useHeritageTour();
+  const { payload, currentScene, isModelReady } = useHeritageTour();
 
   // Trang thử dùng narration/VTT từ tour.json; payload backend chưa có các URL này.
   const player = useTourPlayer({ interactiveRoute });
@@ -919,9 +919,10 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       <div className={styles.toast} role="status" aria-live="polite" />
       {/* Gợi ý kéo để xoay: chỉ hiện khi narration đã xong và đang ở scene view
           (vào chế độ 3D thì đã có tooltip điều khiển riêng). Tự tắt sau cú kéo
-          canvas đầu tiên — xem `LookAroundHint`. */}
-      <LookAroundHint hidden={!isEnded || player.exploreMode !== null} />
-      {isEnded && <ExploreControls interactive={player.interactive} mode={player.exploreMode}
+          canvas đầu tiên — xem `LookAroundHint`. Không có model 3D thì không có
+          gì để xoay nên ẩn luôn. */}
+      <LookAroundHint hidden={!isEnded || !isModelReady || player.exploreMode !== null} />
+      {isEnded && isModelReady && <ExploreControls interactive={player.interactive} mode={player.exploreMode}
         onEnter={enterExplore} onReset={player.resetExplore} onExit={exitExplore}
         initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}
         selectedHighlightId={player.selectedHighlight?.id} />}

@@ -53,9 +53,22 @@ class SkyPresetOut(BaseModel):
     name: str
     turbidity: float | None = None
     rayleigh: float | None = None
+    mie_coefficient: float | None = Field(
+        default=None, serialization_alias="mieCoefficient"
+    )
+    mie_directional_g: float | None = Field(
+        default=None, serialization_alias="mieDirectionalG"
+    )
     elevation: float | None = None
     azimuth: float | None = None
     exposure: float | None = None
+    cloud_coverage: float | None = Field(
+        default=None, serialization_alias="cloudCoverage"
+    )
+    cloud_density: float | None = Field(
+        default=None, serialization_alias="cloudDensity"
+    )
+    stars: float | None = None
     light_settings: dict[str, Any] | None = None
 
 
@@ -66,6 +79,9 @@ class CameraOut(BaseModel):
     start_target: dict[str, Any] | list[Any] | None = None
     zoom_position: dict[str, Any] | list[Any] | None = None
     zoom_target: dict[str, Any] | list[Any] | None = None
+    # GLB chỉ chứa camera + animation clip (không mesh); có thì quỹ đạo camera
+    # của cảnh do clip quyết định và seek theo thời gian audio.
+    path_url: str | None = None
     instant_move: bool
 
 
@@ -196,6 +212,50 @@ class HeritageContentOut(BaseModel):
     heritage: HeritageOut
     overview: SceneDetailOut | None = None
     scenes: list[SceneDetailOut] = Field(default_factory=list)
+
+
+# ── Tour playback ──────────────────────────────────────────────────
+#
+# `playback` mirror 1:1 the `playback` map of the Tapestry `tour.json` fixture
+# that the frontend player consumes (`features/tour/tour-data.ts` →
+# `ScenePlayback`). Field names stay camelCase on purpose: the client reads
+# `narrationUrl`, `timedHighlights`, `startSeconds`, ... verbatim.
+
+class TimedHighlightOut(BaseModel):
+    """Scene highlight gắn mốc thời gian trên timeline của narration."""
+
+    id: int
+    model_url: str
+    position: dict[str, Any] | list[Any]
+    rotation: dict[str, Any] | list[Any]
+    scale: dict[str, Any] | list[Any]
+    animation_type: str | None = None
+    startSeconds: float = 0.0
+    endSeconds: float | None = None
+
+
+class ScenePlaybackOut(BaseModel):
+    """Audio + timing cho một scene, khoá theo scene key ("s0".."sN")."""
+
+    narrationUrl: str | None = None
+    captionsUrl: str | None = None
+    timedHighlights: list[TimedHighlightOut] = Field(default_factory=list)
+    exploreArea: dict[str, Any] | list[Any] | None = None
+    exploreTitle: str | None = None
+    exploreDescription: str | None = None
+
+
+class TourContentOut(BaseModel):
+    """GET /api/heritages/{heritage_slug}/tour — payload + playback.
+
+    Same shape as the `tour.json` fixture the tour player was built against:
+    one request returns the model URL, the full content payload and the
+    per-scene audio map.
+    """
+
+    modelUrl: str | None = None
+    payload: HeritageContentOut
+    playback: dict[str, ScenePlaybackOut] = Field(default_factory=dict)
 
 
 # ── Error schema ───────────────────────────────────────────────────

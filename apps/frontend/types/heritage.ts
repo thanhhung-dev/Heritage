@@ -44,10 +44,10 @@ export interface HeritageSkyPreset {
   azimuth: number | null;
   exposure: number | null;
   /**
-   * Các tham số tán xạ bổ sung của shader Sky (bản gốc có trong `threeJS_skySet`
-   * nhưng bảng `sky_preset` chưa lưu ⇒ để optional, thiếu thì dùng mặc định của
-   * three.js). `mieDirectionalG` bị đánh vần sai (`mieDirctionalG`) trong dữ liệu
-   * nguồn nên bộ nạp dữ liệu phải chấp nhận cả hai khoá.
+   * Các tham số tán xạ bổ sung của shader Sky, lưu trong bảng `sky_preset`
+   * (API trả về dạng camelCase; thiếu thì dùng mặc định của three.js).
+   * `mieDirectionalG` bị đánh vần sai (`mieDirctionalG`) trong dữ liệu nguồn
+   * nên bộ nạp dữ liệu phải chấp nhận cả hai khoá.
    */
   mieCoefficient?: number | null;
   mieDirectionalG?: number | null;
@@ -70,6 +70,13 @@ export interface HeritageCamera {
   start_target: number[] | Record<string, number> | null;
   zoom_position: number[] | Record<string, number> | null;
   zoom_target: number[] | Record<string, number> | null;
+  /**
+   * GLB **chỉ chứa camera + animation clip** (không mesh), thường vài chục KB.
+   *
+   * Có URL này thì quỹ đạo camera của cảnh do clip quyết định và được seek theo
+   * thời gian audio — thay cho cặp preset A/B. Optional để fixture cũ vẫn hợp lệ.
+   */
+  path_url?: string | null;
   instant_move: boolean;
 }
 

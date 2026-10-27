@@ -63,6 +63,14 @@ class Scene(Base):
         nullable=True,
     )
 
+    # GLB CHỈ chứa camera + animation clip (không mesh) — xem
+    # `apps/frontend/features/tour/three/camera-path.ts`. Có cột này thì quỹ đạo
+    # camera của cảnh do clip quyết định, seek theo thời gian audio.
+    camera_path_url: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     instant_move: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

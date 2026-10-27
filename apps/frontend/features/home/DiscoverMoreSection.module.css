@@ -1,0 +1,152 @@
+/* ==========================================================================
+   DiscoverMoreSection.module.css
+   CTA Section "Discover More"
+   Nền: radial-gradient(45% 55% at 50% 60%, rgba(195, 90, 30, 0.16) 0%, rgba(11, 12, 14, 0) 100%), #0B0C0E;
+   Khung Bounding Box: max-width 1280px, padding 2 bên 80px
+   Subtitle: 1 dòng duy nhất, max-width 650px, white-space: nowrap
+   ========================================================================== */
+
+.discoverSection {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: radial-gradient(
+      45% 55% at 50% 60%,
+      rgba(195, 90, 30, 0.16) 0%,
+      rgba(11, 12, 14, 0) 100%
+    ),
+    #0b0c0e;
+  padding: 64px 20px 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 80px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+  margin: 0 0 8px;
+}
+
+.subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 650px;
+  margin: 0 auto 24px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.buttonGroup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Nút "Browse Library": Nền cam #FF6422, bo tròn 9999px, box-shadow: 0 4px 18px */
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ff6422;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 10px 24px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 18px rgba(255, 100, 34, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btnPrimary:hover {
+  background: #ff7536;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(255, 100, 34, 0.45);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+}
+
+/* Nút "Explore Map": Nền mờ kính tối rgba(255, 255, 255, 0.08), viền mỏng border 1px solid rgba(255, 255, 255, 0.15) */
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 10px 24px;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.btnSecondary:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .discoverSection {
+    padding: 48px 16px 36px;
+  }
+
+  .content {
+    padding: 0 20px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    white-space: normal;
+    margin-bottom: 20px;
+  }
+
+  .buttonGroup {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+  }
+}
