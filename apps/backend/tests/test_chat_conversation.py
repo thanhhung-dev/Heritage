@@ -60,7 +60,9 @@ class AsyncTestSession:
 
 class ChatConversationTests(unittest.TestCase):
     def setUp(self):
-        self.enterContext(patch.dict(os.environ, {"LANGFUSE_ENABLED": "false", "OTEL_TRACING_ENABLED": "false"}))
+        self.enterContext(patch.dict(os.environ, {
+            "LANGFUSE_ENABLED": "false", "OTEL_TRACING_ENABLED": "false", "APP_ENVIRONMENT": "test",
+        }))
         metadata = MetaData()
         accounts = Table(
             "account", metadata, Column("id", Integer, primary_key=True),

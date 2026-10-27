@@ -23,6 +23,7 @@ from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.schemas.chat import ChatMessageCreate, ChatResponse as PersistedChatResponse
 from apps.backend.schemas.chat import ConversationDetailResponse, ConversationResponse
 from apps.backend.services.conversations import ChatServiceError, ConversationService, GroundedAnswer
+from apps.backend.services import chat_fallback
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -119,7 +120,10 @@ async def create_chat_message(
     async def answerer(question: str) -> GroundedAnswer:
         # Reuse the existing retrieval, evidence gate, generation and observability.
         try:
-            response = await chat(ChatRequest(message=question), repository)
+            response = await _observed_chat(
+                ChatRequest(message=question), repository,
+                development_fallback=chat_fallback.development_fallback_enabled(),
+            )
         except HTTPException:
             raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.") from None
         return GroundedAnswer(
@@ -167,11 +171,15 @@ async def delete_conversation(
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_repository)):
+    return await _observed_chat(req, repository)
+
+
+async def _observed_chat(req: ChatRequest, repository: PassageRepository, *, development_fallback: bool = False):
     with rag_observation('rag.request', input={'question': req.message}, metadata={
         'correlation_id': correlation_id.get(), 'corpus_version': 'opensearch',
         'grounding_verified': False,
     }) as observation:
-        response = await _chat(req, repository)
+        response = await _chat(req, repository, development_fallback=development_fallback)
         observation.update(output=response.model_dump(), metadata={
             'resolution_status': response.resolution_status,
             'answer_type': response.answer_type,
@@ -180,7 +188,7 @@ async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_rep
         return response
 
 
-async def _chat(req: ChatRequest, repository: PassageRepository):
+async def _chat(req: ChatRequest, repository: PassageRepository, *, development_fallback: bool = False):
     started = time.perf_counter()
     question = req.message.strip()
     if not question:
@@ -188,8 +196,16 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
 
     # All answers require evidence, including requests from older use_rag clients.
     try:
-        result = await repository.search_evidence(question)
+        if development_fallback:
+            result = await asyncio.wait_for(
+                repository.search_evidence(question), timeout=chat_fallback.LOCAL_RETRIEVAL_TIMEOUT_SECONDS,
+            )
+        else:
+            result = await repository.search_evidence(question)
     except Exception:
+        if development_fallback:
+            log.warning("Local retrieval unavailable; using development chat fallback")
+            return await _development_response(question)
         log.exception("OpenSearch passage retrieval lỗi")
         return ChatResponse(
             answer="Kho dữ liệu hiện không khả dụng; tôi chưa thể trả lời có bằng chứng.",
@@ -238,8 +254,20 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         return answer, get_generation_details()
 
     try:
-        answer, details = await asyncio.to_thread(generate)
+        if development_fallback:
+            answer, details = await asyncio.wait_for(
+                asyncio.to_thread(generate), timeout=chat_fallback.LOCAL_INFERENCE_TIMEOUT_SECONDS,
+            )
+            if not answer.strip():
+                raise ValueError("Local model returned an empty answer")
+        else:
+            answer, details = await asyncio.to_thread(generate)
     except Exception:
+        if development_fallback:
+            log.warning("Local generation unavailable; using development chat fallback")
+            return await _development_response(
+                question, context=context, sources=[item.to_source() for item in result.evidence],
+            )
         log.exception("LLM generation lỗi")
         raise HTTPException(status_code=503, detail="Model trả lời hiện không khả dụng.") from None
 
@@ -258,4 +286,12 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         corrected_to=correction.get("suggested", ""),
         intent=",".join(sorted(query.intent)),
         resolution_status="resolved", answer_type="answered",
+    )
+
+
+async def _development_response(question: str, *, context: str = "", sources: list[dict] | None = None) -> ChatResponse:
+    answer = await chat_fallback.development_answer(question, context=context, sources=sources)
+    return ChatResponse(
+        answer=answer.answer, sources=answer.sources,
+        resolution_status=answer.resolution_status, answer_type=answer.answer_type,
     )

@@ -165,7 +165,8 @@ class ConversationService:
             assistant_message = ChatMessage(
                 id=uuid4(), conversation_id=conversation.id, role="assistant", content=answer.answer,
                 citations=answer.sources, abstained=not answer.sources,
-                retrieval_strategy="opensearch_hybrid", created_at=now + timedelta(microseconds=1),
+                retrieval_strategy="development_mock" if answer.answer_type == "development_mock" else "opensearch_hybrid",
+                created_at=now + timedelta(microseconds=1),
             )
             assistant_message.citation_records = [citation_from_source(source, assistant_message.id) for source in answer.sources]
             conversation.updated_at = assistant_message.created_at

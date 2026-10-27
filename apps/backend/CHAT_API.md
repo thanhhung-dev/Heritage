@@ -35,14 +35,66 @@ qualifies the question; it is not inserted into the source evidence. Empty or
 oversized messages/context are rejected with `422`.
 
 The complete answer pipeline is awaited with a 30-second timeout (`504`);
-inference/dependency failures return a Vietnamese `500` response. A missing DB
+outside local development, inference/dependency failures return a Vietnamese `500` response. A missing DB
 configuration returns `503`. The conversation, both messages, and citations
 commit atomically before `201`; timeout, cancellation or failure rolls them back.
 Python cannot forcibly stop an already running inference thread, but a late
 answer cannot write to the request's database transaction.
 
 Database changes require the reviewed Alembic migration described in
-`migrations/README.md`. This task does not apply migrations to a live database.
+`migrations/README.md`. Apply it only to an approved environment. The database
+table names are `conversation`, `chat_message` and `message_citation`.
+
+## Local development fallback
+
+`POST /api/chat/message` enables a fallback only with `APP_ENVIRONMENT=local`
+(the application's local default). Healthy retrieval and inference keep using
+the existing pipeline. The legacy `POST /api/chat` retains its existing behavior.
+
+- Retrieval is allowed 5 seconds and local generation 8 seconds. On failure or
+  timeout, the request tries Gemini if `GOOGLE_API_KEY` is configured in the root
+  `.env`. `GEMINI_MODEL` optionally selects the model; the default is
+  `gemini-3.1-flash-lite`. Gemini has a 10-second deadline, within the overall
+  30-second chat budget. No extra SDK dependency is required.
+- Gemini receives the retrieved context and keeps its original citations. API
+  errors, quota limits, blocked/empty/malformed/truncated responses or timeouts
+  fall back to a deterministic sample response.
+- When retrieval itself is unavailable, fallback uses an explicitly labelled
+  development fixture. Its citation has a descriptive demo title, null URL and
+  null relevance score. It never invents a historical source or URL. Even when
+  Gemini generates text from that fixture, the result stays labelled as a demo.
+- Mock answers display `[MÔ PHỎNG DEVELOPMENT …]` and return
+  `answer_type=development_mock`, `resolution_status=development_fallback`.
+  Gemini with actual retrieved evidence returns `resolution_status=gemini_fallback`.
+  Both paths persist the conversation, user/assistant pair and citations before
+  returning `201 Created`. Mock messages store `retrieval_strategy=development_mock`.
+
+Fallback never bypasses validation, authentication, ownership or database errors.
+It is disabled in `test`, `staging` and `production`. A missing embedded GGUF
+model is permitted at startup only in local mode so this endpoint can be tested.
+`/api/health` still reports actual model readiness and may return `503` while
+local chat successfully returns a labelled fallback.
+
+Optional local configuration (keep the real key out of Git):
+
+```dotenv
+APP_ENVIRONMENT=local
+GOOGLE_API_KEY=
+GEMINI_MODEL=gemini-3.1-flash-lite
+```
+
+The Gemini adapter follows the official
+[generateContent REST contract](https://ai.google.dev/api/generate-content).
+
+On Windows, Psycopg's async driver requires a selector event loop. With the
+project's Uvicorn version, run from the repository root:
+
+```powershell
+python -m uvicorn apps.backend.app:app --host 127.0.0.1 --port 8000 --loop asyncio:SelectorEventLoop
+```
+
+This explicitly selects the compatible loop for direct local startup. Linux
+can keep its usual Uvicorn command.
 
 ## Account conversation management
 
@@ -69,7 +121,7 @@ account's list. Management routes do not open an AI/retrieval dependency.
 From the repository root:
 
 ```powershell
-python -m pytest apps/backend/tests/test_chat_conversation.py
+python -m pytest apps/backend/tests/test_chat_conversation.py apps/backend/tests/test_chat_fallback.py apps/backend/tests/test_startup_config.py
 ```
 
 Tests use `unittest.TestCase`, `TestClient`, real JWT validation and SQLAlchemy
@@ -80,5 +132,7 @@ both retrieval/inference timeouts, AI/storage errors and atomic rollback. A late
 inference result cannot persist data after a timeout. Legacy session retention
 and cascade/parent constraints are checked as well.
 
-SQLite tests do not replace PostgreSQL migration/integration verification. This
-task renders the migration offline and does not run it on an application database.
+Fallback tests also cover Gemini request headers/payloads, dependency failures,
+deadlines, demo labelling, persistence and account isolation. Gemini HTTP is
+stubbed in automated tests; a real key is needed to verify its live availability.
+SQLite tests do not replace PostgreSQL migration/integration verification.

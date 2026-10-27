@@ -1,21 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import { Welcome } from "@ant-design/x";
 import ChatInput from "./ChatInput";
 import { SuggestionList } from "./SuggestionList";
 import { HeritageLogo } from "@/components/Logo/HeritageLogo";
-import styles from "../chat.module.css";
+import styles from "@/features/chat/chat.module.css";
 
 interface LandingProps {
+  input: string;
+  onInputChange: (value: string) => void;
   onSend: (text: string) => void;
   suggestions: string[];
   loading?: boolean;
 }
 
-export function ChatLanding({ onSend, suggestions, loading }: LandingProps) {
-  const [input, setInput] = useState("");
-
+export function ChatLanding({ input, onInputChange, onSend, suggestions, loading }: LandingProps) {
   return (
     <div className={styles.landing}>
       <Welcome
@@ -26,11 +25,10 @@ export function ChatLanding({ onSend, suggestions, loading }: LandingProps) {
       <div className={styles.landingInput}>
         <ChatInput
           value={input}
-          onChange={setInput}
+          onChange={onInputChange}
           onSubmit={() => {
             if (input.trim()) {
               onSend(input);
-              setInput("");
             }
           }}
           placeholder="Hỏi về di sản Đà Nẵng – Huế…"

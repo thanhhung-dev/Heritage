@@ -7,7 +7,7 @@ import type { Message, Source } from "@/features/chat/types";
 import ChatInput from "./ChatInput";
 import { ChatActions } from "./ChatActions";
 import { HeritageLogoMini } from "@/components/Logo/HeritageLogoMinimal";
-import styles from "../chat.module.css";
+import styles from "@/features/chat/chat.module.css";
 
 interface ChatViewProps {
   messages: Message[];
