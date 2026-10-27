@@ -564,3 +564,147 @@ Kiến trúc chốt:
 > **R2 versioned knowledge store → reproducible ingestion → replaceable hybrid
 > search index → KAG-lite query planner → Evidence Context Builder → Qwen3-4B →
 > grounding gate; PostgreSQL giữ graph, nghiệp vụ, trạng thái và cache.**
+
+## 16. Langfuse local cho đánh giá chatbot
+
+Stack quan sát chạy trong project `heritage-local`, profile `langfuse`, network
+`langfuse` và năm volume riêng (PostgreSQL, ClickHouse data/logs, Redis, MinIO).
+Không tạo lại, kết nối network hay dùng volume của PostgreSQL/OpenSearch nghiệp
+vụ thuộc project `heritagegraph`. Chỉ web `127.0.0.1:3003` và S3
+`127.0.0.1:9090` được publish; worker, database, Redis và console MinIO không
+publish cổng. Truy cập UI tại **http://localhost:3003** trên chính máy chạy Docker.
+
+### Cấu hình và credentials
+
+Tham chiếu [Compose chính thức](https://github.com/langfuse/langfuse/blob/main/docker-compose.yml):
+web `docker.langfuse.com/langfuse/langfuse:4`, worker
+`docker.langfuse.com/langfuse/langfuse-worker:4`, PostgreSQL `17`, ClickHouse
+`25.12`, Redis `7`, MinIO `cgr.dev/chainguard/minio:latest`. Đây là các tag có thể
+thay đổi; ghi lại image digest thực tế khi chốt một lượt đo, không tự pull nâng
+phiên bản giữa lượt chạy.
+
+Tạo file **`.amp/in/langfuse.env`** local (quyền `600`), không sửa `.env` hiện có,
+không copy toàn bộ `.env.example` vào file này. Trước khi ghi file, bảo đảm
+`/.amp/in/` nằm trong Git exclude local (`git rev-parse --git-path info/exclude`);
+không commit credentials hoặc nội dung trace. File chỉ cần các biến Langfuse và
+cấu hình capture dành riêng cho lượt đánh giá. Không bật shell tracing (`set -x`),
+không in file hoặc chạy `docker compose config` không có `--quiet`.
+
+Các biến **bắt buộc**, không có secret mặc định:
+
+| Biến | Yêu cầu |
+|---|---|
+| `LANGFUSE_POSTGRES_PASSWORD` | Mật khẩu riêng; dùng hex để an toàn trong URI PostgreSQL |
+| `LANGFUSE_CLICKHOUSE_PASSWORD` | Mật khẩu riêng ClickHouse |
+| `LANGFUSE_REDIS_AUTH` | Mật khẩu riêng Redis, dùng hex không có khoảng trắng/newline |
+| `LANGFUSE_S3_ACCESS_KEY_ID` | Access key riêng MinIO, ít nhất 3 ký tự |
+| `LANGFUSE_S3_SECRET_ACCESS_KEY` | Secret riêng MinIO, ít nhất 8 ký tự |
+| `LANGFUSE_SALT` | Giá trị ngẫu nhiên, giữ ổn định cùng dữ liệu |
+| `LANGFUSE_ENCRYPTION_KEY` | Đúng 64 ký tự hex (32 byte ngẫu nhiên) |
+| `LANGFUSE_NEXTAUTH_SECRET` | Secret session ngẫu nhiên |
+| `LANGFUSE_PUBLIC_KEY` | Project API public key, dạng `pk-lf-<giá trị ngẫu nhiên>` |
+| `LANGFUSE_SECRET_KEY` | Project API secret key, dạng `sk-lf-<giá trị ngẫu nhiên>` |
+| `LANGFUSE_INIT_USER_EMAIL` | Email hợp lệ của tài khoản local ban đầu |
+| `LANGFUSE_INIT_USER_PASSWORD` | Mật khẩu mạnh, tối thiểu 12 ký tự |
+
+Sinh từng secret độc lập bằng bộ sinh mật mã, chẳng hạn `openssl rand -hex 32`
+với output **redirect vào file bảo vệ**, không in ra terminal/log. Dùng hex cho
+các secrets để tránh vấn đề escaping trong URI, Redis config và dotenv. Không
+đổi salt/encryption key khi tái sử dụng volumes. Credentials trong environment
+container vẫn có thể được người có quyền Docker đọc; đây chỉ là stack local.
+
+Giá trị không bí mật mặc định:
+
+- `LANGFUSE_INIT_ORG_ID=heritage-local`, `LANGFUSE_INIT_ORG_NAME=Heritage Local`;
+- `LANGFUSE_INIT_PROJECT_ID=heritage-chatbot`,
+  `LANGFUSE_INIT_PROJECT_NAME=Heritage Chatbot`;
+- `LANGFUSE_INIT_USER_NAME=Local Evaluator`;
+- SDK: `LANGFUSE_HOST=http://localhost:3003`, `LANGFUSE_ENABLED=false` trong
+  `.env.example`; đổi thành `true` **chỉ trong môi trường backend đánh giá**;
+- SDK: `LANGFUSE_TIMEOUT=60` giây cho stack local; mặc định SDK là 5 giây và
+  đã phát sinh exporter timeout khi đo trên máy dùng chung tài nguyên. Biến này
+  phải được nạp vào process backend, không chỉ file environment của Compose.
+  Tăng timeout không khôi phục span đã mất; không đổi giữa lượt đo đang chạy;
+- `OBSERVABILITY_CONTENT_CAPTURE=metadata` mặc định. Chỉ lượt đo local có chủ ý
+  mới dùng `full` (nội dung đã redact); sau đó trả về `metadata` hoặc `none`.
+
+Compose chỉ nội suy biến `LANGFUSE_*`; `DATABASE_URL`, `POSTGRES_*`, `REDIS_*`
+nghiệp vụ không thể ghi đè endpoint/credentials Langfuse. Trong container,
+PostgreSQL user/database và ClickHouse user là `langfuse`; bucket MinIO là
+`langfuse`, prefix `events/` và `media/`, region `auto`, path-style bật. TLS Redis,
+ClickHouse cluster, telemetry, experimental features và batch export tắt cho
+local. Không cần OTEL collector hoặc cài thêm Python dependencies.
+
+Web dùng headless initialization để tạo org/project/user và project API keys
+ngay lần khởi động đầu. Cặp `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` được map
+trực tiếp sang `LANGFUSE_INIT_PROJECT_PUBLIC_KEY`/`LANGFUSE_INIT_PROJECT_SECRET_KEY`:
+SDK và project dùng cùng cặp key, không phải hai cặp khác nhau. Init không phải
+công cụ rotate key/reset password trên dữ liệu đã tồn tại; nếu tái sử dụng volumes,
+phải giữ đúng credentials đã provision hoặc quản lý thay đổi trong UI. Signup
+công khai bị tắt; đăng nhập bằng user đã khởi tạo.
+
+### Bật, kiểm tra và dừng
+
+Chạy từ repository root sau khi file credential đã sẵn sàng:
+
+```bash
+docker compose --env-file .amp/in/langfuse.env --profile langfuse config --quiet
+docker compose --env-file .amp/in/langfuse.env --profile langfuse up -d
+docker compose --env-file .amp/in/langfuse.env --profile langfuse ps
+curl --fail --silent --show-error http://localhost:3003/api/public/health
+# Dừng stack quan sát, giữ nguyên volumes và dịch vụ nghiệp vụ:
+docker compose --env-file .amp/in/langfuse.env --profile langfuse stop
+```
+
+Chỉ chạy các lệnh khởi động khi đã được phép. Không chạy `down -v`, không xóa
+volume hay khởi động lại project `heritagegraph`. Health web chỉ chứng minh web
+đang sống; cần kiểm tra API xác thực và trace ingestion riêng bằng project keys.
+Không đưa keys vào command line, báo cáo hoặc log. Khi khởi động backend đánh giá,
+nạp các biến SDK từ file local vào **process riêng**, giữ nguyên model/prompt,
+retrieval/reasoning và cấu hình kết nối nghiệp vụ; không thay môi trường của API
+đang chạy. Langfuse lỗi phải giữ hành vi fail-open hiện có của chatbot.
+
+Giới hạn RAM container: web/worker mỗi service 1024 MiB (Node heap 768 MiB),
+ClickHouse 1536 MiB (memory accounting 1 GiB), PostgreSQL 384 MiB, Redis/MinIO mỗi
+service 256 MiB, tổng trần khoảng **4,38 GiB**; CPU mỗi service 0,5–1 core. Redis
+dùng AOF và `noeviction`, maxmemory 128 MiB để không tự loại job. Đây là cấu hình
+thử nghiệm nhỏ, không phải sizing production hay bảo đảm không OOM. Với Docker
+8 GiB dùng chung OpenSearch, kiểm tra RAM còn trống và `docker stats` trước khi
+đo; migration/merge có thể gây đỉnh RAM. Nếu thiếu RAM, dừng đánh giá và ghi lại
+giới hạn, không thay đổi/xóa OpenSearch hay lặng lẽ đổi cấu hình giữa lượt đo.
+
+### Diễn giải lượt đánh giá 50 câu
+
+Runner hỗ trợ `--hybrid-only` để không yêu cầu snapshot GraphRAG và `--balanced`
+để lấy đều câu hỏi trải từ đầu tới cuối mỗi nhóm. Cờ hybrid chỉ điều khiển runner,
+không tắt GraphRAG trong backend: phải kiểm tra môi trường backend riêng.
+Ví dụ với inventory đã export và runtime manifest không chứa secrets:
+
+```bash
+.venv/bin/python -m pipelines.evaluation.eval_graphrag_chat \
+  --url http://127.0.0.1:8001 \
+  --inventory-root .amp/in/langfuse-50-inventory \
+  --hybrid-only --balanced --limit 50 \
+  --runtime-manifest .amp/in/artifacts/langfuse-50-runtime.json \
+  --output .amp/in/artifacts/langfuse-50.jsonl
+```
+
+Runner không ghi đè kết quả cũ; dùng output mới cho lần chạy tiếp theo. Manifest
+runtime cần ghi cấu hình **đã kiểm tra của server đang chạy**, không suy ra chỉ từ
+`.env`. Summary dùng p95 nearest-rank, gồm cả response validation dự kiến; số
+`all_evidence_groups_hit` chỉ là độ phủ ID nguồn kỳ vọng, không chứng minh mọi
+khẳng định trong đáp án đều đúng. Langfuse v4 dùng Observations API v2 để đối soát
+(`fields=core,basic,io,metadata,...`); API traces cũ không có trên events-only.
+
+Chốt danh sách 50 câu (5 câu mỗi nhóm), model, prompt, reasoning settings và hash
+corpus trước khi chạy tuần tự. Ghi correlation ID, timing, câu trả lời, lỗi và
+run identity vào artifacts local bị Git bỏ qua. Không retry POST chatbot khi
+transport lỗi mà chưa biết request có hoàn tất không; lưu phần đã có và báo số
+câu chưa chạy. Ingestion bất đồng bộ cần được đợi/đối soát theo correlation ID;
+chỉ đếm retrieval/context/generation nếu bước đó thực sự chạy, không suy từ HTTP
+200 hay health check. Nội dung capture vẫn có thể nhạy cảm sau redact: chỉ dùng
+câu đánh giá cố định, không chia sẻ trace thô ra ngoài.
+
+Báo cáo phải tách HTTP/schema, bằng chứng được chọn/citation và nhận xét nội dung.
+`grounded=True`, rubric/passage ID nội bộ hoặc trace đủ span **không phải** bằng
+chứng đúng lịch sử; không công bố historical accuracy khi chưa thẩm định nguồn.
