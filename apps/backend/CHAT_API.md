@@ -19,6 +19,33 @@ normalized `citations`, `resolution_status`, and `answer_type`. Citations store
 their own UUID, message UUID, source title, optional source URL and relevance
 score. Original passage provenance also remains in the existing message JSON.
 
+Both the full chat page and an embedded heritage/scene chat can use this same
+persisted endpoint. Contracts live in `schemas/chat.py`. Both response formats
+include `needs_user_choice`, `suggestions`, `corrected_from`, `corrected_to`,
+`intent`, `entity_id`, `abstained` and `abstention_reason`:
+
+- A grounded answer has citations and `abstained=false`.
+- A clarification has `needs_user_choice=true`, the question in `answer`, and
+  optional candidate `suggestions`. It is not an abstention and may have no citations.
+- Missing evidence has `abstained=true`, `abstention_reason=insufficient_evidence`
+  and no invented citations.
+- The compatibility response can report unavailable retrieval with
+  `abstention_reason=service_unavailable`. Persisted chat treats unavailability
+  as a failed request, unless its labelled local fallback is enabled.
+
+Assistant outcome metadata is stored in `chat_message.response_metadata` and
+restored as the same top-level fields in the message history API. The database
+evidence constraint also permits an explicitly marked clarification. Existing
+messages retain their stored abstention flag; unavailable historical metadata
+uses response defaults rather than being inferred from message text.
+
+`POST /api/chat` remains a stateless HTTP-200 compatibility interface, using
+`LegacyChatRequest` / `LegacyChatResponse`. It accepts the same heritage/scene
+context and retains `sources` instead of normalized `citations`. Its optional
+`session_id` is deprecated, is not an authentication credential and does not
+grant history access. Both interfaces always require source evidence for factual
+answers, including when a legacy client sends `use_rag=false`.
+
 Authenticated requests use `Authorization: Bearer <access_token>`. Account IDs
 come exclusively from the verified JWT and the current `account` table. Invalid
 tokens are rejected; they never silently become guest requests. No account ID

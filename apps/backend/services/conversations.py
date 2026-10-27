@@ -5,7 +5,6 @@ import asyncio
 import json
 import math
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
@@ -18,7 +17,8 @@ from apps.backend.models.admin import AdminAccount
 from apps.backend.models.chat import ChatMessage, Conversation, MessageCitation
 from apps.backend.models.heritage import Heritage
 from apps.backend.schemas.chat import (
-    ChatMessageCreate, ChatMessageResponse, ChatResponse, ConversationDetailResponse,
+    ChatAnswer as GroundedAnswer, ChatMessageCreate, ChatMessageResponse, ChatOutcome,
+    ChatResponse, ConversationDetailResponse, LegacyChatRequest,
     ConversationResponse, MessageCitationResponse,
 )
 
@@ -34,15 +34,7 @@ class ChatServiceError(Exception):
         super().__init__(detail)
 
 
-@dataclass(frozen=True)
-class GroundedAnswer:
-    answer: str
-    sources: list[dict] = field(default_factory=list)
-    resolution_status: str | None = None
-    answer_type: str | None = None
-
-
-def question_with_context(request: ChatMessageCreate) -> str:
+def question_with_context(request: ChatMessageCreate | LegacyChatRequest) -> str:
     """UI context qualifies the question; it is never added to source evidence."""
     parts = [request.message]
     for label, value in (("Di sản đang xem", request.heritage_context), ("Cảnh đang xem", request.scene_context)):
@@ -68,6 +60,17 @@ def citation_from_source(source: dict, message_id: UUID) -> MessageCitation:
         id=uuid4(), message_id=message_id,
         source_title=str(source.get("doc") or f"Passage {source.get('passage_id', '')}").strip(),
         source_url=url, relevance_score=score,
+    )
+
+
+def message_response(message: ChatMessage) -> ChatMessageResponse:
+    outcome = ChatOutcome.model_validate({
+        **(message.response_metadata or {}), "abstained": message.abstained,
+    })
+    return ChatMessageResponse(
+        **outcome.outcome_data(), id=message.id, conversation_id=message.conversation_id,
+        role=message.role, content=message.content, created_at=message.created_at,
+        citations=message.citation_records,
     )
 
 
@@ -115,7 +118,7 @@ class ConversationService:
         )
         return ConversationDetailResponse(
             **ConversationResponse.model_validate(conversation).model_dump(),
-            messages=[ChatMessageResponse.model_validate(row) for row in rows.scalars().all()],
+            messages=[message_response(row) for row in rows.scalars().all()],
         )
 
     async def delete_conversation(self, conversation_id: UUID, account_id: int) -> None:
@@ -130,7 +133,7 @@ class ConversationService:
 
     async def send(
         self, request: ChatMessageCreate, account_id: int | None,
-        answerer: Callable[[str], Awaitable[GroundedAnswer]],
+        answerer: Callable[[ChatMessageCreate], Awaitable[GroundedAnswer]],
     ) -> ChatResponse:
         try:
             if account_id is not None:
@@ -151,7 +154,7 @@ class ConversationService:
                 )
                 self.db.add(conversation)
 
-            answer = await asyncio.wait_for(answerer(question_with_context(request)), timeout=CHAT_TIMEOUT_SECONDS)
+            answer = await asyncio.wait_for(answerer(request), timeout=CHAT_TIMEOUT_SECONDS)
             if not answer.answer.strip() or answer.resolution_status == "unavailable":
                 raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.")
             if answer.answer_type == "answered" and not answer.sources:
@@ -164,7 +167,7 @@ class ConversationService:
             )
             assistant_message = ChatMessage(
                 id=uuid4(), conversation_id=conversation.id, role="assistant", content=answer.answer,
-                citations=answer.sources, abstained=not answer.sources,
+                citations=answer.sources, abstained=answer.abstained, response_metadata=answer.outcome_data(),
                 retrieval_strategy="development_mock" if answer.answer_type == "development_mock" else "opensearch_hybrid",
                 created_at=now + timedelta(microseconds=1),
             )
@@ -175,7 +178,7 @@ class ConversationService:
             response = ChatResponse(
                 conversation_id=conversation.id, message_id=assistant_message.id, answer=answer.answer,
                 citations=[MessageCitationResponse.model_validate(citation) for citation in assistant_message.citation_records],
-                resolution_status=answer.resolution_status, answer_type=answer.answer_type,
+                **answer.outcome_data(),
             )
             # Both turns and every citation commit as one unit before the response is sent.
             await self.db.commit()

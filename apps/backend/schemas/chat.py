@@ -9,12 +9,9 @@ from uuid import UUID
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, JsonValue, field_validator
 
 
-class ChatMessageCreate(BaseModel):
+class ChatContextFields(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="forbid", str_strip_whitespace=True)
 
-    message: str = Field(min_length=1, max_length=8000)
-    conversation_id: UUID | None = None
-    heritage_id: int | None = Field(default=None, gt=0, le=2**63 - 1)
     heritage_context: str | dict[str, JsonValue] | None = None
     scene_context: str | dict[str, JsonValue] | None = None
 
@@ -27,6 +24,48 @@ class ChatMessageCreate(BaseModel):
         return value
 
 
+class ChatMessageCreate(ChatContextFields):
+    message: str = Field(min_length=1, max_length=8000)
+    conversation_id: UUID | None = None
+    heritage_id: int | None = Field(default=None, gt=0, le=2**63 - 1)
+
+
+class LegacyChatRequest(ChatContextFields):
+    # Keep the legacy route's explicit HTTP 400 for blank questions.
+    message: str = Field(max_length=8000)
+    use_rag: bool = True
+    session_id: str | None = Field(default=None, max_length=128)
+
+
+class ChatOutcome(BaseModel):
+    """Outcome fields shared by live replies and restored assistant messages."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    corrected_from: str = ""
+    corrected_to: str = ""
+    needs_user_choice: bool = False
+    suggestions: list[dict[str, JsonValue]] = Field(default_factory=list)
+    entity_id: str | None = None
+    intent: str | None = None
+    resolution_status: str | None = None
+    answer_type: str | None = None
+    abstained: bool = False
+    abstention_reason: Literal["insufficient_evidence", "service_unavailable"] | None = None
+
+    def outcome_data(self) -> dict:
+        return self.model_dump(include=set(ChatOutcome.model_fields))
+
+
+class ChatAnswer(ChatOutcome):
+    answer: str
+    sources: list[dict] = Field(default_factory=list)
+
+
+class LegacyChatResponse(ChatAnswer):
+    """Compatibility response for POST /api/chat (HTTP 200)."""
+
+
 class MessageCitationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -37,7 +76,7 @@ class MessageCitationResponse(BaseModel):
     relevance_score: float | None = Field(default=None, allow_inf_nan=False)
 
 
-class ChatMessageResponse(BaseModel):
+class ChatMessageResponse(ChatOutcome):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -50,15 +89,13 @@ class ChatMessageResponse(BaseModel):
     )
 
 
-class ChatResponse(BaseModel):
+class ChatResponse(ChatOutcome):
     model_config = ConfigDict(from_attributes=True)
 
     conversation_id: UUID
     message_id: UUID
     answer: str
     citations: list[MessageCitationResponse] = Field(default_factory=list)
-    resolution_status: str | None = None
-    answer_type: str | None = None
 
 
 class ConversationResponse(BaseModel):

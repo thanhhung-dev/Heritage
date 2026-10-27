@@ -20,6 +20,11 @@ Revision `20261028_knowledge` creates the R2 document/upload metadata tables use
 by the registered local knowledge administration router. Existing tables and
 objects are preserved; applying the migration never contacts the R2 bucket.
 
+Revision `20261028_chat_outcomes` adds `chat_message.response_metadata` and
+extends the evidence constraint to allow clarification questions without
+citations. Uncited factual answers still fail the constraint. Metadata is
+additive, with an empty object default for older messages.
+
 After approval, apply the latest schema from `apps/backend`:
 
 ```powershell

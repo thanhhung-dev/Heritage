@@ -65,6 +65,9 @@ class ChatMessage(Base):
         JSONB().with_variant(JSON(), "sqlite"), nullable=False, server_default=text("'[]'")
     )
     abstained: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false", comment="từ chối trả lời ngoài phạm vi")
+    response_metadata: Mapped[dict] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite"), nullable=False, default=dict, server_default=text("'{}'")
+    )
     retrieval_strategy: Mapped[str | None] = mapped_column(String(32), nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     model: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -86,7 +89,8 @@ class ChatMessage(Base):
         ),
         CheckConstraint("role IN ('user','assistant')", name="chk_msg_role"),
         CheckConstraint(
-            "role = 'user' OR abstained OR jsonb_array_length(citations) > 0",
+            "role = 'user' OR abstained OR jsonb_array_length(citations) > 0 OR "
+            "COALESCE(jsonb_extract_path_text(response_metadata, 'needs_user_choice'), 'false') = 'true'",
             name="chk_msg_citations",
         ),
     )

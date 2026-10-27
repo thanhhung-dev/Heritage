@@ -95,6 +95,19 @@ class ChatApiTests(unittest.TestCase):
             response = self.client.post("/api/chat", json={"message": "Chùa Sao Hỏa ở đâu?"})
         self.assertEqual(response.json()["resolution_status"], "not_found")
         self.assertEqual(response.json()["sources"], [])
+        self.assertTrue(response.json()["abstained"])
+        self.assertEqual(response.json()["abstention_reason"], "insufficient_evidence")
+
+    def test_legacy_widget_context_is_qualified_but_does_not_become_citation_evidence(self):
+        with patch.object(chat_api, "generate_response", return_value="Answer") as generate:
+            response = self.client.post("/api/chat", json={
+                "message": "Cổng này xây khi nào?", "heritage_context": {"title": "Chùa Thiên Mụ"},
+                "scene_context": "Cổng chính",
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Chùa Thiên Mụ", self.search.await_args.args[0])
+        self.assertIn("Cổng chính", self.search.await_args.args[0])
+        self.assertEqual(generate.call_args.kwargs["context"], self.evidence.text)
 
     def test_blank_message_is_rejected(self):
         response = self.client.post("/api/chat", json={"message": "  "})

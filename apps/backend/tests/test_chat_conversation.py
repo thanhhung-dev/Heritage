@@ -88,6 +88,8 @@ class ChatConversationTests(unittest.TestCase):
         def configure_sqlite(connection, _):
             connection.execute("PRAGMA foreign_keys=ON")
             connection.create_function("jsonb_array_length", 1, lambda value: len(json.loads(value)))
+            connection.create_function("jsonb_extract_path_text", 2, lambda value, key:
+                {True: "true", False: "false"}.get(json.loads(value).get(key)))
 
         # create_all is restricted to this disposable in-memory test database.
         metadata.create_all(self.engine)
@@ -183,6 +185,58 @@ class ChatConversationTests(unittest.TestCase):
         self.assertIn("Cổng chính", question)
         self.assertEqual(self.generate.call_args.kwargs["context"], self.evidence.text)
         self.assertEqual(self.history(result["conversation_id"]).json()["heritage_id"], 10)
+
+    def test_clarification_metadata_survives_persistence_and_history_restore(self):
+        self.query.ambiguous = True
+        self.query.corrections = [{"original": "cung an", "suggested": "Cung An Định", "score": 0.8}]
+        self.retrieval.evidence = []
+        result = self.create_conversation(message="cung an ở đâu?")
+        self.assertTrue(result["needs_user_choice"])
+        self.assertFalse(result["abstained"])
+        self.assertIsNone(result["abstention_reason"])
+        self.assertEqual(result["citations"], [])
+        self.assertEqual(result["suggestions"], self.query.corrections)
+        restored = self.history(result["conversation_id"]).json()["messages"][1]
+        for key in ("needs_user_choice", "suggestions", "abstained", "abstention_reason", "answer_type", "resolution_status"):
+            self.assertEqual(restored[key], result[key], key)
+        self.generate.assert_not_called()
+
+    def test_abstention_metadata_survives_history_restore_without_invented_citations(self):
+        self.retrieval.evidence = []
+        result = self.create_conversation()
+        self.assertTrue(result["abstained"])
+        self.assertEqual(result["abstention_reason"], "insufficient_evidence")
+        self.assertFalse(result["needs_user_choice"])
+        restored = self.history(result["conversation_id"]).json()["messages"][1]
+        self.assertEqual(restored["abstention_reason"], result["abstention_reason"])
+        self.assertTrue(restored["abstained"])
+        self.assertEqual(restored["citations"], [])
+
+    def test_answer_metadata_and_corrections_are_restored(self):
+        self.query.corrections = [{"original": "Thien Mu", "suggested": "Thiên Mụ"}]
+        result = self.create_conversation()
+        restored = self.history(result["conversation_id"]).json()["messages"][1]
+        self.assertEqual(result["corrected_from"], "Thien Mu")
+        self.assertEqual(restored["corrected_to"], "Thiên Mụ")
+        self.assertEqual(restored["intent"], result["intent"])
+        self.assertFalse(restored["abstained"])
+
+    def test_valid_maximum_message_and_ui_context_are_not_revalidated_as_one_oversized_message(self):
+        result = self.create_conversation(message="a" * 8000, heritage_context="b" * 2000, scene_context="c" * 2000)
+        self.assertEqual(result["answer_type"], "answered")
+        self.assertIn("b" * 2000, self.repository.search_evidence.await_args.args[0])
+
+    def test_uncited_nonabstaining_nonclarification_answers_violate_database_gate(self):
+        created = self.create_conversation()
+        with Session(self.engine) as database:
+            database.add(ChatMessage(
+                id=uuid4(), conversation_id=UUID(created["conversation_id"]), role="assistant",
+                content="Unverified claim", citations=[], abstained=False, response_metadata={},
+                created_at=datetime.now(timezone.utc),
+            ))
+            with self.assertRaises(IntegrityError):
+                database.flush()
+            database.rollback()
 
     def test_continuation_keeps_one_conversation_and_orders_turns(self):
         first = self.create_conversation()

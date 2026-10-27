@@ -12,7 +12,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field
 
 from apps.backend.core.llm import generate_response, get_generation_details
 from apps.backend.core.observability import correlation_id, observe_grounded_qa, rag_observation
@@ -22,7 +21,8 @@ from apps.backend.core.security import get_current_user
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.schemas.chat import ChatMessageCreate, ChatResponse as PersistedChatResponse
 from apps.backend.schemas.chat import ConversationDetailResponse, ConversationResponse
-from apps.backend.services.conversations import ChatServiceError, ConversationService, GroundedAnswer
+from apps.backend.schemas.chat import LegacyChatRequest as ChatRequest, LegacyChatResponse as ChatResponse
+from apps.backend.services.conversations import ChatServiceError, ConversationService, GroundedAnswer, question_with_context
 from apps.backend.services import chat_fallback
 
 log = logging.getLogger(__name__)
@@ -82,25 +82,6 @@ def get_authenticated_account_id(current_user: dict = Depends(get_current_user))
     return account_id_from_claims(current_user)
 
 
-class ChatRequest(BaseModel):
-    message: str
-    use_rag: bool = True
-    session_id: str | None = None
-
-
-class ChatResponse(BaseModel):
-    answer: str
-    sources: list[dict] = Field(default_factory=list)
-    corrected_from: str = ""
-    corrected_to: str = ""
-    needs_user_choice: bool = False
-    suggestions: list[dict] = Field(default_factory=list)
-    entity_id: str | None = None
-    intent: str | None = None
-    resolution_status: str | None = None
-    answer_type: str | None = None
-
-
 async def get_repository():
     async with PassageStore() as store:
         yield PassageRepository(store)
@@ -117,19 +98,19 @@ async def create_chat_message(
     service: ConversationService = Depends(get_conversation_service),
     repository: PassageRepository = Depends(get_repository),
 ):
-    async def answerer(question: str) -> GroundedAnswer:
+    async def answerer(message_request: ChatMessageCreate) -> GroundedAnswer:
         # Reuse the existing retrieval, evidence gate, generation and observability.
         try:
             response = await _observed_chat(
-                ChatRequest(message=question), repository,
+                ChatRequest(
+                    message=message_request.message, heritage_context=message_request.heritage_context,
+                    scene_context=message_request.scene_context,
+                ), repository,
                 development_fallback=chat_fallback.development_fallback_enabled(),
             )
         except HTTPException:
             raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.") from None
-        return GroundedAnswer(
-            answer=response.answer, sources=response.sources,
-            resolution_status=response.resolution_status, answer_type=response.answer_type,
-        )
+        return response
 
     with conversation_errors():
         return await service.send(request, account_id, answerer)
@@ -190,9 +171,9 @@ async def _observed_chat(req: ChatRequest, repository: PassageRepository, *, dev
 
 async def _chat(req: ChatRequest, repository: PassageRepository, *, development_fallback: bool = False):
     started = time.perf_counter()
-    question = req.message.strip()
-    if not question:
+    if not req.message.strip():
         raise HTTPException(status_code=400, detail="message trống")
+    question = question_with_context(req)
 
     # All answers require evidence, including requests from older use_rag clients.
     try:
@@ -210,6 +191,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository, *, development_
         return ChatResponse(
             answer="Kho dữ liệu hiện không khả dụng; tôi chưa thể trả lời có bằng chứng.",
             resolution_status="unavailable", answer_type="insufficient_evidence",
+            abstained=True, abstention_reason="service_unavailable",
         )
 
     query = result.query
@@ -223,6 +205,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository, *, development_
         return ChatResponse(
             answer="Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có.",
             resolution_status="not_found", answer_type="insufficient_evidence",
+            abstained=True, abstention_reason="insufficient_evidence",
         )
 
     with rag_observation('context.assembly') as observation:
@@ -291,7 +274,4 @@ async def _chat(req: ChatRequest, repository: PassageRepository, *, development_
 
 async def _development_response(question: str, *, context: str = "", sources: list[dict] | None = None) -> ChatResponse:
     answer = await chat_fallback.development_answer(question, context=context, sources=sources)
-    return ChatResponse(
-        answer=answer.answer, sources=answer.sources,
-        resolution_status=answer.resolution_status, answer_type=answer.answer_type,
-    )
+    return ChatResponse(**answer.model_dump())
