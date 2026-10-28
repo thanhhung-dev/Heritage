@@ -207,6 +207,38 @@ Passwords are never returned in the response/JWT. Registration requires 8 to
 1024 characters and rejects all-whitespace passwords; login accepts 1 to 1024.
 Reset tokens cannot be used to authenticate protected endpoints as access tokens.
 
+### Register/Login FUT verification (2026-10-28)
+
+The existing `apps/backend/tests/test_auth_api.py` contains 36 passing tests
+covering registration/login validation, email normalization, username and legacy
+identifier login, password/hash handling, inactive/temporary locks, transaction
+rollback and privilege isolation. Together with the four existing Chat API,
+conversation, integration and fallback suites, the targeted run completed with
+**112 passed, 57 subtests passed**. No additional test file was created.
+
+Local HTTP checks against PostgreSQL also passed: normalized registration,
+duplicate conflicts, all supported login identifiers, JWT authentication,
+active/expired locks using the database timezone, invalid stored hashes and
+concurrent registrations. Four distinct concurrent registrations received
+distinct IDs; two simultaneous duplicate requests returned one `201` and one
+`400`. Only the temporary verification accounts were removed afterwards.
+
+The English [FUT workbook](../../FUT_BE_Login_Register.xlsx) contains **37 Pass,
+0 Fail, 0 Not Run** cases mapped to the executed test methods/subtests. Tester:
+**Cao Văn Khoa**. With `openpyxl` available in the reporting environment, regenerate
+it from actual pytest evidence from the repository root:
+
+```powershell
+python -m pytest apps/backend/tests/test_auth_api.py -q --junitxml=tmp/auth-fut.xml
+python generate_auth_fut.py --junit tmp/auth-fut.xml
+```
+
+The generator records the JUnit filename, SHA256, source revision and execution
+date in the workbook. Without evidence, cases remain `Not Run`; it does not
+execute APIs or assign fabricated passing results. The 37 FUT rows include
+separate boundary/validation scenarios covered by shared parameterized subtests,
+so this count differs from the 36 test methods.
+
 ## Account conversation management
 
 All management routes require a valid JWT and an active account:
