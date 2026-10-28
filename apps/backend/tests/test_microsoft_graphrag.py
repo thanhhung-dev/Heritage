@@ -24,8 +24,8 @@ class MicrosoftGraphRagTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'snapshot'
             export_snapshot(rows, root)
-            self.assertEqual((root / 'input/passage-PSG-example.txt').read_text(), rows[0]['text'])
-            manifest = json.loads((root / 'source-manifest.json').read_text())
+            self.assertEqual((root / 'input/passage-PSG-example.txt').read_text(encoding='utf-8'), rows[0]['text'])
+            manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
             self.assertEqual(manifest['documents']['passage-PSG-example.txt']['passage_id'], 'PSG-example')
 
     def test_export_preserves_passage_identity_and_refuses_overwrite(self):
@@ -36,9 +36,9 @@ class MicrosoftGraphRagTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'snapshot'
             export_snapshot(rows, root)
-            self.assertEqual((root / 'input/passage-42.txt').read_text(),
+            self.assertEqual((root / 'input/passage-42.txt').read_text(encoding='utf-8'),
                              'Chùa Thiên Mụ nằm ở Huế.')
-            manifest = json.loads((root / 'source-manifest.json').read_text())
+            manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
             source = manifest['documents']['passage-42.txt']
             self.assertEqual(source['passage_id'], 42)
             self.assertEqual(source['object_key'], rows[0]['object_key'])
@@ -46,7 +46,7 @@ class MicrosoftGraphRagTests(unittest.TestCase):
             self.assertTrue((root / 'settings.yaml').is_file())
             with self.assertRaises(FileExistsError):
                 export_snapshot(rows, root)
-            self.assertEqual(json.loads((root / 'source-manifest.json').read_text()), manifest)
+            self.assertEqual(json.loads((root / 'source-manifest.json').read_text(encoding='utf-8')), manifest)
 
     def test_incomplete_source_does_not_publish_partial_snapshot(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -168,12 +168,13 @@ class GraphRagProcessTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             environment = root / 'venv'
-            venv.EnvBuilder(with_pip=False, symlinks=True).create(environment)
+            venv.EnvBuilder(with_pip=False, symlinks=os.name != 'nt').create(environment)
+            interpreter = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
             (root / 'index-ready.json').write_text('{}')
             with (
                 patch.dict(os.environ, {
                     'GRAPHRAG_ENABLED': 'true', 'GRAPHRAG_ROOT': str(root),
-                    'GRAPHRAG_PYTHON': str(environment / 'bin/python'),
+                    'GRAPHRAG_PYTHON': str(interpreter),
                 }),
                 patch('apps.backend.services.graphrag.asyncio.create_subprocess_exec', new=launch_probe),
             ):
@@ -197,8 +198,13 @@ class GraphRagProcessTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'index-ready.json').write_text('{}')
-            worker = root / 'worker'
-            worker.write_text(f'#!{sys.executable}\n' + '''
+            # A Python module works on both Windows and POSIX, without a shebang.
+            package = root / 'pipelines' / 'graph'
+            package.mkdir(parents=True)
+            (root / 'pipelines' / '__init__.py').write_text('')
+            (package / '__init__.py').write_text('')
+            worker = package / 'microsoft_graphrag.py'
+            worker.write_text('''
 import json, sys, time
 message = json.load(sys.stdin)['message']
 if message == 'timeout':
@@ -211,12 +217,11 @@ if message == 'invalid':
 else:
     print(json.dumps({'answer': message, 'snapshot_id': 'test', 'context_reports': [],
                       'sources': [], 'source_scope': 'community_context', 'grounding_verified': False}))
-''')
-            worker.chmod(0o700)
+''', encoding='utf-8')
             with patch.dict(os.environ, {
                 'GRAPHRAG_ENABLED': 'true', 'GRAPHRAG_ROOT': str(root),
-                'GRAPHRAG_PYTHON': str(worker), 'GRAPHRAG_QUERY_TIMEOUT': '2',
-            }):
+                'GRAPHRAG_PYTHON': sys.executable, 'GRAPHRAG_QUERY_TIMEOUT': '2',
+            }), patch('apps.backend.services.graphrag.PROJECT', root):
                 self.assertEqual((await run_global_query('question'))['answer'], 'question')
                 with self.assertRaises(RuntimeError) as error:
                     await run_global_query('fail')

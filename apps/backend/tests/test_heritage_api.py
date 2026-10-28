@@ -91,6 +91,7 @@ def make_scene(**overrides: Any) -> SimpleNamespace:
         "title": "Tam Quan",
         "description": "Cổng tam quan",
         "camera_node_name": None,
+        "camera_path_url": None,
         "cam_start_pos": [0.0, 1.5, 6.0],
         "cam_start_target": [0.0, 1.0, 0.0],
         "cam_zoom_pos": None,

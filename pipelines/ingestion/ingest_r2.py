@@ -240,7 +240,7 @@ def main() -> int:
         message = str(error) if isinstance(error, IngestionError) else "Không đọc/ghi được config hoặc output; kiểm tra JSON và đường dẫn."
         print(f"Ingestion thất bại: {message}", file=sys.stderr)
         return 1
-    package = json.loads(path.read_text())
+    package = json.loads(path.read_text(encoding="utf-8"))
     print(f"Hoàn tất: {len(package['documents'])} documents, {len(package['passages'])} passages.")
     print(f"Package (draft): {path}")
     print("Chưa ghi database/R2; xem docs/ingestion.md để review và import.")

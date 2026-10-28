@@ -85,6 +85,17 @@ class LlamaServerTests(unittest.TestCase):
         self.assertEqual(messages[-1]["role"], "user")
         self.assertIn("Nguồn: Nguồn mới", messages[-1]["content"])
 
+    def test_generation_transmits_bounded_history_to_the_model_request(self) -> None:
+        history = [{"role": "user", "content": "Previous question"}, {"role": "assistant", "content": "Previous answer"}]
+        with patch.object(llm, 'get_model', return_value=(None, None, 'llama_server')), patch.object(
+            llm, '_llama_server_generate', return_value='Grounded answer',
+        ) as generate:
+            result = llm.generate_response('Followup', 'Source evidence', history=history)
+        self.assertEqual(result, 'Grounded answer')
+        sent = generate.call_args.args[0]
+        self.assertEqual(sent[1:3], history)
+        self.assertIn('Source evidence', sent[-1]['content'])
+
 
 if __name__ == "__main__":
     unittest.main()

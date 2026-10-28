@@ -13,6 +13,7 @@ from botocore.exceptions import ClientError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 
 class MemoryS3:
@@ -91,7 +92,10 @@ class AdminKnowledgeTests(unittest.TestCase):
             'R2_UPLOAD_MAX_BYTES': '100', 'CORS_ORIGINS': '',
         }))
         self.temp = self.enterContext(tempfile.TemporaryDirectory())
-        self.engine = create_async_engine(f'sqlite+aiosqlite:///{Path(self.temp) / "test.db"}')
+        # Setup, TestClient and cleanup use different event loops. Do not retain
+        # pooled SQLite handles across those loops (Windows locks the test file).
+        self.engine = create_async_engine(f'sqlite+aiosqlite:///{Path(self.temp) / "test.db"}', poolclass=NullPool)
+        self.addCleanup(lambda: asyncio.run(self.engine.dispose()))
         async def create():
             async with self.engine.begin() as conn:
                 await conn.run_sync(lambda c: KnowledgeDocument.metadata.create_all(
@@ -101,7 +105,11 @@ class AdminKnowledgeTests(unittest.TestCase):
         self.factory = factory
         async def database():
             async with factory() as session:
-                yield session
+                try:
+                    yield session
+                finally:
+                    # Release SQLite file handles even when an endpoint raises.
+                    await session.rollback()
         self.s3 = MemoryS3()
         self.storage = R2Storage(client=self.s3, bucket='test-bucket')
         self.passages = MemoryPassages()
@@ -112,7 +120,6 @@ class AdminKnowledgeTests(unittest.TestCase):
         app.dependency_overrides[api.get_db] = database
         self.client = self.enterContext(TestClient(app, base_url='http://127.0.0.1:8000',
                                                   client=('127.0.0.1', 50000)))
-        self.addCleanup(lambda: asyncio.run(self.engine.dispose()))
 
     def upload(self, *, document_id=None, text=b'Thien Mu nam 1601.', parent='knowledge/hue/'):
         payload = {'parent_prefix': parent, 'filename': 'lich-su.txt',

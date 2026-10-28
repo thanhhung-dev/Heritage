@@ -5,6 +5,3 @@ export const CHAT_SUGGESTIONS = [
   "Làng Non Nước nổi tiếng về gì?",
   "Nhã nhạc cung đình Huế có gì đặc biệt?",
 ] as const;
-
-export const CHAT_API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
