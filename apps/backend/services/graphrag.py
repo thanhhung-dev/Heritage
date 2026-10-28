@@ -25,7 +25,8 @@ async def run_global_query(message: str, community_level: int = 0) -> dict:
         raise RuntimeError('Select an indexed snapshot first.')
     root = Path(configured_root).resolve()
     # Resolving a venv interpreter symlink would discard its site-packages.
-    python = Path(os.environ.get('GRAPHRAG_PYTHON', str(PROJECT / '.venv-graphrag/bin/python'))).absolute()
+    interpreter = 'Scripts/python.exe' if os.name == 'nt' else 'bin/python'
+    python = Path(os.environ.get('GRAPHRAG_PYTHON', str(PROJECT / '.venv-graphrag' / interpreter))).absolute()
     timeout = float(os.environ.get('GRAPHRAG_QUERY_TIMEOUT', '180'))
     if not math.isfinite(timeout) or not 0 < timeout <= 3600:
         raise ValueError('Invalid GraphRAG timeout.')

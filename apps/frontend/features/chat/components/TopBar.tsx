@@ -1,12 +1,16 @@
 "use client";
 
-import { SettingOutlined, QuestionCircleOutlined } from "@ant-design/icons";
-import styles from "../chat.module.css";
+import Link from "next/link";
+import { SettingOutlined, QuestionCircleOutlined, MenuOutlined } from "@ant-design/icons";
+import styles from "@/features/chat/chat.module.css";
 
-export function TopBar() {
+export function TopBar({ authenticated, onHistory }: { authenticated: boolean; onHistory: () => void }) {
   return (
     <div className={styles.topbar}>
       <div className={styles.topbarActions}>
+        <button className={`${styles.btnIcon} ${styles.historyToggle}`} aria-label="Mở lịch sử trò chuyện" onClick={onHistory}>
+          <MenuOutlined />
+        </button>
         <button className={styles.btnIcon} aria-label="Cài đặt">
           <SettingOutlined style={{ fontSize: 18 }} />
         </button>
@@ -18,8 +22,12 @@ export function TopBar() {
         </button>
       </div>
       <div className={styles.topbarAuth}>
-        <button className={styles.btnGhost}>Đăng nhập</button>
-        <button className={styles.btnPrimary}>Đăng ký</button>
+        {authenticated ? <Link className={styles.btnGhost} href="/profile">Tài khoản</Link> : (
+          <>
+            <Link className={styles.btnGhost} href="/sign-in">Đăng nhập</Link>
+            <Link className={styles.btnPrimary} href="/sign-up">Đăng ký</Link>
+          </>
+        )}
       </div>
     </div>
   );

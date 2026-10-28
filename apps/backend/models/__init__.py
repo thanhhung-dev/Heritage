@@ -5,7 +5,7 @@ Import order matters — các model phụ thuộc theo thứ tự:
 """
 from apps.backend.db.base import Base, TimestampMixin, AsyncSessionLocal, engine, DATABASE_URL  # noqa: F401
 
-from apps.backend.models.admin import AdminAccount  # noqa: F401
+from apps.backend.models.admin import AccountRole, AdminAccount  # noqa: F401
 from apps.backend.models.user import (  # noqa: F401
     UserProfile, UserConsent,
     BadgeDefinition, UserBadge,
@@ -16,6 +16,7 @@ from apps.backend.models.kg import (  # noqa: F401
     EntityAliasEvidence, Predicate, Relation, PlaceLocation,
 )
 from apps.backend.models.heritage import Heritage  # noqa: F401
+from apps.backend.models.knowledge import KnowledgeDocument, KnowledgeUpload  # noqa: F401
 from apps.backend.models.language import Language  # noqa: F401
 from apps.backend.models.sky_preset import SkyPreset  # noqa: F401
 from apps.backend.models.scene import Scene  # noqa: F401
@@ -27,13 +28,15 @@ from apps.backend.models.media_item import MediaItem  # noqa: F401
 from apps.backend.models.interactive import Interactive  # noqa: F401
 from apps.backend.models.interactive_highlight import InteractiveHighlight  # noqa: F401
 from apps.backend.models.scene_highlight import SceneHighlight  # noqa: F401
-from apps.backend.models.chat import ChatSession, ChatMessage, ChatFeedback  # noqa: F401
+from apps.backend.models.chat import (  # noqa: F401
+    Conversation, ChatSession, ChatMessage, MessageCitation, ChatFeedback,
+)
 
 __all__ = [
     # base
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
     # admin / identity
-    "AdminAccount",
+    "AccountRole", "AdminAccount",
     # profile & gamification
     "UserProfile", "UserConsent",
     "BadgeDefinition", "UserBadge",
@@ -43,12 +46,13 @@ __all__ = [
     "EntityEvidence", "EntityAliasEvidence", "Predicate", "Relation", "PlaceLocation",
     # heritage
     "Heritage", "Language",
+    "KnowledgeDocument", "KnowledgeUpload",
     # scene graph
     "SkyPreset", "Scene", "ModelAsset",
     "Voice", "VoiceClip", "HeritageVoice",
     "MediaItem",
     "Interactive", "InteractiveHighlight", "SceneHighlight",
     # chat
-    "ChatSession", "ChatMessage", "ChatFeedback",
+    "Conversation", "ChatSession", "ChatMessage", "MessageCitation", "ChatFeedback",
 ]
 
