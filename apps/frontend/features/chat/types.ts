@@ -23,6 +23,29 @@ export interface ChatMessageRequest {
   heritage_context?: string | Record<string, JsonValue> | null;
   scene_context?: string | Record<string, JsonValue> | null;
   heritage_id?: number | null;
+  conversation_context?: { role: "user" | "assistant"; content: string }[];
+}
+
+export interface ChatSuggestion {
+  original?: string;
+  suggested?: string;
+  label?: string;
+  title?: string;
+  name?: string;
+  score?: number;
+}
+
+export interface ChatOutcome {
+  corrected_from?: string;
+  corrected_to?: string;
+  needs_user_choice?: boolean;
+  suggestions?: ChatSuggestion[];
+  entity_id?: string | null;
+  intent?: string | null;
+  resolution_status?: string | null;
+  answer_type?: string | null;
+  abstained?: boolean;
+  abstention_reason?: "insufficient_evidence" | "service_unavailable" | null;
 }
 
 export interface MessageCitation {
@@ -33,7 +56,7 @@ export interface MessageCitation {
   relevance_score: number | null;
 }
 
-export interface ChatResponse {
+export interface ChatResponse extends ChatOutcome {
   conversation_id: string;
   message_id: string;
   answer: string;
@@ -49,7 +72,7 @@ export interface Conversation {
   updated_at: string;
 }
 
-export interface StoredMessage {
+export interface StoredMessage extends ChatOutcome {
   id: string;
   conversation_id: string;
   role: "user" | "assistant";

@@ -13,13 +13,25 @@ const conversationSchema = z.object({
   id: z.string(), account_id: z.number().nullable(), title: z.string(),
   heritage_id: z.number().nullable(), created_at: z.string(), updated_at: z.string(),
 });
+const outcomeFields = {
+  corrected_from: z.string().optional(), corrected_to: z.string().optional(),
+  needs_user_choice: z.boolean().optional(),
+  suggestions: z.array(z.object({
+    original: z.string().optional(), suggested: z.string().optional(), label: z.string().optional(),
+    title: z.string().optional(), name: z.string().optional(), score: z.number().optional(),
+  })).optional(),
+  entity_id: z.string().nullable().optional(), intent: z.string().nullable().optional(),
+  resolution_status: z.string().nullable().optional(), answer_type: z.string().nullable().optional(),
+  abstained: z.boolean().optional(),
+  abstention_reason: z.enum(["insufficient_evidence", "service_unavailable"]).nullable().optional(),
+};
 const storedMessageSchema = z.object({
   id: z.string(), conversation_id: z.string(), role: z.enum(["user", "assistant"]),
-  content: z.string(), created_at: z.string(), citations: z.array(citationSchema),
+  content: z.string(), created_at: z.string(), citations: z.array(citationSchema), ...outcomeFields,
 });
 const chatResponseSchema = z.object({
   conversation_id: z.string(), message_id: z.string(), answer: z.string(),
-  citations: z.array(citationSchema),
+  citations: z.array(citationSchema), ...outcomeFields,
 });
 
 export class ChatApiError extends Error {

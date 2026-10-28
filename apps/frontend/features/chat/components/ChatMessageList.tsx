@@ -31,6 +31,9 @@ export function ChatMessageList({ messages, sending, onSend }: ChatMessageListPr
         <article key={message.id} className={`${styles.message} ${message.role === "user" ? styles.userMessage : ""}`}>
           {message.role === "assistant" && <MilaAvatar small />}
           <div className={styles.messageBody}>
+            {message.answerType === "development_mock" && <span className={styles.answerStatus}>Sample answer</span>}
+            {message.needsUserChoice && <span className={styles.answerStatus}>Choose a heritage</span>}
+            {message.abstained && <span className={styles.answerStatus}>No verified answer</span>}
             <p className={styles.messageText}>{message.content}</p>
             {message.suggestions?.length ? (
               <div className={styles.suggestions}>

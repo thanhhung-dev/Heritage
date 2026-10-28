@@ -190,6 +190,14 @@
   line-height: 1.7;
 }
 
+.answerStatus {
+  display: block;
+  margin-bottom: 5px;
+  color: #ffbc8c;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
 .userMessage {
   align-items: flex-end;
   text-align: right;
@@ -438,6 +446,10 @@
     height: min(580px, calc(100dvh - 112px));
     max-height: calc(100dvh - 112px);
     border-radius: 22px;
+  }
+  .panelExpanded {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 112px);
   }
   .messageText {
     font-size: 13px;

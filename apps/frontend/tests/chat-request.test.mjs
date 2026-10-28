@@ -55,3 +55,20 @@ test("authenticated requests preserve context and send only fields allowed by th
     },
   });
 });
+
+test("guest requests forward completed bounded conversation context", async () => {
+  const history = [
+    { role: "user", content: "Which heritage is this?" },
+    { role: "assistant", content: "This is the current heritage." },
+  ];
+  await requestChat("/api", { message: "When was it built?", conversation_context: history }, {
+    randomUUID: () => "guest-request",
+    fetchImpl: async (_url, init) => {
+      assert.deepEqual(JSON.parse(init.body), {
+        message: "When was it built?", conversation_id: null, conversation_context: history,
+      });
+      assert.equal(init.headers.Authorization, undefined);
+      return new Response("{}", { status: 201 });
+    },
+  });
+});

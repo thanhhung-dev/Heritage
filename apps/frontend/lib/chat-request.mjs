@@ -19,7 +19,7 @@ export function requestChat(apiUrl, payload, dependencies = {}) {
   const randomUUID = dependencies.randomUUID ?? (() => crypto.randomUUID());
   const request = typeof payload === "string" ? { message: payload } : payload;
   const body = { message: request.message, conversation_id: request.conversation_id ?? null };
-  for (const key of ["heritage_context", "scene_context", "heritage_id"]) {
+  for (const key of ["heritage_context", "scene_context", "heritage_id", "conversation_context"]) {
     if (request[key] !== undefined) body[key] = request[key];
   }
 

@@ -4,6 +4,8 @@ import {
   ChatApiError, chatErrorMessage, citationSources, getConversationMessages,
   listConversations, sendChatMessage,
 } from "../services/chatService";
+import { guestConversationContext, overlaySuggestions } from "../features/chat/overlay-context";
+import type { ChatOverlayMessage } from "../features/chat/types/chatOverlay";
 
 const citation = {
   id: "citation-1", message_id: "assistant-1", source_title: "Chùa Thiên Mụ",
@@ -120,4 +122,51 @@ test("malformed success responses are rejected and unsafe citation URLs are not 
   await assert.rejects(sendChatMessage({ message: "Câu hỏi" }, null), ChatApiError);
   assert.equal(citationSources([{ ...citation, source_url: "javascript:alert(1)" }])[0].url, undefined);
   assert.equal(citationSources([{ ...citation, source_url: null }])[0].doc, citation.source_title);
+});
+
+test("overlay replies retain clarification, abstention and development answer metadata", async (t) => {
+  const clarification = {
+    ...answer, citations: [], needs_user_choice: true, abstained: false,
+    suggestions: [{ suggested: "Cung An Định", original: "cung an", score: 0.9 }],
+    answer_type: "suggestion", resolution_status: "ambiguous", abstention_reason: null,
+  };
+  let payload: unknown = clarification;
+  t.mock.method(globalThis, "fetch", async () => json(payload, 201));
+  assert.deepEqual(await sendChatMessage({ message: "Which palace?" }, null), clarification);
+  payload = {
+    ...answer, citations: [], abstained: true, abstention_reason: "insufficient_evidence",
+    needs_user_choice: false, answer_type: "insufficient_evidence",
+  };
+  const result = await sendChatMessage({ message: "Unknown heritage" }, null);
+  assert.equal(result.abstained, true);
+  assert.equal(result.abstention_reason, "insufficient_evidence");
+  payload = { ...answer, answer_type: "development_mock" };
+  assert.equal((await sendChatMessage({ message: "Preview" }, null)).answer_type, "development_mock");
+});
+
+test("guest context excludes the UI greeting and bounds complete turns", () => {
+  const message = (id: string, role: "user" | "assistant", content: string): ChatOverlayMessage => ({
+    id, role, content, citations: [], createdAt: "2026-10-29T00:00:00Z",
+  });
+  const shortHistory = [message("mila-welcome", "assistant", "UI_GREETING"), message("u1", "user", "Question"), message("a1", "assistant", "Answer")];
+  assert.deepEqual(guestConversationContext(shortHistory), [
+    { role: "user", content: "Question" }, { role: "assistant", content: "Answer" },
+  ]);
+  const longHistory = Array.from({ length: 12 }, (_, index) => message(
+    String(index), index % 2 === 0 ? "user" : "assistant", String(index).repeat(4000),
+  ));
+  const bounded = guestConversationContext(longHistory);
+  assert.ok(bounded.length <= 6);
+  assert.equal(bounded[0].role, "user");
+  assert.ok(bounded.every((item) => item.content.length <= 2000));
+  assert.ok(bounded.reduce((total, item) => total + item.content.length, 0) <= 6000);
+  assert.deepEqual(guestConversationContext([message("a", "assistant", "No user question")]), []);
+});
+
+test("clarification options preserve usable labels without duplicate or empty choices", () => {
+  assert.deepEqual(overlaySuggestions([
+    { suggested: " Palace " }, { label: "Temple" }, { suggested: "Palace" }, {}, { suggested: "  " },
+  ]), [
+    { label: "Palace", value: "Palace" }, { label: "Temple", value: "Temple" },
+  ]);
 });

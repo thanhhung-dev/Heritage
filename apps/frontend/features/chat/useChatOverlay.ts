@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessageRequest } from "@/features/chat/types";
 import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
+import { guestConversationContext, overlaySuggestions } from "@/features/chat/overlay-context";
 import { chatErrorMessage, sendChatMessage } from "@/services/chatService";
 
 function welcome(): ChatOverlayMessage {
@@ -55,17 +56,20 @@ export function useChatOverlay(accessToken: string | null, context: OverlayConte
     try {
       const response = await sendChatMessage({
         message, conversation_id: conversationId, ...latestContext.current,
+        ...(!accessToken ? { conversation_context: guestConversationContext(messages) } : {}),
       }, accessToken, controller.signal);
       if (controller.signal.aborted) return;
       setConversationId(accessToken ? response.conversation_id : null);
       setMessages((previous) => [...previous, {
         id: response.message_id, role: "assistant", content: response.answer,
         createdAt: new Date().toISOString(), citations: response.citations,
+        needsUserChoice: response.needs_user_choice, abstained: response.abstained,
+        answerType: response.answer_type, suggestions: overlaySuggestions(response.suggestions),
       }]);
     } catch (failure) {
       if (controller.signal.aborted && controller.signal.reason !== "timeout") return;
       setMessages((previous) => previous.filter((item) => item.id !== userMessage.id));
-      setInput(message);
+      setInput((draft) => draft || message);
       setError(controller.signal.reason === "timeout"
         ? "The assistant took too long. Please try again."
         : chatErrorMessage(failure));
@@ -78,7 +82,7 @@ export function useChatOverlay(accessToken: string | null, context: OverlayConte
         setSending(false);
       }
     }
-  }, [accessToken, conversationId, input]);
+  }, [accessToken, conversationId, input, messages]);
 
   const newConversation = useCallback(() => {
     activeRequest.current?.abort();
