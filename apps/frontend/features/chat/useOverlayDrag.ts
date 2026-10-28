@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type RefObject } from "react";
-import { clampOverlayPosition, type OverlayBounds, type OverlayPoint } from "@/features/chat/overlay-position";
+import { clampOverlayPosition, overlayBesideAnchor, type OverlayBounds, type OverlayPoint } from "@/features/chat/overlay-position";
 
 const dragThreshold = 6;
 const interactive = "button, a, input, textarea, select, [contenteditable='true']";
@@ -38,6 +38,8 @@ export function useOverlayDrag(
   const current = useRef<OverlayPoint | null>(null);
   const session = useRef<DragSession | null>(null);
   const suppressClick = useRef(false);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   const place = useCallback((point: OverlayPoint) => {
     const element = target.current;
@@ -53,6 +55,12 @@ export function useOverlayDrag(
     if (active?.handle.hasPointerCapture(active.pointerId)) active.handle.releasePointerCapture(active.pointerId);
   }, []);
 
+  const placeBeside = useCallback((anchor: OverlayBounds) => {
+    const element = target.current;
+    if (element) place(overlayBesideAnchor(anchor,
+      { width: element.offsetWidth, height: element.offsetHeight }, viewportBounds(element)));
+  }, [target, place]);
+
   useLayoutEffect(() => {
     const element = target.current;
     if (!element) return;
@@ -62,18 +70,27 @@ export function useOverlayDrag(
       const height = visual?.height ?? window.innerHeight;
       setViewport((previous) => previous?.width === width && previous.height === height ? previous : { width, height });
       if (current.current) place(current.current);
+      else if (enabledRef.current) {
+        const rect = element.getBoundingClientRect();
+        const bounds = viewportBounds(element);
+        if (rect.left < bounds.left || rect.top < bounds.top || rect.right > bounds.right || rect.bottom > bounds.bottom) {
+          place({ x: rect.left, y: rect.top });
+        }
+      }
     };
     const resize = () => { release(); setDragging(false); synchronize(); };
     synchronize();
     const observer = new ResizeObserver(synchronize);
     observer.observe(element);
     window.addEventListener("resize", resize);
+    window.addEventListener("blur", resize);
     window.visualViewport?.addEventListener("resize", resize);
     window.visualViewport?.addEventListener("scroll", resize);
     return () => {
       release();
       observer.disconnect();
       window.removeEventListener("resize", resize);
+      window.removeEventListener("blur", resize);
       window.visualViewport?.removeEventListener("resize", resize);
       window.visualViewport?.removeEventListener("scroll", resize);
     };
@@ -87,11 +104,11 @@ export function useOverlayDrag(
   const handlers: DragHandlers = {
     onPointerDown(event) {
       if (!enabled || !event.isPrimary || event.button !== 0 || session.current) return;
+      suppressClick.current = false;
       if (ignoreInteractive && event.target instanceof Element && event.target.closest(interactive)) return;
       const element = target.current;
       if (!element) return;
       event.stopPropagation();
-      suppressClick.current = false;
       const rect = element.getBoundingClientRect();
       session.current = {
         pointerId: event.pointerId, handle: event.currentTarget, moved: false,
@@ -156,5 +173,5 @@ export function useOverlayDrag(
     ...(viewport ? { "--chat-viewport-width": `${viewport.width}px`, "--chat-viewport-height": `${viewport.height}px` } : {}),
     ...(position ? { left: position.x, top: position.y } : {}),
   } as CSSProperties;
-  return { position, dragging, style, handlers, place };
+  return { position, dragging, style, handlers, placeBeside };
 }

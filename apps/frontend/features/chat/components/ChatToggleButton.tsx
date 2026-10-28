@@ -35,6 +35,7 @@ export function ChatToggleButton({ panelId, open, online, onClick, buttonRef, dr
     <button ref={buttonRef} className={styles.toggle} type="button" onClick={onClick} {...dragHandlers} style={style}
       data-positioned={positioned} data-dragging={dragging} title="Kéo để di chuyển · Bấm để mở trợ lý AI"
       data-chat-trigger data-open={open} aria-label={open ? "Close heritage AI assistant" : "Open heritage AI assistant"}
+      aria-describedby={`${panelId}-drag-help`}
       aria-controls={panelId} aria-expanded={open} aria-hidden={open} tabIndex={open ? -1 : 0}>
       <span className={styles.triggerBot}><MilaAvatar /></span>
       <span className={styles.triggerLabel}>Ask AI</span>

@@ -31,9 +31,19 @@
   opacity: .45;
 }
 
-.dock button:focus-visible, .dock a:focus-visible, .dock summary:focus-visible {
+.dock button:focus-visible, .dock a:focus-visible, .dock summary:focus-visible, .header:focus-visible {
   outline: 2px solid #f97316;
   outline-offset: 3px;
+}
+
+.dragHint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .toggle {
@@ -106,7 +116,8 @@
   flex-direction: column;
   width: 360px;
   height: 580px;
-  max-height: calc(100dvh - 120px);
+  max-width: calc(var(--chat-viewport-width, 100vw) - 24px);
+  max-height: calc(var(--chat-viewport-height, 100dvh) - 120px);
   border: 1px solid #ffffff26;
   border-radius: 24px;
   background: linear-gradient(155deg, #dce3df14, #0a0e0c59), #0a0a0a73;
@@ -132,7 +143,12 @@
   align-items: center;
   gap: 8px;
   padding: 18px 16px 8px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
+
+.panel[data-dragging="true"] .header { cursor: grabbing; }
 
 .identity {
   min-width: 0;
@@ -491,7 +507,7 @@
 
 @media (max-height: 700px) and (min-width: 601px) {
   .panel {
-    max-height: calc(100dvh - 120px);
+    max-height: calc(var(--chat-viewport-height, 100dvh) - 120px);
   }
 }
 
@@ -510,15 +526,15 @@
     top: auto;
     bottom: max(78px, calc(66px + env(safe-area-inset-bottom)));
     right: max(12px, env(safe-area-inset-right));
-    width: min(360px, calc(100vw - 24px));
-    height: min(580px, calc(100dvh - 112px));
-    max-height: calc(100dvh - 112px);
+    width: min(360px, calc(var(--chat-viewport-width, 100vw) - 24px));
+    height: min(580px, calc(var(--chat-viewport-height, 100dvh) - 112px));
+    max-height: calc(var(--chat-viewport-height, 100dvh) - 112px);
     transform: translateY(12px) scale(.98);
     border-radius: 22px;
   }
   .panelExpanded {
-    width: calc(100vw - 24px);
-    height: calc(100dvh - 112px);
+    width: calc(var(--chat-viewport-width, 100vw) - 24px);
+    height: calc(var(--chat-viewport-height, 100dvh) - 112px);
   }
   .panel[data-open="true"] { transform: translateY(0) scale(1); }
   .messageText {
@@ -543,6 +559,16 @@
     font-size: 10px;
   }
 }
+
+.panel[data-positioned="true"] {
+  right: auto;
+  bottom: auto;
+  max-height: calc(var(--chat-viewport-height, 100dvh) - 24px);
+  transform: translateY(12px) scale(.98);
+}
+
+.panel[data-positioned="true"][data-open="true"] { transform: none; }
+.panel[data-dragging="true"] { transition: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .panel, .thinking i {

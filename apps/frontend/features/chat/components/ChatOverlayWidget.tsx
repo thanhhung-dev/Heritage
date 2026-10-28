@@ -39,6 +39,7 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
   const [mode, setMode] = useState<ChatOverlayWidgetState["mode"]>("closed");
   const isOpen = mode !== "closed";
   const launcherDrag = useOverlayDrag(trigger, { enabled: !isOpen });
+  const panelDrag = useOverlayDrag(panel, { enabled: isOpen, ignoreInteractive: true, layoutKey: mode });
   const online = useSyncExternalStore(subscribeToNetwork, () => navigator.onLine, () => true);
   useEffect(() => {
     if (!panel.current) return;
@@ -46,8 +47,13 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
     if (isOpen) panel.current.querySelector("textarea")?.focus();
   }, [isOpen]);
   const close = () => {
+    if (panelDrag.position && panel.current) launcherDrag.placeBeside(panel.current.getBoundingClientRect());
     setMode("closed");
     requestAnimationFrame(() => trigger.current?.focus());
+  };
+  const open = () => {
+    if (launcherDrag.position && trigger.current) panelDrag.placeBeside(trigger.current.getBoundingClientRect());
+    setMode("open");
   };
 
   return (
@@ -56,13 +62,19 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
         event.stopPropagation();
         if (event.key === "Escape" && mode !== "closed") { event.preventDefault(); close(); }
       }}>
+      <span id={`${panelId}-drag-help`} className={styles.dragHint}>
+        Kéo nút AI hoặc thanh tiêu đề để di chuyển. Dùng phím mũi tên khi được chọn; giữ Shift để di chuyển nhanh hơn.
+      </span>
       <ChatToggleButton panelId={panelId} open={isOpen} online={online} buttonRef={trigger}
         dragHandlers={launcherDrag.handlers} style={launcherDrag.style} positioned={Boolean(launcherDrag.position)} dragging={launcherDrag.dragging}
-        onClick={() => isOpen ? close() : setMode("open")} />
+        onClick={() => isOpen ? close() : open()} />
         <section ref={panel} id={panelId} data-chat-panel data-open={isOpen}
+          style={panelDrag.style} data-positioned={Boolean(panelDrag.position)} data-dragging={panelDrag.dragging}
           className={`${styles.panel} ${mode === "expanded" ? styles.panelExpanded : ""}`}
           role="dialog" aria-modal={false} aria-hidden={!isOpen} aria-labelledby={`${panelId}-title`}>
-          <header className={styles.header}>
+          <header className={styles.header} {...panelDrag.handlers} data-chat-drag-handle tabIndex={isOpen ? 0 : -1}
+            role="group" aria-label="Di chuyển cửa sổ chat" aria-describedby={`${panelId}-drag-help`}
+            title="Kéo để di chuyển cửa sổ chat">
             <MilaAvatar />
             <div className={styles.identity}>
               <h2 id={`${panelId}-title`} title="Heritage AI Assistant">Mila</h2>

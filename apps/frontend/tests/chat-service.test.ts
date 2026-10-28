@@ -11,7 +11,7 @@ import {
 import { guestConversationContext, overlaySuggestions } from "../features/chat/overlay-context";
 import type { ChatOverlayMessage } from "../features/chat/types/chatOverlay";
 import { getHeritageConversation, sendHeritageChatMessage } from "../services/heritageChatService";
-import { clampOverlayPosition } from "../features/chat/overlay-position";
+import { clampOverlayPosition, overlayBesideAnchor } from "../features/chat/overlay-position";
 import {
   chatAccountId, chatStorageKey, forgetChat, rememberConversation, rememberedConversation,
   rememberGuestMessages, rememberedGuestMessages, type ChatStorage,
@@ -313,4 +313,14 @@ test("floating controls respect shifted visual viewports and keep oversized hand
     { left: 44, top: 120, right: 360, bottom: 460 }), { x: 44, y: 120 });
   assert.deepEqual(clampOverlayPosition({ x: 200, y: 300 }, { width: 520, height: 720 },
     { left: 12, top: 12, right: 308, bottom: 556 }), { x: 12, y: 12 });
+});
+
+test("opening and closing a moved assistant keeps the next control near its anchor", () => {
+  const bounds = { left: 12, top: 12, right: 1428, bottom: 948 };
+  assert.deepEqual(overlayBesideAnchor({ left: 600, top: 700, right: 690, bottom: 744 },
+    { width: 360, height: 580 }, bounds), { x: 330, y: 164 });
+  assert.deepEqual(overlayBesideAnchor({ left: 12, top: 12, right: 102, bottom: 56 },
+    { width: 360, height: 580 }, bounds), { x: 12, y: 12 });
+  assert.deepEqual(overlayBesideAnchor({ left: 120, top: 80, right: 480, bottom: 660 },
+    { width: 90, height: 44 }, bounds), { x: 390, y: 616 });
 });
