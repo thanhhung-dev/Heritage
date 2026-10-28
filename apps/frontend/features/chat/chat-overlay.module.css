@@ -34,10 +34,10 @@
 
 .toggle {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
+  display: flex;
+  align-items: center;
+  width: 90px;
+  height: 44px;
   align-items: center;
   gap: 8px;
   padding: 0;
@@ -57,6 +57,10 @@
   place-items: center;
   transition: opacity .18s ease, transform .18s ease;
 }
+
+.triggerBot { left: 8px; }
+.triggerLabel { margin-left: 42px; font-size: 11px; white-space: nowrap; }
+.toggle[data-open="true"] { opacity: 0; visibility: hidden; pointer-events: none; }
 
 .triggerClose { opacity: 0; transform: rotate(-90deg) scale(.6); font-size: 19px; }
 .toggle[data-open="true"] .triggerBot { opacity: 0; transform: rotate(90deg) scale(.6); }
@@ -86,13 +90,13 @@
 
 .panel {
   position: fixed;
-  bottom: 96px;
+  top: 50%;
   right: 24px;
-  transform: translateY(12px) scale(.98);
+  transform: translateY(calc(-50% + 12px)) scale(.98);
   display: flex;
   flex-direction: column;
-  width: 380px;
-  height: 560px;
+  width: 360px;
+  height: 580px;
   max-height: calc(100dvh - 120px);
   border: 1px solid #ffffff26;
   border-radius: 24px;
@@ -107,7 +111,7 @@
   transition: opacity .2s ease, transform .2s ease, visibility 0s .2s;
 }
 
-.panel[data-open="true"] { opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto; transition-delay: 0s; }
+.panel[data-open="true"] { opacity: 1; visibility: visible; transform: translateY(-50%) scale(1); pointer-events: auto; transition-delay: 0s; }
 
 .panelExpanded {
   width: 520px;
@@ -168,9 +172,9 @@
 }
 
 .contextBadges { display: flex; gap: 6px; align-items: center; margin: 4px 20px 8px; min-width: 0; }
-.heritageBadge, .visitorBadge { border: 1px solid #ffffff26; border-radius: 999px; padding: 4px 8px; font-size: 10px; background: #ffffff0d; }
+.heritageBadge, .visitorBadge { border: 1px solid #ffffff12; border-radius: 999px; padding: 3px 7px; font-size: 9px; background: #ffffff08; }
 .heritageBadge { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.visitorBadge { flex-shrink: 0; border-color: #f9731640; color: #ffbd8b; }
+.visitorBadge { flex-shrink: 0; color: #ffffffa6; }
 
 .contextLabel {
   margin: 0 20px;
@@ -211,6 +215,8 @@
   min-width: 0;
 }
 
+.message:not(.userMessage) .messageBody { width: 100%; }
+
 .messageText {
   margin: 0;
   white-space: pre-wrap;
@@ -218,6 +224,23 @@
   font-size: 12px;
   line-height: 1.7;
 }
+
+.messageText p { margin: 0 0 8px; }
+.messageText p:last-child { margin-bottom: 0; }
+.messageText h3, .messageText h4 { margin: 10px 0 6px; color: inherit; line-height: 1.5; font-size: 13px; font-weight: 600; }
+.messageText h3:first-child, .messageText h4:first-child { margin-top: 0; }
+.messageText ul, .messageText ol { margin: 6px 0; padding-left: 20px; }
+.messageText li { margin: 4px 0; }
+.messageText strong { font-weight: 600; }
+.messageText blockquote { border-left: 2px solid #f97316; padding-left: 10px; margin: 10px 0; color: #ffffffb3; }
+.messageText code { border-radius: 4px; background: #00000030; padding: 1px 4px; font-size: 11px; }
+.messageText pre { overflow-x: auto; white-space: pre; border-radius: 8px; background: #00000030; padding: 10px; }
+.messageText pre code { background: none; padding: 0; }
+.messageText a { color: #ffc08a; text-decoration: underline; text-underline-offset: 3px; }
+.messageText :global(.markdown-table) { max-width: 100%; overflow-x: auto; }
+.messageText table { border-collapse: collapse; font-size: 11px; }
+.messageText td, .messageText th { border: 1px solid #ffffff26; padding: 5px 8px; }
+.scrollEnd { flex-shrink: 0; height: 1px; }
 
 .answerStatus {
   display: block;
@@ -291,6 +314,13 @@
   color: #ffbc8c;
   text-underline-offset: 3px;
 }
+
+.citationBadges { display: flex; flex-wrap: wrap; gap: 5px; }
+.citationBadges button { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; border: 1px solid #f973164d; border-radius: 999px; padding: 4px 7px; background: #f9731614; color: #ffceaa; text-align: left; font-size: 10px; overflow-wrap: anywhere; }
+.citationBadges button[aria-expanded="true"] { border-color: #fb923c; background: #f9731633; }
+.citationBadges button span { flex-shrink: 0; color: #f5f5f3; }
+.citationPanel { display: grid; gap: 6px; margin-top: 8px; padding: 10px; border-radius: 10px; background: #00000033; line-height: 1.6; }
+.citationPanel p { margin: 0; }
 
 .thinking {
   display: flex;
@@ -455,17 +485,19 @@
   }
   .panel, .panelExpanded {
     top: auto;
-    bottom: max(96px, calc(84px + env(safe-area-inset-bottom)));
+    bottom: max(78px, calc(66px + env(safe-area-inset-bottom)));
     right: max(12px, env(safe-area-inset-right));
     width: min(360px, calc(100vw - 24px));
-    height: min(560px, calc(100dvh - 120px));
-    max-height: calc(100dvh - 120px);
+    height: min(580px, calc(100dvh - 112px));
+    max-height: calc(100dvh - 112px);
+    transform: translateY(12px) scale(.98);
     border-radius: 22px;
   }
   .panelExpanded {
     width: calc(100vw - 24px);
-    height: calc(100dvh - 120px);
+    height: calc(100dvh - 112px);
   }
+  .panel[data-open="true"] { transform: translateY(0) scale(1); }
   .messageText {
     font-size: 13px;
   }

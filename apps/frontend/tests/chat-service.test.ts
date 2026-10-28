@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ChatMarkdown } from "../features/chat/components/ChatMarkdown";
+import { safeSourceUrl } from "../lib/safe-source-url";
 import {
   ChatApiError, chatErrorMessage, citationSources, getConversationMessages,
   listConversations, sendChatMessage,
@@ -169,4 +173,28 @@ test("clarification options preserve usable labels without duplicate or empty ch
   ]), [
     { label: "Palace", value: "Palace" }, { label: "Temple", value: "Temple" },
   ]);
+});
+
+test("overlay Markdown renders semantic headings, emphasis and lists", () => {
+  const html = renderToStaticMarkup(createElement(ChatMarkdown, {
+    content: "## Heritage\n\n**Important** facts:\n\n- First detail\n- Second detail\n\n1. Visit\n2. Explore\n\n`stone`",
+  }));
+  assert.match(html, /<h3>Heritage<\/h3>/);
+  assert.match(html, /<strong>Important<\/strong>/);
+  assert.match(html, /<ul>.*First detail.*Second detail.*<\/ul>/s);
+  assert.match(html, /<ol.*Visit.*Explore.*<\/ol>/s);
+  assert.match(html, /<code>stone<\/code>/);
+});
+
+test("overlay Markdown never executes raw HTML or unsafe links", () => {
+  const html = renderToStaticMarkup(createElement(ChatMarkdown, {
+    content: '<script>alert(1)</script>\n\n[unsafe](javascript:alert(1))\n\n[verified](https://example.org/source)\n\n![remote](https://example.org/tracker.png)',
+  }));
+  assert.doesNotMatch(html, /<script|<img|href="javascript:/);
+  assert.match(html, /&lt;script&gt;/);
+  assert.match(html, /href="https:\/\/example.org\/source"/);
+  assert.match(html, /rel="noopener noreferrer"/);
+  assert.equal(safeSourceUrl("https://user:password@example.org/private"), null);
+  assert.equal(safeSourceUrl("data:text/html,unsafe"), null);
+  assert.equal(safeSourceUrl(null), null);
 });

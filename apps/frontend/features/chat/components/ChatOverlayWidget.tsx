@@ -1,6 +1,6 @@
 "use client";
 
-import { CloseOutlined, CompressOutlined, ExpandAltOutlined, MinusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { CloseOutlined, CompressOutlined, ExpandAltOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { ChatInputBar } from "@/features/chat/components/ChatInputBar";
 import { ChatMessageList } from "@/features/chat/components/ChatMessageList";
@@ -61,9 +61,10 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           <header className={styles.header}>
             <MilaAvatar />
             <div className={styles.identity}>
-              <h2 id={`${panelId}-title`}>Heritage AI Assistant</h2>
-              <p><span className={`${styles.statusDot} ${!online ? styles.statusOffline : ""}`} />
-                {online ? "Trực tuyến" : "Ngoại tuyến"}
+              <h2 id={`${panelId}-title`} title="Heritage AI Assistant">Mila</h2>
+              <p><span className={`${styles.statusDot} ${!online ? styles.statusOffline : ""}`}
+                title={online ? "Trực tuyến" : "Ngoại tuyến"} />
+                AI Heritage Assistant
               </p>
             </div>
             <div className={styles.headerActions}>
@@ -74,7 +75,6 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
                 aria-pressed={mode === "expanded"} onClick={() => setMode(mode === "expanded" ? "open" : "expanded")}>
                 {mode === "expanded" ? <CompressOutlined /> : <ExpandAltOutlined />}
               </button>
-              <button type="button" onClick={close} aria-label="Minimize assistant" title="Thu nhỏ"><MinusOutlined /></button>
               <button type="button" onClick={close} aria-label="Close assistant"><CloseOutlined /></button>
             </div>
           </header>

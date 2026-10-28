@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { API_BASE_URL } from "../config/api";
 import { chatApiUrl, requestChat } from "../lib/chat-request.mjs";
+import { safeSourceUrl } from "../lib/safe-source-url";
 import type {
   ChatMessageRequest, ChatResponse, Conversation, Message, MessageCitation, StoredMessage,
 } from "../features/chat/types";
@@ -106,7 +107,7 @@ export async function getConversationMessages(
 export function citationSources(citations: MessageCitation[]): NonNullable<Message["sources"]> {
   return citations.map((citation) => ({
     doc: citation.source_title,
-    url: citation.source_url && /^https?:\/\//i.test(citation.source_url) ? citation.source_url : undefined,
+    url: safeSourceUrl(citation.source_url) ?? undefined,
     chunk_id: citation.id,
   }));
 }
