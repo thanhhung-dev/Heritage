@@ -17,19 +17,19 @@ function subscribe(onChange: () => void) {
 
 const serverSession = () => null;
 
-export function HeritageChatOverlay() {
+export function HeritageChatOverlay({ heritageId }: { heritageId?: number }) {
   const { heritageSlug } = useHeritageTour();
   const accessToken = useSyncExternalStore(subscribe, getAccessToken, serverSession);
   // A session/heritage change must never display the previous account's messages.
-  return <OverlaySession key={`${heritageSlug}:${accessToken ?? "guest"}`} accessToken={accessToken} />;
+  return <OverlaySession key={`${heritageSlug}:${accessToken ?? "guest"}`} accessToken={accessToken} heritageId={heritageId} />;
 }
 
-function OverlaySession({ accessToken }: { accessToken: string | null }) {
+function OverlaySession({ accessToken, heritageId }: { accessToken: string | null; heritageId?: number }) {
   const { payload, currentScene, currentSceneKey, heritageSlug } = useHeritageTour();
   const heritage = payload.heritage;
   const chat = useChatOverlay(accessToken, {
     // The viewer fixture is not a published heritage row in the local database.
-    heritage_id: heritageSlug !== "tapestry-test" && heritage.publish_state === "published" ? heritage.id : undefined,
+    heritage_id: heritageSlug !== "tapestry-test" && heritage.publish_state === "published" ? heritageId ?? heritage.id : undefined,
     heritage_context: { title: heritage.title.slice(0, 300), region: heritage.region?.slice(0, 300) ?? null },
     scene_context: {
       key: currentSceneKey, title: currentScene?.title.slice(0, 300) ?? currentSceneKey,

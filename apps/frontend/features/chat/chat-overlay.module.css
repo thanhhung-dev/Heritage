@@ -38,7 +38,6 @@
   align-items: center;
   width: 90px;
   height: 44px;
-  align-items: center;
   gap: 8px;
   padding: 0;
   border: 1px solid #ffffff26;
@@ -486,10 +485,16 @@
   }
 }
 
+@media (max-width: 640px) {
+  /* Leave the viewer's mobile menu and playback row available. */
+  .dock {
+    bottom: max(88px, calc(76px + env(safe-area-inset-bottom)));
+  }
+}
+
 @media (max-width: 600px) {
   .dock {
     right: max(24px, env(safe-area-inset-right));
-    bottom: max(24px, env(safe-area-inset-bottom));
   }
   .panel, .panelExpanded {
     top: auto;
