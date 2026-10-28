@@ -12,25 +12,40 @@ export interface HeritageItem {
   region?: string;
   category?: string;
   imageUrl?: string;
- routeType?: 'heritage' | 'content'; // Linh hoạt điều hướng 2 router
+  routeType?: 'heritage' | 'content';
 }
 
 interface HeritageCardProps {
-  item: HeritageItem;
-  onOpenModal?: (item: HeritageItem) => void; // Dành cho trường hợp mở modal chi tiết
+  item?: HeritageItem;
+  isLoading?: boolean; // Hỗ trợ trạng thái Loading Skeleton
+  onOpenModal?: (item: HeritageItem) => void;
 }
 
-export default function HeritageCard({ item, onOpenModal }: HeritageCardProps) {
-  // Ảnh mặc định dự phòng nếu link ảnh bị lỗi hoặc 404
-  const [imgSrc, setImgSrc] = useState(item.imageUrl || '/images/placeholder.jpg');
+const DEFAULT_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=600&q=80';
 
-  // Xử lý route điều hướng: qua trang content hoặc trang heritage
+export default function HeritageCard({ item, isLoading = false, onOpenModal }: HeritageCardProps) {
+  const [imgSrc, setImgSrc] = useState<string>(item?.imageUrl || DEFAULT_FALLBACK_IMAGE);
+  const [isImgLoading, setIsImgLoading] = useState<boolean>(true);
+
+  // 1. Trạng thái Loading Skeleton cho Card
+  if (isLoading || !item) {
+    return (
+      <div className={`${styles.cardContainer} ${styles.skeletonCard}`}>
+        <div className={`${styles.imageWrapper} ${styles.skeletonPulse}`} />
+        <div className={styles.content}>
+          <div className={`${styles.skeletonLine} ${styles.skeletonTitle}`} />
+          <div className={`${styles.skeletonLine} ${styles.skeletonSubtitle}`} />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Định tuyến chuyển trang
   const targetHref = item.routeType === 'content'
     ? `/content/${item.slug}`
     : `/heritage/${item.slug}`;
 
   const handleClick = (e: React.MouseEvent) => {
-    // Nếu có handler mở modal (trường hợp router modal) thì chặn redirect
     if (onOpenModal) {
       e.preventDefault();
       onOpenModal(item);
@@ -44,10 +59,13 @@ export default function HeritageCard({ item, onOpenModal }: HeritageCardProps) {
           src={imgSrc}
           alt={item.name}
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className={styles.cardImage}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className={`${styles.cardImage} ${isImgLoading ? styles.imgBlur : styles.imgLoaded}`}
+          onLoad={() => setIsImgLoading(false)}
           onError={() => {
-            setImgSrc('/images/placeholder.jpg');
+            // Xử lý fallback khi URL ảnh lỗi hoặc 404
+            setImgSrc(DEFAULT_FALLBACK_IMAGE);
+            setIsImgLoading(false);
           }}
         />
         {item.category && (
