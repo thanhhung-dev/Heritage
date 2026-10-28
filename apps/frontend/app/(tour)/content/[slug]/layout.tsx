@@ -8,6 +8,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { HeritageTourProvider } from "@/context/heritage-tour";
 import { LogoText } from "@/components/LogoText";
 import HeritageViewer from "@/features/tour/HeritageViewer";
+import { HeritageChatOverlay } from "@/features/chat/HeritageChatOverlay";
 import HeritageCanvas from "@/features/tour/three/HeritageCanvas";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
 import { TEST_TOUR } from "@/features/tour/tour-data";
@@ -198,6 +199,7 @@ export default function HeritageContentLayout({
           fallbackImageUrl={payload.heritage.splash_image_url}
         />
         {params.sceneKey ? <HeritageViewer interactiveRoute={interactiveRoute} /> : null}
+        {params.sceneKey ? <HeritageChatOverlay /> : null}
         {children}
       </HeritageTourProvider>
     </div>

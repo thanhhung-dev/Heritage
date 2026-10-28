@@ -32,3 +32,18 @@
 - `ChatInputBar`: controlled input, composition-safe submit and send availability.
 - A connected tour adapter will consume the existing tour context and chat service;
   presentation components do not access Three.js, authentication or HTTP directly.
+
+## Viewer integration
+
+`HeritageChatOverlay` mounts inside the persistent tour provider, alongside the
+viewer on scene routes. It uses the current heritage/scene payload for each
+message, resets on account/heritage changes and preserves the conversation during
+scene navigation. The fixture route supplies descriptive context without a fake
+published heritage ID. Viewer camera, playback and scene-loading code is untouched.
+
+The overlay is non-modal: only its panel/launcher accepts pointer input. Keyboard
+and wheel events stay inside the overlay while interacting with it. Escape closes
+the panel and restores launcher focus. The composer supports IME, Shift+Enter,
+disabled empty submissions, auto-height and a waiting indicator. Short/mobile
+viewports, safe-area insets, reduced motion and missing backdrop-filter have
+dedicated styles. Mobile uses a 16px composer font to prevent input zoom.
