@@ -8,7 +8,7 @@ from typing import Any
 
 import jwt
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
+from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -50,7 +50,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         ph.verify(hashed_password, plain_password)
         return True
-    except VerifyMismatchError:
+    except (InvalidHashError, VerificationError, TypeError):
         return False
 
 
@@ -96,7 +96,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
             detail="Token đã hết hạn",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.JWTError:
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token không hợp lệ",
@@ -123,7 +123,7 @@ async def get_current_user(
     
     # Verify required claims
     account_id = payload.get("sub")
-    if account_id is None:
+    if account_id is None or payload.get("type") not in (None, "access"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token không hợp lệ",

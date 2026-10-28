@@ -19,6 +19,19 @@ VALID_ENV = {
 
 
 class StartupConfigTests(unittest.TestCase):
+    def test_local_missing_gguf_can_start_for_persisted_chat_fallback(self) -> None:
+        with patch("apps.backend.core.config.GGUF_MODEL_PATH") as model_path:
+            model_path.is_file.return_value = False
+            settings = validate_startup_config({"INFERENCE_BACKEND": "llama_cpp", "APP_ENVIRONMENT": "local"})
+        self.assertEqual(settings.inference_backend, "llama_cpp")
+
+    def test_missing_gguf_still_prevents_nonlocal_startup(self) -> None:
+        for environment in ("production", "staging", "test"):
+            with self.subTest(environment=environment), patch("apps.backend.core.config.GGUF_MODEL_PATH") as model_path:
+                model_path.is_file.return_value = False
+                with self.assertRaises(ConfigurationError):
+                    validate_startup_config({"INFERENCE_BACKEND": "llama_cpp", "APP_ENVIRONMENT": environment})
+
     def test_chat_only_configuration_does_not_require_postgres(self) -> None:
         settings = validate_startup_config({})
         self.assertEqual(settings.database_url, '')

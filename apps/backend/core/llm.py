@@ -135,11 +135,11 @@ def get_model():
 
 
 def generate_response_with_details(
-    question: str, context: str = "", max_tokens: int = MAX_TOKENS
+    question: str, context: str = "", max_tokens: int = MAX_TOKENS, *, history: list[dict[str, str]] | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    messages = chat_messages(context, question)
+    messages = chat_messages(context, question, history=history)
 
     with rag_observation('generation', as_type='generation', input=messages) as observation:
         observation.update(
@@ -169,6 +169,6 @@ def generate_response_with_details(
 
 
 def generate_response(
-    question: str, context: str = "", max_tokens: int = MAX_TOKENS
+    question: str, context: str = "", max_tokens: int = MAX_TOKENS, *, history: list[dict[str, str]] | None = None,
 ) -> str:
-    return generate_response_with_details(question, context, max_tokens).answer
+    return generate_response_with_details(question, context, max_tokens, history=history).answer

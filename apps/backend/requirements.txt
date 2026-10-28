@@ -23,6 +23,7 @@ sentence-transformers==6.1.0
 
 # Database
 SQLAlchemy==2.0.54
+alembic==1.18.4
 psycopg[binary]==3.3.6
 
 # Observability

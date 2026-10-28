@@ -163,7 +163,10 @@ def validate_startup_config(
     if inference_backend == "llama_server" and not _is_http_url(llama_server_url):
         errors.append("LLAMA_SERVER_URL must be a valid http:// or https:// URL.")
 
-    if inference_backend == "llama_cpp" and not GGUF_MODEL_PATH.is_file():
+    if (
+        inference_backend == "llama_cpp" and not GGUF_MODEL_PATH.is_file()
+        and env.get("APP_ENVIRONMENT", DEFAULT_APP_ENVIRONMENT).strip().lower() != "local"
+    ):
         errors.append(
             f"INFERENCE_BACKEND=llama_cpp requires a GGUF model at {GGUF_MODEL_PATH}."
         )

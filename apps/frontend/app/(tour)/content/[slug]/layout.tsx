@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -17,6 +18,11 @@ import { isInteractivePath } from "@/lib/tour-routes";
 import { tapestryTourVarsStyle } from "@/styles/theme/heritageTheme";
 import type { HeritagePayload } from "@/types/heritage";
 import styles from "./content-shell.module.css";
+
+const HeritageChatOverlay = dynamic(
+  () => import("@/features/chat/HeritageChatOverlay").then((module) => module.HeritageChatOverlay),
+  { ssr: false },
+);
 
 type TourState = {
   /** `null` = payload thật chưa về (đang tải hoặc lỗi). Không còn payload demo. */
@@ -198,6 +204,9 @@ export default function HeritageContentLayout({
           fallbackImageUrl={payload.heritage.splash_image_url}
         />
         {params.sceneKey ? <HeritageViewer interactiveRoute={interactiveRoute} /> : null}
+        {params.sceneKey && sceneKeyValid ? <HeritageChatOverlay
+          heritageId={payload.heritage.publish_state === "published" ? payload.heritage.id : undefined}
+        /> : null}
         {children}
       </HeritageTourProvider>
     </div>

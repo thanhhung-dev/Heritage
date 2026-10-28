@@ -9,7 +9,7 @@ class ScoreGoldMetadataTests(unittest.TestCase):
     def test_file_identity_records_content_hash(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "gold.jsonl"
-            path.write_text("sample\n", encoding="utf-8")
+            path.write_bytes(b"sample\n")
 
             identity = file_identity(path)
 

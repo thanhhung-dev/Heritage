@@ -1,5 +1,6 @@
 export type PublicRouteKey =
   | "home"
+  | "search"
   | "library"
   | "map"
   | "faq"
@@ -15,6 +16,13 @@ export interface PublicRoute {
 }
 
 export const PUBLIC_ROUTES = [
+  {
+    key: "search",
+    href: "/search",
+    label: "Tìm kiếm",
+    title: "Tìm kiếm di sản",
+    description: "Tìm kiếm di sản Đà Nẵng – Huế theo từ khóa, vùng miền và danh mục.",
+  },
   {
     key: "home",
     href: "/",
@@ -72,6 +80,7 @@ export const PUBLIC_NAVIGATION_ITEMS = ([
   { key: "home", label: "Home" },
   { key: "map", label: "Map" },
   { key: "library", label: "Library" },
+  { key: "search", label: "Search" },
   { key: "faq", label: "FAQ" },
 ] as const).map((item) => ({
   ...item,

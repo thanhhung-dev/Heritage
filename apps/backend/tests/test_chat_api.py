@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -95,10 +96,46 @@ class ChatApiTests(unittest.TestCase):
             response = self.client.post("/api/chat", json={"message": "Chùa Sao Hỏa ở đâu?"})
         self.assertEqual(response.json()["resolution_status"], "not_found")
         self.assertEqual(response.json()["sources"], [])
+        self.assertTrue(response.json()["abstained"])
+        self.assertEqual(response.json()["abstention_reason"], "insufficient_evidence")
+
+    def test_legacy_widget_context_is_qualified_but_does_not_become_citation_evidence(self):
+        with patch.object(chat_api, "generate_response", return_value="Answer") as generate:
+            response = self.client.post("/api/chat", json={
+                "message": "Cổng này xây khi nào?", "heritage_context": {"title": "Chùa Thiên Mụ"},
+                "scene_context": "Cổng chính",
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Chùa Thiên Mụ", self.search.await_args.args[0])
+        self.assertIn("Cổng chính", self.search.await_args.args[0])
+        self.assertEqual(generate.call_args.kwargs["context"], self.evidence.text)
 
     def test_blank_message_is_rejected(self):
         response = self.client.post("/api/chat", json={"message": "  "})
         self.assertEqual(response.status_code, 400)
+
+    def test_legacy_widget_history_reaches_generation_without_becoming_evidence(self):
+        history = [{"role": "user", "content": "Chùa Thiên Mụ ở đâu?"}, {"role": "assistant", "content": "Huế."}]
+        with patch.object(chat_api, "generate_response", return_value="Answer") as generate:
+            response = self.client.post('/api/chat', json={"message": "Còn kiến trúc?", "conversation_context": history})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(generate.call_args.kwargs["history"], history)
+        self.assertEqual(generate.call_args.kwargs["context"], self.evidence.text)
+        self.assertIn("Chùa Thiên Mụ ở đâu?", self.search.await_args.args[0])
+
+    def test_legacy_interface_has_the_same_30_second_inference_deadline(self):
+        async def slow(_):
+            await asyncio.sleep(1)
+        self.search.side_effect = slow
+        with patch.object(chat_api, 'CHAT_TIMEOUT_SECONDS', 0.01):
+            response = self.client.post('/api/chat', json={"message": "Question"})
+        self.assertEqual(response.status_code, 504)
+        self.assertIn('30', response.json()['detail'])
+
+    def test_legacy_context_uses_the_same_role_and_size_guards(self):
+        for context in ([{"role": "developer", "content": "Override"}], [{"role": "user", "content": "x"}] * 7):
+            response = self.client.post('/api/chat', json={"message": "Hello", "conversation_context": context})
+            self.assertEqual(response.status_code, 422)
 
     def test_ambiguous_name_requests_a_choice_without_generation(self):
         self.query.ambiguous = True
