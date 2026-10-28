@@ -1,6 +1,7 @@
 "use client";
 
 import type { Ref } from "react";
+import { CloseOutlined } from "@ant-design/icons";
 import styles from "@/features/chat/chat-overlay.module.css";
 
 export function MilaAvatar({ small = false }: { small?: boolean }) {
@@ -18,16 +19,21 @@ export function MilaAvatar({ small = false }: { small?: boolean }) {
 
 interface ChatToggleButtonProps {
   panelId: string;
+  open: boolean;
+  online: boolean;
   onClick: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
 }
 
-export function ChatToggleButton({ panelId, onClick, buttonRef }: ChatToggleButtonProps) {
+export function ChatToggleButton({ panelId, open, online, onClick, buttonRef }: ChatToggleButtonProps) {
   return (
     <button ref={buttonRef} className={styles.toggle} type="button" onClick={onClick}
-      aria-label="Open heritage AI assistant" aria-controls={panelId} aria-expanded={false}>
-      <MilaAvatar small />
-      <span>Ask AI</span>
+      data-chat-trigger data-open={open} aria-label={open ? "Close heritage AI assistant" : "Open heritage AI assistant"}
+      aria-controls={panelId} aria-expanded={open}>
+      <span className={styles.triggerBot}><MilaAvatar /></span>
+      <span className={styles.triggerClose} aria-hidden="true"><CloseOutlined /></span>
+      <span className={`${styles.triggerStatus} ${!online ? styles.statusOffline : ""}`}
+        role="img" aria-label={online ? "Online" : "Offline"} />
     </button>
   );
 }

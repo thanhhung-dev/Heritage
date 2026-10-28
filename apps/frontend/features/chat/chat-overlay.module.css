@@ -33,10 +33,14 @@
 }
 
 .toggle {
-  display: flex;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px 10px 10px;
+  padding: 0;
   border: 1px solid #ffffff26;
   border-radius: 999px;
   background: #0a0a0a99;
@@ -44,7 +48,21 @@
   color: inherit;
   font-size: 12px;
   pointer-events: auto;
+  box-shadow: 0 8px 32px #00000040;
 }
+
+.triggerBot, .triggerClose {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.triggerClose { opacity: 0; transform: rotate(-90deg) scale(.6); font-size: 19px; }
+.toggle[data-open="true"] .triggerBot { opacity: 0; transform: rotate(90deg) scale(.6); }
+.toggle[data-open="true"] .triggerClose { opacity: 1; transform: rotate(0) scale(1); }
+.triggerStatus { position: absolute; right: 2px; bottom: 2px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #18231d; background: #60d394; }
+.statusDot.statusOffline, .triggerStatus.statusOffline { background: #939b96; }
 
 .avatar {
   display: inline-flex;
@@ -68,13 +86,13 @@
 
 .panel {
   position: fixed;
-  top: 50%;
+  bottom: 96px;
   right: 24px;
-  transform: translateY(-50%);
+  transform: translateY(12px) scale(.98);
   display: flex;
   flex-direction: column;
-  width: 360px;
-  height: 580px;
+  width: 380px;
+  height: 560px;
   max-height: calc(100dvh - 120px);
   border: 1px solid #ffffff26;
   border-radius: 24px;
@@ -82,8 +100,14 @@
   backdrop-filter: blur(32px) saturate(115%);
   box-shadow: 0 16px 56px #00000033, inset 0 1px 0 #ffffff1a;
   overflow: hidden;
-  pointer-events: auto;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform-origin: bottom right;
+  transition: opacity .2s ease, transform .2s ease, visibility 0s .2s;
 }
+
+.panel[data-open="true"] { opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto; transition-delay: 0s; }
 
 .panelExpanded {
   width: 520px;
@@ -142,6 +166,11 @@
   color: #ffffffb3;
   font-size: 11px;
 }
+
+.contextBadges { display: flex; gap: 6px; align-items: center; margin: 4px 20px 8px; min-width: 0; }
+.heritageBadge, .visitorBadge { border: 1px solid #ffffff26; border-radius: 999px; padding: 4px 8px; font-size: 10px; background: #ffffff0d; }
+.heritageBadge { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.visitorBadge { flex-shrink: 0; border-color: #f9731640; color: #ffbd8b; }
 
 .contextLabel {
   margin: 0 20px;
@@ -379,9 +408,6 @@
   background: #ea6510;
 }
 
-.panel {
-  animation: panelAppear .22s ease-out;
-}
 
 .thinking i {
   animation: thinkingPulse 1.2s ease-in-out infinite;
@@ -395,16 +421,6 @@
   animation-delay: .3s;
 }
 
-@keyframes panelAppear {
-  from {
-    opacity: 0;
-    margin-top: 8px;
-  }
-  to {
-    opacity: 1;
-    margin-top: 0;
-  }
-}
 
 @keyframes thinkingPulse {
   0%, 70%, 100% {
@@ -428,28 +444,27 @@
 
 @media (max-height: 700px) and (min-width: 601px) {
   .panel {
-    max-height: calc(100dvh - 100px);
+    max-height: calc(100dvh - 120px);
   }
 }
 
 @media (max-width: 600px) {
   .dock {
-    right: max(16px, env(safe-area-inset-right));
-    bottom: max(20px, env(safe-area-inset-bottom));
+    right: max(24px, env(safe-area-inset-right));
+    bottom: max(24px, env(safe-area-inset-bottom));
   }
   .panel, .panelExpanded {
     top: auto;
-    bottom: max(78px, calc(66px + env(safe-area-inset-bottom)));
+    bottom: max(96px, calc(84px + env(safe-area-inset-bottom)));
     right: max(12px, env(safe-area-inset-right));
-    transform: none;
     width: min(360px, calc(100vw - 24px));
-    height: min(580px, calc(100dvh - 112px));
-    max-height: calc(100dvh - 112px);
+    height: min(560px, calc(100dvh - 120px));
+    max-height: calc(100dvh - 120px);
     border-radius: 22px;
   }
   .panelExpanded {
     width: calc(100vw - 24px);
-    height: calc(100dvh - 112px);
+    height: calc(100dvh - 120px);
   }
   .messageText {
     font-size: 13px;
@@ -481,4 +496,5 @@
   .toggle, .headerActions button, .suggestions button, .sendButton {
     transition: none;
   }
+  .panel, .triggerBot, .triggerClose { transition: none; }
 }

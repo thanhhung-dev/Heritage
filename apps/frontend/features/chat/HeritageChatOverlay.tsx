@@ -38,6 +38,7 @@ function OverlaySession({ accessToken }: { accessToken: string | null }) {
   });
 
   return <ChatOverlayWidget messages={chat.messages} input={chat.input} sending={chat.sending}
+    heritageName={heritage.title} authenticated={Boolean(accessToken)}
     error={chat.error} contextLabel={currentScene?.title ?? heritage.title}
     onInputChange={chat.setInput} onSend={(text) => void chat.send(text)} onNewConversation={chat.newConversation} />;
 }
