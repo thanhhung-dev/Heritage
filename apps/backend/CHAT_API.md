@@ -285,3 +285,35 @@ persistence, restoration and continuation; only retrieval and the model HTTP
 response are stubbed. Empty/truncated model output is rejected, and restored
 citations retain their response order. See [the task audit](CHAT_TASK_AUDIT.md)
 for the latest checklist, local PostgreSQL/HTTP verification and runtime limits.
+
+## Task 2 English FUT report
+
+The [Chat Backend FUT workbook](../../FUT_BE_Chat_Conversation_Management.xlsx)
+contains 65 passing cases across the eight Task 2 acceptance areas. Tester:
+**Cao Văn Khoa**. On 2026-10-28, the existing seven chat/GraphRAG/LLM/prompt test
+modules completed with **89 passed, 37 subtests passed**. Each FUT case references
+its passing test method(s) in an Actual Result cell comment; multiple cases may
+share scenario evidence. The workbook separately records the tester's reported
+manual QA sign-off, which does not override automated results.
+
+From the repository root, regenerate with `openpyxl` installed:
+
+```powershell
+$chatModules = @(
+  'apps/backend/tests/test_chat_api.py'
+  'apps/backend/tests/test_chat_conversation.py'
+  'apps/backend/tests/test_chat_fallback.py'
+  'apps/backend/tests/test_chat_integration.py'
+  'apps/backend/tests/test_chat_graphrag.py'
+  'apps/backend/tests/test_llama_server.py'
+  'apps/backend/tests/test_prompt.py'
+)
+python -m pytest @chatModules -q --junitxml=tmp/chat-fut.xml
+python generate_chat_fut.py --junit tmp/chat-fut.xml
+```
+
+The script uses the existing report style helpers in `generate_auth_fut.py` and
+does not run tests or change database data. It records the JUnit SHA256, source
+revision and execution date. Missing/skipped evidence yields `Not Run`; any
+failed dependency yields `Fail`. Automated retrieval/provider responses are
+controlled fixtures; these results do not certify live model/corpus quality.
