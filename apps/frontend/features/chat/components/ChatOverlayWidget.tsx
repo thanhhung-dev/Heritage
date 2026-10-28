@@ -7,6 +7,7 @@ import { ChatMessageList } from "@/features/chat/components/ChatMessageList";
 import { ChatToggleButton, MilaAvatar } from "@/features/chat/components/ChatToggleButton";
 import type { ChatOverlayMessage, ChatOverlayWidgetState } from "@/features/chat/types/chatOverlay";
 import styles from "@/features/chat/chat-overlay.module.css";
+import { useOverlayDrag } from "@/features/chat/useOverlayDrag";
 
 interface ChatOverlayWidgetProps {
   messages: ChatOverlayMessage[];
@@ -37,6 +38,7 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
   const panel = useRef<HTMLElement>(null);
   const [mode, setMode] = useState<ChatOverlayWidgetState["mode"]>("closed");
   const isOpen = mode !== "closed";
+  const launcherDrag = useOverlayDrag(trigger, { enabled: !isOpen });
   const online = useSyncExternalStore(subscribeToNetwork, () => navigator.onLine, () => true);
   useEffect(() => {
     if (!panel.current) return;
@@ -55,6 +57,7 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
         if (event.key === "Escape" && mode !== "closed") { event.preventDefault(); close(); }
       }}>
       <ChatToggleButton panelId={panelId} open={isOpen} online={online} buttonRef={trigger}
+        dragHandlers={launcherDrag.handlers} style={launcherDrag.style} positioned={Boolean(launcherDrag.position)} dragging={launcherDrag.dragging}
         onClick={() => isOpen ? close() : setMode("open")} />
         <section ref={panel} id={panelId} data-chat-panel data-open={isOpen}
           className={`${styles.panel} ${mode === "expanded" ? styles.panelExpanded : ""}`}

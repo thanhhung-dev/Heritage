@@ -1,6 +1,6 @@
 "use client";
 
-import type { Ref } from "react";
+import type { CSSProperties, HTMLAttributes, Ref } from "react";
 import { CloseOutlined } from "@ant-design/icons";
 import styles from "@/features/chat/chat-overlay.module.css";
 
@@ -23,11 +23,17 @@ interface ChatToggleButtonProps {
   online: boolean;
   onClick: () => void;
   buttonRef?: Ref<HTMLButtonElement>;
+  dragHandlers?: Pick<HTMLAttributes<HTMLElement>, "onPointerDown" | "onPointerMove" | "onPointerUp"
+    | "onPointerCancel" | "onLostPointerCapture" | "onClickCapture" | "onKeyDown">;
+  style?: CSSProperties;
+  positioned?: boolean;
+  dragging?: boolean;
 }
 
-export function ChatToggleButton({ panelId, open, online, onClick, buttonRef }: ChatToggleButtonProps) {
+export function ChatToggleButton({ panelId, open, online, onClick, buttonRef, dragHandlers, style, positioned, dragging }: ChatToggleButtonProps) {
   return (
-    <button ref={buttonRef} className={styles.toggle} type="button" onClick={onClick}
+    <button ref={buttonRef} className={styles.toggle} type="button" onClick={onClick} {...dragHandlers} style={style}
+      data-positioned={positioned} data-dragging={dragging} title="Kéo để di chuyển · Bấm để mở trợ lý AI"
       data-chat-trigger data-open={open} aria-label={open ? "Close heritage AI assistant" : "Open heritage AI assistant"}
       aria-controls={panelId} aria-expanded={open} aria-hidden={open} tabIndex={open ? -1 : 0}>
       <span className={styles.triggerBot}><MilaAvatar /></span>

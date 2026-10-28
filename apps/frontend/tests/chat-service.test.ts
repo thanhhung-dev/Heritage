@@ -11,6 +11,7 @@ import {
 import { guestConversationContext, overlaySuggestions } from "../features/chat/overlay-context";
 import type { ChatOverlayMessage } from "../features/chat/types/chatOverlay";
 import { getHeritageConversation, sendHeritageChatMessage } from "../services/heritageChatService";
+import { clampOverlayPosition } from "../features/chat/overlay-position";
 import {
   chatAccountId, chatStorageKey, forgetChat, rememberConversation, rememberedConversation,
   rememberGuestMessages, rememberedGuestMessages, type ChatStorage,
@@ -295,4 +296,21 @@ test("unavailable browser storage does not prevent an in-memory conversation", (
   assert.deepEqual(rememberedGuestMessages(blocked, "key"), []);
   assert.doesNotThrow(() => rememberConversation(blocked, "key", "11111111-1111-4111-8111-111111111111"));
   assert.doesNotThrow(() => forgetChat(blocked, "key"));
+});
+
+test("floating controls remain reachable at every viewport edge and after shrinking", () => {
+  const bounds = { left: 12, top: 12, right: 788, bottom: 588 };
+  const size = { width: 90, height: 44 };
+  assert.deepEqual(clampOverlayPosition({ x: -100, y: -100 }, size, bounds), { x: 12, y: 12 });
+  assert.deepEqual(clampOverlayPosition({ x: 900, y: 800 }, size, bounds), { x: 698, y: 544 });
+  assert.deepEqual(clampOverlayPosition({ x: 250, y: 180 }, size, bounds), { x: 250, y: 180 });
+  assert.deepEqual(clampOverlayPosition({ x: 698, y: 544 }, size,
+    { left: 12, top: 12, right: 308, bottom: 556 }), { x: 218, y: 512 });
+});
+
+test("floating controls respect shifted visual viewports and keep oversized handles reachable", () => {
+  assert.deepEqual(clampOverlayPosition({ x: 0, y: 0 }, { width: 90, height: 44 },
+    { left: 44, top: 120, right: 360, bottom: 460 }), { x: 44, y: 120 });
+  assert.deepEqual(clampOverlayPosition({ x: 200, y: 300 }, { width: 520, height: 720 },
+    { left: 12, top: 12, right: 308, bottom: 556 }), { x: 12, y: 12 });
 });

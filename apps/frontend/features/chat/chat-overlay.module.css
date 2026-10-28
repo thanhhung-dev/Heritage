@@ -1,4 +1,8 @@
 .dock {
+  --chat-safe-left: env(safe-area-inset-left, 0px);
+  --chat-safe-top: env(safe-area-inset-top, 0px);
+  --chat-safe-right: env(safe-area-inset-right, 0px);
+  --chat-safe-bottom: env(safe-area-inset-bottom, 0px);
   position: fixed;
   right: 24px;
   bottom: 24px;
@@ -48,7 +52,13 @@
   font-size: 12px;
   pointer-events: auto;
   box-shadow: 0 8px 32px #00000040;
+  touch-action: none;
+  user-select: none;
 }
+
+.dock .toggle { cursor: grab; }
+.dock .toggle[data-dragging="true"] { cursor: grabbing; }
+.toggle[data-positioned="true"] { position: fixed; right: auto; bottom: auto; }
 
 .triggerBot, .triggerClose {
   position: absolute;
