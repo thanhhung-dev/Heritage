@@ -15,7 +15,8 @@
 ## Visual direction
 
 - A small rounded Ask AI launcher at the lower-right corner of the viewer.
-- Open panel aligned to the right and vertically centered, as in the screenshots.
+- By default, the open panel is aligned to the right and vertically centered,
+  as in the screenshots. Users can reposition the launcher and open panel.
   Target: 360 × 580 CSS pixels with a 24px right inset, constrained by viewport.
 - Frosted translucent gradient, 32px backdrop blur, subtle 15% white border and
   inset light, 24px corner radius. White text, soft grey secondary text, restrained
@@ -42,6 +43,8 @@
 - `heritageChatService`: contextual facade over the shared chat service; verifies
   account and heritage metadata before restored messages reach the widget.
 - `overlay-storage`: validated, bounded and account/heritage-scoped browser cache.
+- `useOverlayDrag` / `overlay-position`: pointer capture, click/drag separation,
+  keyboard movement, viewport bounds and launcher/panel anchoring.
 
 ## Viewer integration
 
@@ -61,6 +64,30 @@ viewports, safe-area insets, reduced motion and missing backdrop-filter have
 dedicated styles. The closed panel is inert and hidden from assistive technology.
 Mobile uses a 16px composer font to prevent input zoom. At widths up to 640px,
 the launcher sits above the viewer's playback/menu row so both remain clickable.
+
+## Moving the assistant
+
+- Drag the Ask AI launcher with the primary mouse button, pen or one finger.
+  Movement must reach 6px before it becomes a drag; releasing after dragging
+  does not toggle chat. An ordinary click/tap still opens the assistant.
+- Drag the open window by its header. Header action buttons, messages and
+  the composer keep their normal behavior. Moving does not reset drafts,
+  messages, the active conversation or a pending chat request.
+- A moved launcher opens the panel near its bottom-right anchor, constrained
+  to the screen. Closing a moved panel places the launcher at that corner.
+  The original screenshot layout remains the initial default.
+- Focus the launcher or header and use arrow keys to move by 10px, or
+  Shift+arrow by 40px. Header buttons and textarea arrows retain their usual
+  behavior. Escape closes chat and restores launcher focus.
+- Positions respect a minimum 12px margin and device safe-area insets. Resize,
+  orientation, panel expansion and visual viewport changes remeasure the box
+  and clamp it back into view. The panel also adapts its maximum dimensions.
+- Pointer cancel/lost capture, window blur and unmount release the drag.
+  Touch scrolling remains available in messages and the composer; only the
+  launcher/header disables native touch panning for dragging.
+- Position is kept in memory during scene navigation in the current viewer.
+  A full reload or account/heritage remount restores the default position.
+  No new browser storage, dependency, API or viewer-engine changes are required.
 
 ## Chat contract
 
@@ -97,15 +124,26 @@ the launcher sits above the viewer's playback/menu row so both remain clickable.
   port 3000, including mobile expanded height, Enter/Shift+Enter and IME input.
 - TypeScript: `tsc --noEmit` passed. ESLint reports no errors in the new code;
   the full lint run retains two existing `<img>` warnings on the tour splash page.
-- Chat unit tests: 21 passed across the existing `chat-request.test.mjs` (4) and
-  `chat-service.test.ts` (17). Coverage includes contracts, auth, paginated
+- Chat unit tests: 24 passed across the existing `chat-request.test.mjs` (4) and
+  `chat-service.test.ts` (20). Coverage includes contracts, auth, paginated
   history, outcomes, bounded context, Markdown safety, cache isolation,
-  corrupt/blocked storage and restored ownership/heritage checks.
+  corrupt/blocked storage, restored ownership/heritage checks, drag bounds,
+  reduced/shifted viewports and opening/closing near a moved anchor.
 - Browser checks on the actual content route passed: launcher, greeting, draft
   retention, Enter/send guard, Escape/focus, suggestions, citations, scene
   changes, clarification, abstention, failure/retry, reset cancellation, bearer
   authentication, account isolation, resizing, 375/320px mobile sizing, four-line
   input sizing, Guest page restoration and full-page account history restoration.
+- Drag-specific browser checks use native Chrome mouse/touch input: launcher
+  and header dragging, movement threshold, no accidental toggle, input draft
+  retention, working header actions, keyboard movement, focus restoration,
+  touch cancellation/recovery, portrait/landscape/zoom bounds and scene
+  continuity. Chat sending and citation rendering use a controlled API response
+  in these checks, without creating new backend QA records. A separate canvas
+  pointer check verifies that the area outside the widget remains interactive.
+  These checks were repeated on `next start`, including dragging in actual
+  fullscreen. Additional simulated device safe-area insets exercise panel size
+  constraints when the available area is narrower/shorter than its default box.
 - Fullscreen was exercised through the real DOM API. Keyboard/wheel events from
   the composer did not propagate to the viewer's window listeners. A point
   outside the panel continued to target the viewer.
