@@ -1,0 +1,46 @@
+.dock { position: fixed; right: 24px; bottom: 24px; z-index: 2000; font-family: "Poppins", sans-serif; color: #f5f5f3; pointer-events: none; }
+.dock *, .dock *::before, .dock *::after { box-sizing: border-box; }
+.dock button, .dock textarea { font: inherit; }
+.dock button { cursor: pointer; }
+.dock button:disabled { cursor: default; opacity: .45; }
+.dock button:focus-visible, .dock a:focus-visible, .dock summary:focus-visible { outline: 2px solid #f97316; outline-offset: 3px; }
+.toggle { display: flex; align-items: center; gap: 8px; padding: 10px 16px 10px 10px; border: 1px solid #ffffff26; border-radius: 999px; background: #0a0a0a99; backdrop-filter: blur(24px); color: inherit; font-size: 12px; pointer-events: auto; }
+.avatar { display: inline-flex; flex-shrink: 0; width: 30px; height: 30px; align-items: center; justify-content: center; }
+.avatar svg { display: block; width: 100%; height: 100%; }
+.avatarSmall { width: 24px; height: 24px; }
+.panel { position: fixed; top: 50%; right: 24px; transform: translateY(-50%); display: flex; flex-direction: column; width: 360px; height: 580px; max-height: calc(100dvh - 120px); border: 1px solid #ffffff26; border-radius: 24px; background: linear-gradient(155deg, #dce3df29, #0a0e0c8c); backdrop-filter: blur(32px) saturate(115%); box-shadow: 0 16px 56px #00000033, inset 0 1px 0 #ffffff1a; overflow: hidden; pointer-events: auto; }
+.panelExpanded { width: 520px; height: 720px; }
+.header { display: flex; align-items: center; gap: 8px; padding: 18px 16px 8px; }
+.identity { min-width: 0; flex: 1; }
+.identity h2 { margin: 0 0 3px; font-size: 13px; font-weight: 600; line-height: 1.4; color: inherit; }
+.identity p { display: flex; align-items: center; gap: 5px; margin: 0; font-size: 9px; color: #ffffff9e; }
+.statusDot { width: 4px; height: 4px; border-radius: 50%; background: #8eddb2; }
+.headerActions { display: flex; gap: 2px; }
+.headerActions button { display: grid; place-items: center; width: 25px; height: 28px; border: 0; padding: 0; background: transparent; color: #ffffffb3; font-size: 11px; }
+.contextLabel { margin: 0 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; color: #ffffff73; }
+.messages { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 22px 20px 16px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #ffffff40 transparent; }
+.message:first-child { margin-top: auto; }
+.message { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; flex-shrink: 0; }
+.messageBody { max-width: 100%; min-width: 0; }
+.messageText { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.7; }
+.userMessage { align-items: flex-end; text-align: right; }
+.userMessage .messageText { display: inline-block; border-radius: 18px 18px 4px 18px; background: #f5f5eff0; color: #343a32; padding: 9px 13px; text-align: left; }
+.timestamp { display: block; margin-top: 6px; font-size: 8px; color: #ffffff66; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.suggestions button { border: 1px solid #ffffff1a; border-radius: 999px; padding: 6px 9px; background: #ffffff12; color: #ffffffd9; font-size: 9px; text-align: left; }
+.citations { margin-top: 12px; border-top: 1px solid #ffffff1a; padding-top: 8px; font-size: 10px; color: #ffffffb3; }
+.citations summary { cursor: pointer; }
+.citations ol { margin: 8px 0 0; padding-left: 16px; }
+.citations li { padding: 3px 0; overflow-wrap: anywhere; }
+.citations a { color: #ffbc8c; text-underline-offset: 3px; }
+.thinking { display: flex; gap: 3px; padding: 8px 0; }
+.thinking i { height: 4px; width: 4px; border-radius: 50%; background: #ffffffbf; }
+.composer { flex-shrink: 0; padding: 0 14px 12px; }
+.inputRow { display: flex; align-items: flex-end; gap: 8px; border: 1px solid #ffffff26; border-radius: 22px; background: #ffffff12; padding: 6px 6px 6px 12px; }
+.inputIcon { align-self: center; color: #ffffff80; font-size: 12px; }
+.inputRow textarea { flex: 1; min-width: 0; max-height: 100px; resize: none; outline: none; border: 0; background: transparent; padding: 5px 0; color: inherit; font-size: 11px; line-height: 18px; scrollbar-width: thin; }
+.inputRow textarea::placeholder { color: #ffffff80; }
+.sendButton { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: #ffffff1f; color: #fff; }
+.sendButton:not(:disabled) { background: #f97316; }
+.disclaimer { margin: 9px 0 0; text-align: center; color: #ffffff66; font-size: 8px; line-height: 1.4; }
+.error { flex-shrink: 0; margin: 0 18px 12px; font-size: 11px; line-height: 1.5; color: #ffcdc3; }
