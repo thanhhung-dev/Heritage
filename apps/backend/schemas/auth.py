@@ -11,6 +11,11 @@ class RegisterRequest(BaseModel):
     email: EmailStr = Field(..., description="Email address")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     password: str = Field(..., min_length=8, description="Password (minimum 8 characters)")
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.lower()
     
     @field_validator("username")
     @classmethod
@@ -31,7 +36,7 @@ class LoginRequest(BaseModel):
 class UserResponse(BaseModel):
     """User information in responses."""
     
-    account_id: str = Field(..., description="Account UUID")
+    account_id: str = Field(..., description="Account ID serialized as a string")
     email: str = Field(..., description="Email address")
     username: str = Field(..., description="Username")
     role: str = Field(default="user", description="User role")
@@ -40,7 +45,7 @@ class UserResponse(BaseModel):
 class RegisterResponse(BaseModel):
     """Response schema for successful registration."""
     
-    account_id: str = Field(..., description="Account UUID")
+    account_id: str = Field(..., description="Account ID serialized as a string")
     email: str = Field(..., description="Email address")
     username: str = Field(..., description="Username")
     message: str = Field(default="Registration successful", description="Success message")

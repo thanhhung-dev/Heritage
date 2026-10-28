@@ -190,6 +190,12 @@ required for this stale-process error.
 Registration regression tests live in `apps/backend/tests/test_auth_api.py` and
 run with `python -m pytest apps/backend/tests/test_auth_api.py -v`. They use a
 disposable database with real ORM flushes, Argon2 hashing and JWT authentication.
+Registration normalizes email to lowercase, also checks historical mixed-case
+email records and returns `400` for duplicate email/username even if another
+request wins after the initial check. Database-generated account IDs replace
+`MAX(id)+1`; revision `20261028_account_sequence` advances the existing sequence
+past legacy manually assigned IDs without changing any account rows. Failed
+writes roll back and return a safe error. Password hashing runs off the API loop.
 
 ## Account conversation management
 

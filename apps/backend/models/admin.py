@@ -26,7 +26,7 @@ class AdminAccount(Base, TimestampMixin):
 
     __tablename__ = "account"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     created_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")

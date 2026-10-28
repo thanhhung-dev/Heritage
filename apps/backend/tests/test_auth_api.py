@@ -6,17 +6,19 @@ No local accounts, SMTP service, LLM or database configuration are required.
 from __future__ import annotations
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import MetaData, create_engine, event, func, select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import StaticPool
 
 from apps.backend.api import auth as auth_api
 from apps.backend.core.security import verify_password
 from apps.backend.models.admin import AccountRole, AdminAccount
+from apps.backend.services.accounts import AccountService
 
 
 class AsyncAuthSession:
@@ -33,6 +35,12 @@ class AsyncAuthSession:
 
     async def commit(self):
         self.session.commit()
+
+    async def flush(self):
+        self.session.flush()
+
+    async def rollback(self):
+        self.session.rollback()
 
     async def refresh(self, entity):
         self.session.refresh(entity)
@@ -177,3 +185,96 @@ class AuthAPITests(unittest.TestCase):
             response = self.register()
         self.assertEqual(response.status_code, 201, response.text)
         send.assert_not_called()
+
+    def test_register_missing_required_fields_returns_422(self):
+        for field in ("email", "username", "password", None):
+            body = dict(self.registration) if field else {}
+            if field:
+                body.pop(field)
+            with self.subTest(field=field):
+                response = self.client.post("/api/auth/register", json=body)
+                self.assertEqual(response.status_code, 422, response.text)
+        self.assertEqual(self.count_accounts(), 0)
+
+    def test_register_username_at_both_length_boundaries(self):
+        for index, username in enumerate(("abc", "a" * 50)):
+            with self.subTest(length=len(username)):
+                response = self.register(username=username, email=f"boundary{index}@example.com")
+                self.assertEqual(response.status_code, 201, response.text)
+                self.assertEqual(response.json()["username"], username)
+        self.assertEqual(self.count_accounts(), 2)
+
+    def test_register_rejects_username_longer_than_50_characters(self):
+        response = self.register(username="a" * 51)
+        self.assertEqual(response.status_code, 422, response.text)
+        self.assertEqual(self.count_accounts(), 0)
+
+    def test_register_accepts_eight_character_password_and_can_login(self):
+        response = self.register(password="abcdefgh")
+        self.assertEqual(response.status_code, 201, response.text)
+        login = self.client.post("/api/auth/login", json={
+            "email": self.registration["email"], "password": "abcdefgh",
+        })
+        self.assertEqual(login.status_code, 200, login.text)
+
+    def test_register_null_required_fields_returns_422(self):
+        for field in ("email", "username", "password"):
+            with self.subTest(field=field):
+                self.assertEqual(self.register(**{field: None}).status_code, 422)
+        self.assertEqual(self.count_accounts(), 0)
+
+    def test_register_empty_required_fields_returns_422(self):
+        for field in ("email", "username", "password"):
+            with self.subTest(field=field):
+                self.assertEqual(self.register(**{field: ""}).status_code, 422)
+        self.assertEqual(self.count_accounts(), 0)
+
+    def test_register_normalizes_email_and_rejects_case_variant_duplicates(self):
+        response = self.register(email="  Mixed.Case@EXAMPLE.COM  ")
+        self.assertEqual(response.status_code, 201, response.text)
+        self.assertEqual(response.json()["email"], "mixed.case@example.com")
+        duplicate = self.register(email="MIXED.CASE@example.com", username="another_user")
+        self.assertEqual(duplicate.status_code, 400, duplicate.text)
+        self.assertEqual(self.count_accounts(), 1)
+
+    def test_register_handles_preexisting_mixed_case_email(self):
+        created = self.register()
+        self.assertEqual(created.status_code, 201)
+        with Session(self.engine) as session:
+            account = session.get(AdminAccount, int(created.json()["account_id"]))
+            account.email = account.email.upper()
+            session.commit()
+        duplicate = self.register(username="another_user")
+        self.assertEqual(duplicate.status_code, 400, duplicate.text)
+
+    def test_register_allocates_distinct_ids_without_application_max_id_query(self):
+        first = self.register()
+        second = self.register(email="second@example.com", username="second_user")
+        self.assertEqual(first.status_code, 201, first.text)
+        self.assertEqual(second.status_code, 201, second.text)
+        self.assertNotEqual(first.json()["account_id"], second.json()["account_id"])
+        self.assertEqual(self.count_accounts(), 2)
+
+    def test_register_recovers_a_duplicate_that_wins_after_availability_check(self):
+        self.assertEqual(self.register().status_code, 201)
+        original = AccountService.check_available
+        checks = 0
+
+        async def competing_registration(service, email, username):
+            nonlocal checks
+            checks += 1
+            if checks > 1:
+                await original(service, email, username)
+
+        with patch.object(AccountService, "check_available", new=competing_registration):
+            response = self.register(username="another_user")
+        self.assertEqual(response.status_code, 400, response.text)
+        self.assertEqual(response.json()["detail"], "This email is already in use.")
+        self.assertEqual(self.count_accounts(), 1)
+
+    def test_register_rolls_back_failed_commit_without_leaking_database_errors(self):
+        with patch.object(AsyncAuthSession, "commit", new=AsyncMock(side_effect=SQLAlchemyError("private-db-error"))):
+            response = self.register()
+        self.assertEqual(response.status_code, 500, response.text)
+        self.assertNotIn("private-db-error", response.text)
+        self.assertEqual(self.count_accounts(), 0)
