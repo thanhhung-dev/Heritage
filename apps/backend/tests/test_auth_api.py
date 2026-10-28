@@ -6,6 +6,7 @@ No local accounts, SMTP service, LLM or database configuration are required.
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 
 from fastapi import FastAPI
@@ -16,7 +17,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import StaticPool
 
 from apps.backend.api import auth as auth_api
-from apps.backend.core.security import verify_password
+from apps.backend.core.security import create_password_reset_token, decode_access_token, verify_password
 from apps.backend.models.admin import AccountRole, AdminAccount
 from apps.backend.services.accounts import AccountService
 
@@ -277,4 +278,130 @@ class AuthAPITests(unittest.TestCase):
             response = self.register()
         self.assertEqual(response.status_code, 500, response.text)
         self.assertNotIn("private-db-error", response.text)
+        self.assertEqual(self.count_accounts(), 0)
+
+    def login(self, **changes):
+        return self.client.post("/api/auth/login", json={
+            "email": self.registration["email"], "password": self.registration["password"], **changes,
+        })
+
+    def test_login_nonexistent_email_returns_the_same_generic_401(self):
+        response = self.login(email="missing@example.com")
+        self.assertEqual(response.status_code, 401, response.text)
+        self.assertEqual(response.json(), {"detail": "Incorrect email or password."})
+        self.assertNotIn("access_token", response.json())
+
+    def test_login_missing_required_fields_returns_422(self):
+        for body in ({}, {"email": self.registration["email"]}, {"password": self.registration["password"]}):
+            with self.subTest(fields=list(body)):
+                response = self.client.post("/api/auth/login", json=body)
+                self.assertEqual(response.status_code, 422, response.text)
+
+    def test_login_rejects_empty_or_invalid_email(self):
+        for email in ("", "not-an-email", None):
+            with self.subTest(email=email):
+                response = self.login(email=email)
+                self.assertEqual(response.status_code, 422, response.text)
+
+    def test_login_with_username_issues_a_working_jwt(self):
+        registered = self.register()
+        self.assertEqual(registered.status_code, 201)
+        response = self.client.post("/api/auth/login", json={
+            "username": self.registration["username"], "password": self.registration["password"],
+        })
+        self.assertEqual(response.status_code, 200, response.text)
+        claims = decode_access_token(response.json()["access_token"])
+        self.assertEqual(claims["sub"], registered.json()["account_id"])
+
+    def test_login_normalizes_mixed_case_email(self):
+        self.assertEqual(self.register().status_code, 201)
+        response = self.login(email="  REGISTRATION@EXAMPLE.COM  ")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["user"]["email"], self.registration["email"])
+
+    def test_login_password_is_case_sensitive(self):
+        self.assertEqual(self.register().status_code, 201)
+        response = self.login(password=self.registration["password"].lower())
+        self.assertEqual(response.status_code, 401, response.text)
+        self.assertNotIn("access_token", response.json())
+
+    def test_login_response_and_jwt_never_expose_password_or_hash(self):
+        self.assertEqual(self.register().status_code, 201)
+        response = self.login()
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(set(payload), {"access_token", "token_type", "user"})
+        self.assertEqual(set(payload["user"]), {"account_id", "email", "username", "role"})
+        claims = decode_access_token(payload["access_token"])
+        self.assertIn("exp", claims)
+        self.assertEqual(claims["role"], "user")
+        self.assertNotIn(self.registration["password"], response.text)
+        for key in ("password", "password_hash"):
+            self.assertNotIn(key, payload)
+            self.assertNotIn(key, payload["user"])
+            self.assertNotIn(key, claims)
+
+    def test_login_legacy_username_or_email_supports_both_identifiers(self):
+        self.assertEqual(self.register().status_code, 201)
+        for identifier in (self.registration["email"].upper(), self.registration["username"]):
+            with self.subTest(identifier=identifier):
+                response = self.client.post("/api/auth/login", json={
+                    "username_or_email": identifier, "password": self.registration["password"],
+                })
+                self.assertEqual(response.status_code, 200, response.text)
+
+    def test_login_rejects_ambiguous_identifiers(self):
+        for changes in (
+            {"username": self.registration["username"]},
+            {"username_or_email": self.registration["email"]},
+        ):
+            with self.subTest(fields=list(changes)):
+                response = self.login(**changes)
+                self.assertEqual(response.status_code, 422, response.text)
+
+    def test_login_rejects_temporarily_locked_account(self):
+        registered = self.register()
+        self.assertEqual(registered.status_code, 201)
+        with Session(self.engine) as session:
+            account = session.get(AdminAccount, int(registered.json()["account_id"]))
+            account.locked_until = datetime.now(timezone.utc) + timedelta(hours=1)
+            session.commit()
+        response = self.login()
+        self.assertEqual(response.status_code, 403, response.text)
+        self.assertEqual(response.json()["detail"], "This account is locked or not activated.")
+
+    def test_login_accepts_an_expired_temporary_lock(self):
+        registered = self.register()
+        self.assertEqual(registered.status_code, 201)
+        with Session(self.engine) as session:
+            account = session.get(AdminAccount, int(registered.json()["account_id"]))
+            account.locked_until = datetime.now(timezone.utc) - timedelta(minutes=1)
+            session.commit()
+        self.assertEqual(self.login().status_code, 200)
+
+    def test_login_invalid_stored_hash_returns_401_instead_of_crashing(self):
+        registered = self.register()
+        self.assertEqual(registered.status_code, 201)
+        with Session(self.engine) as session:
+            account = session.get(AdminAccount, int(registered.json()["account_id"]))
+            account.password_hash = "invalid-legacy-hash"
+            session.commit()
+        response = self.login()
+        self.assertEqual(response.status_code, 401, response.text)
+        self.assertEqual(response.json(), {"detail": "Incorrect email or password."})
+
+    def test_password_reset_token_cannot_authenticate_as_an_access_token(self):
+        response = self.client.get("/api/auth/me", headers={
+            "Authorization": "Bearer " + create_password_reset_token("1"),
+        })
+        self.assertEqual(response.status_code, 401, response.text)
+
+    def test_register_and_login_reject_excessively_large_passwords(self):
+        self.assertEqual(self.register(password="x" * 1025).status_code, 422)
+        self.assertEqual(self.login(password="x" * 1025).status_code, 422)
+        self.assertEqual(self.count_accounts(), 0)
+
+    def test_register_rejects_an_all_whitespace_password(self):
+        response = self.register(password=" " * 8)
+        self.assertEqual(response.status_code, 422, response.text)
         self.assertEqual(self.count_accounts(), 0)

@@ -197,6 +197,16 @@ request wins after the initial check. Database-generated account IDs replace
 past legacy manually assigned IDs without changing any account rows. Failed
 writes roll back and return a safe error. Password hashing runs off the API loop.
 
+`POST /api/auth/login` accepts exactly one of `email`, `username` or the
+compatibility field `username_or_email`, plus `password`. Existing frontend
+email requests retain their response contract. Email is case-insensitive;
+usernames and passwords retain their case. Incorrect credentials return `401`,
+including a malformed stored password hash. Inactive accounts or accounts with
+a future `locked_until` return `403`; an expired lock permits normal login.
+Passwords are never returned in the response/JWT. Registration requires 8 to
+1024 characters and rejects all-whitespace passwords; login accepts 1 to 1024.
+Reset tokens cannot be used to authenticate protected endpoints as access tokens.
+
 ## Account conversation management
 
 All management routes require a valid JWT and an active account:

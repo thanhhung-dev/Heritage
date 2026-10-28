@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, TypeAdapter, field_validator, model_validator
 
 
 class RegisterRequest(BaseModel):
@@ -10,12 +10,19 @@ class RegisterRequest(BaseModel):
     
     email: EmailStr = Field(..., description="Email address")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
-    password: str = Field(..., min_length=8, description="Password (minimum 8 characters)")
+    password: str = Field(..., min_length=8, max_length=1024, description="Password (8 to 1024 characters)")
 
     @field_validator("email")
     @classmethod
     def normalize_email(cls, value: str) -> str:
         return value.lower()
+
+    @field_validator("password")
+    @classmethod
+    def reject_blank_password(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Password must contain a non-whitespace character")
+        return value
     
     @field_validator("username")
     @classmethod
@@ -27,10 +34,42 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """Request schema for email/password login."""
+    """Accept one login identifier, preserving existing email clients."""
 
-    email: EmailStr = Field(..., description="Email address")
-    password: str = Field(..., description="Password")
+    email: EmailStr | None = Field(default=None, description="Email address")
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+    username_or_email: str | None = Field(default=None, min_length=3, max_length=254)
+    password: str = Field(..., min_length=1, max_length=1024, description="Password")
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str | None) -> str | None:
+        return value.lower() if value is not None else None
+
+    @field_validator("username", "username_or_email")
+    @classmethod
+    def validate_identifier(cls, value: str | None, info) -> str | None:
+        if value is None:
+            return None
+        if info.field_name == "username_or_email" and "@" in value:
+            return TypeAdapter(EmailStr).validate_python(value).lower()
+        if len(value) > 50 or not value.replace("_", "").replace("-", "").isalnum():
+            raise ValueError("Username can only contain letters, numbers, underscores, and hyphens")
+        return value
+
+    @model_validator(mode="after")
+    def require_one_identifier(self):
+        if sum(value is not None for value in (self.email, self.username, self.username_or_email)) != 1:
+            raise ValueError("Provide exactly one of email, username or username_or_email")
+        return self
+
+    @property
+    def identifier(self) -> str:
+        return self.email or self.username or self.username_or_email or ""
+
+    @property
+    def uses_email(self) -> bool:
+        return self.email is not None or (self.username_or_email is not None and "@" in self.username_or_email)
 
 
 class UserResponse(BaseModel):

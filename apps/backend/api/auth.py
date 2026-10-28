@@ -18,7 +18,6 @@ from apps.backend.core.security import (
     create_password_reset_token,
     get_current_user,
     hash_password,
-    verify_password,
     verify_reset_password_token,
 )
 from apps.backend.core.email import send_reset_password_email
@@ -35,7 +34,7 @@ from apps.backend.schemas.auth import (
     ResetPasswordRequest,
     UserResponse,
 )
-from apps.backend.services.accounts import AccountConflict, AccountService
+from apps.backend.services.accounts import AccountConflict, AccountService, AccountUnavailable, InvalidCredentials
 
 log = logging.getLogger(__name__)
 
@@ -109,26 +108,13 @@ async def login(
     request: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ) -> LoginResponse:
-    """Đăng nhập bằng email và mật khẩu."""
-    email = request.email.strip().lower()
-    result = await db.execute(
-        select(AdminAccount).where(AdminAccount.email == email)
-    )
-    account = result.scalar_one_or_none()
-
-    if not account or not verify_password(request.password, account.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password.",
-        )
-
-    if not account.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This account is locked or not activated.",
-        )
-
-    await db.commit()
+    """Sign in with an email address or username and password."""
+    try:
+        account = await AccountService(db).authenticate(request)
+    except InvalidCredentials as error:
+        raise HTTPException(status_code=401, detail=str(error)) from None
+    except AccountUnavailable as error:
+        raise HTTPException(status_code=403, detail=str(error)) from None
 
     # Create access token
     role = await role_name(db, account.role_id)
