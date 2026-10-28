@@ -35,10 +35,10 @@ function OverlaySession({ accessToken }: { accessToken: string | null }) {
       key: currentSceneKey, title: currentScene?.title.slice(0, 300) ?? currentSceneKey,
       description: currentScene?.description?.slice(0, 900) ?? null,
     },
-  });
+  }, heritageSlug);
 
   return <ChatOverlayWidget messages={chat.messages} input={chat.input} sending={chat.sending}
     heritageName={heritage.title} authenticated={Boolean(accessToken)}
-    error={chat.error} contextLabel={currentScene?.title ?? heritage.title}
+    error={chat.error} restoring={chat.restoring} contextLabel={currentScene?.title ?? heritage.title}
     onInputChange={chat.setInput} onSend={(text) => void chat.send(text)} onNewConversation={chat.newConversation} />;
 }

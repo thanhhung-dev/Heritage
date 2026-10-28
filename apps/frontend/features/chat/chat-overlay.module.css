@@ -408,7 +408,13 @@
   font-size: 11px;
   line-height: 1.5;
   color: #ffcdc3;
+  padding: 10px 12px;
+  border: 1px solid #ea32414d;
+  border-radius: 10px;
+  background: #ea32411a;
 }
+
+.restoreStatus { margin: 0 20px 10px; font-size: 11px; color: #ffffffa6; }
 
 .toggle, .headerActions button, .suggestions button, .sendButton {
   transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;

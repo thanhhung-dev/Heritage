@@ -10,6 +10,11 @@ import {
 } from "../services/chatService";
 import { guestConversationContext, overlaySuggestions } from "../features/chat/overlay-context";
 import type { ChatOverlayMessage } from "../features/chat/types/chatOverlay";
+import { getHeritageConversation, sendHeritageChatMessage } from "../services/heritageChatService";
+import {
+  chatAccountId, chatStorageKey, forgetChat, rememberConversation, rememberedConversation,
+  rememberGuestMessages, rememberedGuestMessages, type ChatStorage,
+} from "../features/chat/overlay-storage";
 
 const citation = {
   id: "citation-1", message_id: "assistant-1", source_title: "Chùa Thiên Mụ",
@@ -197,4 +202,97 @@ test("overlay Markdown never executes raw HTML or unsafe links", () => {
   assert.equal(safeSourceUrl("https://user:password@example.org/private"), null);
   assert.equal(safeSourceUrl("data:text/html,unsafe"), null);
   assert.equal(safeSourceUrl(null), null);
+});
+
+test("heritage service sends heritage/scene and optional auth with the correct Guest policy", async (t) => {
+  const requests: RequestInit[] = [];
+  t.mock.method(globalThis, "fetch", async (_url: string, init: RequestInit) => { requests.push(init); return json(answer, 201); });
+  const history: ChatOverlayMessage[] = [{
+    id: "user-1", role: "user", content: "Where is this?", createdAt: conversation.created_at, citations: [],
+  }];
+  const context = { heritage_id: 10, heritage_context: "Heritage title", scene_context: "Gate" };
+  await sendHeritageChatMessage("Follow up", conversation.id, context, history, "token-a");
+  await sendHeritageChatMessage("Follow up", conversation.id, context, history, null);
+  const account = JSON.parse(String(requests[0].body));
+  assert.equal(account.heritage_id, 10);
+  assert.equal(account.scene_context, "Gate");
+  assert.equal(account.conversation_id, conversation.id);
+  assert.equal("conversation_context" in account, false);
+  assert.equal(new Headers(requests[0].headers).get("Authorization"), "Bearer token-a");
+  const guest = JSON.parse(String(requests[1].body));
+  assert.equal(guest.conversation_id, null);
+  assert.deepEqual(guest.conversation_context, [{ role: "user", content: "Where is this?" }]);
+  assert.equal(new Headers(requests[1].headers).has("Authorization"), false);
+});
+
+test("heritage history restores outcomes and rejects account or heritage mismatches", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => json({ ...conversation, heritage_id: 10, messages: [{
+    ...storedMessage, needs_user_choice: true, suggestions: [{ suggested: "The temple" }],
+    abstained: false, answer_type: "suggestion",
+  }] }));
+  const restored = await getHeritageConversation(conversation.id, "1", 10, "token-a");
+  assert.equal(restored[0].createdAt, storedMessage.created_at);
+  assert.deepEqual(restored[0].citations, [citation]);
+  assert.equal(restored[0].needsUserChoice, true);
+  assert.deepEqual(restored[0].suggestions, [{ label: "The temple", value: "The temple" }]);
+  await assert.rejects(getHeritageConversation(conversation.id, "2", 10, "token-a"), (error: unknown) => error instanceof ChatApiError && error.status === 403);
+  await assert.rejects(getHeritageConversation(conversation.id, "1", 20, "token-a"), (error: unknown) => error instanceof ChatApiError && error.status === 403);
+});
+
+class MemoryChatStorage implements ChatStorage {
+  private readonly values = new Map<string, string>();
+  getItem(key: string) { return this.values.get(key) ?? null; }
+  setItem(key: string, value: string) { this.values.set(key, value); }
+  removeItem(key: string) { this.values.delete(key); }
+}
+
+test("conversation cache scopes account/heritage IDs without storing access tokens or messages", () => {
+  const storage = new MemoryChatStorage();
+  const token = "header." + Buffer.from(JSON.stringify({ sub: "1" })).toString("base64url") + ".signature";
+  assert.equal(chatAccountId(token), "1");
+  assert.equal(chatAccountId(null), null);
+  assert.equal(chatAccountId("broken-token"), null);
+  const key = chatStorageKey("heritage-a", chatAccountId(token));
+  const id = "11111111-1111-4111-8111-111111111111";
+  rememberConversation(storage, key, id);
+  assert.equal(rememberedConversation(storage, key), id);
+  assert.equal(rememberedConversation(storage, chatStorageKey("heritage-b", "1")), null);
+  assert.equal(rememberedConversation(storage, chatStorageKey("heritage-a", "2")), null);
+  assert.equal(storage.getItem(key), id);
+  assert.ok(!key.includes(token));
+  forgetChat(storage, key);
+  assert.equal(rememberedConversation(storage, key), null);
+});
+
+test("Guest cache restores bounded turns and rejects corrupt or untrusted stored history", () => {
+  const storage = new MemoryChatStorage();
+  const key = chatStorageKey("heritage-a", null);
+  const messages: ChatOverlayMessage[] = [
+    { id: "u", role: "user", content: "Question", createdAt: conversation.created_at, citations: [] },
+    { id: "a", role: "assistant", content: "Answer", createdAt: conversation.created_at, citations: [citation], abstained: false },
+  ];
+  rememberGuestMessages(storage, key, messages);
+  assert.deepEqual(rememberedGuestMessages(storage, key), messages);
+  assert.equal(JSON.parse(storage.getItem(key)!).conversation_id, undefined);
+  storage.setItem(key, JSON.stringify([{ ...messages[0], role: "system" }]));
+  assert.deepEqual(rememberedGuestMessages(storage, key), []);
+  storage.setItem(key, "invalid JSON");
+  assert.deepEqual(rememberedGuestMessages(storage, key), []);
+  const long: ChatOverlayMessage[] = Array.from({ length: 20 }, (_, index) => ({
+    ...messages[index % 2], id: String(index), content: "x".repeat(8000),
+  }));
+  rememberGuestMessages(storage, key, long);
+  const bounded = rememberedGuestMessages(storage, key);
+  assert.ok(bounded.length <= 12);
+  assert.ok(bounded.reduce((size, item) => size + item.content.length, 0) <= 24000);
+});
+
+test("unavailable browser storage does not prevent an in-memory conversation", () => {
+  const blocked: ChatStorage = {
+    getItem() { throw new Error("storage disabled"); }, setItem() { throw new Error("quota"); }, removeItem() { throw new Error("storage disabled"); },
+  };
+  assert.equal(rememberedConversation(blocked, "key"), null);
+  assert.deepEqual(rememberedGuestMessages(blocked, "key"), []);
+  assert.doesNotThrow(() => rememberConversation(blocked, "key", "11111111-1111-4111-8111-111111111111"));
+  assert.doesNotThrow(() => forgetChat(blocked, "key"));
 });

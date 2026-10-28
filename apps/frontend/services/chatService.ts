@@ -3,7 +3,7 @@ import { API_BASE_URL } from "../config/api";
 import { chatApiUrl, requestChat } from "../lib/chat-request.mjs";
 import { safeSourceUrl } from "../lib/safe-source-url";
 import type {
-  ChatMessageRequest, ChatResponse, Conversation, Message, MessageCitation, StoredMessage,
+  ChatMessageRequest, ChatResponse, Conversation, ConversationDetail, Message, MessageCitation, StoredMessage,
 } from "../features/chat/types";
 
 const citationSchema = z.object({
@@ -84,9 +84,9 @@ export async function listConversations(
   return readResponse(response, z.array(conversationSchema));
 }
 
-export async function getConversationMessages(
+export async function getConversationDetail(
   conversationId: string, accessToken: string, signal?: AbortSignal,
-): Promise<Message[]> {
+): Promise<ConversationDetail> {
   const messages: StoredMessage[] = [];
   const pageSize = 500;
   for (let offset = 0; ; offset += pageSize) {
@@ -96,9 +96,15 @@ export async function getConversationMessages(
     });
     const page = await readResponse(response, conversationSchema.extend({ messages: z.array(storedMessageSchema) }));
     messages.push(...page.messages);
-    if (page.messages.length < pageSize) break;
+    if (page.messages.length < pageSize) return { ...page, messages };
   }
-  return messages.map((message) => ({
+}
+
+export async function getConversationMessages(
+  conversationId: string, accessToken: string, signal?: AbortSignal,
+): Promise<Message[]> {
+  const detail = await getConversationDetail(conversationId, accessToken, signal);
+  return detail.messages.map((message) => ({
     id: message.id, role: message.role, content: message.content,
     sources: citationSources(message.citations),
   }));

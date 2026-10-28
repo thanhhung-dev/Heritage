@@ -12,6 +12,7 @@ interface ChatOverlayWidgetProps {
   messages: ChatOverlayMessage[];
   input: string;
   sending: boolean;
+  restoring?: boolean;
   error: string | null;
   contextLabel: string;
   heritageName: string;
@@ -84,8 +85,10 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           </div>
           <span className={styles.contextLabel} title={props.contextLabel}>{props.contextLabel}</span>
           <ChatMessageList messages={props.messages} sending={props.sending} onSend={props.onSend} />
+          {props.restoring && <p className={styles.restoreStatus} role="status">Đang khôi phục hội thoại…</p>}
           {props.error && <p className={styles.error} role="alert">{props.error}</p>}
-          <ChatInputBar value={props.input} sending={props.sending} showSuggestions={props.messages.length <= 1}
+          <ChatInputBar value={props.input} sending={props.sending} disabled={props.restoring}
+            showSuggestions={props.messages.length <= 1 && !props.restoring}
             onChange={props.onInputChange} onSend={props.onSend} />
         </section>
     </div>

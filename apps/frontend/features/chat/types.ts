@@ -80,3 +80,7 @@ export interface StoredMessage extends ChatOutcome {
   created_at: string;
   citations: MessageCitation[];
 }
+
+export interface ConversationDetail extends Conversation {
+  messages: StoredMessage[];
+}
