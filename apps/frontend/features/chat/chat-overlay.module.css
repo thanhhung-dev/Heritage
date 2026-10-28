@@ -288,6 +288,8 @@
   text-align: left;
 }
 
+.quickSuggestions { margin: 0 0 12px; }
+
 .citations {
   margin-top: 12px;
   border-top: 1px solid #ffffff1a;
@@ -359,7 +361,7 @@
 .inputRow textarea {
   flex: 1;
   min-width: 0;
-  max-height: 100px;
+  max-height: 82px;
   resize: none;
   outline: none;
   border: 0;

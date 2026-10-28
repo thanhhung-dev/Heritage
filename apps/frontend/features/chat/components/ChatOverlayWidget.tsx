@@ -85,7 +85,8 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           <span className={styles.contextLabel} title={props.contextLabel}>{props.contextLabel}</span>
           <ChatMessageList messages={props.messages} sending={props.sending} onSend={props.onSend} />
           {props.error && <p className={styles.error} role="alert">{props.error}</p>}
-          <ChatInputBar value={props.input} sending={props.sending} onChange={props.onInputChange} onSend={props.onSend} />
+          <ChatInputBar value={props.input} sending={props.sending} showSuggestions={props.messages.length <= 1}
+            onChange={props.onInputChange} onSend={props.onSend} />
         </section>
     </div>
   );

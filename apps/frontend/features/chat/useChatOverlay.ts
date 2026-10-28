@@ -10,12 +10,6 @@ function welcome(): ChatOverlayMessage {
   return {
     id: "mila-welcome", role: "assistant", createdAt: new Date().toISOString(), citations: [],
     content: "Hi, I’m Mila, your AI heritage guide. What would you like to discover?",
-    suggestions: [
-      { label: "Explore this heritage", value: "Give me a short introduction to this heritage." },
-      { label: "History & origins", value: "Tell me about the history and origins of this heritage." },
-      { label: "About this scene", value: "What am I looking at in this scene?" },
-      { label: "Architectural details", value: "Which architectural details should I look for here?" },
-    ],
   };
 }
 
