@@ -66,7 +66,7 @@ export default function HeritagePreviewPage() {
       <HeritageCarouselSection
         title="Featured Experiences"
         description="Curated virtual journeys and immersive stories"
-        items={featuredItems}
+        items={featuredItems as any}
         onCardClick={handleCardClick}
       />
 
@@ -74,7 +74,7 @@ export default function HeritagePreviewPage() {
       <HeritageCarouselSection
         title="Artifacts & Treasures"
         description="The tools, art, and objects that shape human history"
-        items={artifactItems}
+        items={artifactItems as any}
         onCardClick={handleCardClick}
       />
 
@@ -82,7 +82,7 @@ export default function HeritagePreviewPage() {
       <HeritageCarouselSection
         title="People & Traditions"
         description="Community members share personal stories and memories"
-        items={traditionItems}
+        items={traditionItems as any}
         onCardClick={handleCardClick}
       />
 
@@ -90,7 +90,7 @@ export default function HeritagePreviewPage() {
       <HeritageCarouselSection
         title="Festivals & Community Practices"
         description="The rituals and customs that bring heritage to life"
-        items={festivalItems}
+       items={festivalItems as any}
         onCardClick={handleCardClick}
       />
 
