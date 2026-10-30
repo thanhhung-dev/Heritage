@@ -549,7 +549,9 @@ export function createTourEngine(
   };
 
   return {
- 
+    /** Temporary authoring controls; cleanup restores the normal tour's locks. */
+    enableCameraEditing: cameraController.enableEditing,
+
     enterExplore(mode: ExploreMode, eyeHeight?: number) {
       // Pose trước khi vào Explore là "góc về" khi người dùng bấm Reset.
       cameraController.adoptCurrentPose();

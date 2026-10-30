@@ -37,6 +37,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
   } | null = null;
   let polarCeiling = controls.maxPolarAngle;
   let fitMinDistance = controls.minDistance;
+  let editing = false;
   const scratch = new THREE.Vector3();
   const scratchTarget = new THREE.Vector3();
   const scratchUp = new THREE.Vector3();
@@ -107,13 +108,15 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     // khoảng cách hiện tại, `controls.update()` sẽ kéo camera vọt ra xa tới đúng sàn
     // ngay frame sau — đây là lỗi "hover xong camera bay ra xa".
     const radius = camera.position.distanceTo(controls.target);
-    if (fitMinDistance > radius) {
+    if (!editing && fitMinDistance > radius) {
       camWarn(
         "minDistance",
         `sàn=${fitMinDistance.toFixed(2)} > khoảng cách camera=${radius.toFixed(2)} ⇒ hạ sàn để không bị kéo ra xa`,
       );
     }
-    const floor = Math.min(fitMinDistance, radius);
+    // Authoring needs close-up zoom even after restoring a numeric/captured pose.
+    // Keep the tour's authored floor intact so leaving the editor restores it.
+    const floor = Math.min(fitMinDistance, radius, editing ? camera.near * 2 : Infinity);
     if (controls.minDistance !== floor) controls.minDistance = floor;
   };
   const restore = (pose: ReturnType<typeof snapshot>, duration = 0) => {
@@ -254,6 +257,18 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     snapshot,
     restore,
     adoptCurrentPose,
+    enableEditing() {
+      const previous = { enableZoom: controls.enableZoom, enablePan: controls.enablePan };
+      editing = true;
+      controls.enableZoom = true;
+      controls.enablePan = true;
+      restoreMinDistance();
+      return () => {
+        editing = false;
+        Object.assign(controls, previous);
+        restoreMinDistance();
+      };
+    },
     reset: (duration = 0) => restore(home, duration),
     isFlying: () => flight !== null,
     startTimeline(preset: HeritageCamera, narrationSeconds: number) {
