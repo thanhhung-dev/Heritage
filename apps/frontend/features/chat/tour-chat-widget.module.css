@@ -1,0 +1,323 @@
+.widget {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  pointer-events: none;
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.launcher {
+  position: fixed;
+  right: clamp(16px, 2.3vw, 44px);
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 1401;
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 18px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: var(--shadow-floating), var(--shadow-brand);
+  color: var(--bg);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  pointer-events: auto;
+  transition:
+    transform var(--transition),
+    opacity var(--transition),
+    visibility var(--transition),
+    background var(--transition);
+}
+
+.launcher:hover {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+  transform: translateY(-2px);
+}
+
+.launcher:focus-visible,
+.closeButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.launcherHidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+}
+
+.panel {
+  position: fixed;
+  top: 50%;
+  right: clamp(16px, 2.3vw, 44px);
+  z-index: 1402;
+  display: flex;
+  width: min(440px, calc(100vw - 32px));
+  height: min(720px, calc(100dvh - 48px));
+  min-height: 340px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--bg-strong) 80%, transparent);
+  box-shadow: var(--shadow-floating), var(--shadow-glass-inset);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(0, calc(-50% + 14px));
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 180ms var(--ease-out),
+    visibility 180ms linear;
+  visibility: hidden;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+}
+
+.panelOpen {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%);
+  visibility: visible;
+}
+
+.header {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding-right: 44px;
+}
+
+.avatar,
+.emptyAvatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: var(--glass-surface);
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+}
+
+.identityText {
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistantStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.statusIndicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.closeButton {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: var(--glass-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  transition:
+    color var(--transition),
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.closeButton:hover {
+  border-color: var(--glass-border);
+  background: var(--glass-surface-hover);
+  color: var(--text-strong);
+}
+
+.sceneContext {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.sceneContext span:not(.contextDivider) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneContext span:first-child {
+  color: var(--text-tertiary);
+}
+
+.contextDivider {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.emptyState {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  overflow-y: auto;
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+
+.emptyAvatar {
+  width: 56px;
+  height: 56px;
+}
+
+.emptyCopy h3 {
+  color: var(--text-strong);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.emptyCopy p {
+  max-width: 340px;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.emptyInput {
+  width: 100%;
+  text-align: left;
+}
+
+.panel :global(.ant-sender) {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface);
+  box-shadow: var(--shadow-glass-inset);
+}
+
+.panel :global(.ant-sender:hover),
+.panel :global(.ant-sender:focus-within) {
+  border-color: var(--glass-border);
+}
+
+@media (max-width: 640px) {
+  .launcher {
+    right: calc(14px + env(safe-area-inset-right));
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .panel {
+    top: max(10px, env(safe-area-inset-top));
+    right: 8px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    left: 8px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    border-radius: 24px;
+    transform: translateY(14px);
+  }
+
+  .panelOpen {
+    transform: translateY(0);
+  }
+
+  .header {
+    padding: 14px 14px 12px;
+  }
+
+  .closeButton {
+    top: 12px;
+    right: 12px;
+  }
+
+  .emptyState {
+    gap: 14px;
+    padding: 16px 14px 14px;
+  }
+
+  .emptyAvatar {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 360px) {
+  .launcher {
+    width: 48px;
+    padding: 0;
+  }
+
+  .launcher span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launcher,
+  .panel,
+  .closeButton {
+    transition: none;
+  }
+
+  .launcher:hover {
+    transform: none;
+  }
+}

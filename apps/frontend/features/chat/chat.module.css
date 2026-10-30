@@ -127,6 +127,20 @@
   display: none;
 }
 
+.compactChatMessages {
+  max-width: none;
+  min-height: 0;
+  padding: 12px 18px 16px;
+  overflow: hidden;
+}
+
+.compactChatMessages :global(.ant-bubble-list-scroll-box) {
+  width: 100%;
+  padding-right: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
 .thinkingSpin {
   display: flex;
   align-items: center;
@@ -213,11 +227,40 @@
   margin: 0 auto;
 }
 
+.compactInputArea {
+  position: relative;
+  padding: 12px 16px 16px;
+  background: color-mix(in srgb, var(--bg-strong) 56%, transparent);
+  animation: none;
+}
+
+.compactInputAreaInner {
+  max-width: none;
+}
+
 .inputAreaDisclaimer {
   margin-top: 8px;
   text-align: center;
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.compactDisclaimer {
+  font-size: var(--text-xs);
+}
+
+.compactSuggestionList {
+  width: 100%;
+  max-height: 176px;
+  overflow-y: auto;
+}
+
+.compactSuggestionList :global(.ant-prompts-item) {
+  min-height: 44px;
+  padding: 8px 12px;
+  background: var(--glass-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
 }
 
 /* ===== Help Button ===== */
