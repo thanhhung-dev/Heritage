@@ -12,20 +12,20 @@ interface SearchPaginationProps {
 export function SearchPagination({ page, pageCount, hrefForPage }: SearchPaginationProps) {
   if (pageCount <= 1) return null;
   return (
-    <nav className={styles.pagination} aria-label="Phân trang kết quả tìm kiếm">
+    <nav className={styles.pagination} aria-label="Search result pages">
       {page > 1 ? (
-        <Link href={hrefForPage(page - 1)} scroll={false} aria-label="Trang trước">
+        <Link href={hrefForPage(page - 1)} scroll={false} aria-label="Previous page">
           <LeftOutlined aria-hidden />
         </Link>
       ) : (
-        <span aria-disabled="true" aria-label="Trang trước"><LeftOutlined aria-hidden /></span>
+        <span aria-disabled="true" aria-label="Previous page"><LeftOutlined aria-hidden /></span>
       )}
       {paginationPages(page, pageCount).map((item) => typeof item === "number" ? (
         <Link
           key={item}
           href={hrefForPage(item)}
           scroll={false}
-          aria-label={`Trang ${item}`}
+          aria-label={`Page ${item}`}
           aria-current={page === item ? "page" : undefined}
         >
           {item}
@@ -34,11 +34,11 @@ export function SearchPagination({ page, pageCount, hrefForPage }: SearchPaginat
         <span key={item} className={styles.paginationGap} aria-hidden>…</span>
       ))}
       {page < pageCount ? (
-        <Link href={hrefForPage(page + 1)} scroll={false} aria-label="Trang sau">
+        <Link href={hrefForPage(page + 1)} scroll={false} aria-label="Next page">
           <RightOutlined aria-hidden />
         </Link>
       ) : (
-        <span aria-disabled="true" aria-label="Trang sau"><RightOutlined aria-hidden /></span>
+        <span aria-disabled="true" aria-label="Next page"><RightOutlined aria-hidden /></span>
       )}
     </nav>
   );

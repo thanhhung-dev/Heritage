@@ -2,7 +2,7 @@ import { z } from "zod";
 import { API_BASE_URL } from "../config/api";
 import { normalizeSearchText, SEARCH_PAGE_SIZE, UNCATEGORIZED } from "../features/search/search-params";
 import type { HeritageSearchItem, SearchResults, SearchState } from "../features/search/types";
-import { catalogueFacets, catalogueRecommendations, searchImageUrl } from "../features/search/catalogue";
+import { catalogueFacets, catalogueRecommendations, heritageRegion, searchImageUrl } from "../features/search/catalogue";
 
 const nullableText = z.string().nullish().transform((value) => value?.trim() || null);
 const heritageSchema = z.object({
@@ -25,13 +25,14 @@ const heritageSchema = z.object({
 
 export function selectHeritages(items: HeritageSearchItem[], state: SearchState): SearchResults {
   const terms = normalizeSearchText(state.q).split(/\s+/).filter(Boolean);
-  const region = normalizeSearchText(state.region);
-  const category = normalizeSearchText(state.category);
+  const regions = state.regions.map(normalizeSearchText);
+  const categories = state.categories.map(normalizeSearchText);
   const filtered = items.filter((item) => {
-    const text = normalizeSearchText([item.title, item.tagline, item.description, item.region, item.category].filter(Boolean).join(" "));
+    const text = normalizeSearchText([item.title, item.headline, item.tagline, item.description, item.region, item.category].filter(Boolean).join(" "));
     return terms.every((term) => text.includes(term))
-      && (!region || normalizeSearchText(item.region ?? "").includes(region))
-      && (!category || normalizeSearchText(item.category ?? UNCATEGORIZED) === category);
+      && (!regions.length || regions.some((region) => normalizeSearchText(item.region ?? "").includes(region) || normalizeSearchText(heritageRegion(item)).includes(region)))
+      && (!categories.length || categories.includes(normalizeSearchText(item.category ?? UNCATEGORIZED)))
+      && (!state.locations.length || state.locations.includes(item.slug));
   });
   const pageCount = Math.max(1, Math.ceil(filtered.length / SEARCH_PAGE_SIZE));
   const page = Math.min(state.page, pageCount);
@@ -43,8 +44,6 @@ export function selectHeritages(items: HeritageSearchItem[], state: SearchState)
     pageCount,
     pageSize: SEARCH_PAGE_SIZE,
     // Facets come from the whole catalogue, so empty results never erase the filters.
-    regions: [...new Set(items.flatMap((item) => item.region ? [item.region] : []))].sort((a, b) => a.localeCompare(b, "vi")),
-    categories: [...new Set(items.map((item) => item.category ?? UNCATEGORIZED))].sort((a, b) => a.localeCompare(b, "vi")),
     ...catalogueFacets(items),
     recommendations: catalogueRecommendations(items, visible),
     heroImage: items.map((item) => searchImageUrl(item.splash_image_url) ?? searchImageUrl(item.card_image_url)).find(Boolean) ?? null,
@@ -60,6 +59,7 @@ export async function fetchHeritageCatalogue(signal?: AbortSignal): Promise<Heri
   // Keep this adapter replaceable when the backend introduces a paginated search contract.
   const response = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/heritages`, {
     signal,
+    cache: "no-store",
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw new Error("Không thể tải danh sách di sản.");

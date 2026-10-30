@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readSearchState, searchHref, updateSearchParams, paginationPages, UNCATEGORIZED } from "../features/search/search-params";
+import { readSearchState, searchHref, updateSearchParams, toggleSearchFilter, paginationPages, UNCATEGORIZED } from "../features/search/search-params";
 import { searchHeritages, selectHeritages } from "../services/heritageSearchService";
 import type { HeritageSearchItem, SearchState } from "../features/search/types";
 import { catalogueFacets, catalogueRecommendations, heritageLanguages, searchImageUrl } from "../features/search/catalogue";
 
-const state: SearchState = { q: "", region: "", category: "", page: 1 };
+const state: SearchState = { q: "", regions: [], categories: [], locations: [], page: 1 };
 const heritage: HeritageSearchItem = {
   id: 1, slug: "tu-duc-tomb", title: "Lăng Tự Đức", description: "Di sản Huế",
   tagline: null, region: "Huế, Việt Nam", category: "Di tích & kiến trúc",
@@ -16,7 +16,7 @@ test("search URL round-trips Unicode, filters and pagination without dropping un
   const original = new URLSearchParams("q=Lăng+Tự+Đức&region=Huế&category=Di+tích&page=3&source=library");
   const href = searchHref(original, { page: 2 });
   const restored = new URLSearchParams(href.split("?")[1]);
-  assert.deepEqual(readSearchState(restored), { q: "Lăng Tự Đức", region: "Huế", category: "Di tích", page: 2 });
+  assert.deepEqual(readSearchState(restored), { q: "Lăng Tự Đức", regions: ["Huế"], categories: ["Di tích"], locations: [], page: 2 });
   assert.equal(restored.get("source"), "library");
   assert.equal(original.get("page"), "3");
 });
@@ -24,9 +24,9 @@ test("search URL round-trips Unicode, filters and pagination without dropping un
 test("changing a search constraint resets the page and clearing filters removes their URL parameters", () => {
   const original = new URLSearchParams("q=Huế&region=Huế&category=Di+tích&page=4");
   assert.equal(updateSearchParams(original, { q: "Da Nang" }).get("page"), null);
-  assert.equal(updateSearchParams(original, { region: "Đà Nẵng" }).get("page"), null);
-  assert.equal(updateSearchParams(original, { category: "Danh thắng" }).get("page"), null);
-  assert.equal(searchHref(original, { q: "", region: "", category: "", page: 1 }), "/search");
+  assert.equal(updateSearchParams(original, { regions: ["Đà Nẵng"] }).get("page"), null);
+  assert.equal(updateSearchParams(original, { categories: ["Danh thắng"] }).get("page"), null);
+  assert.equal(searchHref(original, { q: "", regions: [], categories: [], locations: [], page: 1 }), "/search");
 });
 
 test("malformed, negative and unsafe URL pages are normalized", () => {
@@ -37,12 +37,12 @@ test("malformed, negative and unsafe URL pages are normalized", () => {
 
 test("accent-insensitive search combines all terms, region and explicit category", () => {
   const items = [heritage, { ...heritage, id: 2, slug: "marble-mountains", title: "Ngũ Hành Sơn", region: "Đà Nẵng", category: "Danh thắng" }];
-  assert.equal(selectHeritages(items, { ...state, q: "LANG tu DUC", region: "hue", category: "Di tích & kiến trúc" }).total, 1);
-  assert.equal(selectHeritages(items, { ...state, q: "ngu hanh", region: "da nang", category: "Danh thắng" }).items[0].slug, "marble-mountains");
+  assert.equal(selectHeritages(items, { ...state, q: "LANG tu DUC", regions: ["hue"], categories: ["Di tích & kiến trúc"] }).total, 1);
+  assert.equal(selectHeritages(items, { ...state, q: "ngu hanh", regions: ["da nang"], categories: ["Danh thắng"] }).items[0].slug, "marble-mountains");
   const empty = selectHeritages(items, { ...state, q: "không tồn tại" });
   assert.equal(empty.total, 0);
-  assert.equal(empty.regions.length, 2);
-  assert.equal(empty.categories.length, 2);
+  assert.equal(empty.locationGroups.length, 2);
+  assert.equal(empty.categoryFacets.filter((facet) => facet.count > 0).length, 2);
 });
 
 test("pagination has no overlaps and out-of-range requests resolve to the last valid page", () => {
@@ -50,20 +50,22 @@ test("pagination has no overlaps and out-of-range requests resolve to the last v
   const first = selectHeritages(items, state);
   const second = selectHeritages(items, { ...state, page: 2 });
   const last = selectHeritages(items, { ...state, page: 999 });
-  assert.equal(first.items.length, 9);
-  assert.equal(second.items.length, 9);
-  assert.equal(last.items.length, 5);
-  assert.equal(last.page, 3);
-  assert.equal(new Set([...first.items, ...second.items, ...last.items].map((item) => item.id)).size, 23);
+  assert.equal(first.items.length, 4);
+  assert.equal(second.items.length, 4);
+  assert.equal(last.items.length, 3);
+  assert.equal(last.page, 6);
+  const pages = Array.from({ length: last.page }, (_, index) => selectHeritages(items, { ...state, page: index + 1 }).items).flat();
+  assert.equal(pages.length, 23);
+  assert.equal(new Set(pages.map((item) => item.id)).size, 23);
   assert.deepEqual(paginationPages(50, 100), [1, "gap-left", 49, 50, 51, "gap-right", 100]);
   assert.deepEqual(paginationPages(1, 4), [1, 2, 3, 4]);
 });
 
 test("missing backend categories stay uncategorized rather than being guessed from titles", () => {
-  const results = selectHeritages([{ ...heritage, category: null }], { ...state, category: UNCATEGORIZED });
+  const results = selectHeritages([{ ...heritage, category: null }], { ...state, categories: [UNCATEGORIZED] });
   assert.equal(results.total, 1);
   assert.equal(results.items[0].category, null);
-  assert.deepEqual(results.categories, [UNCATEGORIZED]);
+  assert.equal(results.categoryFacets.find((facet) => facet.value === UNCATEGORIZED)?.count, 1);
 });
 
 test("the API adapter uses the existing list endpoint, accepts HeritageOut and forwards cancellation", async (context) => {
@@ -71,6 +73,7 @@ test("the API adapter uses the existing list endpoint, accepts HeritageOut and f
   const fetchMock = context.mock.method(globalThis, "fetch", async (url: string, options: RequestInit) => {
     assert.match(url, /\/api\/heritages$/);
     assert.equal(options.signal, controller.signal);
+    assert.equal(options.cache, "no-store");
     return Response.json([{ id: 1, slug: "tu-duc-tomb", title: "Lăng Tự Đức", region: "Huế", publish_state: "published" }]);
   });
   try {
@@ -126,4 +129,30 @@ test("search imagery accepts API assets while rejecting unsafe URLs", () => {
   for (const url of ["javascript:alert(1)", "//other.example/image", "https://user:secret@example.org/image", "/\\evil.example/image"]) {
     assert.equal(searchImageUrl(url), null);
   }
+});
+
+test("checkbox URLs retain multiple selections, support legacy links and reset pagination on site changes", () => {
+  let params = new URLSearchParams("region=Huế&category=Temples&page=3&source=library");
+  params = toggleSearchFilter(params, "regions", "Đà Nẵng");
+  params = toggleSearchFilter(params, "locations", "tu-duc-tomb");
+  assert.deepEqual(readSearchState(params).regions, ["Huế", "Đà Nẵng"]);
+  assert.deepEqual(readSearchState(params).locations, ["tu-duc-tomb"]);
+  assert.equal(params.get("page"), null);
+  assert.equal(params.get("source"), "library");
+  params = toggleSearchFilter(params, "regions", "Huế");
+  assert.deepEqual(params.getAll("region"), ["Đà Nẵng"]);
+  const repeated = readSearchState(new URLSearchParams("region=Huế&region=Huế&region=&location=a&location=b"));
+  assert.deepEqual(repeated.regions, ["Huế"]);
+  assert.deepEqual(repeated.locations, ["a", "b"]);
+});
+
+test("selections use OR within each filter and AND across query, categories, regions and sites", () => {
+  const items = [heritage, { ...heritage, id: 2, slug: "marble-mountains", title: "Ngũ Hành Sơn", region: "Da Nang City", category: "Natural Landscapes & Scenic Sites" }];
+  const selection = { ...state, regions: ["Huế", "Đà Nẵng"], categories: ["Di tích & kiến trúc", "Natural Landscapes & Scenic Sites"] };
+  assert.equal(selectHeritages(items, selection).total, 2);
+  assert.equal(selectHeritages(items, { ...selection, locations: ["marble-mountains"] }).items[0].slug, "marble-mountains");
+  const empty = selectHeritages(items, { ...selection, q: "missing site", locations: ["marble-mountains"] });
+  assert.equal(empty.total, 0);
+  assert.equal(empty.recommendations.length, 2);
+  assert.equal(empty.locationGroups.length, 2);
 });

@@ -483,6 +483,21 @@
   flex-direction: column;
 }
 
+/* The Search reference places the existing navigation over its photo banner. */
+.shell:has([data-search-page]) { background: #0a0f13; }
+.shell:has([data-search-page]) > footer { display: none; }
+.shell:has([data-search-page]) > .header {
+  position: absolute;
+  top: 0;
+  background: transparent;
+  border-bottom: 0;
+}
+
+@media (min-width: 761px) {
+  .shell:has([data-search-page]) .searchField,
+  .shell:has([data-search-page]) .navigation { background: #ffffff12; border-color: #ffffff26; }
+}
+
 /* Keep the auth entry points visible alongside the existing develop navigation. */
 .brand { flex: none; }
 .controls { min-width: 0; }

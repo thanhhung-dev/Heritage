@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { HeritageSearchPage } from "@/features/search/HeritageSearchPage";
-import { SearchResultsSkeleton } from "@/features/search/SearchResultsGrid";
+import { SearchPageSkeleton } from "@/features/search/SearchPageSkeleton";
 
 export const metadata: Metadata = {
-  title: "Tìm kiếm di sản | Heritage",
-  description: "Tìm kiếm và khám phá di sản Đà Nẵng – Huế theo từ khóa, vùng miền và danh mục.",
+  title: "Virtual Tours Search | HERITAGE",
+  description: "Discover immersive heritage tours. Search and filter by category, location and historic site.",
   alternates: { canonical: "/search" },
 };
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<SearchResultsSkeleton />}>
+    <Suspense fallback={<SearchPageSkeleton />}>
       <HeritageSearchPage />
     </Suspense>
   );

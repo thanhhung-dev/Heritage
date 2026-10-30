@@ -1,7 +1,8 @@
 export interface SearchState {
   q: string;
-  region: string;
-  category: string;
+  regions: string[];
+  categories: string[];
+  locations: string[];
   page: number;
 }
 
@@ -37,8 +38,6 @@ export interface SearchResults {
   page: number;
   pageCount: number;
   pageSize: number;
-  regions: string[];
-  categories: string[];
   categoryFacets: SearchFacet[];
   locationGroups: SearchLocationGroup[];
   recommendations: HeritageSearchItem[];

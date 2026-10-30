@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { readSearchState, searchHref, updateSearchParams } from "./search-params";
+import { readSearchState, searchHref, toggleSearchFilter, updateSearchParams, type SearchFilterKey } from "./search-params";
 import type { SearchState } from "./types";
 
 export function useSearchUrl() {
@@ -51,10 +51,13 @@ export function useSearchUrl() {
     state, draft, setDraft, setComposing, navigate,
     busy: pending || composing || draft.trim() !== state.q,
     submit: () => { if (!composing) navigate({ q: draft, page: 1 }); },
-    filter: (patch: Pick<Partial<SearchState>, "region" | "category">) => navigate({ ...patch, q: draft, page: 1 }),
+    toggle: (key: SearchFilterKey, value: string) => {
+      const next = readSearchState(toggleSearchFilter(new URLSearchParams(paramsRef.current), key, value));
+      navigate({ [key]: next[key], q: draft, page: 1 });
+    },
     reset: () => {
       setDraft("");
-      navigate({ q: "", region: "", category: "", page: 1 });
+      navigate({ q: "", regions: [], categories: [], locations: [], page: 1 });
     },
     hrefForPage: (page: number) => searchHref(new URLSearchParams(serialized), { page }),
   };
