@@ -1,39 +1,39 @@
 "use client";
 
-import { CloseOutlined } from "@ant-design/icons";
-import { XProvider } from "@ant-design/x";
 import {
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
 } from "react";
 
-import { HeritageLogoMini } from "@/components/Logo/HeritageLogoMinimal";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { AUTH_CHANGE_EVENT, getAccessToken, getUser } from "@/lib/auth";
+import { ChatOverlayWidget } from "@/features/chat/components/ChatOverlayWidget";
+import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
 import type { Message } from "./types";
-import ChatInput from "./components/ChatInput";
-import { ChatView } from "./components/ChatView";
-import { SuggestionList } from "./components/SuggestionList";
 import {
   buildSceneConversationContext,
   sendSceneChatMessage,
   type SceneChatRequest,
 } from "./scene-chat-service";
-import { useHeritageTheme } from "./useHeritageTheme";
-import styles from "./tour-chat-widget.module.css";
 
-const SCENE_SUGGESTIONS = [
-  "Giới thiệu về cảnh này",
-  "Địa điểm này có ý nghĩa văn hóa gì?",
-  "Nên chú ý chi tiết nào trong cảnh?",
-];
+const WELCOME_MESSAGE_ID = "mila-welcome";
+const WELCOME_MESSAGE =
+  "Hi, I’m Mila, your AI heritage guide. What would you like to discover?";
 
 function createMessageId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+}
+
+function createWelcomeMessage(): Message {
+  return {
+    id: WELCOME_MESSAGE_ID,
+    role: "assistant",
+    content: WELCOME_MESSAGE,
+    createdAt: new Date().toISOString(),
+  };
 }
 
 function getCurrentAccountId(): string | null {
@@ -42,21 +42,14 @@ function getCurrentAccountId(): string | null {
 
 export function TourChatWidget() {
   const { payload, heritageSlug, currentSceneKey, currentScene } = useHeritageTour();
-  const theme = useHeritageTheme();
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => [createWelcomeMessage()]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationOwnerId, setConversationOwnerId] = useState<string | null>(null);
-  const panelId = useId();
-  const titleId = useId();
-  const launcherRef = useRef<HTMLButtonElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef<AbortController | null>(null);
   const previousHeritageRef = useRef(`${payload.heritage.id}:${heritageSlug}`);
   const previousAccountRef = useRef(getCurrentAccountId());
-  const shouldReturnFocusRef = useRef(false);
 
   const heritageTitle = payload.heritage.title;
   const sceneTitle = currentScene?.title ?? "Cảnh trong tour";
@@ -68,7 +61,7 @@ export function TourChatWidget() {
     previousHeritageRef.current = heritageIdentity;
     requestRef.current?.abort();
     requestRef.current = null;
-    setMessages([]);
+    setMessages([createWelcomeMessage()]);
     setInput("");
     setLoading(false);
     setConversationId(null);
@@ -83,7 +76,7 @@ export function TourChatWidget() {
       previousAccountRef.current = accountId;
       requestRef.current?.abort();
       requestRef.current = null;
-      setMessages([]);
+      setMessages([createWelcomeMessage()]);
       setInput("");
       setLoading(false);
       setConversationId(null);
@@ -94,31 +87,15 @@ export function TourChatWidget() {
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
   }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      closeRef.current?.focus();
-      shouldReturnFocusRef.current = true;
-      return;
-    }
-
-    if (shouldReturnFocusRef.current) {
-      launcherRef.current?.focus();
-      shouldReturnFocusRef.current = false;
-    }
-  }, [isOpen]);
-
-  const closePanel = useCallback(() => setIsOpen(false), []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closePanel();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closePanel, isOpen]);
+  const startNewConversation = useCallback(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setMessages([createWelcomeMessage()]);
+    setInput("");
+    setLoading(false);
+    setConversationId(null);
+    setConversationOwnerId(null);
+  }, []);
 
   const send = useCallback(
     async (text?: string) => {
@@ -128,21 +105,24 @@ export function TourChatWidget() {
       const accountId = getCurrentAccountId();
       const switchedAccount =
         Boolean(accountId && conversationOwnerId && accountId !== conversationOwnerId);
-      const history = switchedAccount ? [] : messages;
+      const displayHistory = switchedAccount ? [createWelcomeMessage()] : messages;
+      const history = displayHistory.filter(
+        (message) => message.id !== WELCOME_MESSAGE_ID,
+      );
       const activeConversationId =
         accountId && conversationOwnerId === accountId ? conversationId : null;
       const userEntry: Message = {
         id: createMessageId(),
         role: "user",
         content: userMessage,
+        createdAt: new Date().toISOString(),
       };
 
       if (switchedAccount) {
-        setMessages([]);
         setConversationId(null);
         setConversationOwnerId(null);
       }
-      setMessages([...history, userEntry]);
+      setMessages([...displayHistory, userEntry]);
       setInput("");
       setLoading(true);
 
@@ -198,6 +178,7 @@ export function TourChatWidget() {
             id: createMessageId(),
             role: "assistant",
             content: response.answer,
+            createdAt: new Date().toISOString(),
             sources: response.sources,
             correctedFrom: response.correctedFrom,
             correctedTo: response.correctedTo,
@@ -211,6 +192,7 @@ export function TourChatWidget() {
           {
             id: createMessageId(),
             role: "assistant",
+            createdAt: new Date().toISOString(),
             content:
               error instanceof Error
                 ? error.message
@@ -239,7 +221,23 @@ export function TourChatWidget() {
     ],
   );
 
-  const suggestions = useMemo(() => [...SCENE_SUGGESTIONS], []);
+  const overlayMessages = useMemo<ChatOverlayMessage[]>(
+    () =>
+      messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        createdAt: message.createdAt ?? new Date(0).toISOString(),
+        citations: (message.sources ?? []).map((source, index) => ({
+          id: `${message.id}-${source.chunk_id ?? index}`,
+          message_id: message.id,
+          source_title: source.doc ?? source.heading ?? "Nguồn tham khảo",
+          source_url: source.url ?? null,
+          relevance_score: null,
+        })),
+      })),
+    [messages],
+  );
 
   useEffect(
     () => {
@@ -249,100 +247,17 @@ export function TourChatWidget() {
   );
 
   return (
-    <XProvider theme={theme}>
-      <div className={styles.widget}>
-        <button
-          ref={launcherRef}
-          type="button"
-          className={`${styles.launcher} ${isOpen ? styles.launcherHidden : ""}`}
-          aria-label={`Mở chat về ${heritageTitle}`}
-          aria-expanded={isOpen}
-          aria-controls={panelId}
-          aria-hidden={isOpen}
-          tabIndex={isOpen ? -1 : 0}
-          onClick={() => setIsOpen(true)}
-        >
-          <span className={styles.launcherLogo} aria-hidden="true">
-            <HeritageLogoMini size={40} radius={74.5} />
-          </span>
-          <span className={styles.launcherLabel}>Hỏi về di sản này</span>
-        </button>
-
-        <section
-          id={panelId}
-          className={`${styles.panel} ${isOpen ? styles.panelOpen : ""}`}
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby={titleId}
-          aria-hidden={!isOpen}
-          data-open={isOpen}
-        >
-          <header className={styles.header}>
-            <div className={styles.identity}>
-              <span className={styles.avatar} aria-hidden="true">
-                <HeritageLogoMini size={30} />
-              </span>
-              <div className={styles.identityText}>
-                <h2 id={titleId} className={styles.title}>Heritage Guide</h2>
-                <span className={styles.assistantStatus}>
-                  <span className={styles.statusIndicator} aria-hidden="true" />
-                  Trợ lý di sản
-                </span>
-              </div>
-            </div>
-            <button
-              ref={closeRef}
-              type="button"
-              className={styles.closeButton}
-              aria-label="Đóng khung chat"
-              onClick={closePanel}
-            >
-              <CloseOutlined aria-hidden="true" />
-            </button>
-            <p className={styles.sceneContext} aria-live="polite">
-              <span>{heritageTitle}</span>
-              <span className={styles.contextDivider} aria-hidden="true">·</span>
-              <span>{sceneTitle}</span>
-            </p>
-          </header>
-
-          {messages.length === 0 ? (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyAvatar} aria-hidden="true">
-                <HeritageLogoMini size={42} />
-              </div>
-              <div className={styles.emptyCopy}>
-                <h3>Bạn muốn tìm hiểu điều gì?</h3>
-                <p>Hỏi về {sceneTitle.toLocaleLowerCase()} hoặc câu chuyện của địa điểm này.</p>
-              </div>
-              <div className={styles.emptyInput}>
-                <ChatInput
-                  value={input}
-                  onChange={setInput}
-                  onSubmit={() => void send()}
-                  placeholder="Hỏi về cảnh này…"
-                  loading={loading}
-                  allowAttachments={false}
-                />
-              </div>
-              <SuggestionList
-                suggestions={suggestions}
-                onSelect={(suggestion) => void send(suggestion)}
-                compact
-              />
-            </div>
-          ) : (
-            <ChatView
-              messages={messages}
-              input={input}
-              loading={loading}
-              onInputChange={setInput}
-              onSend={() => void send()}
-              compact
-            />
-          )}
-        </section>
-      </div>
-    </XProvider>
+    <ChatOverlayWidget
+      messages={overlayMessages}
+      input={input}
+      sending={loading}
+      error={null}
+      contextLabel={sceneTitle}
+      heritageName={heritageTitle}
+      authenticated={Boolean(getAccessToken())}
+      onInputChange={setInput}
+      onSend={(text) => void send(text)}
+      onNewConversation={startNewConversation}
+    />
   );
 }
