@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { useParams, usePathname, useRouter } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 
 import { HeritageTourProvider } from "@/context/heritage-tour";
 import HeritageViewer from "@/features/tour/HeritageViewer";
@@ -14,6 +15,11 @@ import { isInteractivePath } from "@/lib/tour-routes";
 import type { HeritagePayload } from "@/types/heritage";
 import { TEST_TOUR } from "@/features/tour/tour-data";
 import styles from "./content-shell.module.css";
+
+const HeritageChatOverlay = dynamic(
+  () => import("@/features/chat/HeritageChatOverlay").then((module) => module.HeritageChatOverlay),
+  { ssr: false },
+);
 
 type TourState = {
   payload: HeritagePayload;
@@ -39,7 +45,6 @@ export default function HeritageContentLayout({
   children: ReactNode;
 }) {
   const params = useParams<{ slug: string; sceneKey?: string }>();
-  const router = useRouter();
   const pathname = usePathname();
   const slug = params.slug;
   // `/content/{slug}/{sceneKey}/int` ⇒ đang ở chế độ điểm tương tác. Layout là nơi
@@ -50,12 +55,6 @@ export default function HeritageContentLayout({
   const [engine, setEngine] = useState<TourEngine | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
   const isModelReady = engine !== null;
-
-  useEffect(() => {
-    if (params.sceneKey && !isModelReady) {
-      router.replace(`/content/${slug}`);
-    }
-  }, [params.sceneKey, isModelReady, router, slug]);
 
   const [state, setState] = useState<TourState>({
     payload: fixture?.payload ?? DEMO_HERITAGE_PAYLOAD,
@@ -115,6 +114,8 @@ export default function HeritageContentLayout({
         />
         {params.sceneKey && isModelReady ? <HeritageViewer interactiveRoute={interactiveRoute} /> : null}
         {children}
+        {/* Chat stays available on direct scene links while the 3D asset loads. */}
+        {params.sceneKey ? <HeritageChatOverlay /> : null}
       </HeritageTourProvider>
     </div>
   );
