@@ -3,6 +3,7 @@ import test from "node:test";
 import { readSearchState, searchHref, updateSearchParams, paginationPages, UNCATEGORIZED } from "../features/search/search-params";
 import { searchHeritages, selectHeritages } from "../services/heritageSearchService";
 import type { HeritageSearchItem, SearchState } from "../features/search/types";
+import { catalogueFacets, catalogueRecommendations, heritageLanguages, searchImageUrl } from "../features/search/catalogue";
 
 const state: SearchState = { q: "", region: "", category: "", page: 1 };
 const heritage: HeritageSearchItem = {
@@ -86,4 +87,43 @@ test("API errors and invalid payloads fail explicitly without silently substitut
     fetchMock.mock.mockImplementation(async () => Response.json({ items: [] }));
     await assert.rejects(searchHeritages(state));
   } finally { fetchMock.mock.restore(); }
+});
+
+test("catalogue metadata retains languages, headline and images while excluding unpublished tours", async (context) => {
+  const fetchMock = context.mock.method(globalThis, "fetch", async () => Response.json([
+    { ...heritage, headline: "A living story", language1: { code: "en", name: "English" }, language2: { code: "vi", name: "Vietnamese" }, publish_state: "published" },
+    { ...heritage, id: 2, slug: "private-preview", publish_state: "preview" },
+  ]));
+  try {
+    const results = await searchHeritages(state);
+    assert.equal(results.total, 1);
+    assert.equal(results.items[0].headline, "A living story");
+    assert.deepEqual(heritageLanguages(results.items[0]), ["English", "Vietnamese"]);
+    assert.equal(results.recommendations.length, 1);
+  } finally { fetchMock.mock.restore(); }
+});
+
+test("sidebar counts use actual metadata and preserve the design categories without guessing", () => {
+  const facets = catalogueFacets([heritage, { ...heritage, id: 2, slug: "other", region: "Da Nang City, Vietnam", category: null }]);
+  assert.equal(facets.categoryFacets.find((facet) => facet.value === "Imperial & Historic Relics")?.count, 0);
+  assert.equal(facets.categoryFacets.find((facet) => facet.value === UNCATEGORIZED)?.count, 1);
+  assert.equal(facets.locationGroups.find((group) => group.value === "Đà Nẵng")?.sites[0].value, "other");
+  assert.equal(facets.locationGroups.find((group) => group.value === "Huế")?.count, 1);
+});
+
+test("recommendations remain available for empty searches and never duplicate tours", () => {
+  const items = Array.from({ length: 8 }, (_, id) => ({ ...heritage, id, slug: `tour-${id}` }));
+  assert.equal(catalogueRecommendations(items, []).length, 5);
+  const recommendations = catalogueRecommendations(items, items.slice(0, 2));
+  assert.equal(recommendations[0].slug, "tour-2");
+  assert.equal(new Set(recommendations.map((item) => item.slug)).size, 5);
+  assert.equal(catalogueRecommendations([heritage, heritage], []).length, 1);
+});
+
+test("search imagery accepts API assets while rejecting unsafe URLs", () => {
+  assert.equal(searchImageUrl("/images/heritage.jpg"), "/images/heritage.jpg");
+  assert.equal(searchImageUrl("https://example.org/tour.webp"), "https://example.org/tour.webp");
+  for (const url of ["javascript:alert(1)", "//other.example/image", "https://user:secret@example.org/image", "/\\evil.example/image"]) {
+    assert.equal(searchImageUrl(url), null);
+  }
 });
