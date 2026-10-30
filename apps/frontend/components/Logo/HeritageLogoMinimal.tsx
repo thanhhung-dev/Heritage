@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 interface HeritageLogoMiniProps {
   size?: number;
   radius?: number;
@@ -7,6 +9,8 @@ export function HeritageLogoMini({
   size = 64,
   radius = 10,
 }: HeritageLogoMiniProps) {
+  const idPrefix = useId().replace(/:/g, "");
+
   return (
     <svg
       width={size}
@@ -19,9 +23,9 @@ export function HeritageLogoMini({
     >
       <rect width="149" height="149" rx={radius} fill="#FA500F" />
 
-      <g clipPath="url(#clip0_168_149)">
+      <g clipPath={`url(#${idPrefix}-clip0)`}>
         <mask
-          id="mask0_168_149"
+          id={`${idPrefix}-mask0`}
           maskUnits="userSpaceOnUse"
           x="43"
           y="40"
@@ -31,9 +35,9 @@ export function HeritageLogoMini({
           <path d="M43.5769 40H73.9194V78.7123H43.5769V40Z" fill="white" />
         </mask>
 
-        <g mask="url(#mask0_168_149)">
+        <g mask={`url(#${idPrefix}-mask0)`}>
           <mask
-            id="mask1_168_149"
+            id={`${idPrefix}-mask1`}
             maskUnits="userSpaceOnUse"
             x="43"
             y="40"
@@ -46,9 +50,9 @@ export function HeritageLogoMini({
             />
           </mask>
 
-          <g mask="url(#mask1_168_149)">
+          <g mask={`url(#${idPrefix}-mask1)`}>
             <mask
-              id="mask2_168_149"
+              id={`${idPrefix}-mask2`}
               maskUnits="userSpaceOnUse"
               x="43"
               y="39"
@@ -61,9 +65,9 @@ export function HeritageLogoMini({
               />
             </mask>
 
-            <g mask="url(#mask2_168_149)">
+            <g mask={`url(#${idPrefix}-mask2)`}>
               <mask
-                id="mask3_168_149"
+                id={`${idPrefix}-mask3`}
                 maskUnits="userSpaceOnUse"
                 x="43"
                 y="40"
@@ -76,9 +80,9 @@ export function HeritageLogoMini({
                 />
               </mask>
 
-              <g mask="url(#mask3_168_149)">
+              <g mask={`url(#${idPrefix}-mask3)`}>
                 <mask
-                  id="mask4_168_149"
+                  id={`${idPrefix}-mask4`}
                   maskUnits="userSpaceOnUse"
                   x="43"
                   y="40"
@@ -91,7 +95,7 @@ export function HeritageLogoMini({
                   />
                 </mask>
 
-                <g mask="url(#mask4_168_149)">
+                <g mask={`url(#${idPrefix}-mask4)`}>
                   <path
                     d="M43.5769 78.7123V40.1153H73.9194V78.7123H43.5769Z"
                     fill="white"
@@ -103,7 +107,7 @@ export function HeritageLogoMini({
         </g>
 
         <mask
-          id="mask5_168_149"
+          id={`${idPrefix}-mask5`}
           maskUnits="userSpaceOnUse"
           x="63"
           y="40"
@@ -116,9 +120,9 @@ export function HeritageLogoMini({
           />
         </mask>
 
-        <g mask="url(#mask5_168_149)">
+        <g mask={`url(#${idPrefix}-mask5)`}>
           <mask
-            id="mask6_168_149"
+            id={`${idPrefix}-mask6`}
             maskUnits="userSpaceOnUse"
             x="63"
             y="39"
@@ -131,9 +135,9 @@ export function HeritageLogoMini({
             />
           </mask>
 
-          <g mask="url(#mask6_168_149)">
+          <g mask={`url(#${idPrefix}-mask6)`}>
             <mask
-              id="mask7_168_149"
+              id={`${idPrefix}-mask7`}
               maskUnits="userSpaceOnUse"
               x="63"
               y="40"
@@ -146,7 +150,7 @@ export function HeritageLogoMini({
               />
             </mask>
 
-            <g mask="url(#mask7_168_149)">
+            <g mask={`url(#${idPrefix}-mask7)`}>
               <path
                 d="M63.8052 65.0554V40.0651H105.403V65.0554H63.8052Z"
                 fill="white"
@@ -156,7 +160,7 @@ export function HeritageLogoMini({
         </g>
 
         <mask
-          id="mask8_168_149"
+          id={`${idPrefix}-mask8`}
           maskUnits="userSpaceOnUse"
           x="43"
           y="91"
@@ -169,9 +173,9 @@ export function HeritageLogoMini({
           />
         </mask>
 
-        <g mask="url(#mask8_168_149)">
+        <g mask={`url(#${idPrefix}-mask8)`}>
           <mask
-            id="mask9_168_149"
+            id={`${idPrefix}-mask9`}
             maskUnits="userSpaceOnUse"
             x="43"
             y="91"
@@ -184,9 +188,9 @@ export function HeritageLogoMini({
             />
           </mask>
 
-          <g mask="url(#mask9_168_149)">
+          <g mask={`url(#${idPrefix}-mask9)`}>
             <mask
-              id="mask10_168_149"
+              id={`${idPrefix}-mask10`}
               maskUnits="userSpaceOnUse"
               x="43"
               y="91"
@@ -199,7 +203,7 @@ export function HeritageLogoMini({
               />
             </mask>
 
-            <g mask="url(#mask10_168_149)">
+            <g mask={`url(#${idPrefix}-mask10)`}>
               <path
                 d="M43.5761 109.904V91.2083H68.1409V109.904H43.5761Z"
                 fill="white"
@@ -219,7 +223,7 @@ export function HeritageLogoMini({
       </g>
 
       <defs>
-        <clipPath id="clip0_168_149">
+        <clipPath id={`${idPrefix}-clip0`}>
           <rect
             width="63"
             height="70"
