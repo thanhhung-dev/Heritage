@@ -20,7 +20,7 @@ export function HeritageSearchPage() {
   useEffect(() => {
     if (results && results.page !== url.state.page) navigate({ page: results.page }, true);
   }, [results, url.state.page, navigate]);
-  const filtered = Boolean(url.draft || url.state.q || url.state.regions.length || url.state.categories.length || url.state.locations.length || url.state.page > 1);
+  const filtered = Boolean(url.busy || url.draft || url.state.q || url.state.regions.length || url.state.categories.length || url.state.locations.length || url.state.page > 1);
   return <div className={styles.page} data-search-page>
     <SearchHero image={results?.heroImage} />
     <div className={styles.content}>
@@ -33,7 +33,7 @@ export function HeritageSearchPage() {
         <SearchFilters state={url.state} categories={results?.categoryFacets ?? []} groups={results?.locationGroups ?? []} loading={loading} onToggle={url.toggle} />
         <section className={styles.results} aria-labelledby="search-results-title" aria-busy={loading || url.busy}>
           {loading ? <SearchResultsSkeleton /> : status === "error" ? <SearchFeedback error onRetry={retry} />
-            : results?.items.length ? <><SearchResultsList items={results.items} /><SearchPagination page={results.page} pageCount={results.pageCount} hrefForPage={url.hrefForPage} /></>
+            : results?.items.length ? <><SearchResultsList items={results.items} /><SearchPagination page={results.page} pageCount={results.pageCount} hrefForPage={url.hrefForPage} pending={url.busy} /></>
               : <SearchFeedback onRetry={retry} />}
         </section>
       </div>

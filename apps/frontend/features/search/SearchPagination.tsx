@@ -7,20 +7,23 @@ interface SearchPaginationProps {
   page: number;
   pageCount: number;
   hrefForPage: (page: number) => string;
+  pending?: boolean;
 }
 
-export function SearchPagination({ page, pageCount, hrefForPage }: SearchPaginationProps) {
+export function SearchPagination({ page, pageCount, hrefForPage, pending = false }: SearchPaginationProps) {
   if (pageCount <= 1) return null;
   return (
-    <nav className={styles.pagination} aria-label="Search result pages">
-      {page > 1 ? (
+    <nav className={styles.pagination} aria-label="Search result pages" aria-busy={pending}>
+      {page > 1 && !pending ? (
         <Link href={hrefForPage(page - 1)} scroll={false} aria-label="Previous page">
           <LeftOutlined aria-hidden />
         </Link>
       ) : (
         <span aria-disabled="true" aria-label="Previous page"><LeftOutlined aria-hidden /></span>
       )}
-      {paginationPages(page, pageCount).map((item) => typeof item === "number" ? (
+      {paginationPages(page, pageCount).map((item) => typeof item === "number" ? pending ? (
+        <span key={item} aria-disabled="true" aria-label={`Page ${item}`} aria-current={page === item ? "page" : undefined}>{item}</span>
+      ) : (
         <Link
           key={item}
           href={hrefForPage(item)}
@@ -33,7 +36,7 @@ export function SearchPagination({ page, pageCount, hrefForPage }: SearchPaginat
       ) : (
         <span key={item} className={styles.paginationGap} aria-hidden>…</span>
       ))}
-      {page < pageCount ? (
+      {page < pageCount && !pending ? (
         <Link href={hrefForPage(page + 1)} scroll={false} aria-label="Next page">
           <RightOutlined aria-hidden />
         </Link>
