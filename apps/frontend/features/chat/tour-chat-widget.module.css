@@ -17,12 +17,12 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 0 18px;
+  padding: 3px 16px 3px 3px;
   border: 1px solid var(--glass-border);
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--glass-surface);
   box-shadow: var(--shadow-floating), var(--shadow-brand);
-  color: var(--bg);
+  color: var(--text-strong);
   cursor: pointer;
   font: inherit;
   font-size: var(--text-sm);
@@ -36,8 +36,17 @@
 }
 
 .launcher:hover {
-  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+  background: var(--glass-surface-hover);
   transform: translateY(-2px);
+}
+
+.launcherLogo {
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  overflow: hidden;
 }
 
 .launcher:focus-visible,
@@ -297,10 +306,21 @@
 @media (max-width: 360px) {
   .launcher {
     width: 48px;
+    height: 48px;
+    min-height: 48px;
     padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
-  .launcher span {
+  .launcherLogo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .launcherLabel {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -318,6 +338,7 @@
   }
 
   .launcher:hover {
+    background: transparent;
     transform: none;
   }
 }

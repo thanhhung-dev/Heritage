@@ -1,6 +1,6 @@
 "use client";
 
-import { CloseOutlined, MessageOutlined } from "@ant-design/icons";
+import { CloseOutlined } from "@ant-design/icons";
 import { XProvider } from "@ant-design/x";
 import {
   useCallback,
@@ -235,8 +235,10 @@ export function TourChatWidget() {
           tabIndex={isOpen ? -1 : 0}
           onClick={() => setIsOpen(true)}
         >
-          <MessageOutlined aria-hidden="true" />
-          <span>Hỏi về di sản này</span>
+          <span className={styles.launcherLogo} aria-hidden="true">
+            <HeritageLogoMini size={40} radius={0} />
+          </span>
+          <span className={styles.launcherLabel}>Hỏi về di sản này</span>
         </button>
 
         <section
