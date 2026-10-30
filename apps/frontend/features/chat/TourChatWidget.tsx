@@ -263,7 +263,7 @@ export function TourChatWidget() {
           onClick={() => setIsOpen(true)}
         >
           <span className={styles.launcherLogo} aria-hidden="true">
-            <HeritageLogoMini size={40} radius={0} />
+            <HeritageLogoMini size={40} radius={74.5} />
           </span>
           <span className={styles.launcherLabel}>Hỏi về di sản này</span>
         </button>
