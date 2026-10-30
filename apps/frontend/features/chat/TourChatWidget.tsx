@@ -13,7 +13,7 @@ import {
 
 import { HeritageLogoMini } from "@/components/Logo/HeritageLogoMinimal";
 import { useHeritageTour } from "@/context/heritage-tour";
-import { getAccessToken, getUser } from "@/lib/auth";
+import { AUTH_CHANGE_EVENT, getAccessToken, getUser } from "@/lib/auth";
 import type { Message } from "./types";
 import ChatInput from "./components/ChatInput";
 import { ChatView } from "./components/ChatView";
@@ -36,6 +36,10 @@ function createMessageId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
 
+function getCurrentAccountId(): string | null {
+  return getAccessToken() ? getUser()?.account_id ?? null : null;
+}
+
 export function TourChatWidget() {
   const { payload, heritageSlug, currentSceneKey, currentScene } = useHeritageTour();
   const theme = useHeritageTheme();
@@ -51,6 +55,7 @@ export function TourChatWidget() {
   const closeRef = useRef<HTMLButtonElement>(null);
   const requestRef = useRef<AbortController | null>(null);
   const previousHeritageRef = useRef(`${payload.heritage.id}:${heritageSlug}`);
+  const previousAccountRef = useRef(getCurrentAccountId());
   const shouldReturnFocusRef = useRef(false);
 
   const heritageTitle = payload.heritage.title;
@@ -69,6 +74,25 @@ export function TourChatWidget() {
     setConversationId(null);
     setConversationOwnerId(null);
   }, [heritageSlug, payload.heritage.id]);
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const accountId = getCurrentAccountId();
+      if (previousAccountRef.current === accountId) return;
+
+      previousAccountRef.current = accountId;
+      requestRef.current?.abort();
+      requestRef.current = null;
+      setMessages([]);
+      setInput("");
+      setLoading(false);
+      setConversationId(null);
+      setConversationOwnerId(null);
+    };
+
+    window.addEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -101,8 +125,7 @@ export function TourChatWidget() {
       const userMessage = (text ?? input).trim();
       if (!userMessage || loading) return;
 
-      const accessToken = getAccessToken();
-      const accountId = accessToken ? getUser()?.account_id ?? null : null;
+      const accountId = getCurrentAccountId();
       const switchedAccount =
         Boolean(accountId && conversationOwnerId && accountId !== conversationOwnerId);
       const history = switchedAccount ? [] : messages;
@@ -156,7 +179,11 @@ export function TourChatWidget() {
 
       try {
         const response = await sendSceneChatMessage(request, controller.signal);
-        const currentAccountId = getAccessToken() ? getUser()?.account_id ?? null : null;
+        if (controller.signal.aborted) return;
+
+        const currentAccountId = getCurrentAccountId();
+        if (currentAccountId !== accountId) return;
+
         if (accountId && currentAccountId === accountId) {
           setConversationId(response.conversationId);
           setConversationOwnerId(accountId);
