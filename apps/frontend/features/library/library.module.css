@@ -24,6 +24,9 @@
 .filters input, .filters select, .filters button { min-height: 40px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-strong); padding: 8px 12px; font: inherit; }
 .filters input { width: 100%; }
 .filters button { cursor: pointer; }
+.state { text-align: center; padding: 48px 16px; }
+.state button { margin-top: 16px; padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-strong); font: inherit; cursor: pointer; }
+.state button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .filters :is(input, select, button):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; }

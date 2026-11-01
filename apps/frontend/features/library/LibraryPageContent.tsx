@@ -15,6 +15,7 @@ export function LibraryPageContent() {
   const [language, setLanguage] = useState("");
   const [order, setOrder] = useState("newest");
   const [page, setPage] = useState(1);
+  const [attempt, setAttempt] = useState(0);
 
   const regions = Array.from(new Set(items.map((item) => item.region).filter((value): value is string => Boolean(value)))).sort();
   const languages = Array.from(new Set(items.flatMap((item) => [item.language1?.name, item.language2?.name]).filter((value): value is string => Boolean(value)))).sort();
@@ -32,11 +33,13 @@ export function LibraryPageContent() {
 
   useEffect(() => {
     let active = true;
+    setStatus("loading");
     fetchHeritages().then((data) => {
+      if (!Array.isArray(data)) throw new Error("Invalid heritage list");
       if (active) { setItems(data); setStatus("ready"); }
     }).catch(() => { if (active) setStatus("error"); });
     return () => { active = false; };
-  }, []);
+  }, [attempt]);
 
   return (
     <div className={styles.library}>
@@ -53,8 +56,9 @@ export function LibraryPageContent() {
           <button type="button" onClick={() => { setQuery(""); setRegion(""); setLanguage(""); setOrder("newest"); setPage(1); }}>Clear all</button>
         </div>
         {status === "loading" && <p role="status">Loading heritage experiences…</p>}
-        {status === "error" && <p role="alert">Unable to load heritage experiences.</p>}
+        {status === "error" && <div className={styles.state} role="alert"><p>Unable to load heritage experiences.</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></div>}
         {status === "ready" && items.length === 0 && <p>No heritage experiences available.</p>}
+        {status === "ready" && items.length > 0 && filtered.length === 0 && <p role="status" className={styles.state}>No tours found matching your filters.</p>}
         <div className={styles.grid}>
           {visibleItems.map((item) => <PortraitCard key={item.slug} variant="library" item={{ ...item, href: `/content/${encodeURIComponent(item.slug)}` }} />)}
         </div>
