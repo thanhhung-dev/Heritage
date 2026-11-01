@@ -1,0 +1,23 @@
+.library {
+  background: var(--bg);
+  color: var(--text-strong);
+  font-family: var(--font-brand);
+}
+
+.hero {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 24px 40px;
+  text-align: center;
+  background: var(--public-hero-background);
+}
+
+.hero h1 { font-size: clamp(2rem, 3vw, 3rem); line-height: 1.2; }
+.hero p { margin-top: 12px; color: var(--text-secondary); }
+.content { padding: 32px; min-height: 40vh; }
+.grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px; }
+@media (max-width: 1100px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .content { padding: 20px 16px; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
