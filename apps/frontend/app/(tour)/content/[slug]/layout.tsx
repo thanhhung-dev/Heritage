@@ -3,12 +3,12 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { useParams, usePathname, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { HeritageTourProvider } from "@/context/heritage-tour";
 import { LogoText } from "@/components/LogoText";
-import HeritageViewer from "@/features/tour/HeritageViewer";
+import SceneSurface from "@/features/tour/SceneSurface";
 import HeritageCanvas from "@/features/tour/three/HeritageCanvas";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
 import { TEST_TOUR } from "@/features/tour/tour-data";
@@ -17,6 +17,7 @@ import { fetchTourContent, sceneKeys, type TourPlayback } from "@/lib/heritage";
 import { isInteractivePath } from "@/lib/tour-routes";
 import { tapestryTourVarsStyle } from "@/styles/theme/heritageTheme";
 import type { HeritagePayload } from "@/types/heritage";
+import editorStyles from "@/features/tour/dev/scene-editor.module.css";
 import styles from "./content-shell.module.css";
 
 const TourChatWidget = dynamic(
@@ -46,14 +47,16 @@ const NOT_FOUND_MESSAGE =
  * (no separate "loading" screen); only a real failure shows a message.
  * Navigating between `/s0..sN` never refetches.
  */
-export default function HeritageContentLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function HeritageContentLayout({ children }: { children: ReactNode }) {
+  return <Suspense fallback={null}><HeritageContentWorkspace>{children}</HeritageContentWorkspace></Suspense>;
+}
+
+function HeritageContentWorkspace({ children }: { children: ReactNode }) {
   const params = useParams<{ slug: string; sceneKey?: string }>();
   const router = useRouter();
   const pathname = usePathname();
+  const search = useSearchParams();
+  const editingScene = process.env.NODE_ENV === "development" && search.get("dev") === "scene" && !!params.sceneKey;
   const slug = params.slug;
   // `/content/{slug}/{sceneKey}/int` ⇒ đang ở chế độ điểm tương tác. Layout là nơi
   // biết URL, nên nó quyết định; `HeritageViewer` và `useTourPlayer` chỉ tiêu thụ
@@ -195,6 +198,7 @@ export default function HeritageContentLayout({
         playback={fixture?.playback ?? state.playback}
       >
         <HeritageCanvas
+          viewportClassName={editingScene ? editorStyles.canvasViewport : undefined}
           onReady={setEngine}
           onError={setModelError}
           onProgress={(progress) => setModelProgress(progress.ratio)}
@@ -203,7 +207,7 @@ export default function HeritageContentLayout({
           modelUrl={fixture?.modelUrl ?? state.modelUrl ?? null}
           fallbackImageUrl={payload.heritage.splash_image_url}
         />
-        {params.sceneKey ? <HeritageViewer interactiveRoute={interactiveRoute} /> : null}
+        {params.sceneKey ? <SceneSurface interactiveRoute={interactiveRoute} editingScene={editingScene} /> : null}
         {params.sceneKey ? <TourChatWidget /> : null}
         {children}
       </HeritageTourProvider>

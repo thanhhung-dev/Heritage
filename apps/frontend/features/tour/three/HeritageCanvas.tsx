@@ -11,9 +11,12 @@ export default function HeritageCanvas({
   onProgress,
   modelUrl,
   fallbackImageUrl,
+  viewportClassName,
 }: {
   onReady: (engine: TourEngine | null) => void;
   onError?: (error: string) => void;
+  /** Editor viewport bounds; changing these resizes, never recreates the engine. */
+  viewportClassName?: string;
   /** Tiến độ tải GLB (0..1) — dùng cho thanh loading ở trang splash. */
   onProgress?: (progress: ModelProgress) => void;
   /**
@@ -63,7 +66,7 @@ export default function HeritageCanvas({
 
   return (
     <>
-      <div className={styles.threeCanvas} ref={hostRef} />
+      <div className={viewportClassName ?? styles.threeCanvas} ref={hostRef} />
       {!modelUrl && fallbackImageUrl ? (
         <img className={styles.modelFallback} src={fallbackImageUrl} alt="" />
       ) : null}

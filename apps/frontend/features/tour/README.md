@@ -6,6 +6,18 @@
 
 Three.js và types đã cài. Model Tự Đức load trực tiếp từ R2 (`https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/TuDuc/TuDuckt.glb`, lưu trong `model_asset.file_url`) — bucket đã bật CORS cho origin của app nên không cần rewrite qua Next nữa. Nếu đổi sang custom domain thì nhớ thêm host đó vào `R2_ALLOWED_ASSET_HOSTS`. Decoder KTX2/Basis ở `public/three/basis/`, Draco glTF ở `public/three/draco/` (kèm license).
 
+## Dev Scene Editor
+
+Chỉ có khi chạy `npm run dev`. Trong scene, bấm **DEV · Scene Editor**, hoặc mở
+`/content/lang-tu-duc/s1?dev=scene`. Production bỏ qua tham số này và vẫn hiện tour thường.
+
+- Chọn A hoặc B để xem góc đã lưu; xoay/kéo/zoom model rồi bấm **Lấy góc … từ camera** để chụp góc mới. Có thể chỉnh Position, Target và FOV (Enter hoặc blur để áp dụng).
+- Lấy đủ A/B rồi bấm Play hoặc kéo timeline. Scene có narration dùng thời lượng và đồng hồ audio thật, không autoplay khi vào editor. Scene không có audio cho nhập thời lượng preview.
+- Scene dùng `camera.path_url` cần chủ động **Chuyển sang A → B** trước khi chỉnh. Chỉ bản nháp đổi; path gốc không bị xóa.
+- **Lưu nháp** lưu riêng theo di sản + scene ID + scene key trong localStorage của trình duyệt hiện tại. **Xuất JSON** tải tài liệu `*.scene-draft.json` có version, định danh scene, nội dung, hai pose và thời lượng; đây **không phải** payload cập nhật API. Chưa có import hoặc publish vào backend.
+- **Khôi phục** đưa editor về dữ liệu gốc, chưa ghi đè bản nháp đã lưu. **Thoát Dev** mở player thường từ dữ liệu gốc. Thay đổi chưa lưu được cảnh báo khi bấm đổi scene/thoát hoặc reload/đóng tab.
+- Editor thay thế `HeritageViewer`, dùng lại canvas/engine đang có; không mount đồng thời hai player ghi camera. Khi rời editor, dừng preview, audio và camera path.
+
 ## Chạy thử dữ liệu Tapestry
 
 Mở `/content/tapestry-test`, chờ tải rồi Bắt đầu trải nghiệm. Trang này đọc `features/tour/tour.json`, không gọi backend và không dùng tọa độ Petra cho model Tự Đức.
