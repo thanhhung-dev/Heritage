@@ -50,7 +50,7 @@ export function LibraryPageContent() {
       <section className={styles.content} aria-label="Heritage library">
         <div className={styles.filters} role="search" aria-label="Filter heritage experiences">
           <label className={styles.search}><span className={styles.srOnly}>Search tours</span><input type="search" placeholder="Search tours…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label>
-          <label><span className={styles.srOnly}>Publish date</span><select value={order} onChange={(event) => setOrder(event.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+          <label><span className={styles.srOnly}>Publish date</span><select value={order} onChange={(event) => { setOrder(event.target.value); setPage(1); }}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
           <label><span className={styles.srOnly}>Region</span><select value={region} onChange={(event) => { setRegion(event.target.value); setPage(1); }}><option value="">All regions</option>{regions.map((value) => <option key={value}>{value}</option>)}</select></label>
           <label><span className={styles.srOnly}>Language</span><select value={language} onChange={(event) => { setLanguage(event.target.value); setPage(1); }}><option value="">All languages</option>{languages.map((value) => <option key={value}>{value}</option>)}</select></label>
           <button type="button" onClick={() => { setQuery(""); setRegion(""); setLanguage(""); setOrder("newest"); setPage(1); }}>Clear all</button>
@@ -59,10 +59,10 @@ export function LibraryPageContent() {
         {status === "error" && <div className={styles.state} role="alert"><p>Unable to load heritage experiences.</p><button type="button" onClick={() => setAttempt((value) => value + 1)}>Try again</button></div>}
         {status === "ready" && items.length === 0 && <p>No heritage experiences available.</p>}
         {status === "ready" && items.length > 0 && filtered.length === 0 && <p role="status" className={styles.state}>No tours found matching your filters.</p>}
-        <div className={styles.grid}>
+        {status === "ready" && <div className={styles.grid}>
           {visibleItems.map((item) => <PortraitCard key={item.slug} variant="library" item={{ ...item, href: `/content/${encodeURIComponent(item.slug)}` }} />)}
-        </div>
-        <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+        </div>}
+        {status === "ready" && <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />}
       </section>
     </div>
   );
