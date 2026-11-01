@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./portrait-card.module.css";
 
 export interface PortraitCardData {
@@ -23,6 +24,7 @@ export interface PortraitCardProps {
   exploreLabel?: string;
   infoLabel?: string;
   style?: CSSProperties;
+  variant?: "default" | "library";
 }
 
 export function PortraitCard({
@@ -31,7 +33,23 @@ export function PortraitCard({
   exploreLabel = "Explore",
   infoLabel = "Info",
   style,
+  variant = "default",
 }: PortraitCardProps) {
+  if (variant === "library") {
+    return (
+      <article className={`${styles.hp_portrait_card} ${styles.library_card}`} style={style}>
+        {item.href ? <Link className={styles.library_link} href={item.href} aria-label={item.title} /> : null}
+        <div className={styles.hp_portrait_card_img}>
+          {item.card_image_url ? <Image src={item.card_image_url} alt="" fill sizes="(max-width: 600px) 50vw, (max-width: 1100px) 33vw, 20vw" unoptimized /> : null}
+        </div>
+        <div className={styles.hp_portrait_card_overlay} />
+        <div className={styles.hp_portrait_card_content}>
+          <h3 className={styles.hp_portrait_card_title}>{item.title}</h3>
+          {item.region ? <div className={styles.hp_portrait_card_location}>{item.region}</div> : null}
+        </div>
+      </article>
+    );
+  }
   const { hover_video_url: video, hover_image_url: hoverImage } = item;
   const hasVideo = Boolean(video);
   const hasHoverImg = Boolean(hoverImage);
