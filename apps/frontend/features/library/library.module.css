@@ -19,10 +19,11 @@
 .hero p { margin-top: 12px; color: var(--text-secondary); }
 .content { padding: 32px; min-height: 40vh; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.filters label { min-width: 0; }
+.filters label { min-width: 0; max-width: 100%; }
 .filters .search { flex: 1 1 250px; }
 .filters input, .filters select, .filters button { min-height: 40px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-strong); padding: 8px 12px; font: inherit; }
 .filters input { width: 100%; }
+.filters select { max-width: 100%; }
 .filters button { cursor: pointer; }
 .state { text-align: center; padding: 48px 16px; }
 .state button { margin-top: 16px; padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-strong); font: inherit; cursor: pointer; }

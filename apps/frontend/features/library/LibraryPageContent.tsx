@@ -46,8 +46,10 @@ export function LibraryPageContent() {
     const text = `${item.title} ${item.region ?? ""}`.toLocaleLowerCase();
     return text.includes(query.trim().toLocaleLowerCase()) && (!region || item.region === region) && (!language || [item.language1?.name, item.language2?.name].includes(language));
   }).sort((a, b) => {
-    const left = a.publish_date ?? "";
-    const right = b.publish_date ?? "";
+    const left = a.publish_date;
+    const right = b.publish_date;
+    if (!left) return right ? 1 : 0;
+    if (!right) return -1;
     return order === "newest" ? right.localeCompare(left) : left.localeCompare(right);
   });
   const totalPages = Math.ceil(filtered.length / 20);
@@ -74,8 +76,8 @@ export function LibraryPageContent() {
         <div className={styles.filters} role="search" aria-label="Filter heritage experiences">
           <label className={styles.search}><span className={styles.srOnly}>Search tours</span><input type="search" placeholder="Search tours…" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); updateUrl("q", event.target.value, true); }} /></label>
           <label><span className={styles.srOnly}>Publish date</span><select value={order} onChange={(event) => { setOrder(event.target.value); setPage(1); updateUrl("order", event.target.value === "newest" ? "" : event.target.value); }}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
-          <label><span className={styles.srOnly}>Region</span><select value={region} onChange={(event) => { setRegion(event.target.value); setPage(1); updateUrl("region", event.target.value); }}><option value="">All regions</option>{regions.map((value) => <option key={value}>{value}</option>)}</select></label>
-          <label><span className={styles.srOnly}>Language</span><select value={language} onChange={(event) => { setLanguage(event.target.value); setPage(1); updateUrl("language", event.target.value); }}><option value="">All languages</option>{languages.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span className={styles.srOnly}>Region</span><select value={region} onChange={(event) => { setRegion(event.target.value); setPage(1); updateUrl("region", event.target.value); }}><option value="">All regions</option>{region && !regions.includes(region) && <option value={region}>{region} (unavailable)</option>}{regions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+          <label><span className={styles.srOnly}>Language</span><select value={language} onChange={(event) => { setLanguage(event.target.value); setPage(1); updateUrl("language", event.target.value); }}><option value="">All languages</option>{language && !languages.includes(language) && <option value={language}>{language} (unavailable)</option>}{languages.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           <button type="button" onClick={() => { setQuery(""); setRegion(""); setLanguage(""); setOrder("newest"); setPage(1); const url = new URL(window.location.href); ["q", "region", "language", "order", "page"].forEach((key) => url.searchParams.delete(key)); window.history.pushState(null, "", url); }}>Clear all</button>
         </div>
         {status === "loading" && <p role="status">Loading heritage experiences…</p>}
