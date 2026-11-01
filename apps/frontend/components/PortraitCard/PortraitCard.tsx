@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./portrait-card.module.css";
@@ -35,12 +35,13 @@ export function PortraitCard({
   style,
   variant = "default",
 }: PortraitCardProps) {
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   if (variant === "library") {
     return (
       <article className={`${styles.hp_portrait_card} ${styles.library_card}`} style={style}>
         {item.href ? <Link className={styles.library_link} href={item.href} aria-label={item.title} /> : null}
         <div className={styles.hp_portrait_card_img}>
-          {item.card_image_url ? <Image src={item.card_image_url} alt="" fill sizes="(max-width: 600px) 50vw, (max-width: 1100px) 33vw, 20vw" unoptimized /> : null}
+          {item.card_image_url && item.card_image_url !== failedImage ? <Image src={item.card_image_url} alt="" fill sizes="(max-width: 600px) 50vw, (max-width: 1100px) 33vw, 20vw" onError={() => setFailedImage(item.card_image_url ?? null)} unoptimized /> : null}
         </div>
         <div className={styles.hp_portrait_card_overlay} />
         <div className={styles.hp_portrait_card_content}>
