@@ -664,9 +664,10 @@ nạp các biến SDK từ file local vào **process riêng**, giữ nguyên mod
 retrieval/reasoning và cấu hình kết nối nghiệp vụ; không thay môi trường của API
 đang chạy. Langfuse lỗi phải giữ hành vi fail-open hiện có của chatbot.
 
-Giới hạn RAM container: web/worker mỗi service 1024 MiB (Node heap 768 MiB),
-ClickHouse 1536 MiB (memory accounting 1 GiB), PostgreSQL 384 MiB, Redis/MinIO mỗi
-service 256 MiB, tổng trần khoảng **4,38 GiB**; CPU mỗi service 0,5–1 core. Redis
+Giới hạn RAM container: web 640 MiB (Node heap 512 MiB), worker 512 MiB (Node
+heap 384 MiB), ClickHouse 768 MiB (memory accounting 512 MiB, mark/uncompressed
+cache 64 MiB), PostgreSQL 256 MiB (`shared_buffers=64MB`), Redis 160 MiB, MinIO
+192 MiB, tổng trần khoảng **2,47 GiB**; CPU mỗi service 0,5–1 core. Redis
 dùng AOF và `noeviction`, maxmemory 128 MiB để không tự loại job. Đây là cấu hình
 thử nghiệm nhỏ, không phải sizing production hay bảo đảm không OOM. Với Docker
 8 GiB dùng chung OpenSearch, kiểm tra RAM còn trống và `docker stats` trước khi
