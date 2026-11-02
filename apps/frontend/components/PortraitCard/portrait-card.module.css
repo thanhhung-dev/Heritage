@@ -18,6 +18,25 @@
     cursor: pointer
 }
 
+.library_card {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    background: var(--surface);
+}
+
+.library_link {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border-radius: inherit;
+}
+
+.library_link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -3px;
+}
+
 @media(hover: hover)and (pointer: fine) {
     .hp_portrait_card:hover {
         transform:scale(1.08) translateY(0px);
@@ -137,6 +156,20 @@
     transform: translateY(0)
 }
 
+@media(hover: hover)and (pointer: fine) {
+    .hp_globe_hover_card_wrap .hp_portrait_card:hover .hp_portrait_card_overlay {
+        opacity:.75
+    }
+
+    .hp_globe_hover_card_wrap .hp_portrait_card:hover .hp_portrait_card_img {
+        opacity: 1 !important
+    }
+
+    .hp_globe_hover_card_wrap .hp_portrait_card:hover .hp_portrait_card_video {
+        opacity: 0
+    }
+}
+
 .hp_portrait_card_overlay {
     position: absolute;
     inset: 0;
@@ -225,6 +258,10 @@
     overflow: hidden
 }
 
+.hp_theme_galleries .hp_portrait_card_desc,.themesCard_Group .hp_portrait_card_desc,.themes_mainGroup .hp_portrait_card_desc {
+    display: none
+}
+
 .hp_portrait_card_buttons {
     display: flex;
     gap: 8px
@@ -284,5 +321,61 @@
 }
 
 .hp_portrait_card_info_btn {
-    flex-shrink: 0
+    flex-shrink: 0;
+}
+
+.tapestryCard_ComMade {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 6;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(10, 14, 20, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff9b2d;
+    cursor: help;
+    transition: all .2s ease;
+}
+
+.tapestryCard_ComMade:hover {
+    background: rgba(10, 14, 20, 0.9);
+    border-color: rgba(255, 155, 45, 0.6);
+    transform: scale(1.05);
+}
+
+.t_cm_hover {
+    position: absolute;
+    top: 34px;
+    right: 0;
+    width: 240px;
+    padding: 10px 12px;
+    background: rgba(10, 14, 20, 0.96);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: var(--font-size-11);
+    line-height: 1.45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    z-index: 25;
+    text-align: left;
+    white-space: normal;
+    font-style: normal;
+}
+
+.tapestryCard_ComMade:hover .t_cm_hover,
+.tapestryCard_ComMade:focus-within .t_cm_hover {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
 }
