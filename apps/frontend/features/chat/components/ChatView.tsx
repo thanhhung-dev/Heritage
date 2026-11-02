@@ -15,6 +15,7 @@ interface ChatViewProps {
   loading: boolean;
   onInputChange: (value: string) => void;
   onSend: (text?: string) => void;
+  compact?: boolean;
 }
 
 function SourceFooter({ sources }: { sources: Source[] }) {
@@ -37,6 +38,7 @@ export function ChatView({
   loading,
   onInputChange,
   onSend,
+  compact = false,
 }: ChatViewProps) {
   const listRef = useRef<React.ComponentRef<typeof Bubble.List>>(null);
 
@@ -87,7 +89,7 @@ export function ChatView({
     <>
       <Bubble.List
         ref={listRef}
-        className={styles.chatMessages}
+        className={`${styles.chatMessages} ${compact ? styles.compactChatMessages : ""}`}
         autoScroll={false}
         styles={{ scroll: { height: "100%" } }}
         items={items}
@@ -105,7 +107,7 @@ export function ChatView({
         }}
       />
 
-      <div className={styles.inputArea}>
+      <div className={`${styles.inputArea} ${compact ? styles.compactInputArea : ""}`}>
         <div className={styles.inputAreaInner}>
           <ChatInput
             value={input}
@@ -113,9 +115,10 @@ export function ChatView({
             onSubmit={() => onSend()}
             placeholder="Hỏi thêm…"
             loading={loading}
+            allowAttachments={!compact}
           />
-          <div className={styles.inputAreaDisclaimer}>
-            HeritageGraph có thể mắc lỗi. Kiểm tra thông tin. · 100% local
+          <div className={`${styles.inputAreaDisclaimer} ${compact ? styles.compactDisclaimer : ""}`}>
+            Trợ lý AI có thể mắc lỗi. Hãy đối chiếu thông tin với nguồn tham khảo.
           </div>
         </div>
       </div>

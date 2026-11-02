@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { Suspense, useEffect, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -18,6 +19,11 @@ import { tapestryTourVarsStyle } from "@/styles/theme/heritageTheme";
 import type { HeritagePayload } from "@/types/heritage";
 import editorStyles from "@/features/tour/dev/scene-editor.module.css";
 import styles from "./content-shell.module.css";
+
+const TourChatWidget = dynamic(
+  () => import("@/features/chat/TourChatWidget").then((module) => module.TourChatWidget),
+  { ssr: false, loading: () => null },
+);
 
 type TourState = {
   /** `null` = payload thật chưa về (đang tải hoặc lỗi). Không còn payload demo. */
@@ -202,6 +208,7 @@ function HeritageContentWorkspace({ children }: { children: ReactNode }) {
           fallbackImageUrl={payload.heritage.splash_image_url}
         />
         {params.sceneKey ? <SceneSurface interactiveRoute={interactiveRoute} editingScene={editingScene} /> : null}
+        {params.sceneKey ? <TourChatWidget /> : null}
         {children}
       </HeritageTourProvider>
     </div>
