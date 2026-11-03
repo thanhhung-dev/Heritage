@@ -40,10 +40,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #ffffff;
-  font-size: 13px;
+  color: var(--text-strong);
+  font-family: var(--font-brand);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  line-height: 18px;
+  letter-spacing: 2.16px;
   text-decoration: none;
 }
 
@@ -52,6 +54,8 @@
   width: 13px;
   height: 15px;
   flex: none;
+  -webkit-mask: url("../../access/icons/heritage-logo-mask.svg") center / 100% 100% no-repeat;
+  mask: url("../../access/icons/heritage-logo-mask.svg") center / 100% 100% no-repeat;
 }
 
 .slogan {
