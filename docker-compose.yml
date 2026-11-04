@@ -52,8 +52,15 @@ services:
       - heritage-network
 
   llm:
-    image: ghcr.io/ggml-org/llama.cpp:server
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
     restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     ports:
       - "${LLAMA_PORT:-8080}:8080"
     volumes:
@@ -68,7 +75,13 @@ services:
       - --ctx-size
       - "4096"
       - --n-gpu-layers
-      - ${LLAMA_GPU_LAYERS:-0}
+      - ${LLAMA_GPU_LAYERS:-15}
+      - --flash-attn
+      - on
+      - -np
+      - "1"
+      - --slot-prompt-similarity
+      - "0.5"
     networks:
       - heritage-network
 
@@ -83,7 +96,7 @@ services:
       - .env
     environment:
       LLAMA_SERVER_URL: ${LLAMA_SERVER_URL_DOCKER:-http://host.docker.internal:8080}
-      OPENSEARCH_URL: ${OPENSEARCH_URL_DOCKER:-http://host.docker.internal:9200}
+      OPENSEARCH_URL: ${OPENSEARCH_URL_DOCKER:-http://opensearch:9200}
       HEALTHCHECK_SKIP_MODEL: ${HEALTHCHECK_SKIP_MODEL:-0}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@heritagegraph-db-1:5432/${POSTGRES_DB:-heritagegraph}
       DB_HOST: heritagegraph-db-1
