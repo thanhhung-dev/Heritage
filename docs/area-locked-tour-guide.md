@@ -1,11 +1,12 @@
 # Area-Locked AI Tour Guide
 
-Ngày kiểm tra: 06/11/2026. Nhánh: `feat/HER-area-locked-tour-guide`.
+Ngày kiểm tra: 07/11/2026. Nhánh: `feat/HER-area-locked-tour-guide`.
 
 ## Phạm vi và API
 
-Nhánh `develop` hiện dùng **POST `/api/chat`**. Widget 3D và cả hai router
-legacy/refactored dùng cùng DTO. Chat thông thường chỉ gửi `message` vẫn hoạt động;
+Widget 3D và chat thường dùng **POST `/api/chat/message`** để lưu hội thoại;
+`POST /api/chat` vẫn giữ tương thích cho chat không lưu. Cả hai router
+legacy/refactored dùng chung DTO. Chat thông thường chỉ gửi `message` vẫn hoạt động;
 request có ngữ cảnh tour phải có `active_area_id`. Đây là phạm vi tham quan công
 khai do client chọn, không phải cơ chế phân quyền tài khoản.
 
@@ -72,8 +73,11 @@ vẫn có thể truy xuất bằng chứng của Khiêm Lăng; không mở rộn
    Gợi ý không hợp lệ được thay bằng ba mẫu chỉ hỏi về area hiện tại.
 6. Widget remount theo tour/account, abort request khi rời tour, bỏ callback cũ,
    xóa draft/messages/gợi ý khi đổi tour. Đổi scene trong cùng tour giữ hội thoại.
-   History chỉ nằm trong memory của tour này; `/api/chat` trên nhánh hiện tại
-   không có API lưu hội thoại theo tài khoản.
+   Với tài khoản đăng nhập, server lưu hội thoại và cung cấp history theo ownership;
+   client giữ UUID riêng theo tài khoản/tour để khôi phục khi mở lại. Guest giữ luồng
+   hiển thị trong memory; UUID của record Guest không cho phép đọc hay nối tiếp.
+   Đổi tour không được đổi scope trên cùng conversation. Chi tiết:
+   [Chat API](../apps/backend/CHAT_API.md).
 
 Kiểm tra tên địa điểm là quy tắc bảo thủ dựa trên alias do team quản lý, không phải
 bộ nhận diện mọi địa danh hoặc bộ kiểm chứng ngữ nghĩa cho mọi câu do LLM sinh.
@@ -110,9 +114,11 @@ keyword mapping vào index cũ khi chạy bước ingestion chủ động:
 
 Tài liệu trộn nhiều di sản cần tách và review các passage trước khi gắn nhãn.
 Passage không nhãn cũ vẫn dùng được cho chat thông thường nhưng bị loại khỏi tour.
-Khi không tìm thấy evidence trong area, API trả **200**, `insufficient_evidence`,
-`sources=[]`; không bịa kiến thức để làm demo. Kho dữ liệu lỗi trả **503**; inference
-quá 30 giây trả **504**. `wait_for` giới hạn thời gian phản hồi, không thể buộc dừng
+Khi không tìm thấy evidence trong area, API lưu chat trả **201**, `insufficient_evidence`,
+`sources=[]`; không bịa kiến thức để làm demo. Khi tắt local fallback, lỗi pipeline
+ở API lưu chat trả **500**, inference quá 30 giây trả **504**; API transient giữ mã
+lỗi cũ. Local fallback của tour trả abstention với `service_unavailable`, không
+dùng nguồn mock hay Gemini toàn cục. `wait_for` giới hạn phản hồi, không thể buộc dừng
 ngay một native inference đang chạy trong thread.
 
 ## GraphRAG riêng theo area (tùy chọn)
@@ -148,11 +154,11 @@ Chạy backend theo cấu hình local của dự án, sau đó gửi request ở
 
 ```powershell
 $body = @{ message = "So với lăng Minh Mạng thì Khiêm Lăng khác gì?"; active_area_id = "khiem-lang" } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/chat" `
+Invoke-RestMethod -Method Post -Uri "http://localhost:8000/api/chat/message" `
   -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($body))
 ```
 
-Mong đợi **200**, `out_of_scope`, chỉ nhắc phạm vi Khiêm Lăng, không citation
+Mong đợi **201**, `out_of_scope`, chỉ nhắc phạm vi Khiêm Lăng, không citation
 ngoài khu vực. Câu hỏi này hoạt động cả khi chưa có OpenSearch/LLM.
 
 Với corpus đã index đúng nhãn và LLM đang chạy, hỏi “Vua Tự Đức sống ở đây thế
@@ -181,6 +187,9 @@ cấu hình area và không gửi chat toàn cục.
 - External embedding/LLM/process IO trong test area được mock. Chưa chạy E2E
   trình duyệt hoặc xác nhận câu trả lời model thật với corpus area-tagged.
 
-Không chạy migration, production reindex, deploy hoặc khởi động port 3000 trong
-task này. Cần chuẩn bị corpus area-tagged và cập nhật backend phục vụ API trước
-khi xác nhận trải nghiệm kiến thức thật trên môi trường người dùng.
+Các số liệu trong mục trên là lượt kiểm tra area-lock ban đầu. Lượt hoàn thiện
+chat ngày 07/11/2026 đã chạy **91 tests + 85 subtests pass**, migration trên Postgres
+local đã được phê duyệt và HTTP thật thành công; xem
+[báo cáo hiện tại](../apps/backend/CHAT_TASK_AUDIT.md). Không chạy production reindex,
+deploy hoặc port 3000. Vẫn cần corpus area-tagged đã review và model thật để đánh
+giá chất lượng trả lời kiến thức trên môi trường người dùng.

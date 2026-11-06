@@ -1,6 +1,9 @@
 # Complete Chat Backend and Account-Based Conversation Management
 
-Status: implementation authorized by the user's instruction to audit, complete missing work and commit continuously.
+Status: **implemented and verified, 2026-11-07**. The user authorized completing
+missing work and continuous signed commits. See the completed
+[requirement audit](../../apps/backend/CHAT_TASK_AUDIT.md) and
+[API/local instructions](../../apps/backend/CHAT_API.md).
 
 ## Audit of the active branch
 
@@ -35,3 +38,27 @@ The user's earlier approval to migrate this specific local database still applie
 No wholesale merge of old AI/UI code, production changes, secret commits or new
 dependency installations. Tests use isolated databases and controlled AI IO;
 real-model/corpus quality is reported separately.
+
+## Completion evidence
+
+- Storage, canonical DTOs and migration lineage restored without replacing newer
+  area-lock or approved UI code. Approved local migration is at
+  `20261106_chat_scope (head)`.
+- Transactional `/api/chat/message`, list/history/delete, active account and JWT
+  checks, Guest policy, outcome/source restoration and rollback implemented.
+- Both existing chat interfaces use the shared persisted contract and restore
+  owned history, with pointers isolated by account and tour/standalone scope.
+- Local fallback preserves area abstention; production failures remain explicit.
+- Real Windows startup exposed an incompatible Uvicorn/psycopg event loop; the
+  restored launcher explicitly selects the compatible Windows loop.
+- Targeted backend verification: **91 passed + 85 subtests passed**. Frontend:
+  **18 native Node tests + 3 TypeScript service tests**, TypeScript, targeted lint
+  and production build passed.
+- Real local Postgres/HTTP: registered and authenticated two accounts, verified
+  owned persistence/history/citations, cross-account 403, Guest behavior,
+  fault rollback and cascade deletion. Synthetic data and temporary server removed.
+- Browser preview used actual components for both interfaces: owned ID reuse,
+  restoration, account switching, Guest no-bearer and scene changes passed;
+  no runtime exceptions. API/AI IO was controlled, not real-model evaluation.
+
+No production deploy, corpus reindex or infrastructure changes were performed.

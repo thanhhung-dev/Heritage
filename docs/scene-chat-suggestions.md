@@ -1,6 +1,6 @@
 # Gợi ý chat theo từng câu chuyện trong tour 3D
 
-Ngày kiểm tra: 06/11/2026. Nhánh `feat/HER-area-locked-tour-guide`.
+Ngày kiểm tra: 07/11/2026. Nhánh `feat/HER-area-locked-tour-guide`.
 
 ## Hành vi
 
@@ -17,7 +17,7 @@ Các mẫu câu hỏi không tự thêm năm xây dựng, tiểu sử hoặc d�
 Mỗi chip có nhãn ngắn để vừa cửa sổ chat; hover hoặc trình đọc màn hình đọc
 được câu hỏi đầy đủ. Khi bấm, câu hỏi chứa tên câu chuyện và tên di sản đang
 tham quan, đi cùng `active_area_id` và `scene_context` của cảnh đó qua API hiện
-có `POST /api/chat`. UI chỉ hiển thị ba nút ở header, lời chào **“Bạn muốn khám phá
+có `POST /api/chat/message`. UI chỉ hiển thị ba nút ở header, lời chào **“Bạn muốn khám phá
 điều gì về di sản này?”**, bốn chip và ô nhập **“Hỏi về di sản…”** như ảnh mẫu.
 Tên khu vực/câu chuyện vẫn được giữ trong request và accessibility labels,
 không thêm dòng thông tin vào header hoặc phía trên chip.
@@ -29,6 +29,13 @@ Trong lúc lượt hỏi cũ chưa xong, các chip mới hiển thị nhưng t�
 trạng thái gửi chat hiện có. Lịch sử, bản nháp, vị trí và trạng thái mở cửa sổ
 được giữ khi đổi cảnh trong cùng di sản. Đổi di sản/tài khoản vẫn reset theo
 cơ chế khóa khu vực đã triển khai trước đó.
+
+Tài khoản đăng nhập lưu và nối tiếp bằng `conversation_id`; server tự lấy history
+đã lưu, không nhận lịch sử client thay thế. Pointer được tách theo tài khoản/tour;
+đăng nhập lại đúng tài khoản khôi phục qua API history. Guest không giữ UUID trong
+localStorage và không được nối tiếp record Guest bằng UUID. Chi tiết và kết quả
+hiện tại ở [Chat API](../apps/backend/CHAT_API.md) và
+[audit](../apps/backend/CHAT_TASK_AUDIT.md).
 
 Nếu thiếu dữ liệu câu chuyện, widget dùng câu hỏi theo di sản hiện tại. Metadata
 nêu một di sản khác đã biết cũng rơi về gợi ý của khu vực đang khóa. Alias check
@@ -77,4 +84,8 @@ header không có dòng thông tin phụ, đúng lời chào/placeholder/bốn n
 request s0, đổi sang s3 trong lúc chờ, hoàn tất phản hồi cũ rồi gửi chip mới:
 request mới giữ `active_area_id=khiem-lang` và nhận đúng `scene_context.key=s3`.
 Không có runtime exception. Preview dùng API mock và nền minh họa, không chạy
-toàn bộ mô hình 3D hoặc LLM thật. Không thêm dependencies, đổi API schema hoặc migration.
+toàn bộ mô hình 3D hoặc LLM thật. Lượt kiểm tra bổ sung ngày 07/11/2026 xác nhận
+khôi phục hội thoại ở cả hai giao diện, tách lịch sử A/B, Guest không gửi bearer,
+giữ câu chuyện s3 và không có runtime exception. Production build cũng pass.
+Contract lưu hội thoại và migration local hiện tại được ghi ở audit liên kết trên;
+không thay camera/model, thêm dependency hoặc triển khai production.
