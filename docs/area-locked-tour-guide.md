@@ -158,7 +158,7 @@ ngoài khu vực. Câu hỏi này hoạt động cả khi chưa có OpenSearch/L
 Với corpus đã index đúng nhãn và LLM đang chạy, hỏi “Vua Tự Đức sống ở đây thế
 nào?”: nếu nguồn đủ thì `answered` với source đúng area; nếu nguồn chưa đủ phải
 `insufficient_evidence`. Mở `/content/lang-tu-duc/s0` nếu slug này tồn tại trong
-data local, kiểm tra label phạm vi và suggestion chips. Khi một câu hỏi còn đang
+data local, kiểm tra suggestion chips và `active_area_id` trong request. Khi một câu hỏi còn đang
 chờ, đổi sang tour khác: messages/draft/gợi ý cũ biến mất, response cũ không được
 chèn vào tour mới. Tour chưa đăng ký như `tapestry-test` hiển thị trạng thái chưa
 cấu hình area và không gửi chat toàn cục.

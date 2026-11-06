@@ -5,20 +5,22 @@ Ngày kiểm tra: 06/11/2026. Nhánh `feat/HER-area-locked-tour-guide`.
 ## Hành vi
 
 Khi chọn s0, s1… ở thanh bên trái, chatbox đọc `currentScene.title`,
-`currentScene.description` và `currentSceneKey` từ `useHeritageTour`. Bốn chip
-gợi ý được tạo ngay ở frontend, không cần gọi AI để tải gợi ý.
+`currentScene.description` và `currentSceneKey` từ `useHeritageTour`. Bốn câu hỏi
+được tạo ngay ở frontend, không cần gọi AI để tải gợi ý.
 
-Ví dụ với câu chuyện **“Bia đá và những nỗi niềm”** và mô tả nói về văn bia,
-các chip gồm “Về Bia đá và những nỗi niềm”, “Ý nghĩa văn bia”, một câu hỏi theo
-chủ đề tiếp theo trong dữ liệu và “Giải thích thêm”. Đổi sang câu chuyện về
-kiến trúc/cảnh quan/nhân vật/bảo tồn sẽ đổi chủ đề tương ứng. Các mẫu câu hỏi
-không tự thêm năm xây dựng, tiểu sử hoặc dữ kiện lịch sử.
+Theo ảnh UI người dùng cung cấp, nhãn chip luôn ngắn gọn: **“Giới thiệu tổng quan”,
+“Lịch sử hình thành”, “Kiến trúc đặc sắc”, “Khám phá cảnh này”**. Nội dung câu hỏi
+đầy đủ thay đổi theo câu chuyện đang xem. Ví dụ ở **“Bia đá và những nỗi niềm”**,
+chip tổng quan gửi câu hỏi giới thiệu chính mẩu chuyện này tại Khiêm Lăng.
+Các mẫu câu hỏi không tự thêm năm xây dựng, tiểu sử hoặc dữ kiện lịch sử.
 
 Mỗi chip có nhãn ngắn để vừa cửa sổ chat; hover hoặc trình đọc màn hình đọc
 được câu hỏi đầy đủ. Khi bấm, câu hỏi chứa tên câu chuyện và tên di sản đang
 tham quan, đi cùng `active_area_id` và `scene_context` của cảnh đó qua API hiện
-có `POST /api/chat`. Chatbox hiển thị dòng “Câu chuyện đang xem: sN · …” và
-placeholder “Hỏi về câu chuyện này…”.
+có `POST /api/chat`. UI chỉ hiển thị ba nút ở header, lời chào **“Bạn muốn khám phá
+điều gì về di sản này?”**, bốn chip và ô nhập **“Hỏi về di sản…”** như ảnh mẫu.
+Tên khu vực/câu chuyện vẫn được giữ trong request và accessibility labels,
+không thêm dòng thông tin vào header hoặc phía trên chip.
 
 Gợi ý được tính từ dữ liệu của cảnh ở mỗi render, không lưu chung trong state
 với phản hồi AI. Nếu đang hỏi s0 mà chuyển sang s3, phản hồi s0 vẫn hoàn tất lượt
@@ -38,11 +40,12 @@ phạm vi, evidence và citations. Tour chưa đăng ký area tiếp tục bị 
 1. Chạy frontend/backend local theo cấu hình dự án. Dùng nhánh ở đầu tài liệu và
    backend hỗ trợ `active_area_id`. Mở tour có area đã đăng ký, ví dụ
    `/content/lang-tu-duc/s0` nếu dữ liệu local có slug này.
-2. Mở chatbox ở s0. Kiểm tra tên câu chuyện và chip đầu khớp tiêu đề cảnh.
-3. Chọn s1, s2, s3, s4 ở cột trái. Tên câu chuyện và các câu hỏi phải đổi ngay
-   theo nội dung từng cảnh, không cần reload hoặc mở lại chatbox.
-4. Tại câu chuyện văn bia, kiểm tra có chip “Ý nghĩa văn bia”. Hover chip để xem
-   câu hỏi đầy đủ. Bấm chip và kiểm tra Network:
+2. Mở chatbox ở s0. Kiểm tra lời chào, placeholder và bốn nhãn chip khớp ảnh mẫu;
+   không có dòng “Hướng dẫn tại…” hoặc “Câu chuyện đang xem…”.
+3. Chọn s1, s2, s3, s4 ở cột trái. Hover chip để kiểm tra câu hỏi đầy đủ đổi theo
+   câu chuyện đang chọn; nhãn ngắn gọn vẫn giữ nguyên theo mẫu UI.
+4. Tại câu chuyện văn bia, hover chip tổng quan để xem tên mẩu chuyện trong câu
+   hỏi đầy đủ. Bấm chip và kiểm tra Network:
    `message` nêu đúng câu chuyện, `scene_context.key/id/title` đúng cảnh,
    `active_area_id` vẫn là `khiem-lang` đối với tour Lăng Tự Đức.
 5. Khi một câu hỏi đang chờ AI, chuyển sang cảnh khác. Gợi ý đổi theo cảnh mới;
@@ -66,5 +69,12 @@ node node_modules/next/dist/bin/next lint --file features/chat/TourChatWidget.ts
 Kết quả: **14/14 tests pass**, TypeScript pass, ESLint không warning/error.
 Các test kiểm tra dữ liệu s0–s4, 20 câu hỏi/transport payload, metadata thiếu/dài,
 đổi thứ tự scene, đổi nội dung, đề cập area khác, request scope, auth và bounded
-history. HTTP trong test dùng fetch mock; chưa chạy E2E trình duyệt hoặc đánh giá
-câu trả lời thật của LLM. Không thêm dependencies, đổi API schema hoặc chạy migration.
+history. HTTP trong test dùng fetch mock.
+
+Đã kiểm tra thêm bằng Edge headless trên preview tạm dùng chính `TourChatWidget`
+và context của dự án: khung desktop 375×837 và mobile 366×732 không tràn ngang,
+header không có dòng thông tin phụ, đúng lời chào/placeholder/bốn nhãn. Đã gửi
+request s0, đổi sang s3 trong lúc chờ, hoàn tất phản hồi cũ rồi gửi chip mới:
+request mới giữ `active_area_id=khiem-lang` và nhận đúng `scene_context.key=s3`.
+Không có runtime exception. Preview dùng API mock và nền minh họa, không chạy
+toàn bộ mô hình 3D hoặc LLM thật. Không thêm dependencies, đổi API schema hoặc migration.

@@ -7,8 +7,9 @@ Branch: `feat/HER-area-locked-tour-guide` (continues the approved area lock).
 
 - Derive up to four short question chips from the current story's title and
   description in `useHeritageTour`; do not hardcode content by s0/s1 index.
-- Show the active story beside the chips and include its title and the current
-  heritage in the submitted question. Keep `active_area_id` on every request.
+- Match the user's reference UI with four compact labels; keep story/heritage
+  names in submitted questions and accessible descriptions, rather than extra
+  visible rows. Keep `active_area_id` on every request.
 - Update chips synchronously when the active story changes. Keep tour chat
   history, draft and window position. A delayed response to the old story may
   finish its existing turn, but cannot replace chips for the new story.
@@ -26,9 +27,11 @@ Branch: `feat/HER-area-locked-tour-guide` (continues the approved area lock).
 
 ## Outcome
 
-- Pure title/description topic templates and guarded fallback implemented.
+- Scene-specific question values and guarded fallback implemented, with fixed
+  reference labels following the user's UI correction.
 - Widget derives suggestions from the current scene; old AI follow-up state no
   longer overwrites them. Existing conversation/window state is preserved.
 - 14 targeted frontend tests, TypeScript and targeted ESLint passed.
-- Manual browser/model checks remain separate from the automated mock-IO checks.
+- Edge component-preview checks passed on desktop/mobile, including changing
+  scene during an outstanding mocked response. Full 3D/live-model E2E not run.
 - See [local acceptance instructions](../scene-chat-suggestions.md).
