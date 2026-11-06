@@ -54,7 +54,7 @@ export function requestSceneChat(apiUrl, request, dependencies = {}) {
     headers.Authorization = `Bearer ${dependencies.accessToken}`;
   }
 
-  return fetchImpl(chatApiUrl(apiUrl, "/chat/message"), {
+  return fetchImpl(chatApiUrl(apiUrl, "/chat"), {
     method: "POST",
     headers,
     body: JSON.stringify(request),

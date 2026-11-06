@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { DotmSquare1 } from "@/components/ui/dotm-square-1";
 import styles from "./HeritageCarouselSection.module.css";
 
 export interface HeritageItem {
@@ -19,6 +20,42 @@ export interface HeritageCarouselSectionProps {
   items: HeritageItem[];
   onCardClick?: (slug: string) => void;
   className?: string;
+}
+
+function CardImage({ src, title, onReady }: { src: string; title: string; onReady: () => void }) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "120px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={frame} className={styles.cardMedia} aria-busy={visible && status === "loading"}>
+      {visible && status === "loading" && (
+        <span className={styles.cardLoader} role="status" aria-label={`Đang tải ảnh ${title}`}>
+          <DotmSquare1 size={32} dotSize={4} speed={1.2} bloom />
+        </span>
+      )}
+      {visible && status !== "error" && (
+        <Image src={src} alt={title} width={200} height={320} unoptimized
+          className={`${styles.cardImage} ${status === "ready" ? styles.cardImageReady : ""}`}
+          onLoad={() => { setStatus("ready"); onReady(); }}
+          onError={() => setStatus("error")} />
+      )}
+      {status === "error" && <span className={styles.cardImageError}>Không tải được ảnh</span>}
+    </div>
+  );
 }
 
 /**
@@ -46,18 +83,10 @@ export function HeritageCarouselSection({
 }: HeritageCarouselSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const defaultImage =
-    items[0]?.card_image_url ||
-    items[0]?.splash_image_url ||
-    "/images/featured-bg.jpg";
-
-  const [activeImageUrl, setActiveImageUrl] = useState<string>(defaultImage);
+  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const firstImg = items[0]?.card_image_url || items[0]?.splash_image_url;
-    if (firstImg) {
-      setActiveImageUrl(firstImg);
-    }
+    setActiveImageUrl(null);
   }, [items]);
 
   const handleCardHover = (item: HeritageItem) => {
@@ -88,7 +117,7 @@ export function HeritageCarouselSection({
         <div
           className={styles.ambientImageBlur}
           style={{
-            backgroundImage: `url(${activeImageUrl || "/images/featured-bg.jpg"})`,
+            backgroundImage: activeImageUrl ? `url(${activeImageUrl})` : undefined,
           }}
         />
 
@@ -180,13 +209,11 @@ export function HeritageCarouselSection({
                 }
               }}
             >
-              <Image
+              <CardImage
+                key={imageUrl}
                 src={imageUrl}
-                alt={item.title}
-                width={200}
-                height={320}
-                className={styles.cardImage}
-                unoptimized
+                title={item.title}
+                onReady={() => setActiveImageUrl((current) => current ?? imageUrl)}
               />
               <div className={styles.cardOverlay} />
               <div className={styles.cardContent}>

@@ -193,14 +193,36 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
+.cardMedia,
+.cardLoader,
+.cardImageError {
+  position: absolute;
+  inset: 0;
+}
+
+.cardLoader,
+.cardImageError {
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.cardImageError {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+
 .cardImage {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  opacity: 0;
+  transition: transform 0.5s ease, opacity 0.3s ease;
 }
+
+.cardImageReady { opacity: 1; }
 
 .card:hover .cardImage {
   transform: scale(1.05);
@@ -269,4 +291,8 @@
     width: 170px;
     height: 270px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardImage { transition: none; }
 }

@@ -21,7 +21,7 @@ import {
 
 const WELCOME_MESSAGE_ID = "mila-welcome";
 const WELCOME_MESSAGE =
-  "Hi, I’m Mila, your AI heritage guide. What would you like to discover?";
+  "Bạn muốn khám phá điều gì về di sản này?";
 
 function createMessageId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
@@ -52,7 +52,6 @@ export function TourChatWidget() {
   const previousAccountRef = useRef(getCurrentAccountId());
 
   const heritageTitle = payload.heritage.title;
-  const sceneTitle = currentScene?.title ?? "Cảnh trong tour";
 
   useEffect(() => {
     const heritageIdentity = `${payload.heritage.id}:${heritageSlug}`;
@@ -164,7 +163,7 @@ export function TourChatWidget() {
         const currentAccountId = getCurrentAccountId();
         if (currentAccountId !== accountId) return;
 
-        if (accountId && currentAccountId === accountId) {
+        if (accountId && currentAccountId === accountId && response.conversationId) {
           setConversationId(response.conversationId);
           setConversationOwnerId(accountId);
         } else {
@@ -252,9 +251,6 @@ export function TourChatWidget() {
       input={input}
       sending={loading}
       error={null}
-      contextLabel={sceneTitle}
-      heritageName={heritageTitle}
-      authenticated={Boolean(getAccessToken())}
       onInputChange={setInput}
       onSend={(text) => void send(text)}
       onNewConversation={startNewConversation}

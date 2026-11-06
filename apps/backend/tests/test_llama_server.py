@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import Mock, patch
 
@@ -72,6 +73,22 @@ class LlamaServerTests(unittest.TestCase):
             llm.chat_messages("Nguồn", "Câu hỏi"),
             max_tokens=99,
         )
+
+    def test_structured_conversation_also_works_with_embedded_backend(self) -> None:
+        raw = json.dumps({"answer_type": "conversation", "answer": "Chào bạn", "source_ids": []})
+        model = Mock(model_path="qwen3-4b")
+        model.create_chat_completion.return_value = {
+            "choices": [{"message": {"content": raw}, "finish_reason": "stop"}],
+            "usage": {"total_tokens": 19},
+        }
+        with patch.object(llm, "get_model", return_value=(model, None, "llama_cpp")):
+            answer = llm.generate_response("Bạn là ai?", conversation=True, retrieval_status="not_found")
+        self.assertEqual(answer, raw)
+        model.create_chat_completion.assert_called_once()
+        options = model.create_chat_completion.call_args.kwargs
+        self.assertEqual(options["response_format"]["type"], "json_object")
+        self.assertEqual(json.loads(options["messages"][-1]["content"])["message"], "Bạn là ai?")
+        self.assertEqual(llm.get_generation_details().token_usage, 19)
 
     def test_chat_messages_include_recent_conversation_before_current_source(self) -> None:
         history = [

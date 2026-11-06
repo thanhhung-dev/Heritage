@@ -1,4 +1,5 @@
 """Optional GraphRAG must resolve sources against current OpenSearch evidence."""
+import json
 import os
 import unittest
 from unittest.mock import AsyncMock, patch
@@ -26,7 +27,9 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
                                              new_callable=AsyncMock, return_value=self.graph))
 
     async def test_original_chunk_not_generated_graph_answer_reaches_llm(self):
-        with patch.object(chat_api, 'generate_response', side_effect=lambda question, context: context):
+        with patch.object(chat_api, 'generate_response', side_effect=lambda **kw: json.dumps({
+            'answer': kw['context'], 'answer_type': 'answered', 'source_ids': ['42'],
+        })):
             response = await chat_api.chat(chat_api.ChatRequest(message='Thiên Mụ liên quan gì?'),
                                            repository=self.repo)
         self.assertIn('1601', response.answer)

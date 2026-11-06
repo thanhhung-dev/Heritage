@@ -18,4 +18,7 @@ class ChatResponse(BaseModel):
     entity_id: str | None = None
     intent: str | None = None
     resolution_status: str | None = None
-    answer_type: str | None = None
+    answer_type: str | None = Field(default=None, description=(
+        "answered, conversation, insufficient_evidence, out_of_scope hoặc suggestion. "
+        "Chỉ answered có sources; conversation không yêu cầu bằng chứng lịch sử."
+    ))
