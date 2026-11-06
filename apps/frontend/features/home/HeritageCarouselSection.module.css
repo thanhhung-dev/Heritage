@@ -194,13 +194,48 @@
 }
 
 .cardMedia,
-.cardLoader,
 .cardImageError {
   position: absolute;
   inset: 0;
 }
 
-.cardLoader,
+.cardMediaLoading,
+.cardSkeleton {
+  animation: cardPulse 1.8s ease-in-out infinite;
+}
+
+.cardSkeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.cardSkeletonTitle,
+.cardSkeletonRegion {
+  display: block;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.cardSkeletonTitle {
+  width: 76%;
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.cardSkeletonRegion {
+  width: 48%;
+  height: 12px;
+}
+
+@keyframes cardPulse {
+  0%, 100% {
+    background-color: rgba(22, 24, 29, 0.6);
+  }
+  50% {
+    background-color: rgba(34, 40, 52, 0.75);
+  }
+}
+
 .cardImageError {
   display: grid;
   place-items: center;

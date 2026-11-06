@@ -2,27 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import ContentLoading from "@/components/Loading/ContentLoading";
 import {
   HeroSection,
   DiscoverMoreSection,
   HeritageCarouselSection,
-  getCardImageUrl,
-  selectFeaturedTriptychItems,
   type HeritageItem,
 } from "@/features/home";
 import type { TriptychCardData } from "@/components/TriptychCard/TriptychCard";
 import { fetchHeritages } from "@/lib/heritage";
-
-function preloadImage(url: string): Promise<void> {
-  if (!url || typeof window === "undefined") return Promise.resolve();
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => resolve();
-    img.onerror = () => resolve();
-    img.src = url;
-  });
-}
 
 export default function HomePage() {
   const router = useRouter();
@@ -33,22 +20,9 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
     fetchHeritages()
-      .then(async (data) => {
+      .then((data) => {
         if (!active) return;
-        const list = Array.isArray(data) ? data : [];
-        const heroItems = selectFeaturedTriptychItems(list);
-        const urlsToPreload = new Set<string>();
-        for (const item of heroItems) {
-          const bgUrl = getCardImageUrl(item);
-          const cardUrl =
-            item.card_image_url || item.splash_image_url || bgUrl;
-          if (bgUrl) urlsToPreload.add(bgUrl);
-          if (cardUrl) urlsToPreload.add(cardUrl);
-        }
-        await Promise.all(Array.from(urlsToPreload, preloadImage));
-        if (active) {
-          setApiItems(list);
-        }
+        setApiItems(Array.isArray(data) ? data : []);
       })
       .catch(() => {
         // API lỗi ⇒ để trống, các section tự ẩn. Không còn dữ liệu mock thay thế.
@@ -74,24 +48,6 @@ export default function HomePage() {
     router.push(`/content/${slug}`);
   };
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#0b0c0e",
-        }}
-      >
-        <ContentLoading label="Loading heritage experiences…" />
-      </div>
-    );
-  }
-
   return (
     <div
       style={{
@@ -114,6 +70,7 @@ export default function HomePage() {
         title="Featured Experiences"
         description="Curated virtual journeys and immersive stories"
         items={featuredItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 
@@ -122,6 +79,7 @@ export default function HomePage() {
         title="Artifacts & Treasures"
         description="The tools, art, and objects that shape human history"
         items={artifactItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 
@@ -130,6 +88,7 @@ export default function HomePage() {
         title="People & Traditions"
         description="Community members share personal stories and memories"
         items={traditionItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 
@@ -138,6 +97,7 @@ export default function HomePage() {
         title="Festivals & Community Practices"
         description="The rituals and customs that bring heritage to life"
         items={festivalItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 

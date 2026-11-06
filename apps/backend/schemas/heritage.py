@@ -255,7 +255,13 @@ class TourContentOut(BaseModel):
 
     modelUrl: str | None = None
     payload: HeritageContentOut
-    playback: dict[str, ScenePlaybackOut] = Field(default_factory=dict)
+    playback: dict[str, ScenePlaybackOut] = Field(
+        default_factory=dict,
+        description=(
+            "Playback keyed by the matching scene.slug, including the overview. "
+            "Keys preserve gaps in scene sequences; they are not array indices."
+        ),
+    )
 
 
 # ── Error schema ───────────────────────────────────────────────────

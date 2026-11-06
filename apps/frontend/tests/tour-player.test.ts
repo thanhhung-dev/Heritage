@@ -25,7 +25,41 @@ import { HeritageTourContext } from "../context/heritage-tour";
 import { useTourPlayer } from "../features/tour/player/useTourPlayer";
 import { TEST_TOUR } from "../features/tour/tour-data";
 import { interactiveUrl, isInteractivePath, sceneUrl } from "../lib/tour-routes";
+import { resolveSceneByKey, sceneKeys } from "../lib/heritage";
 import type { ExploreArea, HeritageScene } from "../types/heritage";
+
+test("scene routes preserve API slugs and database IDs when sequences have gaps", () => {
+  const base = TEST_TOUR.payload.scenes[0];
+  const payload = {
+    ...TEST_TOUR.payload,
+    scenes: [
+      { ...base, id: 3, slug: "s2", sequence: 1 },
+      { ...base, id: 506, slug: "s3", sequence: 2 },
+      { ...base, id: 508, slug: "s5", sequence: 4 },
+    ],
+  };
+
+  assert.deepEqual(sceneKeys(payload), ["s0", "s2", "s3", "s5"]);
+  assert.equal(resolveSceneByKey(payload, "s2")?.id, 3);
+  assert.equal(resolveSceneByKey(payload, "s3")?.id, 506);
+  assert.equal(resolveSceneByKey(payload, "s5")?.id, 508);
+  assert.equal(resolveSceneByKey(payload, "s0"), payload.overview);
+  for (const key of ["s1", "s4", "s03", "506", "invalid", undefined]) {
+    assert.equal(resolveSceneByKey(payload, key), null);
+  }
+});
+
+test("scene navigation only includes available scenes", () => {
+  const payload = { ...TEST_TOUR.payload, overview: null };
+  assert.deepEqual(sceneKeys(payload), payload.scenes.map((scene) => scene.slug));
+  assert.equal(resolveSceneByKey(payload, "s0"), null);
+  assert.deepEqual(sceneKeys({ ...payload, scenes: [] }), []);
+  assert.deepEqual(sceneKeys(null), []);
+  assert.equal(resolveSceneByKey(null, "s3"), null);
+  for (const scene of TEST_TOUR.payload.scenes) {
+    assert.equal(resolveSceneByKey(TEST_TOUR.payload, scene.slug), scene);
+  }
+});
 
 test("lens badge chọn đúng ID sau khi camera quay và không chọn khi ẩn hoặc thay scene", () => {
   const originalDocument = globalThis.document;
