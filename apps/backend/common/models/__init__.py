@@ -24,7 +24,7 @@ from apps.backend.common.models.media_item import MediaItem  # noqa: F401
 from apps.backend.common.models.interactive import Interactive  # noqa: F401
 from apps.backend.common.models.interactive_highlight import InteractiveHighlight  # noqa: F401
 from apps.backend.common.models.scene_highlight import SceneHighlight  # noqa: F401
-from apps.backend.common.models.chat import ChatSession, ChatMessage, ChatFeedback  # noqa: F401
+from apps.backend.common.models.chat import ChatSession, ChatMessage, ChatFeedback, Conversation, MessageCitation  # noqa: F401
 from apps.backend.common.models.admin import _uuid_pk as uuid_pk  # noqa: F401
 
 __all__ = [
@@ -32,7 +32,7 @@ __all__ = [
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
     "uuid_pk",
     # admin
-    "AdminAccount", "AuditLog", "KnowledgeDocument", "KnowledgeUpload",
+    "AccountRole", "AdminAccount", "AuditLog", "KnowledgeDocument", "KnowledgeUpload",
     # user auth
     "Role", "Account", "UserProfile", "UserConsent",
     # kg
@@ -46,5 +46,5 @@ __all__ = [
     "MediaItem",
     "Interactive", "InteractiveHighlight", "SceneHighlight",
     # chat
-    "ChatSession", "ChatMessage", "ChatFeedback",
+    "ChatSession", "ChatMessage", "ChatFeedback", "Conversation", "MessageCitation",
 ]
