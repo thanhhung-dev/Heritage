@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import logging
+import asyncio
 from contextlib import contextmanager
 from uuid import UUID
+from types import SimpleNamespace
 
 from fastapi import Depends, HTTPException, Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -14,6 +16,7 @@ from apps.backend.schemas.chat import (
     ChatAnswer, ChatMessageCreate, ChatResponse, ConversationDetailResponse, ConversationResponse,
 )
 from apps.backend.services.conversations import ChatServiceError, ConversationService
+from apps.backend.services import chat_fallback
 
 log = logging.getLogger(__name__)
 optional_bearer = HTTPBearer(auto_error=False)
@@ -78,11 +81,34 @@ def mount_conversation_routes(router, get_repository, pipeline):
         repository=Depends(get_repository),
     ):
         async def answerer(message, history):
+            local_fallback = chat_fallback.development_fallback_enabled()
+            retrieved = None
+            async def search_evidence(*args, **kwargs):
+                nonlocal retrieved
+                retrieved = await repository.search_evidence(*args, **kwargs)
+                return retrieved
+            async def fallback():
+                if message.active_area_id:
+                    return chat_fallback.scoped_service_unavailable(message.active_area_id)
+                evidence = retrieved.evidence if retrieved is not None else []
+                return await chat_fallback.development_answer(
+                    message.message, history=[item.model_dump() for item in history],
+                    context="\n\n".join(item.text for item in evidence)[:4800],
+                    sources=[item.to_source() for item in evidence],
+                )
             try:
-                return ChatAnswer.model_validate(await pipeline(message.model_copy(update={
+                inference = pipeline(message.model_copy(update={
                     "conversation_context": history,
-                }), repository))
+                }), SimpleNamespace(search_evidence=search_evidence))
+                result = await asyncio.wait_for(inference, timeout=chat_fallback.LOCAL_INFERENCE_TIMEOUT_SECONDS) if local_fallback else await inference
+                return ChatAnswer.model_validate(result)
+            except TimeoutError:
+                if local_fallback:
+                    return await fallback()
+                raise ChatServiceError("timeout", "AI phản hồi quá thời gian chờ 30 giây.") from None
             except HTTPException as error:
+                if local_fallback and error.status_code in {500, 503, 504}:
+                    return await fallback()
                 if error.status_code == 504:
                     raise ChatServiceError("timeout", "AI phản hồi quá thời gian chờ 30 giây.") from None
                 raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.") from None

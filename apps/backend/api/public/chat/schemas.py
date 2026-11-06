@@ -89,7 +89,7 @@ class ChatOutcome(BaseModel):
             self.needs_user_choice = True
         if self.answer_type in {"insufficient_evidence", "out_of_scope"}:
             self.abstained = True
-            self.abstention_reason = self.answer_type
+            self.abstention_reason = self.abstention_reason or self.answer_type
         if self.needs_user_choice and not self.clarification_question:
             self.clarification_question = getattr(self, "answer", None) or getattr(self, "content", None)
         return self
