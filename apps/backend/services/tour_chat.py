@@ -44,7 +44,8 @@ async def answer_in_area(request, repository, generate, generation_details) -> d
         raise TourChatError(503, "Kho dữ liệu của khu vực đang tham quan hiện không khả dụng.") from error
     evidence = [item for item in result.evidence
                 if getattr(item, "active_area_id", None) == area.id
-                and not mentions_foreign_site(item.text + " " + getattr(item, "location_note", ""), area)]
+                and not mentions_foreign_site(item.text + " " + getattr(item, "location_note", "")
+                                              + " " + getattr(item, "source_url", ""), area)]
     if not evidence:
         return response(scoped_missing(area), "insufficient_evidence")
     # Bound whole evidence chunks; never accidentally send unbounded adapter output.
@@ -68,7 +69,8 @@ async def answer_in_area(request, repository, generate, generation_details) -> d
     def infer():
         raw = generate(question=question, context=context, conversation=True,
                        retrieval_status="available", active_area_id=area.id,
-                       history=[item.model_dump() for item in request.conversation_context])
+                       history=[item.model_dump() for item in request.conversation_context],
+                       scene_context=request.scene_context)
         return raw, generation_details()
 
     try:

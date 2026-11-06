@@ -1,6 +1,7 @@
 # Area-Locked AI Tour Guide — implementation plan
 
-Status: approved by the user (2026-11-06); implementation and targeted verification in progress.
+Status: approved by the user (2026-11-06); code and targeted verification completed.
+Rollout: pending reviewed area-tagged corpus and backend deployment; no production changes executed.
 Scope: the embedded 3D tour guide, starting with Khiem Lang / Lang Tu Duc.
 
 ## Findings
@@ -94,3 +95,12 @@ environment. No new dependency or change of retrieval/inference strategy is plan
 
 The acceptance claim is tested scope enforcement at these application boundaries;
 it does not certify the factual quality of arbitrary future model outputs.
+
+## Implementation outcome
+
+- Backend and 3D widget implemented on `feat/HER-area-locked-tour-guide`.
+- Both legacy and refactored entry paths use the same tour policy/DTO.
+- Targeted chat/retrieval/import tests: 46 passed, 6 integration skips; the extended
+  GraphRAG run adds 6 passes and reproduces 4 existing failures from `fd13d62`.
+- Frontend transport/scope tests: 8 passed; TypeScript and targeted ESLint passed.
+- See [implementation, data preparation and verification notes](../area-locked-tour-guide.md).

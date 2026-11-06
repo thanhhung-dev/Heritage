@@ -3,6 +3,7 @@ import asyncio
 import importlib
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -59,6 +60,12 @@ class ScopeContractTests(unittest.TestCase):
         area = resolve_area(AREA)
         questions = follow_up_questions(["So sánh Khiêm Lăng với Đại Nội?", "Đến https://evil.test", "Nơi khác?"], area)
         self.assertEqual(questions, area.questions())
+
+    def test_output_rejects_navigation_even_without_a_known_place_name(self):
+        area = resolve_area(AREA)
+        for question in ("Khám phá Khiêm Lăng [đi tiếp](/another-tour)",
+                         "Khiêm Lăng https://example.test", "Khiêm Lăng <a href='/tour'>đi tiếp</a>"):
+            self.assertEqual(follow_up_questions([question], area), area.questions())
 
 
 class AreaApiTests(unittest.TestCase):
@@ -142,6 +149,42 @@ class AreaApiTests(unittest.TestCase):
             for response, _, _ in self.exercise():
                 self.assertEqual(response.status_code, 504)
 
+    def test_uncited_claim_cannot_be_published_as_conversation(self):
+        for response, _, _ in self.exercise(raw={"answer_type": "conversation", "answer": "Khiêm Lăng xây năm 9999.", "source_ids": []}):
+            self.assertEqual(response.json()["answer_type"], "insufficient_evidence")
+            self.assertNotIn("9999", response.json()["answer"])
+
+    def test_locked_provider_receives_policy_history_and_scene_as_data(self):
+        for module_name in MODULES:
+            with patch.object(REGISTRY, "register"):
+                api = importlib.import_module(module_name)
+            repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(
+                evidence=[self.evidence], graph_context=[],
+            )))
+            app = FastAPI()
+            app.include_router(api.router, prefix="/api")
+            app.dependency_overrides[api.get_repository] = lambda: repository
+            upstream = Mock()
+            upstream.json.return_value = {"choices": [{"message": {"content": json.dumps({
+                "answer_type": "answered", "answer": "Khiêm Lăng gắn với vua Tự Đức.", "source_ids": ["42"],
+            })}, "finish_reason": "stop"}]}
+            with TestClient(app) as client, patch("httpx.post", return_value=upstream) as post:
+                response = client.post("/api/chat", json={
+                    "message": "Ông sống ở đây thế nào?", "active_area_id": AREA,
+                    "heritage_context": {"slug": "lang-tu-duc"},
+                    "scene_context": {"title": "Hòa Khiêm Điện", "key": "s1", "description": "not evidence"},
+                    "conversation_context": [{"role": "user", "content": "Vua Tự Đức"},
+                                             {"role": "assistant", "content": "Đại Nội ở Huế"}],
+                })
+            self.assertEqual(response.status_code, 200, response.text)
+            prompt = post.call_args.kwargs["json"]["messages"]
+            self.assertIn("active_area_id=khiem-lang", prompt[0]["content"])
+            data = json.loads(prompt[-1]["content"])
+            self.assertIn("[Passage 42]", data["source"])
+            self.assertEqual(data["conversation_context"], [{"role": "user", "content": "Vua Tự Đức"}])
+            self.assertEqual(data["scene_context"], {"title": "Hòa Khiêm Điện", "key": "s1"})
+            post.assert_called_once()
+
 
 class ScopedRetrievalTests(unittest.IsolatedAsyncioTestCase):
     async def test_hybrid_filters_both_branches_and_rechecks_hits(self):
@@ -201,8 +244,48 @@ class ScopedRetrievalTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(ValueError):
                 await module.import_passages(payload, store=store, embedder=embed)
 
+    async def test_scoped_graph_carries_only_same_area_lineage_into_evidence(self):
+        for module_name in ("apps.backend.services.passages", "apps.backend.ai.retrieval.passages"):
+            with patch.object(REGISTRY, "register"):
+                module = importlib.import_module(module_name)
+            row = {"id": "42", "text": "Khiêm Lăng", "active_area_id": AREA,
+                   "content_hash": "h42", "object_key": "tu-duc.pdf", "bucket": "knowledge"}
+            store = SimpleNamespace(search=AsyncMock(return_value=[]), get_passages=AsyncMock(return_value=[row]))
+            graph = {"active_area_id": AREA, "sources": [{"passage_id": "42", **row}], "graph_context": [
+                {"title": "Khiêm Lăng", "source_passage_ids": ["42"]},
+                {"title": "Đại Nội", "source_passage_ids": ["42"]},
+                {"title": "Khiêm Lăng", "source_passage_ids": ["unverified"]},
+            ]}
+            repo = module.PassageRepository(store, embedder=lambda _: [[1.0]])
+            with patch.dict(os.environ, {"GRAPHRAG_ENABLED": "true"}), patch.object(module, "run_global_query", AsyncMock(return_value=graph)):
+                result = await repo.search_evidence("Lịch sử ở đây?", active_area_id=AREA)
+            self.assertEqual([item.id for item in result.evidence], ["42"])
+            self.assertEqual(len(result.graph_context), 1)
+            self.assertEqual(result.evidence[0].retrieval_methods, ("microsoft_graphrag",))
+            store.get_passages.assert_awaited_once_with(["42"], active_area_id=AREA)
+
 
 class AreaGraphTests(unittest.IsolatedAsyncioTestCase):
+    async def test_valid_area_snapshot_selects_only_the_area_worker_root(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "area"
+            export_snapshot([{"id": "42", "text": "Khiêm Lăng", "content_hash": "h", "active_area_id": AREA}], root, active_area_id=AREA)
+            (root / "index-ready.json").write_text("{}", encoding="utf-8")
+            for module_name in ("apps.backend.services.graphrag", "apps.backend.ai.retrieval.graphrag"):
+                with patch.object(REGISTRY, "register"):
+                    module = importlib.import_module(module_name)
+                process = SimpleNamespace(returncode=0, communicate=AsyncMock(return_value=(json.dumps({
+                    "active_area_id": AREA, "snapshot_id": "test", "sources": [], "context_reports": [],
+                }).encode(), b"")))
+                with patch.dict(os.environ, {"GRAPHRAG_ENABLED": "true", "GRAPHRAG_PYTHON": sys.executable,
+                                             "GRAPHRAG_ROOT": "must-not-use-global",
+                                             "GRAPHRAG_AREA_ROOTS": json.dumps({AREA: str(root)})}), \
+                        patch.object(module.asyncio, "create_subprocess_exec", AsyncMock(return_value=process)) as spawn:
+                    result = await module.run_global_query("Lịch sử ở đây?", active_area_id=AREA)
+                self.assertEqual(result["active_area_id"], AREA)
+                self.assertIn(str(root.resolve()), spawn.call_args.args)
+                self.assertEqual(json.loads(process.communicate.call_args.args[0])["active_area_id"], AREA)
+
     async def test_snapshot_validates_before_worker_or_graph_search(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "area"

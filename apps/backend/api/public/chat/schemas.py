@@ -17,7 +17,10 @@ class ChatRequest(BaseModel):
     message: str = Field(max_length=8000)
     use_rag: bool = True
     session_id: str | None = None
-    active_area_id: str | None = Field(default=None, min_length=1, max_length=80)
+    active_area_id: str | None = Field(default=None, min_length=1, max_length=80, description=(
+        "Khóa hướng dẫn viên theo khu vực đã đăng ký, ví dụ khiem-lang. "
+        "Bắt buộc khi gửi ngữ cảnh tour; alias được chuẩn hóa, không fallback sang dữ liệu toàn cục."
+    ))
     heritage_id: int | None = Field(default=None, gt=0)
     heritage_context: dict[str, JsonValue] | None = None
     scene_context: dict[str, JsonValue] | None = None
@@ -39,7 +42,10 @@ class ChatRequest(BaseModel):
     def validate_scope(self):
         if sum(len(message.content) for message in self.conversation_context) > 6000:
             raise ValueError("Ngữ cảnh hội thoại không được vượt quá 6000 ký tự.")
-        if any(value is not None for value in (self.heritage_context, self.scene_context, self.heritage_id)) and not self.active_area_id:
+        has_tour_context = any(value is not None for value in (
+            self.heritage_context, self.scene_context, self.heritage_id,
+        ))
+        if has_tour_context and not self.active_area_id:
             raise ValueError("Chat trong tour phải có active_area_id.")
         if self.active_area_id and self.heritage_context:
             slug = self.heritage_context.get("slug")
@@ -52,7 +58,9 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[dict] = Field(default_factory=list)
     active_area_id: str | None = None
-    follow_up_questions: list[str] = Field(default_factory=list)
+    follow_up_questions: list[str] = Field(default_factory=list, max_length=3, description=(
+        "Câu hỏi gợi ý đã kiểm tra phạm vi active_area_id, tách biệt suggestions dùng để disambiguation."
+    ))
     corrected_from: str = ""
     corrected_to: str = ""
     needs_user_choice: bool = False

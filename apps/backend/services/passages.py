@@ -9,8 +9,6 @@ from apps.backend.core.embedding import embed_texts
 from apps.backend.core.observability import rag_observation
 from apps.backend.core.textutil import strip_accents
 from apps.backend.services.graphrag import graphrag_enabled, run_global_query
-
-
 from apps.backend.services.tour_scope import mentions_foreign_site, question_outside_area, resolve_area
 
 
@@ -69,7 +67,8 @@ class PassageRepository:
 
         def in_scope(row):
             return area is None or (row.get('active_area_id') == area.id
-                and not mentions_foreign_site(row.get('text', '') + ' ' + row.get('location_note', ''), area))
+                and not mentions_foreign_site(row.get('text', '') + ' ' + row.get('location_note', '')
+                    + ' ' + row.get('source_url', ''), area))
 
         with rag_observation('retrieval', as_type='retriever', input={'query': question}) as observation:
             with rag_observation('query.embedding', as_type='embedding'):

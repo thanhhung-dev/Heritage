@@ -84,7 +84,9 @@ def scoped_missing(area: TourArea) -> str:
 
 
 def allowed_output(text: str, area: TourArea) -> bool:
-    return not question_outside_area(text, area) and not re.search(r"https?://|/content/", text, re.I)
+    return not question_outside_area(text, area) and not re.search(
+        r"https?://|/content/|/tapestry/|\[[^\]]*\]\s*\(|<a\b", text, re.I,
+    )
 
 
 def follow_up_questions(values: list[str], area: TourArea) -> list[str]:

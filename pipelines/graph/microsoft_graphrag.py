@@ -54,7 +54,7 @@ def export_snapshot(rows, root: Path, *, active_area_id: str | None = None) -> N
             }
         (stage / 'source-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
                                                    encoding='utf-8')
-        (stage / 'settings.yaml').write_text((PROJECT / 'graphrag/settings.example.yaml').read_text(),
+        (stage / 'settings.yaml').write_text((PROJECT / 'graphrag/settings.example.yaml').read_text(encoding='utf-8'),
                                              encoding='utf-8')
         stage.rename(root)
 
@@ -182,7 +182,7 @@ async def index_snapshot(root):
     config = configure_worker(root)
     if (root / 'index-ready.json').exists():
         raise FileExistsError('Never reindex a published snapshot; export a new one.')
-    manifest = json.loads((root / 'source-manifest.json').read_text())
+    manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
     for name, source in manifest['documents'].items():
         if hashlib.sha256((root / 'input' / name).read_bytes()).hexdigest() != source['text_sha256']:
             raise ValueError('Exported text changed since R2 verification.')
@@ -206,7 +206,7 @@ async def index_snapshot(root):
 async def query_snapshot(root, message, community_level, *, active_area_id=None):
     if active_area_id:
         validate_area_snapshot(root, active_area_id)
-    if json.loads((root / 'index-ready.json').read_text()) != snapshot_hashes(root):
+    if json.loads((root / 'index-ready.json').read_text(encoding='utf-8')) != snapshot_hashes(root):
         raise ValueError('Published snapshot changed; create and index a new snapshot.')
     config = configure_worker(root)
     tables = load_tables(root)
@@ -224,7 +224,7 @@ async def query_snapshot(root, message, community_level, *, active_area_id=None)
     if not isinstance(answer, str) or not answer.strip() or not isinstance(context, dict):
         raise ValueError('Unsupported GraphRAG response.')
     context_reports = context['reports'].to_dict('records') if 'reports' in context else []
-    manifest = json.loads((root / 'source-manifest.json').read_text())
+    manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
     return build_global_response(answer, context_reports,
                                  *[tables[t].to_dict('records') for t in
                                    ('community_reports', 'communities', 'text_units', 'documents')], manifest,

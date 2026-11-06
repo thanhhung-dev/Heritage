@@ -71,20 +71,28 @@ ba loại còn lại bắt buộc source_ids=[]. Không thêm Markdown bao quanh
 def conversation_messages(
     source: str, question: str, retrieval_status: str,
     *, active_area_id: str | None = None, history: list[dict] | None = None,
+    scene_context: dict | None = None,
 ) -> list[dict[str, str]]:
     # Encode the input as data; availability is supplied by the application,
     # never inferred from a user's claim that retrieval succeeded.
     system = CONVERSATION_SYSTEM
     data = {
-            "retrieval_status": retrieval_status,
-            "source": source,
-            "message": question,
+        "retrieval_status": retrieval_status,
+        "source": source,
+        "message": question,
     }
     if active_area_id:
         area = resolve_area(active_area_id)
         system += area_system_policy(area)
         system += " Có thể thêm follow_up_questions: tối đa 3 câu hỏi ngắn về đúng khu vực."
         data["active_area_id"] = area.id
+        # A scene label is a hint for pronouns such as "ở đây", never evidence.
+        if scene_context:
+            data["scene_context"] = {
+                key: value[:200] for key, value in scene_context.items()
+                if key in {"title", "key", "slug"} and isinstance(value, str)
+                and not question_outside_area(value, area)
+            }
         data["conversation_context"] = [
             item for item in (history or [])[-6:]
             if item.get("role") in {"user", "assistant"}
