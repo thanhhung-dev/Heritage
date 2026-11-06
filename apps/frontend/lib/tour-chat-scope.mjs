@@ -57,7 +57,7 @@ export function validateTourReply(data, expectedArea) {
   if (data.active_area_id !== expectedArea || !AREAS.some((area) => area.id === expectedArea)) {
     throw new Error("Máy chủ chưa xác nhận đúng khu vực tham quan. Vui lòng cập nhật backend hỗ trợ khóa khu vực.");
   }
-  const kinds = ["answered", "conversation", "insufficient_evidence", "out_of_scope"];
+  const kinds = ["answered", "conversation", "clarification", "suggestion", "insufficient_evidence", "out_of_scope"];
   if (typeof data.answer_type !== "string" || !kinds.includes(data.answer_type)
       || !Array.isArray(data.sources) || !Array.isArray(data.follow_up_questions)
       || data.follow_up_questions.length > 3

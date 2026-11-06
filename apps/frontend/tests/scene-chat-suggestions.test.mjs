@@ -96,7 +96,7 @@ test("every selected story chip serializes its own scene and preserves the activ
         scene_context: { ...story, key: story.slug },
       }, {
         fetchImpl: async (url, init) => {
-          assert.equal(url, "https://api.example/api/chat");
+          assert.equal(url, "https://api.example/api/chat/message");
           bodies.push(JSON.parse(init.body));
           return { ok: true };
         },

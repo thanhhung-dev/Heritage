@@ -1,22 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useHeritageTour } from "@/context/heritage-tour";
-import { AUTH_CHANGE_EVENT, getAccessToken, getUser } from "@/lib/auth";
+import { AUTH_CHANGE_EVENT } from "@/lib/auth";
 import { resolveTourArea } from "@/lib/tour-chat-scope.mjs";
 import { buildSceneChatSuggestions } from "@/lib/scene-chat-suggestions.mjs";
 import { ChatOverlayWidget } from "@/features/chat/components/ChatOverlayWidget";
 import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
-import { buildSceneConversationContext, sendSceneChatMessage, type SceneChatRequest } from "./scene-chat-service";
+import { getConversationAccountId, useConversationSession } from "./useConversationSession";
 import type { Message } from "./types";
 
 const WELCOME_MESSAGE_ID = "mila-welcome";
 const WELCOME_MESSAGE = "Bạn muốn khám phá điều gì về di sản này?";
-
-function createMessageId(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-}
 
 function createWelcomeMessage(): Message {
   return {
@@ -27,16 +23,14 @@ function createWelcomeMessage(): Message {
   };
 }
 
-function getCurrentAccountId(): string | null {
-  return getAccessToken() ? getUser()?.account_id ?? null : null;
-}
+function initialTourMessages(): Message[] { return [createWelcomeMessage()]; }
 
 export function TourChatWidget() {
   const { payload, heritageSlug } = useHeritageTour();
-  const [accountId, setAccountId] = useState(getCurrentAccountId);
+  const [accountId, setAccountId] = useState(getConversationAccountId);
 
   useEffect(() => {
-    const updateAccount = () => setAccountId(getCurrentAccountId());
+    const updateAccount = () => setAccountId(getConversationAccountId());
     window.addEventListener(AUTH_CHANGE_EVENT, updateAccount);
     return () => window.removeEventListener(AUTH_CHANGE_EVENT, updateAccount);
   }, []);
@@ -49,81 +43,29 @@ export function TourChatWidget() {
 function AreaTourChat() {
   const { payload, heritageSlug, currentSceneKey, currentScene } = useHeritageTour();
   const area = resolveTourArea(heritageSlug);
-  const [messages, setMessages] = useState<Message[]>(() => [createWelcomeMessage()]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const requestRef = useRef<AbortController | null>(null);
-  // Derive chips from the scene displayed NOW. Model replies can arrive after a
-  // scene change and must never restore the previous story's suggestions.
-  const sceneSuggestions = useMemo(
-    () => buildSceneChatSuggestions(area, currentScene, currentSceneKey),
-    [area, currentScene, currentSceneKey],
-  );
-
-  const startNewConversation = useCallback(() => {
-    requestRef.current?.abort();
-    requestRef.current = null;
-    setMessages([createWelcomeMessage()]);
-    setInput("");
-    setError(null);
-    setLoading(false);
-  }, []);
-
-  const send = useCallback(async (text?: string) => {
-    const userMessage = (text ?? input).trim();
-    if (!userMessage || !area || requestRef.current) return;
-
-    const accountId = getCurrentAccountId();
-    const history = messages.filter((message) => message.id !== WELCOME_MESSAGE_ID);
-    const controller = new AbortController();
-    requestRef.current = controller;
-    setMessages((current) => [...current, {
-      id: createMessageId(), role: "user", content: userMessage, createdAt: new Date().toISOString(),
-    }]);
-    setInput("");
-    setError(null);
-    setLoading(true);
-
-    const heritageId = payload.heritage.id;
-    const request: SceneChatRequest = {
-      message: userMessage,
-      active_area_id: area.id,
-      ...(Number.isInteger(heritageId) && heritageId > 0 ? { heritage_id: heritageId } : {}),
+  const chat = useConversationSession({
+    scope: `tour:${payload.heritage.id}:${area?.id ?? heritageSlug}`,
+    initialMessages: initialTourMessages,
+    disabled: !area,
+    context: {
+      active_area_id: area?.id,
+      ...(Number.isInteger(payload.heritage.id) && payload.heritage.id > 0 ? { heritage_id: payload.heritage.id } : {}),
       heritage_context: {
-        id: heritageId, slug: heritageSlug, title: payload.heritage.title, region: payload.heritage.region,
+        id: payload.heritage.id, slug: heritageSlug, title: payload.heritage.title, region: payload.heritage.region,
       },
       scene_context: currentScene ? {
         id: currentScene.id, key: currentSceneKey, slug: currentScene.slug,
         title: currentScene.title, description: currentScene.description?.slice(0, 1000) ?? null,
         sequence: currentScene.sequence,
       } : null,
-      // This branch's /api/chat is stateless. Keep bounded history in this tour
-      // instance for both members and guests; never reuse another tour's ID.
-      conversation_context: buildSceneConversationContext(history),
-    };
+    },
+  });
+  const sceneSuggestions = useMemo(
+    () => buildSceneChatSuggestions(area, currentScene, currentSceneKey),
+    [area, currentScene, currentSceneKey],
+  );
 
-    const isCurrent = () => !controller.signal.aborted
-      && requestRef.current === controller && getCurrentAccountId() === accountId;
-    try {
-      const response = await sendSceneChatMessage(request, controller.signal);
-      if (!isCurrent()) return;
-      setMessages((current) => [...current, {
-        id: createMessageId(), role: "assistant", content: response.answer,
-        createdAt: new Date().toISOString(), sources: response.sources,
-      }]);
-    } catch (failure) {
-      if (!isCurrent()) return;
-      setError(failure instanceof Error ? failure.message : "Không thể gửi câu hỏi lúc này. Vui lòng thử lại.");
-    } finally {
-      if (requestRef.current === controller) {
-        requestRef.current = null;
-        setLoading(false);
-      }
-    }
-  }, [area, currentScene, currentSceneKey, heritageSlug, input, messages, payload.heritage]);
-
-  const overlayMessages = useMemo<ChatOverlayMessage[]>(() => messages.map((message) => ({
+  const overlayMessages = useMemo<ChatOverlayMessage[]>(() => chat.messages.map((message) => ({
     id: message.id, role: message.role, content: message.content,
     createdAt: message.createdAt ?? new Date(0).toISOString(),
     citations: (message.sources ?? []).map((source, index) => ({
@@ -131,16 +73,14 @@ function AreaTourChat() {
       source_title: source.doc ?? source.heading ?? "Nguồn tham khảo",
       source_url: source.url ?? null, relevance_score: null,
     })),
-  })), [messages]);
-
-  useEffect(() => () => requestRef.current?.abort(), []);
+  })), [chat.messages]);
 
   return <ChatOverlayWidget
-    messages={overlayMessages} input={input} sending={loading} disabled={!area}
+    messages={overlayMessages} input={chat.input} sending={chat.sending} restoring={chat.restoring} disabled={!area}
     areaLabel={area?.title}
     sceneLabel={sceneSuggestions.contextLabel ?? undefined}
     suggestions={sceneSuggestions.suggestions}
-    error={area ? error : "Tour này chưa có khu vực hướng dẫn được xác nhận. Chat tạm khóa để tránh trả lời sai phạm vi."}
-    onInputChange={setInput} onSend={(text) => void send(text)} onNewConversation={startNewConversation}
+    error={area ? chat.error : "Tour này chưa có khu vực hướng dẫn được xác nhận. Chat tạm khóa để tránh trả lời sai phạm vi."}
+    onInputChange={chat.setInput} onSend={(text) => void chat.send(text)} onNewConversation={chat.startNewConversation}
   />;
 }

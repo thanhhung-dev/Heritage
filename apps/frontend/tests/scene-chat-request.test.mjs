@@ -36,7 +36,7 @@ test("scene chat sends structured heritage and scene context", async () => {
     randomUUID: () => "correlation-id",
   });
 
-  assert.equal(calls[0][0], "https://api.example/api/chat");
+  assert.equal(calls[0][0], "https://api.example/api/chat/message");
   assert.equal(calls[0][1].method, "POST");
   assert.equal(calls[0][1].headers["X-Correlation-ID"], "correlation-id");
   assert.deepEqual(JSON.parse(calls[0][1].body), request);
