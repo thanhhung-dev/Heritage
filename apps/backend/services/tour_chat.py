@@ -5,6 +5,7 @@ import asyncio
 import json
 
 from apps.backend.ai.answering.conversation import ConversationAnswer
+from apps.backend.services.chat_context import retrieval_question
 from apps.backend.services.tour_scope import (
     allowed_output, follow_up_questions, mentions_foreign_site, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
@@ -38,7 +39,13 @@ async def answer_in_area(request, repository, generate, generation_details) -> d
         return response(f"Mình là trợ lý AI HeritageGraph, đồng hành cùng bạn tại {area.title}. "
                         "Bạn muốn tìm hiểu điều gì trong khu vực đang tham quan?", "conversation")
     try:
-        result = await repository.search_evidence(question, active_area_id=area.id)
+        scene_title = request.scene_context.get("title") if isinstance(request.scene_context, dict) else None
+        if isinstance(scene_title, str) and scene_title.strip() and allowed_output(scene_title, area):
+            search_question = f"{question}\nCảnh đang xem: {scene_title[:200]}"
+        else:
+            safe_history = [item for item in request.conversation_context if not question_outside_area(item.content, area)]
+            search_question = retrieval_question(question, safe_history)
+        result = await repository.search_evidence(search_question, active_area_id=area.id)
     except Exception as error:
         # Never replace unavailable area evidence with unscoped/model-memory facts.
         raise TourChatError(503, "Kho dữ liệu của khu vực đang tham quan hiện không khả dụng.") from error
@@ -87,6 +94,8 @@ async def answer_in_area(request, repository, generate, generation_details) -> d
     if not allowed_output(answer.answer, area) or answer.answer_type == "out_of_scope":
         return response(scoped_refusal(area), "out_of_scope")
     if answer.answer_type != "answered":
+        if answer.answer_type == "clarification":
+            return response(f"Bạn muốn tìm hiểu chi tiết nào về {area.title} trong cảnh đang xem?", "clarification")
         # A model cannot relabel uncited historical claims as social conversation.
         return response(scoped_missing(area), "insufficient_evidence")
     sources = [item.to_source() for item in evidence if str(item.id) in answer.source_ids]

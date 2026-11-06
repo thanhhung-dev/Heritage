@@ -32,7 +32,7 @@ __all__ = [
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
     "uuid_pk",
     # admin
-    "AccountRole", "AdminAccount", "AuditLog", "KnowledgeDocument", "KnowledgeUpload",
+    "AdminAccount", "AuditLog", "KnowledgeDocument", "KnowledgeUpload",
     # user auth
     "Role", "Account", "UserProfile", "UserConsent",
     # kg

@@ -85,6 +85,8 @@ class ChatOutcome(BaseModel):
 
     @model_validator(mode="after")
     def normalize_outcome(self):
+        if self.answer_type == "clarification":
+            self.needs_user_choice = True
         if self.answer_type in {"insufficient_evidence", "out_of_scope"}:
             self.abstained = True
             self.abstention_reason = self.answer_type

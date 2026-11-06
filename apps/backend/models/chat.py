@@ -91,7 +91,7 @@ class ChatMessage(Base):
         CheckConstraint("role IN ('user','assistant')", name="chk_msg_role"),
         CheckConstraint(
             "role = 'user' OR abstained OR jsonb_array_length(citations) > 0 OR "
-            "jsonb_extract_path_text(response_metadata, 'answer_type') = 'conversation' OR "
+            "COALESCE(jsonb_extract_path_text(response_metadata, 'answer_type'), '') = 'conversation' OR "
             "COALESCE(jsonb_extract_path_text(response_metadata, 'needs_user_choice'), 'false') = 'true'",
             name="chk_msg_citations",
         ),

@@ -96,7 +96,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
             detail="Token đã hết hạn",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.JWTError:
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token không hợp lệ",

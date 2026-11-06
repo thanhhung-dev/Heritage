@@ -12,7 +12,7 @@ from apps.backend.services.tour_scope import area_system_policy, question_outsid
 class ConversationAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
 
-    answer_type: Literal["conversation", "answered", "insufficient_evidence", "out_of_scope"]
+    answer_type: Literal["conversation", "answered", "clarification", "insufficient_evidence", "out_of_scope"]
     answer: str = Field(min_length=1)
     source_ids: list[str]
     follow_up_questions: list[str] = Field(default_factory=list, max_length=3)
@@ -42,6 +42,9 @@ XỬ LÝ YÊU CẦU TRONG CÙNG MỘT CÂU TRẢ LỜI
   không đủ hoặc retrieval_status là not_found/unavailable. Nói rõ chưa xác
   nhận được phần nào; khi unavailable, nói kho dữ liệu hiện không khả dụng.
   Không đưa ra dữ kiện đoán từ trí nhớ. Không giả vờ đã tìm kiếm thành công.
+- clarification: yêu cầu chưa đủ rõ để biết di sản, nhân vật hoặc chi tiết nào
+  cần giải thích. Hỏi làm rõ, không tự chọn địa điểm hoặc đưa dữ kiện chưa có
+  căn cứ. Trong tour đã khóa, chỉ hỏi chi tiết thuộc khu vực hiện tại.
 - out_of_scope: yêu cầu ngoài phạm vi hỗ trợ. Nêu giới hạn ngắn gọn và hướng
   người dùng về di sản, lịch sử, văn hóa; không trả lời tự do ngoài phạm vi.
 
@@ -64,7 +67,7 @@ CĂN CỨ VÀ AN TOÀN
 Trả duy nhất JSON với answer_type, answer (lời đáp cho người dùng), source_ids.
 source_ids là danh sách chuỗi ID từ nhãn [Passage ID] thực sự hỗ trợ câu trả lời,
 không phải tất cả nguồn tìm thấy. answered phải có ít nhất một ID hợp lệ;
-ba loại còn lại bắt buộc source_ids=[]. Không thêm Markdown bao quanh JSON.
+các loại còn lại bắt buộc source_ids=[]. Không thêm Markdown bao quanh JSON.
 /no_think"""
 
 
@@ -81,24 +84,30 @@ def conversation_messages(
         "source": source,
         "message": question,
     }
-    if active_area_id:
-        area = resolve_area(active_area_id)
+    area = resolve_area(active_area_id) if active_area_id else None
+    if area:
         system += area_system_policy(area)
         system += " Có thể thêm follow_up_questions: tối đa 3 câu hỏi ngắn về đúng khu vực."
         data["active_area_id"] = area.id
         # A scene label is a hint for pronouns such as "ở đây", never evidence.
-        if scene_context:
+        if isinstance(scene_context, dict):
             data["scene_context"] = {
                 key: value[:200] for key, value in scene_context.items()
                 if key in {"title", "key", "slug"} and isinstance(value, str)
                 and not question_outside_area(value, area)
             }
+        elif isinstance(scene_context, str) and not question_outside_area(scene_context, area):
+            data["scene_context"] = scene_context[:2000]
+    if history:
         data["conversation_context"] = [
-            item for item in (history or [])[-6:]
+            item for item in history[-6:]
             if item.get("role") in {"user", "assistant"}
             and isinstance(item.get("content"), str)
-            and not question_outside_area(item["content"], area)
+            and (area is None or not question_outside_area(item["content"], area))
         ]
+    if scene_context and not area:
+        data["scene_context"] = scene_context
+    system += "\nLịch sử hội thoại và ngữ cảnh người dùng chỉ giúp hiểu câu hỏi, không phải bằng chứng."
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": json.dumps(data, ensure_ascii=False)},
