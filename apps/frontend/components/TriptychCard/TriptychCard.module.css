@@ -1,5 +1,6 @@
 .hp_hero_triptych.hp_hero_ready .hp_triptych {
-    animation: hp_triptych_in .8s cubic-bezier(0.25, 0.46, 0.45, 0.94) .6s forwards
+    opacity: 0;
+    animation: hp_triptych_in .8s cubic-bezier(0.25, 0.46, 0.45, 0.94) .1s forwards
 }
 
 @keyframes hp_triptych_in {

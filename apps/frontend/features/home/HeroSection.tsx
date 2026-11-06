@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, type CSSProperties } from "react";
+import ContentLoading from "@/components/Loading/ContentLoading";
 import TriptychCard, {
   type TriptychCardData,
 } from "@/components/TriptychCard/TriptychCard";
@@ -60,6 +61,7 @@ export const herotile = HeroTile;
 
 export interface HeroSectionProps {
   items?: TriptychCardData[];
+  loading?: boolean;
   title?: React.ReactNode;
   description?: string;
   subDescription?: string;
@@ -82,12 +84,12 @@ export const FEATURED_HERO_SLUGS = [
   ["ngu-hanh-son", "marble-mountains"],
 ] as const;
 
-function getCardImageUrl(item?: TriptychCardData): string {
+export function getCardImageUrl(item?: TriptychCardData): string {
   if (!item) return LOCAL_FALLBACK_IMAGE;
   return item.splash_image_url || item.card_image_url || LOCAL_FALLBACK_IMAGE;
 }
 
-function selectFeaturedTriptychItems(
+export function selectFeaturedTriptychItems(
   sourceItems: TriptychCardData[]
 ): TriptychCardData[] {
   if (sourceItems.length === 0) {
@@ -117,6 +119,7 @@ function selectFeaturedTriptychItems(
 
 export function HeroSection({
   items,
+  loading = false,
   title,
   description,
   subDescription,
@@ -198,46 +201,55 @@ export function HeroSection({
           .filter(Boolean)
           .join(" ")}
       >
-        {/* Cột bên trái: HeroTile (.hp_hero_left) */}
-        <HeroTile
-          eyebrow={eyebrow}
-          title={title}
-          description={description}
-          subDescription={subDescription}
-        />
+        {loading ? (
+          <ContentLoading
+            className={styles.heroLoading}
+            label="Loading heritage experiences…"
+          />
+        ) : (
+          <>
+            {/* Cột bên trái: HeroTile (.hp_hero_left) */}
+            <HeroTile
+              eyebrow={eyebrow}
+              title={title}
+              description={description}
+              subDescription={subDescription}
+            />
 
-        {/* Cột bên phải: Triptych Section (.hp_triptych). Ẩn khi chưa có dữ liệu
-            để layout `--hp-tt-n: 0` không tạo ra khung rỗng. */}
-        {displayItems.length > 0 ? (
-          <section
-            className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
-            id="hp_triptych"
-            aria-label="Featured Experiences"
-            style={
-              {
-                "--hp-tt-n": displayItems.length,
-              } as CSSProperties
-            }
-            onMouseLeave={handleMouseLeave}
-          >
-            {displayItems.map((item, idx) => (
-              <TriptychCard
-                key={`hero-${item.slug}-${idx}`}
-                item={item}
-                index={idx}
-                cardId={`card-${idx + 1}`}
-                isActive={activeIndex === idx}
-                isCollapsed={activeIndex !== null && activeIndex !== idx}
-                onMouseEnter={() => handleCardActivate(item, idx)}
-                onFocus={() => handleCardActivate(item, idx)}
-                onClick={() => handleCardActivate(item, idx)}
-                exploreLabel={exploreLabel}
-                infoLabel={infoLabel}
-                onInfo={onInfo}
-              />
-            ))}
-          </section>
-        ) : null}
+            {/* Cột bên phải: Triptych Section (.hp_triptych). Ẩn khi chưa có dữ liệu
+                để layout `--hp-tt-n: 0` không tạo ra khung rỗng. */}
+            {displayItems.length > 0 ? (
+              <section
+                className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
+                id="hp_triptych"
+                aria-label="Featured Experiences"
+                style={
+                  {
+                    "--hp-tt-n": displayItems.length,
+                  } as CSSProperties
+                }
+                onMouseLeave={handleMouseLeave}
+              >
+                {displayItems.map((item, idx) => (
+                  <TriptychCard
+                    key={`hero-${item.slug}-${idx}`}
+                    item={item}
+                    index={idx}
+                    cardId={`card-${idx + 1}`}
+                    isActive={activeIndex === idx}
+                    isCollapsed={activeIndex !== null && activeIndex !== idx}
+                    onMouseEnter={() => handleCardActivate(item, idx)}
+                    onFocus={() => handleCardActivate(item, idx)}
+                    onClick={() => handleCardActivate(item, idx)}
+                    exploreLabel={exploreLabel}
+                    infoLabel={infoLabel}
+                    onInfo={onInfo}
+                  />
+                ))}
+              </section>
+            ) : null}
+          </>
+        )}
       </div>
     </section>
   );

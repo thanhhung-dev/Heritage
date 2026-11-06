@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ConfigProvider, Spin, theme } from "antd";
+import { ConfigProvider, theme } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import Link from "next/link";
+import CircleLoading from "@/components/Loading/CircleLoading";
 import { getUser, type User } from "@/lib/auth";
 import { CoverImageModal } from "./CoverImageModal";
 import { ProfileHeader } from "./ProfileHeader";
@@ -229,7 +230,7 @@ export function ProfilePage() {
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
-        <Spin size="large" />
+        <CircleLoading label="Loading profile…" />
       </div>
     );
   }
@@ -286,4 +287,3 @@ export function ProfilePage() {
     </ConfigProvider>
   );
 }
-

@@ -2,30 +2,59 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ContentLoading from "@/components/Loading/ContentLoading";
 import {
   HeroSection,
   DiscoverMoreSection,
   HeritageCarouselSection,
+  getCardImageUrl,
+  selectFeaturedTriptychItems,
   type HeritageItem,
 } from "@/features/home";
 import type { TriptychCardData } from "@/components/TriptychCard/TriptychCard";
 import { fetchHeritages } from "@/lib/heritage";
 
+function preloadImage(url: string): Promise<void> {
+  if (!url || typeof window === "undefined") return Promise.resolve();
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = url;
+  });
+}
+
 export default function HomePage() {
   const router = useRouter();
 
   const [apiItems, setApiItems] = useState<TriptychCardData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     fetchHeritages()
-      .then((data) => {
-        if (active && Array.isArray(data)) {
-          setApiItems(data);
+      .then(async (data) => {
+        if (!active) return;
+        const list = Array.isArray(data) ? data : [];
+        const heroItems = selectFeaturedTriptychItems(list);
+        const urlsToPreload = new Set<string>();
+        for (const item of heroItems) {
+          const bgUrl = getCardImageUrl(item);
+          const cardUrl =
+            item.card_image_url || item.splash_image_url || bgUrl;
+          if (bgUrl) urlsToPreload.add(bgUrl);
+          if (cardUrl) urlsToPreload.add(cardUrl);
+        }
+        await Promise.all(Array.from(urlsToPreload, preloadImage));
+        if (active) {
+          setApiItems(list);
         }
       })
       .catch(() => {
         // API lỗi ⇒ để trống, các section tự ẩn. Không còn dữ liệu mock thay thế.
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
@@ -45,6 +74,24 @@ export default function HomePage() {
     router.push(`/content/${slug}`);
   };
 
+  if (loading) {
+    return (
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#0b0c0e",
+        }}
+      >
+        <ContentLoading label="Loading heritage experiences…" />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -58,6 +105,7 @@ export default function HomePage() {
       {/* 1. HERO SECTION (3 Featured Cards: Lăng Tự Đức, Cung An Định, Ngũ Hành Sơn) */}
       <HeroSection
         items={apiItems.length > 0 ? apiItems : undefined}
+        loading={loading}
         onInfo={handleCardClick}
       />
 
