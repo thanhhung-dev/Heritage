@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readSearchState, searchHref, updateSearchParams, toggleSearchFilter, paginationPages, UNCATEGORIZED } from "../features/search/search-params";
-import { searchHeritages, selectHeritages } from "../services/heritageSearchService";
+import { searchHeritages, selectHeritages, heritageCatalogueEndpoint } from "../services/heritageSearchService";
+import { DESIGN_CATEGORIES, heritageCategory } from "../features/search/heritage-taxonomy";
 import type { HeritageSearchItem, SearchState } from "../features/search/types";
 import { catalogueFacets, catalogueRecommendations, heritageLanguages, searchImageUrl } from "../features/search/catalogue";
 
@@ -155,4 +156,56 @@ test("selections use OR within each filter and AND across query, categories, reg
   assert.equal(empty.total, 0);
   assert.equal(empty.recommendations.length, 2);
   assert.equal(empty.locationGroups.length, 2);
+});
+
+test("deployed catalogue slugs get explicit categories while API categories take priority", () => {
+  assert.equal(heritageCategory("lang-tu-duc"), DESIGN_CATEGORIES[0]);
+  assert.equal(heritageCategory("chua-thien-mu"), DESIGN_CATEGORIES[1]);
+  assert.equal(heritageCategory("ngu-hanh-son"), DESIGN_CATEGORIES[2]);
+  assert.equal(heritageCategory("lang-da-non-nuoc"), DESIGN_CATEGORIES[3]);
+  assert.equal(heritageCategory("bao-tang-dieu-khac-cham"), DESIGN_CATEGORIES[4]);
+  assert.equal(heritageCategory("lang-tu-duc", "  API category  "), "API category");
+  for (const slug of ["unknown-tour", "a-temple-sounding-title", "toString", "__proto__"]) {
+    assert.equal(heritageCategory(slug), null);
+  }
+});
+
+test("catalogue endpoint accepts origins and API bases without duplicating /api", () => {
+  assert.equal(heritageCatalogueEndpoint("https://dev-api.worldheritagea.tech/api"), "https://dev-api.worldheritagea.tech/api/heritages");
+  assert.equal(heritageCatalogueEndpoint("http://localhost:8000/"), "http://localhost:8000/api/heritages");
+  assert.equal(heritageCatalogueEndpoint("/api/"), "/api/heritages");
+  assert.equal(heritageCatalogueEndpoint(""), "/api/heritages");
+});
+
+test("live-contract rows enable all five category filters and exclude private or duplicate records", async (context) => {
+  const slugs = ["lang-tu-duc", "chua-thien-mu", "ngu-hanh-son", "lang-da-non-nuoc", "bao-tang-dieu-khac-cham"];
+  const rows = slugs.map((slug, index) => ({ ...heritage, id: index + 1, slug, category: undefined, publish_state: "published" }));
+  const fetchMock = context.mock.method(globalThis, "fetch", async () => Response.json([
+    ...rows, rows[0], { ...rows[0], slug: "duplicate-id" },
+    { ...rows[0], id: 20, slug: "unpublished", publish_state: "draft" },
+  ]));
+  try {
+    const all = await searchHeritages(state);
+    assert.equal(all.total, 5);
+    for (const category of DESIGN_CATEGORIES) {
+      const filtered = await searchHeritages({ ...state, categories: [category] });
+      assert.equal(filtered.total, 1);
+      assert.equal(filtered.items[0].category, category);
+      assert.equal(all.categoryFacets.find((facet) => facet.value === category)?.count, 1);
+    }
+  } finally { fetchMock.mock.restore(); }
+});
+
+test("invalid card URLs fall back to safe splash metadata and the banner has alternate images", async (context) => {
+  const fetchMock = context.mock.method(globalThis, "fetch", async () => Response.json([
+    { ...heritage, card_image_url: "javascript:alert(1)", splash_image_url: "https://example.org/splash.jpg" },
+    { ...heritage, id: 2, slug: "other", card_image_url: "https://example.org/card.jpg" },
+  ]));
+  try {
+    const results = await searchHeritages(state);
+    assert.equal(results.items[0].card_image_url, null);
+    assert.equal(results.items[0].splash_image_url, "https://example.org/splash.jpg");
+    assert.equal(results.heroImage, "https://example.org/splash.jpg");
+    assert.deepEqual(results.heroFallbackImages, ["https://example.org/card.jpg"]);
+  } finally { fetchMock.mock.restore(); }
 });

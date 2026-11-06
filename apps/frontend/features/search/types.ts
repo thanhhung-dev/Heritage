@@ -42,4 +42,5 @@ export interface SearchResults {
   locationGroups: SearchLocationGroup[];
   recommendations: HeritageSearchItem[];
   heroImage: string | null;
+  heroFallbackImages: string[];
 }

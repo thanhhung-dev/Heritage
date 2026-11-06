@@ -1,13 +1,7 @@
 import { normalizeSearchText, UNCATEGORIZED } from "./search-params";
 import type { HeritageSearchItem, SearchFacet, SearchLocationGroup } from "./types";
-
-export const DESIGN_CATEGORIES = [
-  "Imperial & Historic Relics",
-  "Temples, Pagodas",
-  "Natural Landscapes & Scenic Sites",
-  "Traditional Craft Villages & Living Heritage",
-  "Museums & Antiquities",
-] as const;
+import { DESIGN_CATEGORIES } from "./heritage-taxonomy";
+export { DESIGN_CATEGORIES } from "./heritage-taxonomy";
 
 export function searchImageUrl(value: string | null | undefined): string | null {
   if (!value) return null;
