@@ -12,18 +12,17 @@ import { buildSceneConversationContext, sendSceneChatMessage, type SceneChatRequ
 import type { Message } from "./types";
 
 const WELCOME_MESSAGE_ID = "mila-welcome";
+const WELCOME_MESSAGE = "Bạn muốn khám phá điều gì về di sản này?";
 
 function createMessageId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
 
-function createWelcomeMessage(title?: string): Message {
+function createWelcomeMessage(): Message {
   return {
     id: WELCOME_MESSAGE_ID,
     role: "assistant",
-    content: title
-      ? `Mình đồng hành cùng bạn tại ${title}. Bạn muốn tìm hiểu lịch sử, kiến trúc hay những câu chuyện tại đây?`
-      : "Hướng dẫn viên đang chờ cấu hình khu vực cho tour này.",
+    content: WELCOME_MESSAGE,
     createdAt: new Date().toISOString(),
   };
 }
@@ -50,7 +49,7 @@ export function TourChatWidget() {
 function AreaTourChat() {
   const { payload, heritageSlug, currentSceneKey, currentScene } = useHeritageTour();
   const area = resolveTourArea(heritageSlug);
-  const [messages, setMessages] = useState<Message[]>(() => [createWelcomeMessage(area?.title)]);
+  const [messages, setMessages] = useState<Message[]>(() => [createWelcomeMessage()]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,11 +64,11 @@ function AreaTourChat() {
   const startNewConversation = useCallback(() => {
     requestRef.current?.abort();
     requestRef.current = null;
-    setMessages([createWelcomeMessage(area?.title)]);
+    setMessages([createWelcomeMessage()]);
     setInput("");
     setError(null);
     setLoading(false);
-  }, [area]);
+  }, []);
 
   const send = useCallback(async (text?: string) => {
     const userMessage = (text ?? input).trim();

@@ -277,26 +277,6 @@
   gap: 4px;
 }
 
-.areaLabel {
-  min-width: 0;
-  margin-right: auto;
-  padding-right: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.sceneContext {
-  margin: 0 0 8px;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.5;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .headerActions button {
   display: grid;
   place-items: center;
@@ -335,6 +315,10 @@
   margin-block: auto;
   text-align: center;
   transition: opacity .3s ease, transform .3s ease;
+}
+
+.welcomeMessage .messageText {
+  font-weight: 400;
 }
 
 .welcomeMessage[aria-hidden="true"] {

@@ -154,7 +154,8 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           data-chat-phase={props.sending ? "thinking" : hasConversation ? "conversation" : "welcome"}
           style={panelDrag.style} data-positioned={Boolean(panelDrag.position)} data-dragging={panelDrag.dragging}
           className={`${styles.panel} ${mode === "expanded" ? styles.panelExpanded : ""}`}
-          role="dialog" aria-modal={false} aria-hidden={!isOpen} aria-label="Heritage AI assistant">
+          role="dialog" aria-modal={false} aria-hidden={!isOpen}
+          aria-label={["Heritage AI assistant", props.areaLabel, props.sceneLabel].filter(Boolean).join(" · ")}>
           <div
             className={styles.ambient}
             aria-hidden="true"
@@ -181,9 +182,6 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           <header className={styles.header} {...panelDrag.handlers} data-chat-drag-handle tabIndex={isOpen ? 0 : -1}
             role="group" aria-label="Di chuyển cửa sổ chat" aria-describedby={`${panelId}-drag-help`}
             title="Kéo để di chuyển cửa sổ chat">
-            {props.areaLabel && <span className={styles.areaLabel} title={props.areaLabel}>
-              Hướng dẫn tại {props.areaLabel}
-            </span>}
             <div className={styles.headerActions}>
               <button type="button" onClick={props.onNewConversation} aria-label="Start a new conversation" title="New conversation">
                 <ReloadOutlined />

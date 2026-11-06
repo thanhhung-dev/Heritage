@@ -41,9 +41,6 @@ export function ChatInputBar({ value, sending, disabled = false, showSuggestions
       event.preventDefault();
       if (value.trim() && !sending && !disabled) onSend();
     }}>
-      {contextLabel && <p className={styles.sceneContext} role="status" title={contextLabel}>
-        Câu chuyện đang xem: {contextLabel}
-      </p>}
       {showSuggestions && <div className={`${styles.suggestions} ${styles.quickSuggestions}`} aria-label="Câu hỏi gợi ý">
         {suggestions.map((suggestion) => (
           <button key={suggestion.value} type="button" title={suggestion.value} aria-label={suggestion.value}
@@ -54,8 +51,9 @@ export function ChatInputBar({ value, sending, disabled = false, showSuggestions
       </div>}
       <div className={styles.inputRow} data-chat-input-row>
         <textarea ref={input} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}
-          placeholder={contextLabel ? "Hỏi về câu chuyện này…" : "Hỏi về di sản…"}
-          aria-label="Message the heritage assistant" rows={1} maxLength={8000}
+          placeholder="Hỏi về di sản…"
+          aria-label={contextLabel ? `Hỏi về câu chuyện ${contextLabel}` : "Message the heritage assistant"}
+          rows={1} maxLength={8000}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();

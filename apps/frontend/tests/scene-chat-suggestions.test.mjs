@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildSceneChatSuggestions } from "../lib/scene-chat-suggestions.mjs";
-import { resolveTourArea, tourQuestions } from "../lib/tour-chat-scope.mjs";
+import { resolveTourArea } from "../lib/tour-chat-scope.mjs";
 import { requestSceneChat } from "../lib/scene-chat-request.mjs";
 
 const area = resolveTourArea("lang-tu-duc");
+const REFERENCE_LABELS = ["Giới thiệu tổng quan", "Lịch sử hình thành", "Kiến trúc đặc sắc", "Khám phá cảnh này"];
 
 test("s0 and the stele story show different questions anchored to their own titles and heritage", () => {
   const overview = buildSceneChatSuggestions(area, { title: "Mở đầu chuyến tham quan", description: null }, "s0");
@@ -14,7 +15,8 @@ test("s0 and the stele story show different questions anchored to their own titl
   }, "s3");
   assert.notDeepEqual(overview.suggestions, stele.suggestions);
   assert.equal(stele.contextLabel, "s3 · Bia đá và những nỗi niềm");
-  assert.ok(stele.suggestions.some((item) => item.label === "Ý nghĩa văn bia"));
+  assert.deepEqual(stele.suggestions.map((item) => item.label), REFERENCE_LABELS);
+  assert.deepEqual(overview.suggestions.map((item) => item.label), REFERENCE_LABELS);
   for (const item of stele.suggestions) {
     assert.ok(item.value.includes("Bia đá và những nỗi niềm"));
     assert.ok(item.value.includes(area.title));
@@ -27,16 +29,17 @@ test("suggestions follow the story metadata when scene indices or content change
   const first = buildSceneChatSuggestions(area, story, "s1");
   const reordered = buildSceneChatSuggestions(area, story, "s4");
   assert.deepEqual(first.suggestions, reordered.suggestions);
-  assert.ok(first.suggestions.some((item) => item.label === "Cảnh quan nơi này"));
+  assert.ok(first.suggestions.every((item) => item.value.includes(story.title)));
   const edited = buildSceneChatSuggestions(area, { ...story, title: "Cổng và kiến trúc", description: "Chi tiết kiến trúc cổng." }, "s1");
   assert.notDeepEqual(first.suggestions, edited.suggestions);
-  assert.ok(edited.suggestions.some((item) => item.label === "Chi tiết kiến trúc"));
+  assert.ok(edited.suggestions.every((item) => item.value.includes("Cổng và kiến trúc")));
 });
 
 test("absent story or unsupported area never invents a topic", () => {
   const missing = buildSceneChatSuggestions(area, null, "s9");
   assert.equal(missing.contextLabel, null);
-  assert.deepEqual(missing.suggestions.map((item) => item.value), tourQuestions(area));
+  assert.deepEqual(missing.suggestions.map((item) => item.label), REFERENCE_LABELS);
+  assert.ok(missing.suggestions.every((item) => item.value.includes(area.title) && !item.value.includes("s9")));
   assert.deepEqual(buildSceneChatSuggestions(null, { title: "Unregistered tour" }, "s0").suggestions, []);
   const untitled = buildSceneChatSuggestions(area, { title: "  ", description: null }, "s2");
   assert.ok(untitled.suggestions.every((item) => item.value.includes("Câu chuyện s2")));
@@ -62,7 +65,9 @@ test("story metadata for a different destination falls back to the locked herita
   ]) {
     const result = buildSceneChatSuggestions(area, story, "s2");
     assert.equal(result.contextLabel, null);
-    assert.deepEqual(result.suggestions.map((item) => item.value), tourQuestions(area));
+    assert.deepEqual(result.suggestions.map((item) => item.label), REFERENCE_LABELS);
+    assert.ok(result.suggestions.every((item) => item.value.includes(area.title)));
+    assert.equal(result.suggestions.some((item) => item.value.includes(story.title)), false);
   }
   const regionalContext = buildSceneChatSuggestions(area, {
     title: "Khiêm Lăng trong quần thể di tích Cố đô Huế", description: null,
