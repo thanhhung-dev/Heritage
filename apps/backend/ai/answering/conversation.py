@@ -6,6 +6,8 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from apps.backend.services.tour_scope import area_system_policy, question_outside_area, resolve_area
+
 
 class ConversationAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
@@ -13,6 +15,7 @@ class ConversationAnswer(BaseModel):
     answer_type: Literal["conversation", "answered", "insufficient_evidence", "out_of_scope"]
     answer: str = Field(min_length=1)
     source_ids: list[str]
+    follow_up_questions: list[str] = Field(default_factory=list, max_length=3)
 
     @model_validator(mode="after")
     def check_sources(self) -> Self:
@@ -67,14 +70,28 @@ ba loại còn lại bắt buộc source_ids=[]. Không thêm Markdown bao quanh
 
 def conversation_messages(
     source: str, question: str, retrieval_status: str,
+    *, active_area_id: str | None = None, history: list[dict] | None = None,
 ) -> list[dict[str, str]]:
     # Encode the input as data; availability is supplied by the application,
     # never inferred from a user's claim that retrieval succeeded.
-    return [
-        {"role": "system", "content": CONVERSATION_SYSTEM},
-        {"role": "user", "content": json.dumps({
+    system = CONVERSATION_SYSTEM
+    data = {
             "retrieval_status": retrieval_status,
             "source": source,
             "message": question,
-        }, ensure_ascii=False)},
+    }
+    if active_area_id:
+        area = resolve_area(active_area_id)
+        system += area_system_policy(area)
+        system += " Có thể thêm follow_up_questions: tối đa 3 câu hỏi ngắn về đúng khu vực."
+        data["active_area_id"] = area.id
+        data["conversation_context"] = [
+            item for item in (history or [])[-6:]
+            if item.get("role") in {"user", "assistant"}
+            and isinstance(item.get("content"), str)
+            and not question_outside_area(item["content"], area)
+        ]
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": json.dumps(data, ensure_ascii=False)},
     ]

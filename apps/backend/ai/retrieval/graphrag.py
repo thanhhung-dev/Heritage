@@ -9,6 +9,8 @@ from pathlib import Path
 
 from apps.backend.common.observability import rag_observation
 from apps.backend.common.config import PROJECT_ROOT
+from apps.backend.services.tour_scope import resolve_area
+from pipelines.graph.microsoft_graphrag import validate_area_snapshot
 
 PROJECT = PROJECT_ROOT
 _query_lock = asyncio.Lock()
@@ -18,13 +20,21 @@ def graphrag_enabled() -> bool:
     return os.environ.get('GRAPHRAG_ENABLED', 'false').lower() in {'true', '1', 'yes', 'on'}
 
 
-async def run_global_query(message: str, community_level: int = 0) -> dict:
+async def run_global_query(message: str, community_level: int = 0, *,
+                           active_area_id: str | None = None) -> dict:
     if not graphrag_enabled():
         raise RuntimeError('Microsoft GraphRAG is disabled.')
-    configured_root = os.environ.get('GRAPHRAG_ROOT', '')
+    if active_area_id:
+        area = resolve_area(active_area_id)
+        roots = json.loads(os.environ.get("GRAPHRAG_AREA_ROOTS", "{}"))
+        configured_root = roots.get(area.id)
+    else:
+        configured_root = os.environ.get('GRAPHRAG_ROOT', '')
     if not configured_root:
         raise RuntimeError('Select an indexed snapshot first.')
     root = Path(configured_root).resolve()
+    if active_area_id:
+        validate_area_snapshot(root, area.id)
     # Resolving a venv interpreter symlink would discard its site-packages.
     python = Path(os.environ.get('GRAPHRAG_PYTHON', str(PROJECT / '.venv-graphrag/bin/python'))).absolute()
     timeout = float(os.environ.get('GRAPHRAG_QUERY_TIMEOUT', '180'))
@@ -46,10 +56,13 @@ async def run_global_query(message: str, community_level: int = 0) -> dict:
             try:
                 stdout, _ = await asyncio.wait_for(process.communicate(json.dumps({
                     'message': message, 'community_level': community_level,
+                    **({'active_area_id': area.id} if active_area_id else {}),
                 }).encode()), timeout=timeout)
                 if process.returncode:
                     raise RuntimeError('GraphRAG query failed.')
                 result = json.loads(stdout)
+                if active_area_id and result.get("active_area_id") != area.id:
+                    raise ValueError("GraphRAG returned another area.")
             finally:
                 if process.returncode is None:
                     process.kill()

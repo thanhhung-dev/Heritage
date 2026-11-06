@@ -145,10 +145,11 @@ def get_model():
 def generate_response_with_details(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
+    active_area_id: str | None = None, history: list[dict] | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    messages = (conversation_messages(context, question, retrieval_status)
+    messages = (conversation_messages(context, question, retrieval_status, active_area_id=active_area_id, history=history)
                 if conversation else chat_messages(context, question))
     options = {"response_format": {
         "type": "json_object", "schema": ConversationAnswer.model_json_schema(),
@@ -184,7 +185,9 @@ def generate_response_with_details(
 def generate_response(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
+    active_area_id: str | None = None, history: list[dict] | None = None,
 ) -> str:
     return generate_response_with_details(
         question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
+        active_area_id=active_area_id, history=history,
     ).answer

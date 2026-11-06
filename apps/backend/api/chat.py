@@ -8,38 +8,18 @@ import os
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 
 from apps.backend.ai.answering.conversation import ConversationAnswer
+from apps.backend.api.public.chat.schemas import ChatRequest, ChatResponse
 from apps.backend.core.llm import generate_response, get_generation_details
 from apps.backend.core.observability import correlation_id, observe_grounded_qa, rag_observation
 from apps.backend.core.search import PassageStore, SearchError
 from apps.backend.services.passages import EmbeddingError, PassageRepository, PassageSearch, RetrievalQuery
 
+from apps.backend.services.tour_chat import TourChatError, answer_in_area
+
 log = logging.getLogger(__name__)
 router = APIRouter()
-
-
-class ChatRequest(BaseModel):
-    message: str
-    use_rag: bool = True
-    session_id: str | None = None
-
-
-class ChatResponse(BaseModel):
-    answer: str
-    sources: list[dict] = Field(default_factory=list)
-    corrected_from: str = ""
-    corrected_to: str = ""
-    needs_user_choice: bool = False
-    suggestions: list[dict] = Field(default_factory=list)
-    entity_id: str | None = None
-    intent: str | None = None
-    resolution_status: str | None = None
-    answer_type: str | None = Field(default=None, description=(
-        "answered, conversation, insufficient_evidence, out_of_scope hoặc suggestion. "
-        "Chỉ answered có sources; conversation không yêu cầu bằng chứng lịch sử."
-    ))
 
 
 async def get_repository():
@@ -48,6 +28,7 @@ async def get_repository():
 
 
 @router.post("/chat", response_model=ChatResponse, responses={
+    504: {"description": "AI vượt quá thời gian chờ 30 giây cho tour có khóa khu vực."},
     500: {"description": "Lỗi retrieval nội bộ; detail chứa code=RETRIEVAL_INTERNAL_ERROR và message."},
     503: {"description": "Lỗi embedding/OpenSearch; detail chứa code=EMBEDDING_FAILED hoặc "
                          "OPENSEARCH_FAILED và message. Lỗi LLM giữ detail dạng chuỗi."},
@@ -77,6 +58,13 @@ async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_rep
 
 
 async def _chat(req: ChatRequest, repository: PassageRepository):
+    if req.active_area_id:
+        try:
+            return ChatResponse(**await answer_in_area(
+                req, repository, generate_response, get_generation_details,
+            ))
+        except TourChatError as error:
+            raise HTTPException(status_code=error.status, detail=error.detail) from None
     started = time.perf_counter()
     question = req.message.strip()
     if not question:
