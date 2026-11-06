@@ -7,7 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { HeritageTourProvider } from "@/context/heritage-tour";
-import { LogoText } from "@/components/LogoText";
+import ContentLoading from "@/components/Loading/ContentLoading";
 import SceneSurface from "@/features/tour/SceneSurface";
 import HeritageCanvas from "@/features/tour/three/HeritageCanvas";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
@@ -15,7 +15,6 @@ import { TEST_TOUR } from "@/features/tour/tour-data";
 import { ApiError } from "@/config/api";
 import { fetchTourContent, sceneKeys, type TourPlayback } from "@/lib/heritage";
 import { isInteractivePath } from "@/lib/tour-routes";
-import { tapestryTourVarsStyle } from "@/styles/theme/heritageTheme";
 import type { HeritagePayload } from "@/types/heritage";
 import editorStyles from "@/features/tour/dev/scene-editor.module.css";
 import styles from "./content-shell.module.css";
@@ -148,39 +147,13 @@ function HeritageContentWorkspace({ children }: { children: ReactNode }) {
       );
     }
 
-    // Chưa có payload: dựng ĐÚNG khung của trang splash (logo góc trên + thanh
-    // loading của nút Start ở đúng vị trí cuối trang), không mở một màn "đang
-    // tải" riêng nào nữa. Mọi thứ đang tải — payload, bytes GLB, giải mã model —
-    // đều chạy trong đúng thanh này. Khi payload về, info card chỉ chèn vào phía
-    // trên thanh nên thanh không nhảy chỗ và % đang chạy không bị reset.
     return (
-      <main className={styles.loading} style={tapestryTourVarsStyle}>
-        <div className={styles.splashWrap}>
-          <div className={styles.splash} aria-hidden="true" />
-        </div>
-
-        <LogoText className={styles.sHeritageLogo} size={100} />
-
-        <div className={styles.pageGroup}>
-          <div className={styles.enterButtonGroup}>
-            <span
-              className={styles.bottomNav}
-              role="status"
-              aria-live="polite"
-              aria-label="Loading heritage assets"
-            >
-              <span className={styles.loadingBarMain}>
-                <span className={styles.loadingBar} aria-hidden="true" />
-                <span
-                  className={`${styles.loadingBarFill} ${styles.loadingBarFillLoading}`}
-                  aria-hidden="true"
-                />
-                <span className={styles.loadingBarText}>Loading…</span>
-              </span>
-            </span>
-          </div>
-        </div>
-      </main>
+      <div className={styles.shell}>
+        <ContentLoading
+          className={styles.initialLoader}
+          label="Loading heritage tour…"
+        />
+      </div>
     );
   }
 

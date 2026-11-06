@@ -51,6 +51,38 @@ Sửa lỗi và chạy lại cùng input để hoàn tất an toàn.
 Q&A đọc text trực tiếp từ OpenSearch, **không cần R2 credentials hay DATABASE_URL**.
 R2 vẫn lưu tài liệu gốc; không cần upload thêm từng passage để chat hoạt động.
 
+### Lỗi truy xuất của `POST /api/chat`
+
+Khi truy xuất bằng chứng thất bại, API trả lỗi HTTP với `detail.code` và
+`detail.message`, không trả câu trả lời chatbot HTTP 200 với trạng thái
+`unavailable` như trước:
+
+| HTTP | `detail.code` | Ý nghĩa |
+|---|---|---|
+| 503 | `EMBEDDING_FAILED` | Không tạo được embedding cho câu hỏi; chưa chạy tìm kiếm OpenSearch. |
+| 503 | `OPENSEARCH_FAILED` | OpenSearch không hoàn tất truy vấn hoặc trả dữ liệu không hợp lệ. Không khẳng định chỉ là mất kết nối. |
+| 500 | `RETRIEVAL_INTERNAL_ERROR` | Lỗi ngoài dự kiến trong xử lý retrieval; không gán nhầm cho OpenSearch. |
+
+Ví dụ HTTP 503:
+
+```json
+{
+  "detail": {
+    "code": "OPENSEARCH_FAILED",
+    "message": "Không thể truy vấn dữ liệu từ OpenSearch."
+  }
+}
+```
+
+Client cần kiểm tra HTTP status và đọc `detail.message` cho các lỗi này thay vì
+đọc `answer`/`resolution_status`. Response không chứa exception thô, URL nội bộ
+hay credentials. Backend ghi traceback theo từng loại lỗi để chẩn đoán.
+OpenAPI `/docs` có mô tả response 500/503.
+
+Không tìm thấy bằng chứng vẫn là HTTP 200 với `resolution_status="not_found"`.
+Lỗi sinh câu trả lời từ LLM giữ HTTP 503 với `detail` dạng chuỗi như trước.
+GraphRAG tùy chọn bị lỗi vẫn fallback sang bằng chứng hybrid; không đổi pipeline.
+
 ## 3. Chuyển dữ liệu đã có
 
 Không xóa database/volume cũ. Export các passage với text đã xác minh, ID, vector

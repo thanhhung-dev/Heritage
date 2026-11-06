@@ -33,7 +33,7 @@ export interface SceneChatRequest {
 }
 
 export interface SceneChatResponse {
-  conversationId: string;
+  conversationId: string | null;
   answer: string;
   sources: Source[];
   correctedFrom?: string;
@@ -75,38 +75,62 @@ export async function sendSceneChatMessage(
     throw new SceneChatApiError(message, response.status);
   }
 
-  if (
-    !isRecord(data) ||
-    typeof data.answer !== "string" ||
-    typeof data.conversation_id !== "string"
-  ) {
+  if (!isRecord(data) || typeof data.answer !== "string") {
     throw new SceneChatApiError("Phản hồi từ máy chủ chat không đúng định dạng.", response.status);
   }
 
-  const citations = Array.isArray(data.citations) ? data.citations : [];
-  const sources = citations.flatMap((citation): Source[] => {
-    if (!isRecord(citation)) return [];
+  const rawSources = Array.isArray(data.sources)
+    ? data.sources
+    : Array.isArray(data.citations)
+      ? data.citations
+      : [];
+  const sources = rawSources.flatMap((item): Source[] => {
+    if (!isRecord(item)) return [];
 
     const source: Source = {};
-    if (typeof citation.source_title === "string") source.doc = citation.source_title;
-    if (
-      typeof citation.source_url === "string" &&
-      /^https?:\/\//i.test(citation.source_url)
-    ) {
-      source.url = citation.source_url;
+    if (typeof item.doc === "string") {
+      source.doc = item.doc;
+    } else if (typeof item.source_title === "string") {
+      source.doc = item.source_title;
     }
-    if (typeof citation.id === "string") source.chunk_id = citation.id;
+    if (typeof item.heading === "string") {
+      source.heading = item.heading;
+    }
+    if (typeof item.text === "string") {
+      source.text = item.text;
+    }
+    const rawUrl =
+      typeof item.url === "string"
+        ? item.url
+        : typeof item.source_url === "string"
+          ? item.source_url
+          : null;
+    if (rawUrl && /^https?:\/\//i.test(rawUrl)) {
+      source.url = rawUrl;
+    }
+    if (typeof item.chunk_id === "string" || typeof item.chunk_id === "number") {
+      source.chunk_id = String(item.chunk_id);
+    } else if (typeof item.passage_id === "string" || typeof item.passage_id === "number") {
+      source.chunk_id = String(item.passage_id);
+    } else if (typeof item.id === "string" || typeof item.id === "number") {
+      source.chunk_id = String(item.id);
+    }
     return [source];
   });
 
   return {
-    conversationId: data.conversation_id,
+    conversationId:
+      typeof data.conversation_id === "string" ? data.conversation_id : null,
     answer: data.answer,
     sources,
     correctedFrom:
-      typeof data.corrected_from === "string" ? data.corrected_from : undefined,
+      typeof data.corrected_from === "string" && data.corrected_from
+        ? data.corrected_from
+        : undefined,
     correctedTo:
-      typeof data.corrected_to === "string" ? data.corrected_to : undefined,
+      typeof data.corrected_to === "string" && data.corrected_to
+        ? data.corrected_to
+        : undefined,
   };
 }
 

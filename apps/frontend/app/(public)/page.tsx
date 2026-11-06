@@ -15,17 +15,20 @@ export default function HomePage() {
   const router = useRouter();
 
   const [apiItems, setApiItems] = useState<TriptychCardData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     fetchHeritages()
       .then((data) => {
-        if (active && Array.isArray(data)) {
-          setApiItems(data);
-        }
+        if (!active) return;
+        setApiItems(Array.isArray(data) ? data : []);
       })
       .catch(() => {
         // API lỗi ⇒ để trống, các section tự ẩn. Không còn dữ liệu mock thay thế.
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
@@ -58,6 +61,7 @@ export default function HomePage() {
       {/* 1. HERO SECTION (3 Featured Cards: Lăng Tự Đức, Cung An Định, Ngũ Hành Sơn) */}
       <HeroSection
         items={apiItems.length > 0 ? apiItems : undefined}
+        loading={loading}
         onInfo={handleCardClick}
       />
 
@@ -66,6 +70,7 @@ export default function HomePage() {
         title="Featured Experiences"
         description="Curated virtual journeys and immersive stories"
         items={featuredItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 
@@ -74,6 +79,7 @@ export default function HomePage() {
         title="Artifacts & Treasures"
         description="The tools, art, and objects that shape human history"
         items={artifactItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 
@@ -82,6 +88,7 @@ export default function HomePage() {
         title="People & Traditions"
         description="Community members share personal stories and memories"
         items={traditionItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 
@@ -90,6 +97,7 @@ export default function HomePage() {
         title="Festivals & Community Practices"
         description="The rituals and customs that bring heritage to life"
         items={festivalItems}
+        loading={loading}
         onCardClick={handleCardClick}
       />
 

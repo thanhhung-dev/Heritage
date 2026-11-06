@@ -7,6 +7,7 @@ import {
   type PortraitCardData,
 } from "@/components/PortraitCard/PortraitCard";
 import { Pagination } from "@/components/Pagination/Pagination";
+import SkeletonLoading from "@/components/Loading/SkeletonLoading";
 import { fetchHeritages } from "@/lib/heritage";
 import type { HeritageSummary } from "@/types/heritage";
 import styles from "./library.module.css";
@@ -447,7 +448,7 @@ export function LibraryPageContent() {
 
       {/* Screen Reader Status */}
       <div className={styles.sr_only} role="status" id="library_results_status">
-        {filtered.length} tours found
+        {status === "ready" ? `${filtered.length} tours found` : ""}
       </div>
 
       {/* 3. Card Group Grid */}
@@ -458,9 +459,11 @@ export function LibraryPageContent() {
         tabIndex={-1}
       >
         {status === "loading" && (
-          <div className={styles.library_state} role="status">
-            <p>Loading immersive heritage experiences…</p>
-          </div>
+          <SkeletonLoading
+            variant="cards"
+            className={styles.libraryLoading}
+            label="Loading heritage tours…"
+          />
         )}
 
         {status === "error" && (

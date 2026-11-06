@@ -17,8 +17,44 @@ export interface HeritageCarouselSectionProps {
   title: string;
   description?: string;
   items: HeritageItem[];
+  loading?: boolean;
   onCardClick?: (slug: string) => void;
   className?: string;
+}
+
+function CardImage({ src, title, onReady }: { src: string; title: string; onReady: () => void }) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "160px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={frame}
+      className={`${styles.cardMedia} ${status === "loading" ? styles.cardMediaLoading : ""}`}
+      aria-busy={visible && status === "loading"}
+    >
+      {visible && status !== "error" && (
+        <Image src={src} alt={title} width={200} height={320} unoptimized loading="lazy" decoding="async"
+          className={`${styles.cardImage} ${status === "ready" ? styles.cardImageReady : ""}`}
+          onLoad={() => { setStatus("ready"); onReady(); }}
+          onError={() => setStatus("error")} />
+      )}
+      {status === "error" && <span className={styles.cardImageError}>Không tải được ảnh</span>}
+    </div>
+  );
 }
 
 /**
@@ -41,23 +77,16 @@ export function HeritageCarouselSection({
   title,
   description,
   items,
+  loading = false,
   onCardClick,
   className,
 }: HeritageCarouselSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const defaultImage =
-    items[0]?.card_image_url ||
-    items[0]?.splash_image_url ||
-    "/images/featured-bg.jpg";
-
-  const [activeImageUrl, setActiveImageUrl] = useState<string>(defaultImage);
+  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const firstImg = items[0]?.card_image_url || items[0]?.splash_image_url;
-    if (firstImg) {
-      setActiveImageUrl(firstImg);
-    }
+    setActiveImageUrl(null);
   }, [items]);
 
   const handleCardHover = (item: HeritageItem) => {
@@ -74,8 +103,8 @@ export function HeritageCarouselSection({
     }
   };
 
-  // Chưa có dữ liệu (API đang tải hoặc lỗi) ⇒ không render section rỗng.
-  if (items.length === 0) return null;
+  // Đã tải xong mà không có dữ liệu ⇒ ẩn section rỗng.
+  if (!loading && items.length === 0) return null;
 
   return (
     <section
@@ -88,7 +117,7 @@ export function HeritageCarouselSection({
         <div
           className={styles.ambientImageBlur}
           style={{
-            backgroundImage: `url(${activeImageUrl || "/images/featured-bg.jpg"})`,
+            backgroundImage: activeImageUrl ? `url(${activeImageUrl})` : undefined,
           }}
         />
 
@@ -157,47 +186,59 @@ export function HeritageCarouselSection({
       </div>
 
       {/* Danh sách thẻ card cuộn ngang (z-index: 2) */}
-      <div className={styles.scrollContainer} ref={scrollRef}>
-        {items.map((item) => {
-          const imageUrl =
-            item.card_image_url ||
-            item.splash_image_url ||
-            "/images/featured-bg.jpg";
-
-          return (
-            <div
-              key={item.slug}
-              className={styles.card}
-              onClick={() => onCardClick?.(item.slug)}
-              onMouseEnter={() => handleCardHover(item)}
-              onFocus={() => handleCardHover(item)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onCardClick?.(item.slug);
-                }
-              }}
-            >
-              <Image
-                src={imageUrl}
-                alt={item.title}
-                width={200}
-                height={320}
-                className={styles.cardImage}
-                unoptimized
-              />
-              <div className={styles.cardOverlay} />
-              <div className={styles.cardContent}>
-                <h3 className={styles.cardTitle}>{item.title}</h3>
-                {item.region ? (
-                  <p className={styles.cardRegion}>{item.region}</p>
-                ) : null}
+      <div className={styles.scrollContainer} ref={scrollRef} aria-busy={loading}>
+        {loading && items.length === 0
+          ? Array.from({ length: 6 }, (_, idx) => (
+              <div
+                key={`carousel-skeleton-${idx}`}
+                className={`${styles.card} ${styles.cardSkeleton}`}
+                aria-hidden="true"
+              >
+                <div className={styles.cardOverlay} />
+                <div className={styles.cardContent}>
+                  <span className={styles.cardSkeletonTitle} />
+                  <span className={styles.cardSkeletonRegion} />
+                </div>
               </div>
-            </div>
-          );
-        })}
+            ))
+          : items.map((item) => {
+              const imageUrl =
+                item.card_image_url ||
+                item.splash_image_url ||
+                "/images/featured-bg.jpg";
+
+              return (
+                <div
+                  key={item.slug}
+                  className={styles.card}
+                  onClick={() => onCardClick?.(item.slug)}
+                  onMouseEnter={() => handleCardHover(item)}
+                  onFocus={() => handleCardHover(item)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onCardClick?.(item.slug);
+                    }
+                  }}
+                >
+                  <CardImage
+                    key={imageUrl}
+                    src={imageUrl}
+                    title={item.title}
+                    onReady={() => setActiveImageUrl((current) => current ?? imageUrl)}
+                  />
+                  <div className={styles.cardOverlay} />
+                  <div className={styles.cardContent}>
+                    <h3 className={styles.cardTitle}>{item.title}</h3>
+                    {item.region ? (
+                      <p className={styles.cardRegion}>{item.region}</p>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
       </div>
     </section>
   );

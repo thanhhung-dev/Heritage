@@ -1,0 +1,33 @@
+/* Neon Drift adaptation: https://github.com/zzzzshawn/matrix */
+.matrix {
+  display: inline-grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  place-items: center;
+  color: #f4f4f5;
+}
+
+.dot {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.08;
+  animation: sweep var(--cycle) linear infinite;
+  animation-delay: calc(var(--delay) * var(--cycle));
+}
+
+@keyframes sweep {
+  0%, 100% { opacity: 0.08; filter: none; }
+  14% { opacity: 1; filter: var(--glow, none); }
+  30% { opacity: 0.12; filter: none; }
+}
+
+.bloom {
+  --glow: drop-shadow(0 0 calc(var(--dot-size) * 0.75) currentColor)
+    drop-shadow(0 0 calc(var(--dot-size) * 1.35) currentColor);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; opacity: var(--rest-opacity); }
+}
