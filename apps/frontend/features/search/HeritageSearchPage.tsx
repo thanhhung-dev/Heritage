@@ -22,7 +22,7 @@ export function HeritageSearchPage() {
   }, [results, url.state.page, navigate]);
   const filtered = Boolean(url.busy || url.draft || url.state.q || url.state.regions.length || url.state.categories.length || url.state.locations.length || url.state.page > 1);
   return <div className={styles.page} data-search-page>
-    <SearchHero image={results?.heroImage} />
+    <SearchHero image={results?.heroImage} fallbackImages={results?.heroFallbackImages} />
     <div className={styles.content}>
       <SearchQueryBar query={url.draft} filtered={filtered} onChange={url.setDraft} onComposing={url.setComposing} onSubmit={url.submit} onReset={url.reset} />
       <div className={styles.resultsHeading}>

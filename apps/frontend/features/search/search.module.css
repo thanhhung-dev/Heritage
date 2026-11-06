@@ -67,6 +67,8 @@
 .regionChoice { color: #e4e7e4; font-size: 10px; font-weight: 500; text-transform: uppercase; }
 .regionChoice > span > span { color: #aeb6b8; font-size: 9px; }
 .siteChoices { padding-left: 4px; }
+.moreSites { display: inline-block; min-height: 28px; margin: 2px 0 0 23px; padding: 3px 0; border: 0; background: transparent; color: #d8b373; font-size: 10px !important; text-align: left; }
+.moreSites:hover { color: #f5cf8d; text-decoration: underline; }
 .filterNote { color: var(--search-muted); font-size: 11px; line-height: 1.7; }
 .results { min-width: 0; display: flex; flex-direction: column; }
 .resultList { display: flex; flex-direction: column; gap: 22px; }
@@ -145,6 +147,7 @@
   .filterChoice { min-height: 44px; font-size: 11px; gap: 8px; }
   .filterChoice input { width: 14px; height: 14px; }
   .filterChoice input:checked::after { margin: 3px 0 0 3px; }
+  .moreSites { min-height: 44px; }
   .resultList { gap: 24px; }
   .resultCard .cardLink { gap: 13px; }
   .cardBody h3 { font-size: 13px; }

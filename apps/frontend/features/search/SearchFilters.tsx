@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { DownOutlined, FilterOutlined } from "@ant-design/icons";
 import { DESIGN_CATEGORIES } from "@/features/search/catalogue";
 import { UNCATEGORIZED, type SearchFilterKey } from "@/features/search/search-params";
@@ -13,6 +13,30 @@ interface SearchFiltersProps {
   groups: SearchLocationGroup[];
   loading: boolean;
   onToggle: (key: SearchFilterKey, value: string) => void;
+}
+
+function LocationGroup({ group, selectedSites, selected, onToggle, renderSite }: {
+  group: SearchLocationGroup;
+  selectedSites: string[];
+  selected: boolean;
+  onToggle: () => void;
+  renderSite: (site: SearchFacet) => ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const sitesId = useId();
+  // Keep the reference sidebar compact, but always expose selected shared-URL sites.
+  const visible = expanded ? group.sites : group.sites.filter((site, index) => index < 3 || selectedSites.includes(site.value));
+  return <div className={styles.locationGroup}>
+    <label className={`${styles.filterChoice} ${styles.regionChoice}`}>
+      <input type="checkbox" name="regions" value={group.value} checked={selected} onChange={onToggle} />
+      <span>{group.label} <span>({group.count} {group.count === 1 ? "SITE" : "SITES"})</span></span>
+    </label>
+    <div className={styles.siteChoices} id={sitesId}>{visible.map(renderSite)}</div>
+    {(expanded || visible.length < group.sites.length) && <button type="button" className={styles.moreSites}
+      aria-expanded={expanded} aria-controls={sitesId} onClick={() => setExpanded(!expanded)}>
+      {expanded ? "Show fewer sites" : `Show all ${group.sites.length} sites`}
+    </button>}
+  </div>;
 }
 
 export function SearchFilters({ state, categories, groups, loading, onToggle }: SearchFiltersProps) {
@@ -39,13 +63,9 @@ export function SearchFilters({ state, categories, groups, loading, onToggle }: 
       </fieldset>
       <fieldset className={styles.filterSection}>
         <legend>Location Details</legend>
-        {groups.map((group) => <div key={group.value} className={styles.locationGroup}>
-          <label className={`${styles.filterChoice} ${styles.regionChoice}`}>
-            <input type="checkbox" name="regions" value={group.value} checked={state.regions.includes(group.value)} onChange={() => onToggle("regions", group.value)} />
-            <span>{group.label} <span>({group.count} {group.count === 1 ? "SITE" : "SITES"})</span></span>
-          </label>
-          <div className={styles.siteChoices}>{group.sites.map((site) => checkbox("locations", site))}</div>
-        </div>)}
+        {groups.map((group) => <LocationGroup key={group.value} group={group} selectedSites={state.locations}
+          selected={state.regions.includes(group.value)} onToggle={() => onToggle("regions", group.value)}
+          renderSite={(site) => checkbox("locations", site)} />)}
         {state.regions.filter((value) => !knownRegions.has(value)).map((value) => checkbox("regions", { value, label: value, count: 0 }))}
         {state.locations.filter((value) => !knownSites.has(value)).map((value) => checkbox("locations", { value, label: value, count: 0 }))}
         {loading && <div className={styles.filterSkeleton} aria-label="Loading locations"><i /><i /><i /><i /></div>}

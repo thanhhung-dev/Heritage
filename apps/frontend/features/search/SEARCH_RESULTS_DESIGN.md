@@ -66,12 +66,16 @@ Zod, then filters and paginates it on the client. It fetches once per mount or
 explicit retry, uses `cache: no-store`, aborts on unmount and has a 15s deadline.
 Changing query/filter/page does not refetch the whole catalogue.
 
-The adapter retains real `headline`, `region`, image, `language1`, `language2`
-and duration fields. Missing categories remain Uncategorized. The five category
-labels from the reference remain visible; a category with no matching catalogue
-metadata is disabled unless already selected, so a shared URL can be cleared.
-Category is never inferred from a heritage title. Recognized Da Nang/Hue region
-spellings are grouped without changing the actual location displayed on cards.
+The adapter retains real `headline`, `region`, description, image, `language1`,
+`language2` and duration fields. API category metadata takes precedence. The
+deployed API currently omits categories, so `heritage-taxonomy.ts` explicitly
+assigns the reference's categories to known catalogue slugs. This is authored
+presentation metadata, not title/description inference. Unlisted sites remain
+Uncategorized; a category with no catalogue records is disabled unless already
+selected, so a shared URL can be cleared. Recognized Da Nang/Hue region spellings
+are grouped without changing the actual location displayed on cards. Each region
+initially shows three sites with a Show all action; selected shared-link sites
+remain visible when that group is collapsed.
 
 Counts come from the full catalogue, so an empty search does not erase facets.
 Recommendations prefer tours outside the visible result page, are deduplicated
@@ -80,12 +84,37 @@ An empty catalogue shows a truthful recommendation placeholder; no invented
 production tours or historical descriptions are substituted.
 
 Banner/card imagery uses validated catalogue URLs and the project's existing
-Next Image approach (`unoptimized` for API asset hosts). Invalid or broken image
-URLs fall back to a neutral image placeholder; the hero has a dark green fallback.
+Next Image approach (`unoptimized` for API asset hosts). Invalid/broken card URLs
+try the same tour's splash image before a neutral placeholder. The hero tries
+alternate catalogue images before its dark green fallback. Duplicate catalogue
+IDs/slugs are removed while preserving the first valid published record.
 Tour cards link to the existing `/content/{slug}` entry route without preloading
 every tour. No backend, database schema, 3D viewer or dependency changes are needed.
 
 ## Verification
+
+Latest verification on **2026-11-06**:
+
+- The configured `https://dev-api.worldheritagea.tech/api/heritages` returns
+  **HTTP 200 and 30 published tours**. Browser requests use this real API, whose
+  CORS policy accepts `http://localhost:3000`. All 30 card image URLs returned
+  HTTP 200. No local database changes or production fixture substitution were used.
+- The existing Search test module now has **18 passing tests**, including all
+  five authored category filters, API metadata precedence, unknown slugs,
+  duplicate/unpublished exclusion, API-base normalization and safe image metadata.
+- Focused lint and TypeScript checks pass. `npm run build` succeeds with all
+  19 static pages generated. Two pre-existing tour splash `<img>` warnings
+  remain outside this feature.
+- Production browser checks cover the actual 30-tour catalogue and loaded image
+  geometry, category/region/site combinations, debounced/accent-insensitive
+  search, eight pages without gaps/duplicates, expanded location groups, shared
+  links, Back/Forward, page correction, Clear all and Vietnamese IME.
+- Controlled browser-only failures verify loading, HTTP 503/retry, malformed
+  responses, an empty catalogue and image/banner recovery. The actual public
+  API is used again after those checks. Responsive 375/320px filters and the
+  recommendation list are checked without page-wide horizontal overflow.
+
+Earlier verification follows for the original redesign:
 
 Verified on 2026-10-30:
 
