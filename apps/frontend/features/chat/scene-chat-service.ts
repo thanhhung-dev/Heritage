@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "@/config/api";
 import { getAccessToken } from "@/lib/auth";
+import { validateTourReply } from "@/lib/tour-chat-scope.mjs";
 import {
   createConversationContext,
   requestSceneChat,
@@ -13,6 +14,7 @@ export interface SceneChatContextMessage {
 
 export interface SceneChatRequest {
   message: string;
+  active_area_id: string;
   heritage_id?: number;
   heritage_context: {
     id: number;
@@ -36,6 +38,7 @@ export interface SceneChatResponse {
   conversationId: string | null;
   answer: string;
   sources: Source[];
+  followUpQuestions: string[];
   correctedFrom?: string;
   correctedTo?: string;
 }
@@ -78,6 +81,8 @@ export async function sendSceneChatMessage(
   if (!isRecord(data) || typeof data.answer !== "string") {
     throw new SceneChatApiError("Phản hồi từ máy chủ chat không đúng định dạng.", response.status);
   }
+
+  const followUpQuestions = validateTourReply(data, request.active_area_id);
 
   const rawSources = Array.isArray(data.sources)
     ? data.sources
@@ -123,6 +128,7 @@ export async function sendSceneChatMessage(
       typeof data.conversation_id === "string" ? data.conversation_id : null,
     answer: data.answer,
     sources,
+    followUpQuestions,
     correctedFrom:
       typeof data.corrected_from === "string" && data.corrected_from
         ? data.corrected_from

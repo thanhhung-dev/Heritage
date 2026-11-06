@@ -15,6 +15,9 @@ interface ChatOverlayWidgetProps {
   input: string;
   sending: boolean;
   restoring?: boolean;
+  disabled?: boolean;
+  areaLabel?: string;
+  suggestions?: readonly { label: string; value: string }[];
   error: string | null;
   onInputChange: (value: string) => void;
   onSend: (text?: string) => void;
@@ -177,6 +180,9 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           <header className={styles.header} {...panelDrag.handlers} data-chat-drag-handle tabIndex={isOpen ? 0 : -1}
             role="group" aria-label="Di chuyển cửa sổ chat" aria-describedby={`${panelId}-drag-help`}
             title="Kéo để di chuyển cửa sổ chat">
+            {props.areaLabel && <span className={styles.areaLabel} title={props.areaLabel}>
+              Hướng dẫn tại {props.areaLabel}
+            </span>}
             <div className={styles.headerActions}>
               <button type="button" onClick={props.onNewConversation} aria-label="Start a new conversation" title="New conversation">
                 <ReloadOutlined />
@@ -192,8 +198,9 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
             hideWelcome={hasConversation || props.input.trim().length > 0} />
           {props.restoring && <p className={styles.restoreStatus} role="status">Đang khôi phục hội thoại…</p>}
           {props.error && <p className={styles.error} role="alert">{props.error}</p>}
-          <ChatInputBar value={props.input} sending={props.sending} disabled={props.restoring}
-            showSuggestions={props.messages.length <= 1 && !props.restoring}
+          <ChatInputBar value={props.input} sending={props.sending} disabled={props.restoring || props.disabled}
+            suggestions={props.suggestions}
+            showSuggestions={(props.suggestions !== undefined || props.messages.length <= 1) && !props.restoring && !props.disabled}
             onChange={props.onInputChange} onSend={props.onSend} />
         </section>
     </div>

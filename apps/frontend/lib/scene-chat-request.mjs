@@ -1,8 +1,7 @@
 import { chatApiUrl } from "./chat-request.mjs";
 
 /**
- * Build the bounded guest history accepted by the persisted chat endpoint.
- * Authenticated conversations use their server-side history instead.
+ * Build bounded tour history accepted by POST /api/chat for guests and members.
  *
  * @param {Array<{role: "user" | "assistant", content: string}>} messages
  * @returns {Array<{role: "user" | "assistant", content: string}>}

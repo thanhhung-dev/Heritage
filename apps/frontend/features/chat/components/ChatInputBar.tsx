@@ -10,11 +10,12 @@ interface ChatInputBarProps {
   sending: boolean;
   disabled?: boolean;
   showSuggestions?: boolean;
+  suggestions?: readonly { label: string; value: string }[];
   onChange: (value: string) => void;
   onSend: (text?: string) => void;
 }
 
-export function ChatInputBar({ value, sending, disabled = false, showSuggestions = true, onChange, onSend }: ChatInputBarProps) {
+export function ChatInputBar({ value, sending, disabled = false, showSuggestions = true, suggestions = OVERLAY_QUICK_SUGGESTIONS, onChange, onSend }: ChatInputBarProps) {
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { input.current?.focus(); }, []);
   useEffect(() => {
@@ -40,7 +41,7 @@ export function ChatInputBar({ value, sending, disabled = false, showSuggestions
       if (value.trim() && !sending && !disabled) onSend();
     }}>
       {showSuggestions && <div className={`${styles.suggestions} ${styles.quickSuggestions}`} aria-label="Câu hỏi gợi ý">
-        {OVERLAY_QUICK_SUGGESTIONS.map((suggestion) => (
+        {suggestions.map((suggestion) => (
           <button key={suggestion.label} type="button" disabled={sending || disabled} onClick={() => onSend(suggestion.value)}>
             {suggestion.label}
           </button>

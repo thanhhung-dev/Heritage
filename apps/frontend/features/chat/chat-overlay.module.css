@@ -277,6 +277,16 @@
   gap: 4px;
 }
 
+.areaLabel {
+  min-width: 0;
+  margin-right: auto;
+  padding-right: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
 .headerActions button {
   display: grid;
   place-items: center;
