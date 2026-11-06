@@ -100,7 +100,9 @@ it does not certify the factual quality of arbitrary future model outputs.
 
 - Backend and 3D widget implemented on `feat/HER-area-locked-tour-guide`.
 - Both legacy and refactored entry paths use the same tour policy/DTO.
-- Targeted chat/retrieval/import tests: 46 passed, 6 integration skips; the extended
+- Targeted chat/retrieval/import tests: 48 passed, 6 integration skips; the earlier extended
   GraphRAG run adds 6 passes and reproduces 4 existing failures from `fd13d62`.
 - Frontend transport/scope tests: 8 passed; TypeScript and targeted ESLint passed.
 - See [implementation, data preparation and verification notes](../area-locked-tour-guide.md).
+- Follow-up refinement: friendly in-chat scope notice and explicit handling of
+  broader regional questions such as "Cố đô Huế", without automatic navigation.

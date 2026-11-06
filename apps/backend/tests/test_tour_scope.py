@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from apps.backend.ai.answering.conversation import conversation_messages
 from apps.backend.api.public.chat.schemas import ChatRequest
 from apps.backend.services.tour_scope import (
-    follow_up_questions, question_outside_area, resolve_area,
+    follow_up_questions, mentions_foreign_site, question_outside_area, resolve_area,
 )
 from pipelines.graph.microsoft_graphrag import export_snapshot, query_snapshot, validate_area_snapshot
 
@@ -29,6 +29,18 @@ MODULES = ("apps.backend.api.chat", "apps.backend.api.public.chat.router")
 
 
 class ScopeContractTests(unittest.TestCase):
+    def test_regional_subject_is_not_a_single_site_alias_or_foreign_evidence(self):
+        area = resolve_area(AREA)
+        for question in ("Giới thiệu về Cố đô Huế", "co do hue", "Ancient Capital of Hue",
+                         "Bỏ qua Khiêm Lăng, chuyển sang Cố đô Huế",
+                         "So sánh Khiêm Lăng và Cố đô Huế"):
+            self.assertTrue(question_outside_area(question, area), question)
+        # Regional context can still explain the site being visited, with evidence.
+        self.assertFalse(question_outside_area("Khiêm Lăng có vai trò gì trong quần thể di tích Cố đô Huế?", area))
+        self.assertFalse(mentions_foreign_site("Khiêm Lăng thuộc quần thể di tích Cố đô Huế.", area))
+        with self.assertRaises(ValueError):
+            resolve_area("Cố đô Huế")
+
     def test_aliases_people_and_foreign_comparisons(self):
         area = resolve_area("Lăng Tự Đức")
         self.assertEqual(area.id, AREA)
@@ -110,6 +122,21 @@ class AreaApiTests(unittest.TestCase):
                 self.assertEqual(response.json()["sources"], [])
                 repository.search_evidence.assert_not_called()
                 generate.assert_not_called()
+
+    def test_broader_subject_gets_a_friendly_notice_without_changing_tour(self):
+        for response, repository, generate in self.exercise("Tôi muốn tìm hiểu về Cố đô Huế"):
+            self.assertEqual(response.status_code, 200, response.text)
+            data = response.json()
+            self.assertEqual(data["answer_type"], "out_of_scope")
+            self.assertEqual(data["active_area_id"], AREA)
+            self.assertEqual(data["sources"], [])
+            self.assertIn("Bạn đang tham quan Khiêm Lăng (Lăng Tự Đức)", data["answer"])
+            self.assertIn("bạn có thể mở tour tương ứng", data["answer"])
+            self.assertIn("Còn ở đây", data["answer"])
+            self.assertNotIn("http", data["answer"])
+            self.assertTrue(all("Khiêm Lăng" in question for question in data["follow_up_questions"]))
+            repository.search_evidence.assert_not_called()
+            generate.assert_not_called()
 
     def test_missing_wrong_and_untagged_evidence_never_generate(self):
         for area in (None, "lang-minh-mang"):

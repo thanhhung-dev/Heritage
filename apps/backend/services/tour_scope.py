@@ -48,6 +48,11 @@ OTHER_SITES = ("Lăng Gia Long", "Thiên Thọ Lăng", "Lăng Thiệu Trị", "L
                "Cung An Định", "Ngũ Hành Sơn", "Bán đảo Sơn Trà", "Chùa Linh Ứng",
                "Bà Nà Hills", "Phố cổ Hội An", "Thánh địa Mỹ Sơn")
 
+# Regional subjects are broader than a single tour, not aliases for Đại Nội.
+# They may occur in evidence describing the active site's regional context.
+BROAD_TOUR_TOPICS = ("Cố đô Huế", "Kinh đô Huế", "Complex of Hue Monuments",
+                     "Hue Ancient Capital", "Ancient Capital of Hue")
+
 
 def resolve_area(value: str) -> TourArea:
     if not isinstance(value, str):
@@ -67,6 +72,14 @@ def mentions_foreign_site(text: str, area: TourArea) -> bool:
 
 
 def question_outside_area(text: str, area: TourArea) -> bool:
+    folded = f" {normalized(text)} "
+    mentions_region = any(f" {normalized(topic)} " in folded for topic in BROAD_TOUR_TOPICS)
+    mentions_current = any(f" {normalized(name)} " in folded for name in area.names)
+    changing_subject = bool(re.search(
+        r"\b(so sanh|thay vi|chuyen sang|bo qua|compare|instead of|switch to)\b", folded,
+    ))
+    if mentions_region and (not mentions_current or changing_subject):
+        return True
     return mentions_foreign_site(text, area) or bool(re.search(
         r"\b(lang khac|dia diem khac|khu vuc khac|another (?:site|tomb|area)|other (?:site|tomb|area))\b",
         normalized(text),
@@ -74,9 +87,9 @@ def question_outside_area(text: str, area: TourArea) -> bool:
 
 
 def scoped_refusal(area: TourArea) -> str:
-    return (f"Mình đang đồng hành cùng bạn tại {area.title}. Trong chuyến tham quan này, "
-            "mình chỉ giải thích và kể chuyện về khu vực đang xem, chưa mở rộng sang "
-            "địa điểm khác hoặc so sánh giữa các di sản. Bạn muốn tìm hiểu lịch sử hay kiến trúc ở đây?")
+    return (f"Bạn đang tham quan {area.title}, nên hiện mình chỉ hướng dẫn và giải đáp "
+            "về khu vực này. Nếu muốn khám phá nơi khác, bạn có thể mở tour tương ứng. "
+            "Còn ở đây, bạn muốn cùng mình tìm hiểu lịch sử, kiến trúc hay những câu chuyện thú vị?")
 
 
 def scoped_missing(area: TourArea) -> str:

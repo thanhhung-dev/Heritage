@@ -39,6 +39,19 @@ Mỗi source của câu trả lời có căn cứ mang `active_area_id`, `passag
 và URL nếu có. Widget từ chối response thiếu/sai area hoặc citation sai phạm vi;
 vì vậy cần cập nhật backend trước khi dùng widget mới với API public cũ.
 
+## Thông báo khi hỏi ngoài khu vực
+
+Khi đang xem tour Khiêm Lăng và hỏi tổng quan “Cố đô Huế”, API trả **200** với
+`answer_type="out_of_scope"`, `active_area_id="khiem-lang"`, `sources=[]` và câu trả lời:
+
+> Bạn đang tham quan Khiêm Lăng (Lăng Tự Đức), nên hiện mình chỉ hướng dẫn và giải đáp về khu vực này. Nếu muốn khám phá nơi khác, bạn có thể mở tour tương ứng. Còn ở đây, bạn muốn cùng mình tìm hiểu lịch sử, kiến trúc hay những câu chuyện thú vị?
+
+Đây là tin nhắn bình thường trong chat; không phải lỗi kết nối, không tự mở trang
+hoặc đổi scope. Tên địa điểm lấy từ registry của area đang mở. Các chip gợi ý vẫn
+chỉ hỏi về area hiện tại. “Cố đô Huế” là chủ đề rộng, không được gán thành alias
+của Đại Nội. Câu hỏi nói rõ mối liên hệ của Khiêm Lăng trong quần thể Cố đô Huế
+vẫn có thể truy xuất bằng chứng của Khiêm Lăng; không mở rộng kho dữ liệu.
+
 ## Các tầng khóa
 
 1. Câu hỏi nêu di sản khác hoặc so sánh với di sản khác trong registry bị từ chối
@@ -149,11 +162,13 @@ cấu hình area và không gửi chat toàn cục.
 
 ## Kết quả kiểm thử tự động
 
-- 19 test mới trong `test_tour_scope.py` kiểm tra cả entry path legacy/refactored,
+- 21 test trong `test_tour_scope.py` kiểm tra cả entry path legacy/refactored,
   DTO, cả nhánh Hybrid, Graph snapshot, citation, history, scene, timeout, model
   output và injection qua yêu cầu chuyển phạm vi.
-- Lượt chạy gộp chat/retrieval/ingestion/OpenSearch/GraphRAG: **52 passed,
-  6 skipped, 4 failed**, 77 subtests passed. 6 skip cần `OPENSEARCH_TEST_URL` thật.
+- Lượt chạy chat/retrieval/ingestion/OpenSearch sau khi chỉnh thông báo:
+  **48 passed, 6 skipped**, 79 subtests passed. 6 skip cần `OPENSEARCH_TEST_URL` thật.
+- Lượt đối chiếu thêm GraphRAG trước lần chỉnh thông báo: **52 passed,
+  6 skipped, 4 failed**, 77 subtests passed.
 - 4 failure đều tái hiện trên bản gốc `fd13d62` với `python -X utf8`: hai test
   gọi `/api/graphrag/query` không được mount trong app hiện tại; hai test process
   dùng `venv/bin/python` và executable shebang dành cho Linux trên Windows.
