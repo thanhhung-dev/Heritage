@@ -408,4 +408,3 @@ class RefactoredChatConversationTests(ChatConversationTests):
             public_api = importlib.import_module("apps.backend.api.public.chat.router")
         self.enterContext(patch(f"{__name__}.chat_api", public_api))
         super().setUp()
-

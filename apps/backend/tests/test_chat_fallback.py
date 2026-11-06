@@ -156,5 +156,3 @@ class LocalFallbackPersistenceTests(unittest.TestCase):
                 response = self.fixture.client.post("/api/chat/message", headers=self.fixture.headers(), json={"message": "test"})
                 self.assertEqual(response.status_code, 500)
         self.assertEqual(self.fixture.counts(), (0, 0, 0))
-
-
