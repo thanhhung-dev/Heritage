@@ -1,6 +1,6 @@
 # Scene-aware tour chat suggestions
 
-Status: implementation authorized by the user's request to code and commit scene-specific suggestions.
+Status: implemented and verified; authorized by the user's request to code and commit scene-specific suggestions.
 Branch: `feat/HER-area-locked-tour-guide` (continues the approved area lock).
 
 ## Behavior
@@ -23,3 +23,12 @@ Branch: `feat/HER-area-locked-tour-guide` (continues the approved area lock).
    model follow-ups; targeted tests, TypeScript/ESLint; signed commit.
 3. Extend story/transport regressions, document local acceptance checks, review
    staged paths for sensitive files and create a final signed commit.
+
+## Outcome
+
+- Pure title/description topic templates and guarded fallback implemented.
+- Widget derives suggestions from the current scene; old AI follow-up state no
+  longer overwrites them. Existing conversation/window state is preserved.
+- 14 targeted frontend tests, TypeScript and targeted ESLint passed.
+- Manual browser/model checks remain separate from the automated mock-IO checks.
+- See [local acceptance instructions](../scene-chat-suggestions.md).

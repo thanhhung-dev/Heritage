@@ -1,4 +1,4 @@
-import { tourQuestions } from "./tour-chat-scope.mjs";
+import { mentionsOtherTourArea, tourQuestions } from "./tour-chat-scope.mjs";
 
 /** @typedef {{ label: string, value: string }} SceneSuggestion */
 /** @typedef {{ id: string, title: string }} TourArea */
@@ -41,7 +41,7 @@ const TOPICS = [
  */
 export function buildSceneChatSuggestions(area, scene, sceneKey) {
   if (!area) return { contextLabel: null, suggestions: [] };
-  if (!scene) return {
+  if (!scene || mentionsOtherTourArea(`${scene.title} ${scene.description ?? ""}`, area.id)) return {
     contextLabel: null,
     suggestions: tourQuestions(area).map((value) => ({ label: value, value })),
   };

@@ -140,6 +140,9 @@ passage cùng area đã xác thực trong OpenSearch. Không cần GraphRAG đ�
 
 ## Tự kiểm tra local
 
+Widget còn có [gợi ý theo từng câu chuyện s0/s1…](scene-chat-suggestions.md):
+chip đổi theo scene đang xem, giữ khóa di sản và không bị phản hồi cảnh cũ ghi đè.
+
 Chạy backend theo cấu hình local của dự án, sau đó gửi request ở phần API vào
 `http://localhost:8000/docs` hoặc bằng `Invoke-RestMethod`:
 

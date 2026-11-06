@@ -8,6 +8,30 @@ const AREAS = [
   { id: "chua-thien-mu", title: "Chùa Thiên Mụ", slugs: ["chua-thien-mu", "thien-mu-pagoda"] },
 ];
 
+// Extra display-name aliases supplement the route identities above. The backend
+// remains the enforcement boundary; this guard avoids offering misleading chips
+// when a story's metadata explicitly describes a different destination.
+const PLACE_ALIASES = {
+  "khiem-lang": ["Khiêm Cung", "Vạn Niên Cơ"],
+  "lang-minh-mang": ["Lăng Minh Mệnh", "Hiếu Lăng"],
+  "dai-noi-hue": ["Đại Nội", "Hoàng thành Huế", "Hoàng thành Nhà Nguyễn", "Hue Imperial City"],
+  "lang-khai-dinh": ["Ứng Lăng"],
+  "chua-thien-mu": ["Chùa Linh Mụ"],
+};
+
+function normalizedPlace(value) {
+  return ` ${value.toLowerCase().replaceAll("đ", "d").normalize("NFKD")
+    .replace(/[\u0300-\u036f\u200b-\u200f\ufeff]/g, "").replace(/[^a-z0-9]+/g, " ").trim()} `;
+}
+
+/** @param {string} text @param {string} activeAreaId */
+export function mentionsOtherTourArea(text, activeAreaId) {
+  const content = normalizedPlace(text);
+  return AREAS.filter((area) => area.id !== activeAreaId).some((area) => (
+    [area.title, ...area.slugs, ...PLACE_ALIASES[area.id]].some((name) => content.includes(normalizedPlace(name)))
+  ));
+}
+
 /** @param {string} slug */
 export function resolveTourArea(slug) {
   return AREAS.find((area) => area.slugs.includes(slug.toLowerCase())) ?? null;
