@@ -11,11 +11,12 @@ interface ChatInputBarProps {
   disabled?: boolean;
   showSuggestions?: boolean;
   suggestions?: readonly { label: string; value: string }[];
+  contextLabel?: string;
   onChange: (value: string) => void;
   onSend: (text?: string) => void;
 }
 
-export function ChatInputBar({ value, sending, disabled = false, showSuggestions = true, suggestions = OVERLAY_QUICK_SUGGESTIONS, onChange, onSend }: ChatInputBarProps) {
+export function ChatInputBar({ value, sending, disabled = false, showSuggestions = true, suggestions = OVERLAY_QUICK_SUGGESTIONS, contextLabel, onChange, onSend }: ChatInputBarProps) {
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { input.current?.focus(); }, []);
   useEffect(() => {
@@ -40,16 +41,21 @@ export function ChatInputBar({ value, sending, disabled = false, showSuggestions
       event.preventDefault();
       if (value.trim() && !sending && !disabled) onSend();
     }}>
+      {contextLabel && <p className={styles.sceneContext} role="status" title={contextLabel}>
+        Câu chuyện đang xem: {contextLabel}
+      </p>}
       {showSuggestions && <div className={`${styles.suggestions} ${styles.quickSuggestions}`} aria-label="Câu hỏi gợi ý">
         {suggestions.map((suggestion) => (
-          <button key={suggestion.label} type="button" disabled={sending || disabled} onClick={() => onSend(suggestion.value)}>
+          <button key={suggestion.value} type="button" title={suggestion.value} aria-label={suggestion.value}
+            disabled={sending || disabled} onClick={() => onSend(suggestion.value)}>
             {suggestion.label}
           </button>
         ))}
       </div>}
       <div className={styles.inputRow} data-chat-input-row>
         <textarea ref={input} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}
-          placeholder="Hỏi về di sản…" aria-label="Message the heritage assistant" rows={1} maxLength={8000}
+          placeholder={contextLabel ? "Hỏi về câu chuyện này…" : "Hỏi về di sản…"}
+          aria-label="Message the heritage assistant" rows={1} maxLength={8000}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();

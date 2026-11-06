@@ -287,6 +287,16 @@
   color: var(--text-secondary);
 }
 
+.sceneContext {
+  margin: 0 0 8px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .headerActions button {
   display: grid;
   place-items: center;

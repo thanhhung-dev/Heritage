@@ -17,6 +17,7 @@ interface ChatOverlayWidgetProps {
   restoring?: boolean;
   disabled?: boolean;
   areaLabel?: string;
+  sceneLabel?: string;
   suggestions?: readonly { label: string; value: string }[];
   error: string | null;
   onInputChange: (value: string) => void;
@@ -199,6 +200,7 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           {props.restoring && <p className={styles.restoreStatus} role="status">Đang khôi phục hội thoại…</p>}
           {props.error && <p className={styles.error} role="alert">{props.error}</p>}
           <ChatInputBar value={props.input} sending={props.sending} disabled={props.restoring || props.disabled}
+            contextLabel={props.sceneLabel}
             suggestions={props.suggestions}
             showSuggestions={(props.suggestions !== undefined || props.messages.length <= 1) && !props.restoring && !props.disabled}
             onChange={props.onInputChange} onSend={props.onSend} />

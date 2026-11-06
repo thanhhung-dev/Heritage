@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useHeritageTour } from "@/context/heritage-tour";
 import { AUTH_CHANGE_EVENT, getAccessToken, getUser } from "@/lib/auth";
-import { resolveTourArea, tourQuestions } from "@/lib/tour-chat-scope.mjs";
+import { resolveTourArea } from "@/lib/tour-chat-scope.mjs";
+import { buildSceneChatSuggestions } from "@/lib/scene-chat-suggestions.mjs";
 import { ChatOverlayWidget } from "@/features/chat/components/ChatOverlayWidget";
 import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
 import { buildSceneConversationContext, sendSceneChatMessage, type SceneChatRequest } from "./scene-chat-service";
@@ -53,14 +54,18 @@ function AreaTourChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<string[]>(() => area ? tourQuestions(area) : []);
   const requestRef = useRef<AbortController | null>(null);
+  // Derive chips from the scene displayed NOW. Model replies can arrive after a
+  // scene change and must never restore the previous story's suggestions.
+  const sceneSuggestions = useMemo(
+    () => buildSceneChatSuggestions(area, currentScene, currentSceneKey),
+    [area, currentScene, currentSceneKey],
+  );
 
   const startNewConversation = useCallback(() => {
     requestRef.current?.abort();
     requestRef.current = null;
     setMessages([createWelcomeMessage(area?.title)]);
-    setQuestions(area ? tourQuestions(area) : []);
     setInput("");
     setError(null);
     setLoading(false);
@@ -104,7 +109,6 @@ function AreaTourChat() {
     try {
       const response = await sendSceneChatMessage(request, controller.signal);
       if (!isCurrent()) return;
-      setQuestions(response.followUpQuestions);
       setMessages((current) => [...current, {
         id: createMessageId(), role: "assistant", content: response.answer,
         createdAt: new Date().toISOString(), sources: response.sources,
@@ -135,7 +139,8 @@ function AreaTourChat() {
   return <ChatOverlayWidget
     messages={overlayMessages} input={input} sending={loading} disabled={!area}
     areaLabel={area?.title}
-    suggestions={questions.map((question) => ({ label: question, value: question }))}
+    sceneLabel={sceneSuggestions.contextLabel ?? undefined}
+    suggestions={sceneSuggestions.suggestions}
     error={area ? error : "Tour này chưa có khu vực hướng dẫn được xác nhận. Chat tạm khóa để tránh trả lời sai phạm vi."}
     onInputChange={setInput} onSend={(text) => void send(text)} onNewConversation={startNewConversation}
   />;
