@@ -9,7 +9,11 @@ from functools import lru_cache
 import httpx
 from opentelemetry import trace
 
-from apps.backend.ai.answering.conversation import ConversationAnswer, conversation_messages
+from apps.backend.ai.answering.conversation import (
+    ConversationAnswer,
+    conversation_json_schema,
+    conversation_messages,
+)
 from apps.backend.core.observability import DEPENDENCY_HEALTH, rag_observation
 from apps.backend.core.prompt import chat_messages
 
@@ -151,7 +155,7 @@ def generate_response_with_details(
     messages = (conversation_messages(context, question, retrieval_status)
                 if conversation else chat_messages(context, question))
     options = {"response_format": {
-        "type": "json_object", "schema": ConversationAnswer.model_json_schema(),
+        "type": "json_object", "schema": conversation_json_schema(context),
     }} if conversation else {}
 
     with rag_observation('generation', as_type='generation', input=messages) as observation:

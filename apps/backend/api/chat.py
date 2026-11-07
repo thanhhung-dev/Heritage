@@ -10,7 +10,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from apps.backend.ai.answering.conversation import ConversationAnswer
+from apps.backend.ai.answering.conversation import ConversationAnswer, resolve_cited_source_ids
 from apps.backend.core.llm import generate_response, get_generation_details
 from apps.backend.core.observability import correlation_id, observe_grounded_qa, rag_observation
 from apps.backend.core.search import PassageStore, SearchError
@@ -151,8 +151,11 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
                     answer="Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có.",
                     answer_type="insufficient_evidence", source_ids=[],
                 )
-            elif not answer.source_ids or not set(answer.source_ids) <= {str(e.id) for e in result.evidence}:
-                raise ValueError("Answer must cite supplied passages")
+            else:
+                valid_ids = {str(e.id) for e in result.evidence}
+                answer.source_ids = resolve_cited_source_ids(answer.source_ids, valid_ids)
+                if not answer.source_ids or not set(answer.source_ids) <= valid_ids:
+                    raise ValueError("Answer must cite supplied passages")
     except ValueError:
         # Validation errors can contain generated content; do not log that text.
         log.warning("LLM output không hợp lệ hoặc bị cắt")
