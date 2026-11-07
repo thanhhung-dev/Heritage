@@ -203,46 +203,11 @@
 
 .actionsBlock {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
 }
 
-.customExploreBtn {
-  min-width: 185px !important;
-  height: 44px !important;
-  border-radius: 9999px !important;
-  font-size: 0.9rem !important;
-  font-weight: 600 !important;
-  background: linear-gradient(135deg, #ff7e1d 0%, #fa4d09 100%) !important;
-  box-shadow: 0 4px 18px rgba(250, 77, 9, 0.4) !important;
-  color: #ffffff !important;
-  border: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-}
-
-.customShareBtn {
-  min-width: 105px !important;
-  height: 44px !important;
-  padding: 0 20px !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  color: #f1f5f9 !important;
-  border-radius: 9999px !important;
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  gap: 8px;
-  box-shadow: none !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
-}
-
-.customShareBtn:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
+.actionButton {
+  border-radius: 9999px;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button/Button";
 import type { HeritageItem } from "@/services/heritage.service";
 import styles from "./HeritageInfoModal.module.css";
@@ -12,8 +11,6 @@ interface HeritageInfoModalProps {
 }
 
 export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onClose }) => {
-  const router = useRouter();
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -44,11 +41,6 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
     "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1200&q=80";
 
   const displayVoices = item.voices && item.voices.length > 0 ? item.voices : [];
-
-  const handleExplore = () => {
-    onClose();
-    if (slug) router.push(`/content/${slug}`);
-  };
 
   const handleShare = async () => {
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -135,20 +127,20 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
             </div>
           )}
 
-         <div className={styles.actionsBlock}>
+          <div className={styles.actionsBlock}>
             <Button
               variant="primary"
+              className={styles.actionButton}
               href={slug ? `/content/${slug}` : undefined}
               onClick={onClose}
-              style={{ borderRadius: "9999px" }}
             >
               Khám phá
             </Button>
 
             <Button
-              className={styles.customShareBtn}
+              variant="secondary"
+              className={styles.actionButton}
               onClick={handleShare}
-              style={{ borderRadius: "9999px" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -157,6 +149,7 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
               </svg>
               Chia sẻ
             </Button>
+          </div>
         </div>
       </div>
     </div>
