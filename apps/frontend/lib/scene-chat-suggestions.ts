@@ -1,13 +1,16 @@
 import { mentionsOtherTourArea, type TourArea } from "./tour-chat-scope";
+import type { GuideStory } from "../types/heritage";
 
 export interface SceneSuggestion {
   label: string;
   value: string;
+  storyId?: string;
 }
 
 export interface Story {
   title: string;
   description?: string | null;
+  guide_stories?: GuideStory[];
 }
 
 function plainText(value: unknown, limit: number): string {
@@ -40,6 +43,8 @@ export function buildSceneChatSuggestions(
   area: Pick<TourArea, "id" | "title"> | null,
   scene: Story | null,
   sceneKey: string,
+  selectedPoint?: { popup_title: string | null; guide_stories?: GuideStory[] } | null,
+  completedStoryIds: readonly string[] = [],
 ): { contextLabel: string | null; suggestions: SceneSuggestion[] } {
   if (!area) return { contextLabel: null, suggestions: [] };
   if (!scene || mentionsOtherTourArea(`${scene.title} ${scene.description ?? ""}`, area.id)) {
@@ -51,6 +56,23 @@ export function buildSceneChatSuggestions(
 
   const key = plainText(sceneKey, 12);
   const title = plainText(scene.title, 64) || `Câu chuyện ${key || "hiện tại"}`;
+  const pointTitle = plainText(selectedPoint?.popup_title, 80);
+  const point = pointTitle && !mentionsOtherTourArea(pointTitle, area.id) ? selectedPoint : null;
+  const stories = point ? point.guide_stories : scene.guide_stories;
+  if (stories?.length) {
+    return {
+      contextLabel: `${key ? `${key} · ` : ""}${title}${point ? ` · ${pointTitle}` : ""}`,
+      suggestions: stories.filter((story) => !completedStoryIds.includes(story.id)
+        && story.source_ids.length > 0 && !mentionsOtherTourArea(story.question, area.id))
+        .slice(0, 3).map((story) => ({ label: story.label, value: story.question, storyId: story.id })),
+    };
+  }
+  if (point) {
+    return {
+      contextLabel: `${key ? `${key} · ` : ""}${title} · ${pointTitle}`,
+      suggestions: questionsFor(`điểm “${pointTitle}” tại ${area.title}`).slice(0, 3),
+    };
+  }
   const subject = `mẩu chuyện “${title}” tại ${area.title}`;
   return {
     contextLabel: `${key ? `${key} · ` : ""}${title}`,

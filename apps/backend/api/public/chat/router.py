@@ -18,7 +18,7 @@ from apps.backend.ai.retrieval.passages import EmbeddingError, PassageRepository
 
 from apps.backend.services.tour_chat import TourChatError, answer_in_area
 
-from apps.backend.api.conversations import get_chat_db, get_conversation_service, mount_conversation_routes
+from apps.backend.api.conversations import get_chat_db, get_conversation_service, mount_conversation_routes, validated_tour_context
 from apps.backend.services.chat_context import question_with_context, retrieval_question
 
 log = logging.getLogger(__name__)
@@ -65,9 +65,10 @@ async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_rep
 
 async def _chat(req: ChatRequest, repository: PassageRepository):
     if req.active_area_id:
+        context = await validated_tour_context(req)
         try:
             return ChatResponse(**await answer_in_area(
-                req, repository, generate_response, get_generation_details,
+                req, repository, generate_response, get_generation_details, reply_context=context,
             ))
         except TourChatError as error:
             raise HTTPException(status_code=error.status, detail=error.detail) from None

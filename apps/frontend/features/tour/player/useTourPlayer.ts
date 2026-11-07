@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHeritageTour } from "@/context/heritage-tour";
-import type { HeritageInteractiveHighlight } from "@/types/heritage";
 import { parseExploreArea } from "../three/explore-area";
 import type { ExploreMode } from "../three/explore-controller";
 import type { TourEngine } from "../three/tour-engine";
@@ -17,7 +16,8 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   allowLookAround?: boolean;
   interactiveRoute?: boolean;
 } = {}) {
-  const { engine, payload, currentSceneKey, currentScene, scenePlayback } = useHeritageTour();
+  const { engine, payload, currentSceneKey, currentScene, scenePlayback,
+    selectedHighlight, setSelectedHighlight, reportNarration } = useHeritageTour();
   const interactive = scenePlayback ? currentScene?.interactive[0] ?? null : null;
   const [isMuted, setIsMuted] = useState(false);
   const { playTransition, stopTransition, playExploreReveal, stopExploreReveal } = useTourAudio(
@@ -33,7 +33,6 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   const isSceneTransitioning = readyScene?.key !== currentSceneKey
     || readyScene.engine !== engine || readyScene.playback !== scenePlayback;
   const [ccOn, setCcOn] = useState(true);
-  const [selectedHighlight, setSelectedHighlight] = useState<HeritageInteractiveHighlight | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
   const highlightEntry = useRef<ReturnType<TourEngine["getCameraPose"]> | null>(null);
@@ -52,6 +51,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   /** Engine mà `exploreActive` đang nói tới — engine mới thì phải vào lại từ đầu. */
   const exploreEngine = useRef<TourEngine | null>(null);
   const narration = useNarration(narrationUrl ?? scenePlayback?.narrationUrl ?? null, isMuted);
+  useEffect(() => {
+    reportNarration(currentSceneKey, narration.narrationStatus);
+  }, [currentSceneKey, narration.narrationStatus, reportNarration]);
   const captions = useCaptions(captionsUrl ?? scenePlayback?.captionsUrl ?? null, narration.currentTime, ccOn);
   const { pause, seek } = narration;
 
@@ -175,7 +177,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       stopTransition();
       unsubscribe?.();
     };
-  }, [engine, currentSceneKey, currentScene, scenePlayback, interactive, exploreArea, pause, seek, playTransition, stopTransition]);
+  }, [engine, currentSceneKey, currentScene, scenePlayback, interactive, exploreArea, pause, seek, playTransition, stopTransition, setSelectedHighlight]);
   useEffect(() => {
     // Truyền cả trạng thái phát: engine cần biết để tự tiến đồng hồ nội bộ giữa
     // các lần React báo thời gian (mượt 60fps thay vì giật theo `timeupdate`).

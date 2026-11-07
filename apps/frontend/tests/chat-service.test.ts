@@ -11,6 +11,25 @@ const reply = {
   follow_up_questions: [], needs_user_choice: false, abstained: false,
 };
 
+test("tour replies require the request snapshot and restored messages retain their original scene", async (t) => {
+  browser(t);
+  const context = { scene_id: 506, mode: "standard" as const, highlight_id: 6, narration: "partial" as const };
+  const snapshot = { scene_id: 506, scene_key: "s3", scene_title: "Cảnh gốc", mode: "standard", highlight_id: 6,
+    highlight_title: "Điểm gốc", story_id: null };
+  globalThis.fetch = async () => new Response(JSON.stringify({ ...reply, reply_context: snapshot }));
+  const result = await sendChatMessage({ message: "Kể thêm", active_area_id: "khiem-lang", tour_context: context });
+  assert.deepEqual(result.replyContext, snapshot);
+  globalThis.fetch = async () => new Response(JSON.stringify({ ...reply, reply_context: { ...snapshot, scene_id: 508 } }));
+  await assert.rejects(sendChatMessage({ message: "Kể thêm", active_area_id: "khiem-lang", tour_context: context }), /ngữ cảnh/);
+  globalThis.fetch = async () => new Response(JSON.stringify(reply));
+  await assert.rejects(sendChatMessage({ message: "Kể thêm", active_area_id: "khiem-lang", tour_context: context }), /ngữ cảnh/);
+  globalThis.fetch = async () => new Response(JSON.stringify({ id: conversationId, active_area_id: "khiem-lang", total_messages: 1,
+    messages: [{ ...reply, id: messageId, role: "assistant", content: reply.answer, reply_context: snapshot }],
+  }));
+  const history = await getConversationHistory(conversationId);
+  assert.deepEqual(history.messages[0].replyContext, snapshot);
+});
+
 function browser(t: TestContext) {
   const values = new Map<string, string>([["heritage_access_token", "test-access-token"]]);
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");

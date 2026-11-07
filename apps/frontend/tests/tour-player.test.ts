@@ -190,6 +190,8 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
       currentScene, error: null, isModelReady: true,
       modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
+      selectedHighlight: null, setSelectedHighlight() {}, chatMode: "scene",
+      narrationStatus: "not_started", reportNarration() {},
     } }, createElement(Probe)));
     return result;
   }
@@ -246,6 +248,8 @@ test("chế độ điểm tương tác suy ra từ URL /int, không giữ state 
       currentScene, error: null, isModelReady: true,
       modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
+      selectedHighlight: null, setSelectedHighlight() {}, chatMode: "scene",
+      narrationStatus: "not_started", reportNarration() {},
     } }, createElement(Probe, { interactiveRoute })));
     return result;
   }

@@ -193,6 +193,9 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
               <button type="button" onClick={close} aria-label="Close assistant"><CloseOutlined /></button>
             </div>
           </header>
+          {props.sceneLabel && <p className={styles.restoreStatus} data-tour-context>
+            Đang xem: {props.sceneLabel}
+          </p>}
           <ChatMessageList messages={props.messages} sending={props.sending} onSend={props.onSend}
             hideWelcome={hasConversation || props.input.trim().length > 0} />
           {props.restoring && <p className={styles.restoreStatus} role="status">Đang khôi phục hội thoại…</p>}

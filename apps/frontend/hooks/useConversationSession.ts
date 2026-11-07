@@ -40,6 +40,7 @@ export function useConversationSession({
   const [sending, setSending] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completedStoryIds, setCompletedStoryIds] = useState<string[]>([]);
   const owner = useRef(getConversationAccountId()).current;
   const conversation = useRef<string | null>(null);
   const pending = useRef<AbortController | null>(null);
@@ -113,14 +114,17 @@ export function useConversationSession({
     setSending(false);
     setRestoring(false);
     setError(null);
+    setCompletedStoryIds([]);
   }, [initialMessages, owner, scope]);
 
   const send = useCallback(
-    async (text?: string) => {
+    async (text?: string, storyId?: string) => {
       const content = (text ?? input).trim();
       if (!content || disabled || pending.current || getConversationAccountId() !== owner) return;
       const controller = new AbortController();
       pending.current = controller;
+      let timedOut = false;
+      const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 35_000);
       setMessages((current) => [
         ...current,
         {
@@ -141,6 +145,9 @@ export function useConversationSession({
         const response = await sendChatMessage(
           {
             ...context,
+            ...(context.tour_context ? { tour_context: {
+              ...context.tour_context, story_id: storyId ?? null, completed_story_ids: [...completedStoryIds],
+            } } : {}),
             message: content,
             ...(owner && conversation.current
               ? { conversation_id: conversation.current }
@@ -153,6 +160,9 @@ export function useConversationSession({
           controller.signal,
         );
         if (!isCurrent()) return;
+        if (response.answerType === "answered" && storyId && response.replyContext?.story_id === storyId) {
+          setCompletedStoryIds((previous) => [...previous.filter((id) => id !== storyId), storyId].slice(-32));
+        }
         if (owner) {
           conversation.current = response.conversationId;
           pointer(owner, scope, response.conversationId);
@@ -170,23 +180,27 @@ export function useConversationSession({
             answerType: response.answerType,
             needsUserChoice: response.needsUserChoice,
             abstained: response.abstained,
+            replyContext: response.replyContext,
           },
         ]);
       } catch (failure) {
-        if (isCurrent()) {
+        if (timedOut && pending.current === controller && getConversationAccountId() === owner) {
+          setError("AI phản hồi quá thời gian chờ. Bạn có thể gửi lại; yêu cầu trước có thể đã được máy chủ xử lý.");
+        } else if (isCurrent()) {
           setError(
             failure instanceof Error ? failure.message : "Không thể gửi câu hỏi. Vui lòng thử lại.",
           );
         }
       } finally {
+        window.clearTimeout(timeout);
         if (pending.current === controller) {
           pending.current = null;
           setSending(false);
         }
       }
     },
-    [context, disabled, input, messages, owner, scope],
+    [context, disabled, input, messages, owner, scope, completedStoryIds],
   );
 
-  return { messages, input, setInput, sending, restoring, error, send, startNewConversation };
+  return { messages, input, setInput, sending, restoring, error, send, startNewConversation, completedStoryIds };
 }

@@ -86,10 +86,18 @@ export interface HeritageMediaItem {
   sort_order: number;
 }
 
+export interface GuideStory {
+  id: string;
+  label: string;
+  question: string;
+  source_ids: string[];
+}
+
 export interface HeritageInteractiveHighlight {
   id: number;
   popup_title: string | null;
   popup_text: string | null;
+  guide_stories?: GuideStory[];
   /** Thumbnail từ tour nguồn; API backend hiện chưa trả trường này. */
   thumb_url?: string | null;
   media_url: string | null;
@@ -140,6 +148,7 @@ export interface HeritageScene {
   slug: string;
   title: string;
   description: string | null;
+  guide_stories?: GuideStory[];
   sequence: number;
   /** Track phụ (ví dụ nội thất/ban đêm); thiếu URL thì im lặng. */
   use_ambient_audio_alt?: boolean;

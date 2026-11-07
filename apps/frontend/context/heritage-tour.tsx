@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import type { HeritagePayload, HeritageScene } from "@/types/heritage";
+import type { HeritageInteractiveHighlight, HeritagePayload, HeritageScene } from "@/types/heritage";
+import type { NarrationStatus, TourMode } from "@/features/chat/types";
 import { resolveSceneByKey } from "@/lib/heritage";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
 import type { ScenePlayback } from "@/features/tour/tour-data";
@@ -27,6 +28,11 @@ export interface HeritageTourContextValue {
   hasModel: boolean;
   engine: TourEngine | null;
   scenePlayback: ScenePlayback | null;
+  selectedHighlight: HeritageInteractiveHighlight | null;
+  setSelectedHighlight: (point: HeritageInteractiveHighlight | null) => void;
+  chatMode: TourMode;
+  narrationStatus: NarrationStatus;
+  reportNarration: (sceneKey: string, status: NarrationStatus) => void;
 }
 
 export const HeritageTourContext = createContext<HeritageTourContextValue | null>(
@@ -42,6 +48,7 @@ interface HeritageTourProviderProps {
   modelError: string | null;
   modelProgress?: number;
   hasModel?: boolean;
+  interactiveRoute?: boolean;
   playback?: Record<string, ScenePlayback>;
   children: ReactNode;
 }
@@ -55,6 +62,7 @@ export function HeritageTourProvider({
   modelError,
   modelProgress = 0,
   hasModel = false,
+  interactiveRoute = false,
   playback,
   children,
 }: HeritageTourProviderProps) {
@@ -62,6 +70,23 @@ export function HeritageTourProvider({
     () => resolveSceneByKey(payload, currentSceneKey),
     [payload, currentSceneKey]
   );
+  const [selection, setSelection] = useState<{ key: string; id: number } | null>(null);
+  const setSelectedHighlight = useCallback((point: HeritageInteractiveHighlight | null) => {
+    setSelection(point ? { key: currentSceneKey, id: point.id } : null);
+  }, [currentSceneKey]);
+  const interactive = playback?.[currentSceneKey] ? currentScene?.interactive[0] : null;
+  const chatMode: TourMode = !interactiveRoute || !interactive ? "scene"
+    : interactive.mode === "free_explore" ? "walk" : interactive.mode === "free" ? "free" : "standard";
+  useEffect(() => { setSelection(null); }, [currentSceneKey, chatMode]);
+  const selectedHighlight = chatMode !== "scene" && selection?.key === currentSceneKey
+    ? interactive?.highlights.find((point) => point.id === selection.id) ?? null : null;
+  const [narration, setNarration] = useState<Record<string, NarrationStatus>>({});
+  const reportNarration = useCallback((key: string, status: NarrationStatus) => {
+    setNarration((previous) => previous[key] === status ? previous
+      : Object.fromEntries([...Object.entries(previous).filter(([entry]) => entry !== key), [key, status]].slice(-32)));
+  }, []);
+  const narrationStatus = narration[currentSceneKey]
+    ?? (playback?.[currentSceneKey]?.narrationUrl ? "not_started" : "unavailable");
 
   const value = useMemo<HeritageTourContextValue>(
     () => ({
@@ -76,6 +101,7 @@ export function HeritageTourProvider({
       hasModel,
       engine,
       scenePlayback: playback?.[currentSceneKey] ?? null,
+      selectedHighlight, setSelectedHighlight, chatMode, narrationStatus, reportNarration,
     }),
     [
       payload,
@@ -88,6 +114,7 @@ export function HeritageTourProvider({
       modelProgress,
       hasModel,
       playback,
+      selectedHighlight, setSelectedHighlight, chatMode, narrationStatus, reportNarration,
     ]
   );
 

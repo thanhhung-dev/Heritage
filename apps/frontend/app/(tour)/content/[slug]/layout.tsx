@@ -168,6 +168,7 @@ function HeritageContentWorkspace({ children }: { children: ReactNode }) {
         modelError={modelError}
         modelProgress={modelProgress}
         hasModel={Boolean(fixture?.modelUrl ?? state.modelUrl)}
+        interactiveRoute={interactiveRoute}
         playback={fixture?.playback ?? state.playback}
       >
         <HeritageCanvas

@@ -1,3 +1,5 @@
+import type { Source, TourReplyContext } from "../types";
+
 export interface ChatOverlayCitation {
   id: string;
   message_id: string;
@@ -21,6 +23,8 @@ export interface ChatOverlayMessage {
   abstained?: boolean;
   answerType?: string | null;
   suggestions?: ChatOverlaySuggestion[];
+  replyContext?: TourReplyContext;
+  sources?: Source[];
 }
 
 export interface ChatOverlayWidgetState {

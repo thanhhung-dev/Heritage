@@ -38,7 +38,7 @@ def conversation_json_schema(context: str = "") -> dict:
             "answer": {"type": "string", "minLength": 1},
             "answer_type": {
                 "type": "string",
-                "enum": ["conversation", "insufficient_evidence", "out_of_scope"],
+                "enum": ["conversation", "clarification", "insufficient_evidence", "out_of_scope"],
             },
             "source_ids": {"type": "array", "maxItems": 0},
         },
@@ -148,12 +148,24 @@ def conversation_messages(
     if area:
         system += area_system_policy(area)
         system += " Có thể thêm follow_up_questions: tối đa 3 câu hỏi ngắn về đúng khu vực."
+        system += (
+            "\nĐỒNG HÀNH TRONG TOUR: ngữ cảnh cảnh là điểm đang xem, không phải vật bạn nhìn thấy. "
+            "Chỉ nhắc tới điểm được chọn khi có highlight_title; không đoán từ camera. "
+            "Đổi cảnh không tự xóa chủ đề hội thoại. Đại từ như nó/ông ấy có thể chỉ chủ đề "
+            "vừa trao đổi, không mặc định là cảnh mới. Nếu có nhiều đối tượng hợp lý, trả clarification. "
+            "Khi được yêu cầu kể chuyện, kể ngắn từ chi tiết có nguồn tới bối cảnh liên quan; "
+            "không tự dựng lời thoại, tâm trạng, động cơ hay quan hệ nhân quả. "
+            "completed_stories chỉ là các nhánh đã hiển thị trong phiên: tránh kể lại trừ khi "
+            "được yêu cầu nhắc lại. narration=skipped/partial/not_started không có nghĩa đã nghe hết. "
+            "narration=completed chỉ xác nhận playback, không chứng minh người dùng hiểu nội dung. "
+            "Không chào lại mỗi khi scene đổi. Nếu không có thông tin mới có nguồn, không kéo dài."
+        )
         data["active_area_id"] = area.id
         # A scene label is a hint for pronouns such as "ở đây", never evidence.
         if isinstance(scene_context, dict):
             data["scene_context"] = {
                 key: value[:200] for key, value in scene_context.items()
-                if key in {"title", "key", "slug"} and isinstance(value, str)
+                if key in {"title", "key", "slug", "mode", "highlight_title", "narration", "completed_stories"} and isinstance(value, str)
                 and not question_outside_area(value, area)
             }
         elif isinstance(scene_context, str) and not question_outside_area(scene_context, area):

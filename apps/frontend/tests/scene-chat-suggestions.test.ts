@@ -13,6 +13,28 @@ const REFERENCE_LABELS = [
   "Khám phá cảnh này",
 ];
 
+test("reviewed branches follow the selected point, hide completed stories and do not invent a replacement", () => {
+  assert.ok(area);
+  const scene = {
+    title: "Cảnh thử nghiệm", guide_stories: [
+      { id: "scene-story", label: "Câu chuyện của cảnh", question: "Câu hỏi của cảnh", source_ids: ["fixture-1"] },
+    ],
+  };
+  const point = {
+    popup_title: "Điểm được chọn", guide_stories: [
+      { id: "point-story", label: "Câu chuyện của điểm", question: "Câu hỏi của điểm", source_ids: ["fixture-2"] },
+      { id: "point-detail", label: "Chi tiết khác", question: "Câu hỏi chi tiết", source_ids: ["fixture-3"] },
+    ],
+  };
+  const result = buildSceneChatSuggestions(area, scene, "s3", point, ["point-story"]);
+  assert.deepEqual(result.suggestions.map((item) => item.value), ["Câu hỏi chi tiết"]);
+  assert.match(result.contextLabel ?? "", /Điểm được chọn/);
+  const exhausted = buildSceneChatSuggestions(area, scene, "s3", point, ["point-story", "point-detail"]);
+  assert.deepEqual(exhausted.suggestions, []);
+  const fallback = buildSceneChatSuggestions(area, { title: "Cảnh khác" }, "s4", { popup_title: "Chi tiết B" });
+  assert.ok(fallback.suggestions.every((item) => item.value.includes("Chi tiết B")));
+});
+
 test("s0 and the stele story show different questions anchored to their own titles and heritage", () => {
   assert.ok(area);
   const overview = buildSceneChatSuggestions(
@@ -141,7 +163,7 @@ test("every selected story chip serializes its own scene and preserves the activ
         },
         {
           fetchImpl: (async (url: string | URL | Request, init?: RequestInit) => {
-            assert.equal(url, "https://api.example/api/chat");
+            assert.equal(url, "https://api.example/api/chat/message");
             bodies.push(JSON.parse(init?.body as string));
             return { ok: true } as Response;
           }) as typeof fetch,

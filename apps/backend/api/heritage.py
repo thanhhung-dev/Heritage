@@ -38,6 +38,8 @@ from apps.backend.schemas.heritage import (
     VoiceOut,
 )
 from apps.backend.services.heritageServices import HeritageService, scene_slug
+from apps.backend.services.tour_guide import guide_stories
+from apps.backend.services.tour_scope import resolve_area
 
 router = APIRouter(prefix="/heritages", tags=["heritage"])
 
@@ -190,6 +192,16 @@ def _content_out(data) -> HeritageContentOut:
         else None
     )
     scenes_out = [_scene_detail_out(sc, policy) for sc in data["scenes"]]
+    try:
+        area_id = resolve_area(heritage_out.slug).id
+    except ValueError:
+        area_id = None
+    if area_id:
+        for scene in ([overview_out] if overview_out else []) + scenes_out:
+            scene.guide_stories = guide_stories(area_id, scene.title)
+            for interactive in scene.interactive:
+                for point in interactive.highlights:
+                    point.guide_stories = guide_stories(area_id, scene.title, point.popup_title)
     return HeritageContentOut(
         heritage=heritage_out,
         overview=overview_out,

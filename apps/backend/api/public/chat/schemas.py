@@ -1,7 +1,7 @@
 """Grounded chat request and response contracts."""
 import json
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
@@ -15,6 +15,45 @@ class ContextMessage(BaseModel):
     content: str = Field(min_length=1, max_length=2000)
 
 
+StoryId = Annotated[str, Field(min_length=1, max_length=80)]
+
+
+class GuideStory(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: StoryId
+    label: str = Field(min_length=1, max_length=40)
+    question: str = Field(min_length=1, max_length=500)
+    source_ids: list[StoryId] = Field(min_length=1, max_length=8)
+
+
+class TourContext(BaseModel):
+    """UI progress is a bounded hint, never evidence or an authorization token."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    scene_id: int = Field(gt=0)
+    mode: Literal["scene", "standard", "free", "walk"] = "scene"
+    highlight_id: int | None = Field(default=None, gt=0)
+    story_id: StoryId | None = None
+    completed_story_ids: list[StoryId] = Field(default_factory=list, max_length=32)
+    narration: Literal["unavailable", "not_started", "partial", "completed", "skipped"] = "not_started"
+
+    @model_validator(mode="after")
+    def selected_point_requires_explore(self):
+        if self.highlight_id is not None and self.mode == "scene":
+            raise ValueError("Điểm được chọn chỉ hợp lệ trong chế độ khám phá.")
+        return self
+
+
+class TourReplyContext(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    scene_id: int = Field(gt=0)
+    scene_key: str = Field(min_length=1, max_length=80)
+    scene_title: str = Field(min_length=1, max_length=200)
+    mode: Literal["scene", "standard", "free", "walk"]
+    highlight_id: int | None = Field(default=None, gt=0)
+    highlight_title: str | None = Field(default=None, max_length=200)
+    story_id: StoryId | None = None
+
+
 class ChatRequest(BaseModel):
     message: str = Field(max_length=8000)
     use_rag: bool = True
@@ -26,6 +65,7 @@ class ChatRequest(BaseModel):
     heritage_id: int | None = Field(default=None, gt=0)
     heritage_context: str | dict[str, JsonValue] | None = None
     scene_context: str | dict[str, JsonValue] | None = None
+    tour_context: TourContext | None = None
     conversation_context: list[ContextMessage] = Field(default_factory=list, max_length=6)
 
     @field_validator("active_area_id")
@@ -42,6 +82,8 @@ class ChatRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_scope(self):
+        if self.tour_context is not None and (not self.active_area_id or self.heritage_id is None):
+            raise ValueError("Ngữ cảnh tham quan cần active_area_id và heritage_id.")
         if sum(len(message.content) for message in self.conversation_context) > 6000:
             raise ValueError("Ngữ cảnh hội thoại không được vượt quá 6000 ký tự.")
         has_tour_context = any(value is not None for value in (
@@ -65,6 +107,7 @@ class ChatMessageCreate(ChatRequest):
 class ChatOutcome(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     active_area_id: str | None = None
+    reply_context: TourReplyContext | None = None
     follow_up_questions: list[str] = Field(default_factory=list, max_length=3, description=(
         "Câu hỏi gợi ý đã kiểm tra phạm vi active_area_id, tách biệt suggestions dùng để disambiguation."
     ))

@@ -41,6 +41,53 @@ at most six user/assistant messages, 2,000 characters each, 6,000 total. Each
 heritage/scene context is limited to 2,000 serialized characters. Invalid request
 fields, UUIDs or unsupported roles return 422.
 
+### Optional tour companion context
+
+The tour client additionally sends `heritage_id` and a bounded `tour_context`:
+
+```json
+{
+  "message": "Kể thêm về điểm đang chọn.",
+  "active_area_id": "khiem-lang",
+  "heritage_id": 1,
+  "tour_context": {
+    "scene_id": 3,
+    "mode": "standard",
+    "highlight_id": 4,
+    "story_id": null,
+    "completed_story_ids": [],
+    "narration": "partial"
+  }
+}
+```
+
+IDs above illustrate the inspected development payload, not stable seed data.
+The server validates published heritage → scene → interaction/highlight ownership
+and the interaction's mode against SQL data before retrieval. Client labels are
+not authoritative. Mode is `scene`, `standard`, `free`, or `walk`; a highlight is
+invalid in `scene`. Narration is `unavailable`, `not_started`, `partial`,
+`completed`, or `skipped`, and is a UI hint, not historical evidence.
+
+`completed_story_ids` contains at most 32 IDs, each 1–80 characters. A requested
+`story_id` must match an editorial branch for the resolved scene/point and its
+exact question. Each branch requires its reviewed passage IDs both in retrieved
+evidence and in the answer's citations. Invalid relations or branch requests
+return 422; unavailable identity storage returns 503. Requests without
+`tour_context` retain their existing contract.
+
+Responses and saved assistant history include optional `reply_context`:
+`scene_id`, canonical `scene_key`/`scene_title`, `mode`, `highlight_id`/
+`highlight_title`, and `story_id`. Non-answered replies clear `story_id`; local
+scoped service-unavailable replies retain validated scene/point identity. New
+tour-context replies do not include generated follow-up questions. Old messages
+without metadata remain unlabeled, never assigned the current scene.
+
+The single-load heritage/tour payload adds optional-default-empty `guide_stories`
+to scenes and interactive highlights. The registry is currently empty: no
+Khiêm Lăng historical branch has approved independent sources. See
+[`docs/tour-guide-mvp.md`](../../docs/tour-guide-mvp.md) for the pilot audit,
+session lifecycle, verification evidence, and remaining acceptance gates.
+
 The 201 response includes:
 
 - `conversation_id`, `message_id`, `answer`.

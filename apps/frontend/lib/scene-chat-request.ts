@@ -48,7 +48,7 @@ export function requestSceneChat(
   dependencies: SceneChatDependencies = {},
 ): Promise<Response> {
   return apiFetch(
-    "/chat",
+    "/chat/message",
     {
       method: "POST",
       body: JSON.stringify(request),

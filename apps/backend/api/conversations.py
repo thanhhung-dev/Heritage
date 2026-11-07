@@ -17,6 +17,7 @@ from apps.backend.schemas.chat import (
 )
 from apps.backend.services.conversations import ChatServiceError, ConversationService
 from apps.backend.services import chat_fallback
+from apps.backend.services.tour_guide import resolve_tour_context
 
 log = logging.getLogger(__name__)
 optional_bearer = HTTPBearer(auto_error=False)
@@ -54,6 +55,19 @@ def get_conversation_service(db=Depends(get_chat_db)):
     return ConversationService(db)
 
 
+async def validated_tour_context(request):
+    """Both chat adapters validate optional scene identity before retrieval."""
+    if request.tour_context is None:
+        return None
+    if AsyncSessionLocal.kw.get("bind") is None:
+        raise HTTPException(503, "Không thể xác minh ngữ cảnh tham quan lúc này.")
+    async with AsyncSessionLocal() as db:
+        try:
+            return await resolve_tour_context(request, db)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from None
+
+
 @contextmanager
 def conversation_errors():
     try:
@@ -89,7 +103,14 @@ def mount_conversation_routes(router, get_repository, pipeline):
                 return retrieved
             async def fallback():
                 if message.active_area_id:
-                    return chat_fallback.scoped_service_unavailable(message.active_area_id)
+                    answer = chat_fallback.scoped_service_unavailable(message.active_area_id)
+                    if message.tour_context:
+                        snapshot = await validated_tour_context(message)
+                        answer = answer.model_copy(update={
+                            "reply_context": snapshot.model_copy(update={"story_id": None}),
+                            "follow_up_questions": [],
+                        })
+                    return answer
                 evidence = retrieved.evidence if retrieved is not None else []
                 return await chat_fallback.development_answer(
                     message.message, history=[item.model_dump() for item in history],
@@ -107,6 +128,8 @@ def mount_conversation_routes(router, get_repository, pipeline):
                     return await fallback()
                 raise ChatServiceError("timeout", "AI phản hồi quá thời gian chờ 30 giây.") from None
             except HTTPException as error:
+                if error.status_code == 422:
+                    raise
                 if local_fallback and error.status_code in {500, 503, 504}:
                     return await fallback()
                 if error.status_code == 504:

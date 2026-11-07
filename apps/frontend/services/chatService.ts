@@ -5,7 +5,7 @@ import { isConversationId, requestConversationHistory } from "@/lib/conversation
 import { requestSceneChat } from "@/lib/scene-chat-request";
 import { safeSourceUrl } from "@/lib/safe-source-url";
 import { validateTourReply } from "@/lib/tour-chat-scope";
-import type { Message, Source } from "@/features/chat/types";
+import type { Message, Source, TourChatContext, TourReplyContext } from "@/features/chat/types";
 
 export interface ChatContextMessage {
   role: "user" | "assistant";
@@ -20,6 +20,7 @@ export interface ChatMessageRequest {
   heritage_id?: number;
   heritage_context?: string | Record<string, unknown>;
   scene_context?: string | Record<string, unknown> | null;
+  tour_context?: TourChatContext;
 }
 
 export interface ChatReply {
@@ -33,6 +34,7 @@ export interface ChatReply {
   answerType?: string;
   needsUserChoice: boolean;
   abstained: boolean;
+  replyContext?: TourReplyContext;
 }
 
 export interface ConversationSummary {
@@ -80,6 +82,20 @@ function sourcesFrom(value: unknown): Source[] {
   });
 }
 
+function replyContextFrom(value: unknown): TourReplyContext | undefined {
+  if (value == null) return undefined;
+  if (!isRecord(value) || !Number.isInteger(value.scene_id) || Number(value.scene_id) <= 0
+      || typeof value.scene_key !== "string" || !value.scene_key || value.scene_key.length > 80
+      || typeof value.scene_title !== "string" || !value.scene_title || value.scene_title.length > 200
+      || !["scene", "standard", "free", "walk"].includes(String(value.mode))
+      || (value.highlight_id != null && (!Number.isInteger(value.highlight_id) || Number(value.highlight_id) <= 0))
+      || (value.highlight_title != null && (typeof value.highlight_title !== "string" || value.highlight_title.length > 200))
+      || (value.story_id != null && (typeof value.story_id !== "string" || !value.story_id || value.story_id.length > 80))) {
+    throw new ChatApiError("Máy chủ trả ngữ cảnh tham quan không hợp lệ.", 502);
+  }
+  return value as unknown as TourReplyContext;
+}
+
 function outcomeFrom(data: Record<string, unknown>) {
   return {
     correctedFrom: typeof data.corrected_from === "string" ? data.corrected_from : undefined,
@@ -87,6 +103,7 @@ function outcomeFrom(data: Record<string, unknown>) {
     answerType: typeof data.answer_type === "string" ? data.answer_type : undefined,
     needsUserChoice: data.needs_user_choice === true,
     abstained: data.abstained === true,
+    replyContext: replyContextFrom(data.reply_context),
   };
 }
 
@@ -96,6 +113,16 @@ export async function sendChatMessage(request: ChatMessageRequest, signal?: Abor
 
   if (!isRecord(data) || typeof data.answer !== "string") {
     throw new ChatApiError("Phản hồi chat không đúng định dạng.", 502);
+  }
+  const outcome = outcomeFrom(data);
+  if (request.tour_context) {
+    const expected = request.tour_context;
+    const actual = outcome.replyContext;
+    if (!actual || actual.scene_id !== expected.scene_id || actual.mode !== expected.mode
+        || (actual.highlight_id ?? null) !== (expected.highlight_id ?? null)
+        || (actual.story_id != null && actual.story_id !== expected.story_id)) {
+      throw new ChatApiError("Máy chủ chưa xác nhận đúng ngữ cảnh của câu hỏi. Vui lòng cập nhật backend.", 502);
+    }
   }
 
   const conversationId = isConversationId(data.conversation_id)
@@ -120,7 +147,7 @@ export async function sendChatMessage(request: ChatMessageRequest, signal?: Abor
     answer: data.answer,
     sources: sourcesFrom(data.sources),
     followUpQuestions,
-    ...outcomeFrom(data),
+    ...outcome,
   };
 }
 

@@ -75,6 +75,8 @@ class ChatConversationTests(unittest.TestCase):
             Column("publish_state", Text, nullable=False),
             Column("title", Text), Column("region", Text), Column("slug", Text),
         )
+        scenes = Table("scene", metadata, Column("id", Integer, primary_key=True),
+                       Column("heritage_id", Integer), Column("sequence", Integer), Column("title", Text))
         for model in (Conversation, ChatSession, ChatMessage, MessageCitation, ChatFeedback):
             table = model.__table__.to_metadata(metadata)
             for column in table.columns:
@@ -103,6 +105,9 @@ class ChatConversationTests(unittest.TestCase):
             connection.execute(heritages.insert(), [
                 {"id": 10, "publish_state": "published", "title": "Chùa Thiên Mụ", "region": "Huế", "slug": "chua-thien-mu"},
                 {"id": 11, "publish_state": "draft", "title": "Private draft", "region": "Huế", "slug": "private"},
+            ])
+            connection.execute(scenes.insert(), [
+                {"id": 100, "heritage_id": 10, "sequence": 2, "title": "Cảnh Thiên Mụ"},
             ])
 
         self.source = {
@@ -142,6 +147,50 @@ class ChatConversationTests(unittest.TestCase):
             chat_api, "get_generation_details", return_value=SimpleNamespace(model="test-model", token_usage=25, truncated=False),
         ))
         self.client = self.enterContext(TestClient(app, raise_server_exceptions=False))
+
+    def test_tour_snapshot_is_validated_before_inference_and_survives_history(self):
+        from fastapi import HTTPException
+        from apps.backend.services.tour_guide import resolve_tour_context
+
+        async def validate(request):
+            database = AsyncTestSession(self.engine)
+            try:
+                return await resolve_tour_context(request, database)
+            except ValueError as error:
+                raise HTTPException(422, str(error)) from None
+            finally:
+                database.session.close()
+
+        with patch.object(chat_api, "validated_tour_context", side_effect=validate):
+            response = self.client.post("/api/chat/message", headers=self.headers(), json={
+                "message": "Ở đây có gì?", "heritage_id": 10, "active_area_id": "chua-thien-mu",
+                "scene_context": {"title": "Nhãn giả"}, "tour_context": {"scene_id": 100},
+            })
+            self.assertEqual(response.status_code, 201, response.text)
+            created = response.json()
+            self.assertEqual(created["reply_context"]["scene_title"], "Cảnh Thiên Mụ")
+            restored = self.client.get(f"/api/chat/conversations/{created['conversation_id']}/messages", headers=self.headers())
+            self.assertEqual(restored.json()["messages"][-1]["reply_context"], created["reply_context"])
+            self.generate.reset_mock()
+            invalid = self.client.post("/api/chat/message", headers=self.headers(), json={
+                "message": "Ở đây có gì?", "heritage_id": 10, "active_area_id": "chua-thien-mu",
+                "tour_context": {"scene_id": 999},
+            })
+            self.assertEqual(invalid.status_code, 422, invalid.text)
+            self.generate.assert_not_called()
+            self.repository.search_evidence.side_effect = RuntimeError("offline")
+            with patch("apps.backend.api.conversations.validated_tour_context", side_effect=validate), patch.dict(
+                os.environ, {"APP_ENVIRONMENT": "local", "CHAT_DEVELOPMENT_FALLBACK": "true"},
+            ):
+                unavailable = self.client.post("/api/chat/message", headers=self.headers(), json={
+                    "message": "Ở đây có gì?", "heritage_id": 10, "active_area_id": "chua-thien-mu",
+                    "tour_context": {"scene_id": 100},
+                })
+            self.assertEqual(unavailable.status_code, 201, unavailable.text)
+            self.assertEqual(unavailable.json()["abstention_reason"], "service_unavailable")
+            self.assertEqual(unavailable.json()["reply_context"], created["reply_context"])
+            self.assertEqual(unavailable.json()["follow_up_questions"], [])
+            self.generate.assert_not_called()
 
     def headers(self, account_id=1):
         if account_id is None:
