@@ -4508,7 +4508,7 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   overflow: hidden;
 }
 
-.infoInner .playpenInfo-Desc:hover {
+.infoInner .infoDescExpanded {
   -webkit-line-clamp: unset;
   line-clamp: unset;
   overflow: visible;

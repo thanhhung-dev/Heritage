@@ -1,3 +1,5 @@
+import type { Source, TourReplyContext } from "../types";
+
 export interface ChatOverlayCitation {
   id: string;
   message_id: string;
@@ -16,11 +18,13 @@ export interface ChatOverlayMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
-  citations: ChatOverlayCitation[];
+  citations?: ChatOverlayCitation[];
   needsUserChoice?: boolean;
   abstained?: boolean;
   answerType?: string | null;
   suggestions?: ChatOverlaySuggestion[];
+  replyContext?: TourReplyContext;
+  sources?: Source[];
 }
 
 export interface ChatOverlayWidgetState {

@@ -146,7 +146,8 @@ export function createTourEngine(
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.maxPolarAngle = Math.PI / 2;
+  // Tapestry: damping 0.08, giữ miền xoay dọc mặc định 0 → π của OrbitControls.
+  controls.dampingFactor = 0.08;
   // Scene view chỉ "kéo để nhìn quanh": không zoom, không pan. Chế độ 3D
   // (`enterExplore`) tự bật lại zoom — xem `explore-controller`.
   controls.enableZoom = false;
@@ -178,6 +179,8 @@ export function createTourEngine(
   let playbackClock = 0;
   let playbackSynced = 0;
   let playbackPlaying = false;
+  let sceneLookAround = false;
+  let sceneLookAroundAllowed = false;
 
   const syncPlayback = () => {
     playbackClock = playbackTime;
@@ -321,9 +324,12 @@ export function createTourEngine(
     const pathMoved = updateCameraPath(playbackClock);
     const cameraDriven = cameraFlying || dollyMoved || timelineMoved || pathMoved;
 
- 
     const walking = explore.isWalking();
     const walkMoved = walking ? explore.updateWalk(delta) : false;
+    const looking = sceneLookAround && sceneLookAroundAllowed && !playbackPlaying && !cameraDriven && !walking;
+    cameraController.setLookAround(looking);
+    // Chỉ mở xoay khi scene cho hiện gợi ý nhìn quanh, không phải mỗi khi Pause.
+    if (sceneLookAround) controls.enableRotate = looking;
     const cameraChanged = cameraDriven || walking ? false : controls.update();
     // Ăn pose mà OrbitControls vừa tính (damping, quay tay) để frame sau không giật
     // về pose cũ khi camera đang/đã dí gần badge.
@@ -357,11 +363,12 @@ export function createTourEngine(
     // badge đang thu nhỏ/phình ra phải kéo theo việc vẽ tiếp, nếu không nó đứng
     // hình sau frame đầu vì vòng lặp này chỉ vẽ khi có gì đó thay đổi.
     const badgesAnimating = highlights.update(camera, delta);
+    const cloudsMoved = environment.update(delta);
 
     // `walkMoved` phải có mặt ở đây: khi đi bộ ta đã BỎ `controls.update()` nên
     // `cameraChanged` luôn false, và bước đi không tự sinh frame nào khác — thiếu
     // nó thì người dùng bấm W mà hình đứng im.
-    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating) {
+    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating || cloudsMoved) {
       renderer.render(scene, camera);
       needsRender = false;
       trackFrame(delta);
@@ -551,6 +558,14 @@ export function createTourEngine(
   return {
     /** Temporary authoring controls; cleanup restores the normal tour's locks. */
     enableCameraEditing: cameraController.enableEditing,
+
+    setSceneLookAround(active: boolean, allowed = false) {
+      sceneLookAround = active;
+      sceneLookAroundAllowed = allowed;
+      if (!active || !allowed) cameraController.setLookAround(false);
+      controls.enableRotate = !active || (allowed && !playbackPlaying);
+      invalidate();
+    },
 
     enterExplore(mode: ExploreMode, eyeHeight?: number) {
       // Pose trước khi vào Explore là "góc về" khi người dùng bấm Reset.

@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { chatApiUrl } from "../lib/chat-request.mjs";
+import { chatApiUrl } from "../lib/chat-request";
 import {
   createConversationContext,
   requestSceneChat,
-} from "../lib/scene-chat-request.mjs";
+} from "../lib/scene-chat-request";
 
 test("chat API URL does not duplicate an existing /api prefix", () => {
   assert.equal(
@@ -19,35 +19,36 @@ test("chat API URL does not duplicate an existing /api prefix", () => {
 });
 
 test("scene chat sends structured heritage and scene context", async () => {
-  const calls = [];
+  const calls: unknown[][] = [];
   const request = {
     message: "What should I notice here?",
     heritage_id: 42,
     heritage_context: { id: 42, slug: "sample", title: "Sample Heritage", region: "Hue" },
     scene_context: { id: 7, key: "s1", slug: "s1", title: "Main Gate", description: null, sequence: 0 },
-    conversation_context: [{ role: "user", content: "Tell me about this place." }],
+    conversation_context: [{ role: "user" as const, content: "Tell me about this place." }],
   };
 
   await requestSceneChat("https://api.example/api", request, {
-    fetchImpl: async (...args) => {
+    fetchImpl: (async (...args: unknown[]) => {
       calls.push(args);
-      return { ok: true };
-    },
+      return { ok: true } as Response;
+    }) as typeof fetch,
     randomUUID: () => "correlation-id",
   });
 
-  assert.equal(calls[0][0], "https://api.example/api/chat");
-  assert.equal(calls[0][1].method, "POST");
-  assert.equal(calls[0][1].headers["X-Correlation-ID"], "correlation-id");
-  assert.deepEqual(JSON.parse(calls[0][1].body), request);
+  assert.equal(calls[0][0], "https://api.example/api/chat/message");
+  const options = calls[0][1] as { method: string; headers: Record<string, string>; body: string };
+  assert.equal(options.method, "POST");
+  assert.equal(options.headers["X-Correlation-ID"], "correlation-id");
+  assert.deepEqual(JSON.parse(options.body), request);
 });
 
 test("scene chat only sends a bearer header when an access token exists", async () => {
-  const calls = [];
-  const fetchImpl = async (...args) => {
+  const calls: unknown[][] = [];
+  const fetchImpl = (async (...args: unknown[]) => {
     calls.push(args);
-    return { ok: true };
-  };
+    return { ok: true } as Response;
+  }) as typeof fetch;
 
   await requestSceneChat("https://api.example/api", { message: "Hello" }, {
     fetchImpl,
@@ -59,8 +60,10 @@ test("scene chat only sends a bearer header when an access token exists", async 
     randomUUID: () => "account-request",
   });
 
-  assert.equal("Authorization" in calls[0][1].headers, false);
-  assert.equal(calls[1][1].headers.Authorization, "Bearer access-token");
+  const firstOptions = calls[0][1] as { headers: Record<string, string> };
+  const secondOptions = calls[1][1] as { headers: Record<string, string> };
+  assert.equal("Authorization" in firstOptions.headers, false);
+  assert.equal(secondOptions.headers.Authorization, "Bearer access-token");
 });
 
 test("guest conversation context stays within the API message and character limits", () => {

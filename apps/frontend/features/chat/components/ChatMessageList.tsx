@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
 import { safeSourceUrl } from "@/lib/safe-source-url";
@@ -16,7 +16,6 @@ interface ChatMessageListProps {
 export function ChatMessageList({ messages, sending, onSend, hideWelcome }: ChatMessageListProps) {
   const scroll = useRef<HTMLDivElement>(null);
   const end = useRef<HTMLDivElement>(null);
-  const [selectedCitation, setSelectedCitation] = useState<string | null>(null);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [messages, sending]);
@@ -32,8 +31,12 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
               {new Date(message.createdAt).toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit" })}
             </time>}
             {message.answerType === "development_mock" && <span className={styles.answerStatus}>Sample answer</span>}
-            {message.needsUserChoice && <span className={styles.answerStatus}>Choose a heritage</span>}
-            {message.abstained && <span className={styles.answerStatus}>No verified answer</span>}
+            {message.replyContext && <span className={styles.answerStatus} data-reply-context>
+              Về {message.replyContext.scene_key} · {message.replyContext.scene_title}
+              {message.replyContext.highlight_title ? ` · ${message.replyContext.highlight_title}` : ""}
+            </span>}
+            {message.needsUserChoice && <span className={styles.answerStatus}>Cần làm rõ đối tượng</span>}
+            {message.abstained && <span className={styles.answerStatus}>Chưa có câu trả lời được xác minh</span>}
             <div className={styles.messageText}>
               {message.role === "assistant" ? (
                 <ChatMarkdown content={message.content} animate={message.id !== "mila-welcome"} />
@@ -41,6 +44,16 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
                 <p>{message.content}</p>
               )}
             </div>
+            {message.role === "assistant" && !!message.sources?.length && <details className={styles.citations}>
+              <summary>Nguồn tham khảo ({message.sources.length})</summary>
+              <ol>{message.sources.map((source, index) => {
+                const url = safeSourceUrl(source.url);
+                return <li key={`${source.chunk_id ?? "source"}-${index}`}>
+                  {url ? <a href={url} target="_blank" rel="noopener noreferrer">{source.doc ?? source.heading ?? `Nguồn ${index + 1}`}</a>
+                    : source.doc ?? source.heading ?? `Đoạn nguồn ${source.chunk_id ?? index + 1}`}
+                </li>;
+              })}</ol>
+            </details>}
             {message.suggestions?.length ? (
               <div className={styles.suggestions}>
                 {message.suggestions.map((item) => (
@@ -50,27 +63,6 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
                 ))}
               </div>
             ) : null}
-            {message.citations.length > 0 && (
-              <div className={styles.citations} aria-label="Nguồn tham khảo">
-                <div className={styles.citationBadges}>{message.citations.map((citation, index) => (
-                  <button type="button" key={citation.id} data-citation={citation.id}
-                    aria-expanded={selectedCitation === citation.id} aria-controls={`source-${citation.id}`}
-                    onClick={() => setSelectedCitation(selectedCitation === citation.id ? null : citation.id)}>
-                    <span>{index + 1}</span>{citation.source_title}
-                  </button>
-                ))}</div>
-                {message.citations.filter((item) => item.id === selectedCitation).map((citation) => {
-                  const url = safeSourceUrl(citation.source_url);
-                  return <div key={citation.id} id={`source-${citation.id}`} className={styles.citationPanel}
-                    role="region" aria-label="Chi tiết nguồn tham khảo">
-                    <strong>{citation.source_title}</strong>
-                    {url ? <a href={url} target="_blank" rel="noopener noreferrer">Mở nguồn tham khảo ↗</a>
-                      : <p>Nguồn này không có liên kết công khai.</p>}
-                    {citation.relevance_score !== null && <p>Điểm liên quan: {citation.relevance_score.toFixed(2)}</p>}
-                  </div>;
-                })}
-              </div>
-            )}
           </div>
         </article>
       ))}

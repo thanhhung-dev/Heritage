@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import type { HeritageSkyPreset } from "@/types/heritage";
+import { createClouds } from "./clouds";
 
 /**
  * Môi trường 3D của tour: bầu trời vật lý (`Sky` của three.js) + sương mù +
@@ -13,8 +14,8 @@ import type { HeritageSkyPreset } from "@/types/heritage";
  * mỗi frame đều phải chạy lại toàn bộ shader đó — đây là khoản ngốn GPU lớn nhất
  * của cả cảnh (nhất là cảnh đêm s1, nơi bầu trời phủ kín khung hình mà gần như
  * không có gì che). Nay mỗi lần đổi cảnh ta "nướng" bầu trời MỘT lần thành cubemap
- * HDR (`CubeCamera`) rồi gán `scene.background`; mỗi frame chỉ còn một lần lấy mẫu
- * texture. Ảnh môi trường (PMREM) cũng sinh từ đúng lần nướng đó.
+ * HDR (`CubeCamera`) rồi gán `scene.background`. Mây động dùng lớp texture nhẹ
+ * riêng, không chạy lại shader khí quyển hay nướng lại PMREM mỗi frame.
  *
  * Bầu trời chỉ phụ thuộc HƯỚNG nhìn nên nướng thành cubemap là chính xác tuyệt
  * đối, không sai lệch so với mesh sống (mesh cũ bám theo camera, tức parallax = 0).
@@ -118,6 +119,7 @@ export function createEnvironment(
     magFilter: THREE.LinearFilter,
   });
   const skyCamera = new THREE.CubeCamera(1, SKY_BOX_SCALE * 2, skyTarget);
+  const clouds = createClouds(scene, skyTarget.texture);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   let envTarget: THREE.WebGLRenderTarget | null = null;
@@ -140,7 +142,11 @@ export function createEnvironment(
     const exposure = renderer.toneMappingExposure;
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.toneMappingExposure = 1;
+    // Mây chỉ nằm ở lớp động, không để một bản đứng yên lưu lại trong background.
+    const coverage = uniforms.cloudCoverage.value;
+    uniforms.cloudCoverage.value = 0;
     skyCamera.update(renderer, skyScene);
+    uniforms.cloudCoverage.value = coverage;
     renderer.toneMapping = toneMapping;
     renderer.toneMappingExposure = exposure;
     scene.background = skyTarget.texture;
@@ -184,6 +190,7 @@ export function createEnvironment(
     const phi = THREE.MathUtils.degToRad(90 - elevation);
     const theta = THREE.MathUtils.degToRad(azimuth);
     uniforms.sunPosition.value.setFromSphericalCoords(1, phi, theta);
+    clouds.apply(cloudCoverage, cloudDensity, uniforms.sunPosition.value);
 
     renderer.toneMappingExposure = readNumber(preset?.exposure) ?? DEFAULTS.exposure;
 
@@ -238,7 +245,9 @@ export function createEnvironment(
 
   return {
     apply,
+    update: clouds.update,
     dispose() {
+      clouds.dispose();
       envTarget?.dispose();
       pmrem.dispose();
       skyTarget.dispose();

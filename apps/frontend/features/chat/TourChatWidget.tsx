@@ -1,31 +1,18 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useHeritageTour } from "@/context/heritage-tour";
-import { AUTH_CHANGE_EVENT, getAccessToken, getUser } from "@/lib/auth";
+import { AUTH_CHANGE_EVENT } from "@/lib/auth";
+import { resolveTourArea } from "@/lib/tour-chat-scope";
+import { buildSceneChatSuggestions } from "@/lib/scene-chat-suggestions";
 import { ChatOverlayWidget } from "@/features/chat/components/ChatOverlayWidget";
 import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
+import { getConversationAccountId, useConversationSession } from "@/hooks/useConversationSession";
 import type { Message } from "./types";
-import {
-  buildSceneConversationContext,
-  sendSceneChatMessage,
-  type SceneChatRequest,
-} from "./scene-chat-service";
 
 const WELCOME_MESSAGE_ID = "mila-welcome";
-const WELCOME_MESSAGE =
-  "Bạn muốn khám phá điều gì về di sản này?";
-
-function createMessageId(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-}
+const WELCOME_MESSAGE = "Bạn muốn khám phá điều gì về di sản này?";
 
 function createWelcomeMessage(): Message {
   return {
@@ -36,224 +23,69 @@ function createWelcomeMessage(): Message {
   };
 }
 
-function getCurrentAccountId(): string | null {
-  return getAccessToken() ? getUser()?.account_id ?? null : null;
-}
+function initialTourMessages(): Message[] { return [createWelcomeMessage()]; }
 
 export function TourChatWidget() {
-  const { payload, heritageSlug, currentSceneKey, currentScene } = useHeritageTour();
-  const [messages, setMessages] = useState<Message[]>(() => [createWelcomeMessage()]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [conversationOwnerId, setConversationOwnerId] = useState<string | null>(null);
-  const requestRef = useRef<AbortController | null>(null);
-  const previousHeritageRef = useRef(`${payload.heritage.id}:${heritageSlug}`);
-  const previousAccountRef = useRef(getCurrentAccountId());
-
-  const heritageTitle = payload.heritage.title;
+  const { payload, heritageSlug } = useHeritageTour();
+  const [accountId, setAccountId] = useState(getConversationAccountId);
 
   useEffect(() => {
-    const heritageIdentity = `${payload.heritage.id}:${heritageSlug}`;
-    if (previousHeritageRef.current === heritageIdentity) return;
-
-    previousHeritageRef.current = heritageIdentity;
-    requestRef.current?.abort();
-    requestRef.current = null;
-    setMessages([createWelcomeMessage()]);
-    setInput("");
-    setLoading(false);
-    setConversationId(null);
-    setConversationOwnerId(null);
-  }, [heritageSlug, payload.heritage.id]);
-
-  useEffect(() => {
-    const handleAuthChange = () => {
-      const accountId = getCurrentAccountId();
-      if (previousAccountRef.current === accountId) return;
-
-      previousAccountRef.current = accountId;
-      requestRef.current?.abort();
-      requestRef.current = null;
-      setMessages([createWelcomeMessage()]);
-      setInput("");
-      setLoading(false);
-      setConversationId(null);
-      setConversationOwnerId(null);
-    };
-
-    window.addEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
-    return () => window.removeEventListener(AUTH_CHANGE_EVENT, handleAuthChange);
+    const updateAccount = () => setAccountId(getConversationAccountId());
+    window.addEventListener(AUTH_CHANGE_EVENT, updateAccount);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, updateAccount);
   }, []);
 
-  const startNewConversation = useCallback(() => {
-    requestRef.current?.abort();
-    requestRef.current = null;
-    setMessages([createWelcomeMessage()]);
-    setInput("");
-    setLoading(false);
-    setConversationId(null);
-    setConversationOwnerId(null);
-  }, []);
+  // A different tour/account gets a fresh component instance immediately. Old
+  // callbacks can only update the unmounted instance, never the new tour state.
+  return <AreaTourChat key={`${payload.heritage.id}:${heritageSlug}:${accountId ?? "guest"}`} />;
+}
 
-  const send = useCallback(
-    async (text?: string) => {
-      const userMessage = (text ?? input).trim();
-      if (!userMessage || loading) return;
-
-      const accountId = getCurrentAccountId();
-      const switchedAccount =
-        Boolean(accountId && conversationOwnerId && accountId !== conversationOwnerId);
-      const displayHistory = switchedAccount ? [createWelcomeMessage()] : messages;
-      const history = displayHistory.filter(
-        (message) => message.id !== WELCOME_MESSAGE_ID,
-      );
-      const activeConversationId =
-        accountId && conversationOwnerId === accountId ? conversationId : null;
-      const userEntry: Message = {
-        id: createMessageId(),
-        role: "user",
-        content: userMessage,
-        createdAt: new Date().toISOString(),
-      };
-
-      if (switchedAccount) {
-        setConversationId(null);
-        setConversationOwnerId(null);
-      }
-      setMessages([...displayHistory, userEntry]);
-      setInput("");
-      setLoading(true);
-
-      const controller = new AbortController();
-      requestRef.current?.abort();
-      requestRef.current = controller;
-
-      const heritageId = payload.heritage.id;
-      const request: SceneChatRequest = {
-        message: userMessage,
-        ...(Number.isInteger(heritageId) && heritageId > 0
-          ? { heritage_id: heritageId }
-          : {}),
-        heritage_context: {
-          id: heritageId,
-          slug: heritageSlug,
-          title: heritageTitle,
-          region: payload.heritage.region,
-        },
-        scene_context: currentScene
-          ? {
-              id: currentScene.id,
-              key: currentSceneKey,
-              slug: currentScene.slug,
-              title: currentScene.title,
-              description: currentScene.description,
-              sequence: currentScene.sequence,
-            }
-          : null,
-        ...(activeConversationId
-          ? { conversation_id: activeConversationId }
-          : { conversation_context: buildSceneConversationContext(history) }),
-      };
-
-      try {
-        const response = await sendSceneChatMessage(request, controller.signal);
-        if (controller.signal.aborted) return;
-
-        const currentAccountId = getCurrentAccountId();
-        if (currentAccountId !== accountId) return;
-
-        if (accountId && currentAccountId === accountId && response.conversationId) {
-          setConversationId(response.conversationId);
-          setConversationOwnerId(accountId);
-        } else {
-          setConversationId(null);
-          setConversationOwnerId(null);
-        }
-
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          {
-            id: createMessageId(),
-            role: "assistant",
-            content: response.answer,
-            createdAt: new Date().toISOString(),
-            sources: response.sources,
-            correctedFrom: response.correctedFrom,
-            correctedTo: response.correctedTo,
-          },
-        ]);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          {
-            id: createMessageId(),
-            role: "assistant",
-            createdAt: new Date().toISOString(),
-            content:
-              error instanceof Error
-                ? error.message
-                : "Không thể gửi câu hỏi lúc này. Vui lòng thử lại.",
-          },
-        ]);
-      } finally {
-        if (requestRef.current === controller) {
-          requestRef.current = null;
-          setLoading(false);
-        }
-      }
+function AreaTourChat() {
+  const { payload, heritageSlug, currentSceneKey, currentScene, chatMode,
+    selectedHighlight, narrationStatus } = useHeritageTour();
+  const area = resolveTourArea(heritageSlug);
+  const hasIdentity = !!currentScene && currentScene.id > 0 && payload.heritage.id > 0;
+  const chat = useConversationSession({
+    scope: `tour:${payload.heritage.id}:${area?.id ?? heritageSlug}`,
+    initialMessages: initialTourMessages,
+    disabled: !area || !hasIdentity,
+    context: {
+      active_area_id: area?.id,
+      ...(Number.isInteger(payload.heritage.id) && payload.heritage.id > 0 ? { heritage_id: payload.heritage.id } : {}),
+      heritage_context: {
+        id: payload.heritage.id, slug: heritageSlug, title: payload.heritage.title, region: payload.heritage.region,
+      },
+      scene_context: currentScene ? {
+        id: currentScene.id, key: currentSceneKey, slug: currentScene.slug,
+        title: currentScene.title, description: currentScene.description?.slice(0, 1000) ?? null,
+        sequence: currentScene.sequence,
+      } : null,
+      ...(hasIdentity ? { tour_context: {
+        scene_id: currentScene!.id, mode: chatMode,
+        highlight_id: selectedHighlight?.id ?? null, narration: narrationStatus,
+      } } : {}),
     },
-    [
-      conversationId,
-      conversationOwnerId,
-      currentScene,
-      currentSceneKey,
-      heritageSlug,
-      heritageTitle,
-      input,
-      loading,
-      messages,
-      payload.heritage.id,
-      payload.heritage.region,
-    ],
+  });
+  const sceneSuggestions = useMemo(
+    () => buildSceneChatSuggestions(area, currentScene, currentSceneKey, selectedHighlight, chat.completedStoryIds),
+    [area, currentScene, currentSceneKey, selectedHighlight, chat.completedStoryIds],
   );
 
-  const overlayMessages = useMemo<ChatOverlayMessage[]>(
-    () =>
-      messages.map((message) => ({
-        id: message.id,
-        role: message.role,
-        content: message.content,
-        createdAt: message.createdAt ?? new Date(0).toISOString(),
-        citations: (message.sources ?? []).map((source, index) => ({
-          id: `${message.id}-${source.chunk_id ?? index}`,
-          message_id: message.id,
-          source_title: source.doc ?? source.heading ?? "Nguồn tham khảo",
-          source_url: source.url ?? null,
-          relevance_score: null,
-        })),
-      })),
-    [messages],
-  );
+  const overlayMessages = useMemo<ChatOverlayMessage[]>(() => chat.messages.map((message) => ({
+    id: message.id, role: message.role, content: message.content,
+    createdAt: message.createdAt ?? new Date(0).toISOString(),
+    replyContext: message.replyContext, answerType: message.answerType,
+    needsUserChoice: message.needsUserChoice, abstained: message.abstained, sources: message.sources,
+  })), [chat.messages]);
 
-  useEffect(
-    () => {
-      return () => requestRef.current?.abort();
-    },
-    [],
-  );
-
-  return (
-    <ChatOverlayWidget
-      messages={overlayMessages}
-      input={input}
-      sending={loading}
-      error={null}
-      onInputChange={setInput}
-      onSend={(text) => void send(text)}
-      onNewConversation={startNewConversation}
-    />
-  );
+  return <ChatOverlayWidget
+    messages={overlayMessages} input={chat.input} sending={chat.sending} restoring={chat.restoring} disabled={!area || !hasIdentity}
+    areaLabel={area?.title}
+    sceneLabel={`${sceneSuggestions.contextLabel ?? area?.title ?? ""} · ${chatMode === "scene" ? "Theo cảnh" : chatMode === "walk" ? "Đi bộ 3D" : "Khám phá 3D"}`}
+    suggestions={sceneSuggestions.suggestions}
+    error={area ? chat.error : "Tour này chưa có khu vực hướng dẫn được xác nhận. Chat tạm khóa để tránh trả lời sai phạm vi."}
+    onInputChange={chat.setInput} onSend={(text) => void chat.send(text,
+      text ? sceneSuggestions.suggestions.find((item) => item.value === text)?.storyId : undefined,
+    )} onNewConversation={chat.startNewConversation}
+  />;
 }

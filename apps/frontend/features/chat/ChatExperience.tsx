@@ -1,74 +1,37 @@
 "use client";
 import { theme as antdTheme } from "antd";
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 import { XProvider } from "@ant-design/x";
 import { ChatLanding } from "./components/ChatLanding";
 import { ChatView } from "./components/ChatView";
-import { CHAT_API_URL, CHAT_SUGGESTIONS } from "./config";
-import type { Message, Source } from "./types";
+import { CHAT_SUGGESTIONS } from "./config";
+import type { Message } from "./types";
 import styles from "@/features/chat/chat.module.css";
 import { useHeritageTheme } from "./useHeritageTheme";
 import { HelpButton, TopBar } from "./components/TopBar";
-import { requestChat } from "@/lib/chat-request.mjs";
+import { AUTH_CHANGE_EVENT } from "@/lib/auth";
+import { getConversationAccountId, useConversationSession } from "@/hooks/useConversationSession";
 
 const SUGGESTIONS = [...CHAT_SUGGESTIONS];
 
+function initialStandaloneMessages(): Message[] { return []; }
+
 export function ChatExperience() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [account, setAccount] = useState(getConversationAccountId);
+  useEffect(() => {
+    const update = () => setAccount(getConversationAccountId());
+    window.addEventListener(AUTH_CHANGE_EVENT, update);
+    return () => window.removeEventListener(AUTH_CHANGE_EVENT, update);
+  }, []);
+  return <AccountChatExperience key={account ?? "guest"} />;
+}
+
+function AccountChatExperience() {
+  const chat = useConversationSession({ scope: "standalone", initialMessages: initialStandaloneMessages });
+  const { messages, input, sending, restoring, setInput, send } = chat;
+  const loading = sending || restoring;
   const theme = useHeritageTheme();
-
   const hasMessages = messages.length > 0;
-
-  const send = useCallback(
-    async (text?: string) => {
-      const userMessage = text ?? input;
-      if (!userMessage.trim() || loading) return;
-
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        {
-          id: Date.now().toString(),
-          role: "user",
-          content: userMessage,
-        },
-      ]);
-      setInput("");
-      setLoading(true);
-
-      try {
-        const response = await requestChat(CHAT_API_URL, userMessage);
-        if (!response.ok) throw new Error("Chat request failed");
-
-        const data = await response.json();
-
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: data.answer,
-            sources: data.sources as Source[],
-            correctedFrom: data.corrected_from,
-            correctedTo: data.corrected_to,
-          },
-        ]);
-      } catch {
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: "Đã xảy ra lỗi khi kết nối tới máy chủ.",
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [input, loading],
-  );
 
   return (
     <XProvider
@@ -108,6 +71,7 @@ export function ChatExperience() {
           />
         )}
 
+        {chat.error && <p className={styles.requestError} role="alert">{chat.error}</p>}
         <HelpButton />
       </div>
     </XProvider>

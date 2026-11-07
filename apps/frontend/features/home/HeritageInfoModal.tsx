@@ -3,34 +3,13 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/Button/Button";
-import { HeritageItem } from "@/services/heritage.service";
+import type { HeritageItem } from "@/services/heritage.service";
 import styles from "./HeritageInfoModal.module.css";
 
 interface HeritageInfoModalProps {
   item: HeritageItem | null;
   onClose: () => void;
 }
-
-const MOCK_FALLBACK_VOICES = [
-  {
-    id: 901,
-    name: "Ngọc Ngân",
-    title: "Người thuyết minh tiếng Việt",
-    headshot_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80",
-  },
-  {
-    id: 902,
-    name: "Hung Heo",
-    title: "Cultural Interpreter, Musician",
-    headshot_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80",
-  },
-  {
-    id: 903,
-    name: "Hung Heo",
-    title: "Cultural Interpreter, Dancer",
-    headshot_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&h=100&q=80",
-  },
-];
 
 export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onClose }) => {
   const router = useRouter();
@@ -45,33 +24,26 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
 
   if (!item) return null;
 
-  const title = item.title || "Look Eye to Eye with the Towering Faces of Mount Rushmore";
-  const location = item.region || "Keystone, South Dakota";
-  const description =
-    item.description ||
-    "Explore Mount Rushmore National Memorial through the stories of the many communities whose cultural traditions have shaped this place and continue to flourish in the Black Hills.";
+  const title = item.title || "Khám phá di sản";
+  const location = item.region || "Việt Nam";
+  const description = item.description || "";
   const slug = item.slug || "";
-  const publishYear = item.publish_date ? new Date(item.publish_date).getFullYear() : 2025;
-  const lang = item.language1?.name || "English";
+  const publishYear = item.publish_date ? new Date(item.publish_date).getFullYear() : new Date().getFullYear();
+  const lang = item.language1?.name || "Tiếng Việt";
 
-  // Lấy video hover
-  const rawVideo = (item as any).hover_video_url;
-  const isTuDuc = String(item.slug).includes("tu-duc") || String(item.title).toLowerCase().includes("tự đức");
-  const videoUrl = rawVideo || (isTuDuc ? "/tuc-duc-hover.mp4" : null);
-  const hasValidVideo = typeof videoUrl === "string" && videoUrl.trim().length > 0;
+  // Lấy video hover nếu có
+  const rawVideo = item.hover_video_url;
+  const videoUrl = typeof rawVideo === "string" && rawVideo.trim().length > 0 ? rawVideo : null;
+  const hasValidVideo = Boolean(videoUrl);
 
   // Lấy ảnh tĩnh splash
   const splashImg =
     item.splash_image_url ||
     item.card_image_url ||
-    (item as any).coverImage ||
+    item.coverImage ||
     "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1200&q=80";
 
-  let displayVoices = item.voices && item.voices.length > 0 ? [...item.voices] : [];
-  if (displayVoices.length < 3) {
-    const needed = 3 - displayVoices.length;
-    displayVoices = [...displayVoices, ...MOCK_FALLBACK_VOICES.slice(3 - needed)];
-  }
+  const displayVoices = item.voices && item.voices.length > 0 ? item.voices : [];
 
   const handleExplore = () => {
     onClose();
@@ -87,10 +59,10 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
           url: window.location.href,
         });
       } catch {
-        // Dismissed
+        // Dismissed by user
       }
     } else if (typeof navigator !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+      void navigator.clipboard.writeText(window.location.href);
       alert("Đã sao chép liên kết vào clipboard!");
     }
   };
@@ -100,7 +72,7 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Nền Media */}
         <div className={styles.mediaLayer}>
-          {hasValidVideo ? (
+          {hasValidVideo && videoUrl ? (
             <video
               key={videoUrl}
               src={videoUrl}
@@ -129,35 +101,39 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
           </div>
 
           <div className={styles.metaBlock}>
-            <span className={styles.badge}>Published {publishYear}</span>
+            <span className={styles.badge}>Năm {publishYear}</span>
             <span className={styles.divider}>•</span>
-            <span className={styles.aboutLink}>About</span>
+            <span className={styles.aboutLink}>Giới thiệu</span>
             <span className={styles.divider}>•</span>
             <span className={styles.langText}>{lang}</span>
           </div>
 
-          <div className={styles.descBlock}>
-            <p className={styles.description}>{description}</p>
-          </div>
+          {description && (
+            <div className={styles.descBlock}>
+              <p className={styles.description}>{description}</p>
+            </div>
+          )}
 
-          <div className={styles.contributorsBlock}>
-            {displayVoices.slice(0, 3).map((voice, idx) => (
-              <div key={voice.id || idx} className={styles.contributorItem}>
-                <img
-                  src={
-                    voice.headshot_url ||
-                    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80"
-                  }
-                  alt={voice.name}
-                  className={styles.avatar}
-                />
-                <div className={styles.contributorInfo}>
-                  <span className={styles.contributorName}>{voice.name}</span>
-                  <span className={styles.contributorRole}>{voice.title}</span>
+          {displayVoices.length > 0 && (
+            <div className={styles.contributorsBlock}>
+              {displayVoices.slice(0, 3).map((voice, idx) => (
+                <div key={voice.id || idx} className={styles.contributorItem}>
+                  <img
+                    src={
+                      voice.headshot_url ||
+                      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80"
+                    }
+                    alt={voice.name}
+                    className={styles.avatar}
+                  />
+                  <div className={styles.contributorInfo}>
+                    <span className={styles.contributorName}>{voice.name}</span>
+                    <span className={styles.contributorRole}>{voice.title}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
          <div className={styles.actionsBlock}>
             <Button
@@ -166,7 +142,7 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
               onClick={onClose}
               style={{ borderRadius: "9999px" }}
             >
-              Explore
+              Khám phá
             </Button>
 
             <Button
@@ -179,11 +155,10 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
                 <polyline points="16 6 12 2 8 6" />
                 <line x1="12" y1="2" x2="12" y2="15" />
               </svg>
-              Share
+              Chia sẻ
             </Button>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 };

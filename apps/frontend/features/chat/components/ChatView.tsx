@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bubble, Sources } from "@ant-design/x";
+import { Bubble } from "@ant-design/x";
 import type { BubbleListProps } from "@ant-design/x";
-import type { Message, Source } from "@/features/chat/types";
+import type { Message } from "@/features/chat/types";
 import ChatInput from "./ChatInput";
 import { ChatActions } from "./ChatActions";
 import { MilaAvatar } from "@/features/chat/components/ChatToggleButton";
@@ -16,20 +16,6 @@ interface ChatViewProps {
   onInputChange: (value: string) => void;
   onSend: (text?: string) => void;
   compact?: boolean;
-}
-
-function SourceFooter({ sources }: { sources: Source[] }) {
-  return (
-    <Sources
-      title="Nguồn"
-      items={sources.map((s, i) => ({
-        key: i,
-        title: s.doc || "Nguồn",
-        description: s.heading,
-        url: s.url,
-      }))}
-    />
-  );
 }
 
 export function ChatView({
@@ -58,9 +44,6 @@ export function ChatView({
         msg.role === "assistant" ? (
           <div className={styles.assistantFooter}>
             <ChatActions content={msg.content} />
-            {msg.sources && msg.sources.length > 0 && (
-              <SourceFooter sources={msg.sources} />
-            )}
           </div>
         ) : undefined,
     })),

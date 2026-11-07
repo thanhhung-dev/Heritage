@@ -3,3 +3,4 @@ export * from "./DiscoverMoreSection";
 export * from "./HeritageCarouselSection";
 export { default } from "./HeroSection";
 export * from "./HeritageInfoModal";
+export * from "./fallbackHeritageData";

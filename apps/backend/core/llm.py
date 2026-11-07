@@ -9,7 +9,11 @@ from functools import lru_cache
 import httpx
 from opentelemetry import trace
 
-from apps.backend.ai.answering.conversation import ConversationAnswer, conversation_messages
+from apps.backend.ai.answering.conversation import (
+    ConversationAnswer,
+    conversation_json_schema,
+    conversation_messages,
+)
 from apps.backend.core.observability import DEPENDENCY_HEALTH, rag_observation
 from apps.backend.core.prompt import chat_messages
 
@@ -145,13 +149,15 @@ def get_model():
 def generate_response_with_details(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
+    active_area_id: str | None = None, history: list[dict] | None = None,
+    scene_context: dict | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    messages = (conversation_messages(context, question, retrieval_status)
+    messages = (conversation_messages(context, question, retrieval_status, active_area_id=active_area_id, history=history, scene_context=scene_context)
                 if conversation else chat_messages(context, question))
     options = {"response_format": {
-        "type": "json_object", "schema": ConversationAnswer.model_json_schema(),
+        "type": "json_object", "schema": conversation_json_schema(context),
     }} if conversation else {}
 
     with rag_observation('generation', as_type='generation', input=messages) as observation:
@@ -184,7 +190,10 @@ def generate_response_with_details(
 def generate_response(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
+    active_area_id: str | None = None, history: list[dict] | None = None,
+    scene_context: dict | None = None,
 ) -> str:
     return generate_response_with_details(
         question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
+        active_area_id=active_area_id, history=history, scene_context=scene_context,
     ).answer

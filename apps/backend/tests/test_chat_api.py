@@ -130,6 +130,25 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(data["answer_type"], "answered")
         self.assertEqual(data["resolution_status"], "resolved")
 
+    def test_accepts_bracketed_passage_label_in_source_ids(self):
+        self.evidence.id = "PSG-a5249e9c6b65e5ae1b56174261805d80f38afc5829e376c25ffccb3ae152c7d3"
+        self.evidence.to_source = lambda: {"passage_id": self.evidence.id}
+        for cited_id in (
+            f"[Passage {self.evidence.id}]",
+            "a5249e9c6b65e5ae1b56174261805d80f38afc5829e376c25ffccb3ae152c7d3",
+        ):
+            with self.subTest(cited_id=cited_id):
+                raw = model_answer(
+                    "Lăng Tự Đức nằm ở thôn Thượng Ba, xã Thủy Xuân, thành phố Huế.",
+                    source_ids=[cited_id],
+                )
+                with patch.object(chat_api, "generate_response", return_value=raw):
+                    response = self.client.post("/api/chat", json={"message": "Lăng Tự Đức ở đâu?"})
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertEqual(data["answer_type"], "answered")
+                self.assertEqual([s["passage_id"] for s in data["sources"]], [self.evidence.id])
+
     def test_relationship_context_keeps_events_that_refer_back_to_the_subject(self):
         cases = [
             ("Chùa Thiên Mụ", "Vì sao chùa Thiên Mụ còn gọi là Linh Mụ, vua Tự Đức liên quan thế nào?",

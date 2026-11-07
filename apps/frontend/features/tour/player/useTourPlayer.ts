@@ -2,34 +2,46 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHeritageTour } from "@/context/heritage-tour";
-import type { HeritageInteractiveHighlight } from "@/types/heritage";
 import { parseExploreArea } from "../three/explore-area";
 import type { ExploreMode } from "../three/explore-controller";
 import type { TourEngine } from "../three/tour-engine";
 import { useNarration } from "./useNarration";
 import { useCaptions } from "./useCaptions";
+import { useTourAudio } from "./useTourAudio";
 
-export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interactiveRoute = false }: {
+export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interactiveRoute = false, allowLookAround = false }: {
   narrationUrl?: string | null;
   captionsUrl?: string | null;
-  /**
-   * URL đang là route điểm tương tác `/content/{slug}/{sceneKey}/int`.
-   *
-   * Truyền vào từ layout (nơi biết URL) thay vì gọi hook router ở đây: hook này
-   * được test bằng `renderToStaticMarkup` không có App Router context, mà
-   * `useRouter()` của `next/navigation` sẽ throw khi thiếu context đó.
-   */
+  /** Cùng điều kiện hiện gợi ý Drag to Look Around; Pause không tự mở khóa. */
+  allowLookAround?: boolean;
   interactiveRoute?: boolean;
 } = {}) {
-  const { engine, currentSceneKey, currentScene, scenePlayback } = useHeritageTour();
+  const { engine, payload, currentSceneKey, currentScene, scenePlayback,
+    selectedHighlight, setSelectedHighlight, reportNarration } = useHeritageTour();
   const interactive = scenePlayback ? currentScene?.interactive[0] ?? null : null;
   const [isMuted, setIsMuted] = useState(false);
+  const { playTransition, stopTransition, playExploreReveal, stopExploreReveal } = useTourAudio(
+    (currentScene?.use_ambient_audio_alt ? payload.heritage.ambient_audio_alt_url : payload.heritage.ambient_audio_url) ?? null,
+    payload.heritage.transition_sfx_url ?? null,
+    isMuted,
+  );
+  const [readyScene, setReadyScene] = useState<{
+    key: string;
+    engine: TourEngine | null;
+    playback: typeof scenePlayback;
+  } | null>(null);
+  const isSceneTransitioning = readyScene?.key !== currentSceneKey
+    || readyScene.engine !== engine || readyScene.playback !== scenePlayback;
   const [ccOn, setCcOn] = useState(true);
-  const [selectedHighlight, setSelectedHighlight] = useState<HeritageInteractiveHighlight | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
   const highlightEntry = useRef<ReturnType<TourEngine["getCameraPose"]> | null>(null);
   const timelineSceneKey = useRef<string | null>(null);
+  const cameraEntry = useRef<{
+    engine: TourEngine;
+    sceneKey: string;
+    initial: boolean;
+  } | null>(null);
   /**
    * Engine đã thực sự vào explore chưa. Cần cờ này vì `exploreMode` là giá trị
    * suy ra (có thể đổi vì lý do khác), còn `enterExplore` phải chạy ĐÚNG MỘT LẦN
@@ -39,6 +51,9 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   /** Engine mà `exploreActive` đang nói tới — engine mới thì phải vào lại từ đầu. */
   const exploreEngine = useRef<TourEngine | null>(null);
   const narration = useNarration(narrationUrl ?? scenePlayback?.narrationUrl ?? null, isMuted);
+  useEffect(() => {
+    reportNarration(currentSceneKey, narration.narrationStatus);
+  }, [currentSceneKey, narration.narrationStatus, reportNarration]);
   const captions = useCaptions(captionsUrl ?? scenePlayback?.captionsUrl ?? null, narration.currentTime, ccOn);
   const { pause, seek } = narration;
 
@@ -59,6 +74,8 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   useEffect(() => {
     pause();
     seek(0);
+    stopTransition();
+    setReadyScene(null);
     // Trước khi đổi cảnh: chốt pose người dùng đang thấy (có thể đang dí gần một
     // badge) để cảnh mới bay tiếp từ đó, không nhảy về preset cũ.
     engine?.releaseHighlightDolly();
@@ -66,6 +83,17 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     timelineSceneKey.current = null;
     engine?.setPlaybackTime(0, false);
     let cancelled = false;
+    let transitionTimer: number | undefined;
+    const waitForArrival = (cameraDuration = 0, withSfx = false) => {
+      const sfx = withSfx ? playTransition() : Promise.resolve();
+      // Màn che giữ 620ms rồi mở trong 420ms; camera bay có thể lâu hơn.
+      const arrival = new Promise<void>((resolve) => {
+        transitionTimer = window.setTimeout(resolve, Math.max(1040, cameraDuration * 1000));
+      });
+      void Promise.all([arrival, sfx]).then(() => {
+        if (!cancelled) setReadyScene({ key: currentSceneKey, engine, playback: scenePlayback });
+      });
+    };
     setSceneError(null);
     // Bay từ góc hiện tại tới góc mở đầu; chỉ instant_move mới đặt ngay.
     // Metadata audio đến sau sẽ bật timeline mà không hủy chuyến bay này.
@@ -74,13 +102,23 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       // nếu để chạy trong lúc chờ nạp path thì camera sẽ nhảy về quỹ đạo cũ.
       engine?.stopCameraTimeline();
       const camera = currentScene.camera;
-      const duration = camera.instant_move ? 0 : 1.6;
+      const changingScene = cameraEntry.current?.engine === engine && cameraEntry.current?.sceneKey !== currentSceneKey;
+      if (engine && (cameraEntry.current?.engine !== engine || cameraEntry.current.sceneKey !== currentSceneKey)) {
+        cameraEntry.current = {
+          engine,
+          sceneKey: currentSceneKey,
+          // Giữ cờ khi effect chạy lại cho cùng scene (kể cả React Strict Mode).
+          initial: cameraEntry.current?.engine !== engine,
+        };
+      }
+      const duration = camera.instant_move || (currentSceneKey === "s0" && cameraEntry.current?.initial) ? 0 : 1.6;
       /** Góc mở đầu theo dữ liệu tĩnh: preset DB → camera nướng trong model → `fit()`. */
       const startWithPreset = () => {
         const usedGLB = !(camera.start_position && camera.start_target) && camera.node_name
           ? engine?.useGLBCamera(camera.node_name, duration) === true
           : false;
-        if (!usedGLB) engine?.flyCameraPreset(camera, false, duration);
+        const moved = usedGLB || engine?.flyCameraPreset(camera, false, duration);
+        waitForArrival(moved ? duration : 0, !!moved && changingScene && duration > 0);
       };
       // Thứ tự ưu tiên góc mở đầu:
       //  1. quỹ đạo camera trong GLB riêng (`camera.path_url`) — clip lo TOÀN BỘ
@@ -90,12 +128,14 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       //  4. không có gì ⇒ giữ nguyên góc `fit()` đang thấy.
       // Path nạp bất đồng bộ (file chỉ vài chục KB): xong thì bay tới khung đầu,
       // lỗi/không có clip thì lùi về preset — không để cảnh đứng hình chờ.
-      if (camera.path_url) {
+      if (camera.path_url && engine) {
         const url = camera.path_url;
-        void engine?.setCameraPath(url).then((ready) => {
+        void engine.setCameraPath(url).then((ready) => {
           if (cancelled) return;
-          if (ready) engine?.applyCameraPathStart(0);
-          else startWithPreset();
+          if (ready) {
+            engine.applyCameraPathStart(0);
+            waitForArrival(0, changingScene && duration > 0);
+          } else startWithPreset();
         });
       } else {
         engine?.stopCameraPath();
@@ -104,6 +144,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     } else {
       engine?.stopCameraTimeline();
       engine?.stopCameraPath();
+      waitForArrival();
     }
     engine?.setInteractiveHighlights(interactive?.highlights ?? []);
     // Biên đi bộ thuộc về CẢNH, không thuộc lần vào/ra chế độ — đặt ở đây để đổi
@@ -126,11 +167,17 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       if (item && scenePlayback && currentScene && item.cam_pos && item.cam_target) {
         highlightEntry.current ??= engine.getCameraPose();
         engine.flyCameraPreset({ ...currentScene.camera, start_position: item.cam_pos, start_target: item.cam_target }, false, 1.2);
+        playTransition();
       }
       if (!item) highlightEntry.current = null;
     });
-    return () => { cancelled = true; unsubscribe?.(); };
-  }, [engine, currentSceneKey, currentScene, scenePlayback, interactive, exploreArea, pause, seek]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(transitionTimer);
+      stopTransition();
+      unsubscribe?.();
+    };
+  }, [engine, currentSceneKey, currentScene, scenePlayback, interactive, exploreArea, pause, seek, playTransition, stopTransition, setSelectedHighlight]);
   useEffect(() => {
     // Truyền cả trạng thái phát: engine cần biết để tự tiến đồng hồ nội bộ giữa
     // các lần React báo thời gian (mượt 60fps thay vì giật theo `timeupdate`).
@@ -157,10 +204,12 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
 
   const applyInteractiveCamera = useCallback((duration = 1.2) => {
     if (interactive?.cam_pos && interactive.cam_target && currentScene) {
-      return engine?.flyCameraPreset({ ...currentScene.camera, start_position: interactive.cam_pos, start_target: interactive.cam_target }, false, duration);
+      const moved = engine?.flyCameraPreset({ ...currentScene.camera, start_position: interactive.cam_pos, start_target: interactive.cam_target }, false, duration);
+      if (moved && duration > 0) playTransition();
+      return moved;
     }
     return false;
-  }, [interactive, currentScene, engine]);
+  }, [interactive, currentScene, engine, playTransition]);
 
   /**
    * Chế độ explore suy ra TRỰC TIẾP từ dữ liệu điểm tương tác.
@@ -186,6 +235,12 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   const exploreMode: ExploreMode | null =
     interactiveRoute && interactive ? initialExploreMode : null;
 
+  useEffect(() => {
+    // Scene dùng pivot sát mắt; Explore/editor phải giữ orbit/đi bộ riêng.
+    engine?.setSceneLookAround(scenePlayback !== null && exploreMode === null, allowLookAround);
+    return () => engine?.setSceneLookAround(false);
+  }, [engine, currentSceneKey, scenePlayback, exploreMode, allowLookAround]);
+
   /**
    * URL đổi thì engine phải được lệnh tường minh: `enter` chụp pose hiện tại để
    * nút Reset quay về, `exit` khôi phục pose đó. `exploreActive` bảo đảm mỗi lần
@@ -204,6 +259,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       if (!exploreActive.current) return;
       exploreActive.current = false;
       engine.exitExplore(1.2);
+      playTransition();
       timelineSceneKey.current = null;
       // Trả quyền lại cho camera tự động khi rời Explore (bỏ qua cảnh instant_move
       // và cảnh chưa biết thời lượng clip). Đánh dấu cảnh đã bật để effect bên
@@ -249,15 +305,20 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       engine.enterExplore(exploreMode);
       applyInteractiveCamera();
     }
-  }, [engine, exploreMode, exploreArea, pause, currentSceneKey, currentScene, narration.duration, applyInteractiveCamera]);
+  }, [engine, exploreMode, exploreArea, pause, currentSceneKey, currentScene, narration.duration, applyInteractiveCamera, playTransition]);
 
   return {
     ...narration,
+    isSceneTransitioning,
+    async play() {
+      if (!isSceneTransitioning) await narration.play();
+    },
     error: sceneError ?? narration.error,
     isMuted, setIsMuted, ccOn, setCcOn,
     captionText: captions.text,
     captionsError: captions.error,
     exploreMode, selectedHighlight, zoomed, interactive,
+    playExploreReveal, stopExploreReveal,
     hasSceneData: scenePlayback !== null,
     initialExploreMode,
     /** Tiêu đề + mô tả của chế độ explore, chỉ có nghĩa khi ĐANG ở trong chế độ. */
@@ -272,6 +333,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       if (currentScene && engine?.flyCameraPreset(currentScene.camera, !zoomed, 1.2)) {
         timelineSceneKey.current = currentSceneKey;
         setZoomed(!zoomed);
+        playTransition();
       }
     },
     resetExplore() {
@@ -279,18 +341,18 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
       // Reset = về đúng điểm xuất phát của chế độ (với đi bộ là `cam_pos`). Bay
       // mượt như mọi chế độ khác: `updateWalk` tự nhường quyền trong lúc bay nên
       // khoá độ cao không cắt ngang đường bay.
-      if (!applyInteractiveCamera()) engine?.resetExplore(1.2);
+      if (!applyInteractiveCamera()) { engine?.resetExplore(1.2); playTransition(); }
     },
     closeHighlight() {
       const pose = highlightEntry.current;
       engine?.selectHighlight(null);
-      if (pose) engine?.restoreCameraPose(pose, 1.2);
+      if (pose) { engine?.restoreCameraPose(pose, 1.2); playTransition(); }
     },
     selectHighlight(id: number) { engine?.selectHighlight(id); },
     /** Cần gạt ảo (mobile) — toạ độ đã chuẩn hoá `[-1, 1]`. */
     setWalkStick(x: number, y: number) { engine?.setWalkStick(x, y); },
     releaseWalkStick() { engine?.releaseWalkStick(); },
-    restart() { void narration.replay(); },
+    restart() { if (!isSceneTransitioning) void narration.replay(); },
     skipVoiceover: narration.skipToEnd,
     seekBy: (seconds: number) => seek(narration.currentTime + seconds),
   };

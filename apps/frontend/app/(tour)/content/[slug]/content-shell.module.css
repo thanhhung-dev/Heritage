@@ -1,9 +1,31 @@
 .shell {
+  --content-corner-shadow:
+    radial-gradient(ellipse 70% 80% at top left, rgba(0, 0, 0, 0.6), transparent 70%),
+    radial-gradient(ellipse 70% 80% at top right, rgba(0, 0, 0, 0.6), transparent 70%),
+    radial-gradient(ellipse 70% 80% at bottom left, rgba(0, 0, 0, 0.6), transparent 70%),
+    radial-gradient(ellipse 70% 80% at bottom right, rgba(0, 0, 0, 0.6), transparent 70%);
   position: fixed;
   inset: 0;
   overflow: hidden;
   background: #090d0b;
   color: #fff;
+}
+
+.cornerShadow,
+.splashWrap::after {
+  position: absolute;
+  inset: 0;
+  background: var(--content-corner-shadow);
+  pointer-events: none;
+}
+
+/* Above the canvas, below the viewer's controls and panels. */
+.cornerShadow {
+  z-index: 0;
+}
+
+.splashWrap::after {
+  content: "";
 }
 
 /* ── Màn hình chờ / lỗi khi chưa có payload tour ── */

@@ -38,6 +38,8 @@ from apps.backend.schemas.heritage import (
     VoiceOut,
 )
 from apps.backend.services.heritageServices import HeritageService, scene_slug
+from apps.backend.services.tour_guide import guide_stories
+from apps.backend.services.tour_scope import resolve_area
 
 router = APIRouter(prefix="/heritages", tags=["heritage"])
 
@@ -68,6 +70,9 @@ def _heritage_out(heritage, voices, voice_length) -> HeritageOut:
         "splash_image_url",
         "hover_video_url",
         "presented_by_logo_url",
+        "ambient_audio_url",
+        "ambient_audio_alt_url",
+        "transition_sfx_url",
     )
     for voice in out.voices:
         _resolve_urls(voice, policy, "headshot_url", "intro_video_url")
@@ -155,7 +160,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
         _resolve_urls(item, policy, "asset_url", "thumb_url")
     for inter in interactive_out:
         for highlight in inter.highlights:
-            _resolve_urls(highlight, policy, "media_url")
+            _resolve_urls(highlight, policy, "media_url", "audio_url")
     for scene_highlight in highlights_out:
         _resolve_urls(scene_highlight, policy, "model_url")
 
@@ -165,6 +170,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
         title=sc.title,
         description=sc.description,
         sequence=sc.sequence,
+        use_ambient_audio_alt=getattr(sc, "use_ambient_audio_alt", False),
         sky=sky_out,
         camera=camera_out,
         voice_clips=voices_out,
@@ -186,6 +192,16 @@ def _content_out(data) -> HeritageContentOut:
         else None
     )
     scenes_out = [_scene_detail_out(sc, policy) for sc in data["scenes"]]
+    try:
+        area_id = resolve_area(heritage_out.slug).id
+    except ValueError:
+        area_id = None
+    if area_id:
+        for scene in ([overview_out] if overview_out else []) + scenes_out:
+            scene.guide_stories = guide_stories(area_id, scene.title)
+            for interactive in scene.interactive:
+                for point in interactive.highlights:
+                    point.guide_stories = guide_stories(area_id, scene.title, point.popup_title)
     return HeritageContentOut(
         heritage=heritage_out,
         overview=overview_out,
