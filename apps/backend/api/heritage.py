@@ -233,12 +233,12 @@ def _scene_playback(scene: SceneDetailOut) -> ScenePlaybackOut:
 
 
 def _playback_map(content: HeritageContentOut) -> dict[str, ScenePlaybackOut]:
-    """Build the "s0".."sN" playback map that the tour player indexes by key."""
+    """Key playback by scene slug, preserving gaps in scene sequences."""
     playback: dict[str, ScenePlaybackOut] = {}
     if content.overview is not None:
-        playback["s0"] = _scene_playback(content.overview)
-    for index, scene in enumerate(content.scenes):
-        playback[f"s{index + 1}"] = _scene_playback(scene)
+        playback[content.overview.slug] = _scene_playback(content.overview)
+    for scene in content.scenes:
+        playback[scene.slug] = _scene_playback(scene)
     return playback
 
 
@@ -296,8 +296,9 @@ async def get_heritage_tour(
     """Tour payload + per-scene audio, shaped like the `tour.json` fixture.
 
     One request returns everything the tour player needs: the tour-wide GLB,
-    the full content payload and the "s0".."sN" playback map (narration URL,
-    captions, timed highlights, explore area).
+    the full content payload and playback keyed by each scene's slug (narration
+    URL, captions, timed highlights, explore area). Keys need not be contiguous:
+    a scene with slug "s3" keeps playback["s3"] even when "s1" is absent.
     """
     data = await service.get_content_by_slug(heritage_slug)
     if data is None:

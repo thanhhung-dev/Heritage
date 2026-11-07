@@ -682,6 +682,43 @@ class TourContentTests(HeritageApiTestBase):
         self.assertIsNone(body["playback"]["s2"]["narrationUrl"])
         self.assertEqual(body["playback"]["s2"]["timedHighlights"], [])
 
+    def test_tour_playback_preserves_scene_slugs_when_sequences_have_gaps(self) -> None:
+        scenes = [
+            make_scene(
+                id=scene_id,
+                sequence=sequence,
+                camera_path_url=None,
+                voice_clips=[make_voice_clip(audio_url=audio_url)],
+            )
+            for scene_id, sequence, audio_url in [
+                (3, 1, "https://cdn.example.com/audio/dream.mp3"),
+                (506, 2, "https://cdn.example.com/audio/autobiography.mp3"),
+                (508, 4, "https://cdn.example.com/audio/tomb.mp3"),
+            ]
+        ]
+        overview = make_scene(id=1, sequence=-1, camera_path_url=None)
+        self._install_service([make_row(make_heritage(), scenes, overview=overview)])
+
+        response = self.client.get("/api/heritages/chua-thien-mu/tour")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(list(body["playback"]), ["s0", "s2", "s3", "s5"])
+        self.assertEqual(body["payload"]["scenes"][1]["id"], 506)
+        self.assertEqual(body["payload"]["scenes"][1]["slug"], "s3")
+        self.assertEqual(
+            body["playback"]["s2"]["narrationUrl"],
+            "https://cdn.example.com/audio/dream.mp3",
+        )
+        self.assertEqual(
+            body["playback"]["s3"]["narrationUrl"],
+            "https://cdn.example.com/audio/autobiography.mp3",
+        )
+        self.assertEqual(
+            body["playback"]["s5"]["narrationUrl"],
+            "https://cdn.example.com/audio/tomb.mp3",
+        )
+
     def test_tour_returns_404_for_unknown_slug(self) -> None:
         self._install_service([])
 

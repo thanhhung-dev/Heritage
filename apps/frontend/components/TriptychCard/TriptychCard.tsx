@@ -64,9 +64,32 @@ export function TriptychCard({
 }: TriptychCardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isImageReady, setIsImageReady] = useState(false);
 
   const video = item.hover_video_url;
   const hasVideo = Boolean(video);
+  const cardImage =
+    item.card_image_url || item.splash_image_url || "/images/cung-an-dinh.jpg";
+
+  useEffect(() => {
+    setIsImageReady(false);
+    if (!cardImage || typeof window === "undefined") return;
+    let active = true;
+    const img = new window.Image();
+    img.onload = () => {
+      if (active) setIsImageReady(true);
+    };
+    img.onerror = () => {
+      if (active) setIsImageReady(true);
+    };
+    img.src = cardImage;
+    if (img.complete) {
+      setIsImageReady(true);
+    }
+    return () => {
+      active = false;
+    };
+  }, [cardImage]);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -108,8 +131,6 @@ export function TriptychCard({
     ? truncateText(item.description, 100)
     : null;
   const exploreHref = item.href || `/content/${item.slug}`;
-  const cardImage =
-    item.card_image_url || item.splash_image_url || "/images/cung-an-dinh.jpg";
 
   const cardClasses = [
     styles.hp_triptych_card,
@@ -132,7 +153,12 @@ export function TriptychCard({
       onClick={onClick}
     >
       <div
-        className={styles.hp_triptych_card_img}
+        className={[
+          styles.hp_triptych_card_img,
+          !isImageReady ? styles.hp_triptych_card_img_loading : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         style={{ backgroundImage: `url(${cardImage})` }}
       />
 
@@ -145,7 +171,7 @@ export function TriptychCard({
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="none"
           onPlaying={() => setIsVideoPlaying(true)}
           onPause={() => setIsVideoPlaying(false)}
         />

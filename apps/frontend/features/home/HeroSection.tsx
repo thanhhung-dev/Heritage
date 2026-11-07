@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, type CSSProperties } from "react";
-import ContentLoading from "@/components/Loading/ContentLoading";
 import TriptychCard, {
   type TriptychCardData,
 } from "@/components/TriptychCard/TriptychCard";
@@ -201,55 +200,73 @@ export function HeroSection({
           .filter(Boolean)
           .join(" ")}
       >
-        {loading ? (
-          <ContentLoading
-            className={styles.heroLoading}
-            label="Loading heritage experiences…"
-          />
-        ) : (
-          <>
-            {/* Cột bên trái: HeroTile (.hp_hero_left) */}
-            <HeroTile
-              eyebrow={eyebrow}
-              title={title}
-              description={description}
-              subDescription={subDescription}
-            />
+        {/* Cột bên trái: HeroTile (.hp_hero_left) luôn hiển thị ngay lập tức */}
+        <HeroTile
+          eyebrow={eyebrow}
+          title={title}
+          description={description}
+          subDescription={subDescription}
+        />
 
-            {/* Cột bên phải: Triptych Section (.hp_triptych). Ẩn khi chưa có dữ liệu
-                để layout `--hp-tt-n: 0` không tạo ra khung rỗng. */}
-            {displayItems.length > 0 ? (
-              <section
-                className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
-                id="hp_triptych"
-                aria-label="Featured Experiences"
-                style={
-                  {
-                    "--hp-tt-n": displayItems.length,
-                  } as CSSProperties
-                }
-                onMouseLeave={handleMouseLeave}
+        {/* Cột bên phải: Triptych Section (.hp_triptych). Khi đang tải thì hiển thị
+            sẵn khung 3 thẻ; khi tải xong mà rỗng thì ẩn để không tạo khung trống. */}
+        {loading ? (
+          <section
+            className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
+            id="hp_triptych"
+            aria-label="Featured Experiences"
+            aria-busy="true"
+            style={{ "--hp-tt-n": 3 } as CSSProperties}
+          >
+            {[0, 1, 2].map((idx) => (
+              <div
+                key={`hero-skeleton-${idx}`}
+                className={`${triptychStyles.hp_triptych_card} ${triptychStyles.hp_triptych_card_skeleton}`}
+                data-index={idx}
+                aria-hidden="true"
               >
-                {displayItems.map((item, idx) => (
-                  <TriptychCard
-                    key={`hero-${item.slug}-${idx}`}
-                    item={item}
-                    index={idx}
-                    cardId={`card-${idx + 1}`}
-                    isActive={activeIndex === idx}
-                    isCollapsed={activeIndex !== null && activeIndex !== idx}
-                    onMouseEnter={() => handleCardActivate(item, idx)}
-                    onFocus={() => handleCardActivate(item, idx)}
-                    onClick={() => handleCardActivate(item, idx)}
-                    exploreLabel={exploreLabel}
-                    infoLabel={infoLabel}
-                    onInfo={onInfo}
-                  />
-                ))}
-              </section>
-            ) : null}
-          </>
-        )}
+                <div className={triptychStyles.hp_triptych_card_overlay} />
+                <div className={triptychStyles.hp_triptych_card_content}>
+                  <div className={triptychStyles.hp_triptych_card_text}>
+                    <div className={triptychStyles.hp_triptych_card_heading}>
+                      <span className={triptychStyles.hp_triptych_skeleton_title} />
+                      <span className={triptychStyles.hp_triptych_skeleton_sub} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        ) : displayItems.length > 0 ? (
+          <section
+            className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
+            id="hp_triptych"
+            aria-label="Featured Experiences"
+            style={
+              {
+                "--hp-tt-n": displayItems.length,
+              } as CSSProperties
+            }
+            onMouseLeave={handleMouseLeave}
+          >
+            {displayItems.map((item, idx) => (
+              <TriptychCard
+                key={`hero-${item.slug}-${idx}`}
+                item={item}
+                index={idx}
+                cardId={`card-${idx + 1}`}
+                isActive={activeIndex === idx}
+                isCollapsed={activeIndex !== null && activeIndex !== idx}
+                onMouseEnter={() => handleCardActivate(item, idx)}
+                onFocus={() => handleCardActivate(item, idx)}
+                onClick={() => handleCardActivate(item, idx)}
+                exploreLabel={exploreLabel}
+                infoLabel={infoLabel}
+                onInfo={onInfo}
+              />
+            ))}
+          </section>
+        ) : null}
       </div>
     </section>
   );

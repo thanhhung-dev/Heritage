@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import ContentLoading from "@/components/Loading/ContentLoading";
 import {
   HeroSection,
   DiscoverMoreSection,
