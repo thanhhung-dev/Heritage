@@ -26,9 +26,10 @@ const NUDGE_INTERVAL_MS = 10_000;
  *   │  └─ nhóm nút Read More / Read Less
  *   └─ orbTracker              ← ghim tuyệt đối ở đáy panel, ngoài vùng cuộn
  */
-export default function HighlightPanel({ highlight, highlights = [], onClose }: {
+export default function HighlightPanel({ highlight, highlights = [], muted = false, onClose }: {
   highlight: HeritageInteractiveHighlight | null;
   highlights?: HeritageInteractiveHighlight[];
+  muted?: boolean;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -61,7 +62,14 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
     const frame = requestAnimationFrame(() => closeRef.current?.focus());
     const video = videoRef.current;
     const audio = audioRef.current;
-    return () => { cancelAnimationFrame(frame); video?.pause(); audio?.pause(); };
+    const visibility = () => { if (document.hidden) { video?.pause(); audio?.pause(); } };
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      document.removeEventListener("visibilitychange", visibility);
+      cancelAnimationFrame(frame);
+      video?.pause();
+      audio?.pause();
+    };
   }, [highlightId]);
   useEffect(() => {
     if (!collapsed) { setNudge(false); return; }
@@ -139,7 +147,7 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
         )}
         {showVideo && (
           <video key={highlight.id} ref={videoRef} id="playpenInfo-Vid" className={`${styles.hotspotPopupMedia} ${styles["playpenInfo-Vid"]}`}
-            src={mediaUrl} controls playsInline preload="metadata" crossOrigin="anonymous" aria-label={title}
+            src={mediaUrl} controls muted={muted} playsInline preload="metadata" crossOrigin="anonymous" aria-label={title}
             onPlay={() => audioRef.current?.pause()} onError={() => setFailedMediaUrl(mediaUrl)}
             onTimeUpdate={(event) => trackProgress(event.currentTarget)}
             onLoadedMetadata={(event) => trackProgress(event.currentTarget)}>
@@ -158,7 +166,7 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
         )}
         {audioUrl && (failedAudioUrl === audioUrl ? <>
           <p role="status">Không tải được audio.</p><a href={audioUrl} target="_blank" rel="noreferrer">Mở audio</a>
-        </> : <audio key={`${highlight.id}-audio`} ref={audioRef} id="audioHighlight" src={audioUrl} controls preload="metadata"
+        </> : <audio key={`${highlight.id}-audio`} ref={audioRef} id="audioHighlight" src={audioUrl} controls autoPlay muted={muted} preload="metadata"
           aria-label={`Audio: ${title}`} onPlay={() => videoRef.current?.pause()} onError={() => setFailedAudioUrl(audioUrl)}
           onTimeUpdate={(event) => trackProgress(event.currentTarget)}
           onLoadedMetadata={(event) => trackProgress(event.currentTarget)} />)}

@@ -18,16 +18,22 @@ from datetime import date
 from types import SimpleNamespace
 from typing import Any
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from apps.backend.api.heritage import get_service
-from apps.backend.app import app
+from apps.backend.api.heritage import get_service, router
 from apps.backend.core.assets import AssetUrlPolicy, configure_asset_policy
 from apps.backend.core.config import (
     ConfigurationError,
     cors_origins,
     validate_startup_config,
 )
+
+
+# Exercise the public router without importing unrelated auth/AI dependencies
+# or invoking the production application's startup/database lifecycle.
+app = FastAPI()
+app.include_router(router, prefix="/api")
 
 
 VALID_ENV = {
@@ -95,6 +101,7 @@ def make_scene(**overrides: Any) -> SimpleNamespace:
         "cam_start_target": [0.0, 1.0, 0.0],
         "cam_zoom_pos": None,
         "cam_zoom_target": None,
+        "camera_path_url": None,
         "instant_move": False,
         "sky_preset": None,
         "model_assets": [],
@@ -726,6 +733,120 @@ class TourContentTests(HeritageApiTestBase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["error"]["code"], "HERITAGE_NOT_FOUND")
+
+
+class TourAudioContractTests(HeritageApiTestBase):
+    def test_audio_urls_resolve_on_all_public_heritage_responses(self) -> None:
+        configure_asset_policy(base_url="https://assets.heritage.vn")
+        heritage = make_heritage(
+            ambient_audio_url="audio/exterior.mp3",
+            ambient_audio_alt_url="/audio/interior.mp3",
+            transition_sfx_url="audio/transition.mp3",
+        )
+        self._install_service([make_row(heritage, [])])
+
+        for path in ("", "/chua-thien-mu", "/chua-thien-mu/tour"):
+            with self.subTest(path=path):
+                response = self.client.get(f"/api/heritages{path}")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                item = (body[0] if not path else
+                        body["payload"]["heritage"] if path.endswith("/tour") else
+                        body["heritage"])
+                for field, filename in (
+                    ("ambient_audio_url", "exterior.mp3"),
+                    ("ambient_audio_alt_url", "interior.mp3"),
+                    ("transition_sfx_url", "transition.mp3"),
+                ):
+                    self.assertEqual(item[field], f"https://assets.heritage.vn/audio/{filename}")
+
+    def test_scene_flags_preserve_overview_gaps_and_narration(self) -> None:
+        configure_asset_policy(base_url="https://assets.heritage.vn")
+        overview = make_scene(id=99, sequence=-1, use_ambient_audio_alt=True)
+        scenes = [
+            make_scene(id=10, sequence=1, use_ambient_audio_alt=False),
+            make_scene(
+                id=11, sequence=4, use_ambient_audio_alt=True,
+                voice_clips=[make_voice_clip(audio_url="audio/narration.mp3")],
+                interactives=[make_interactive(highlights=[
+                    make_interactive_highlight(audio_url="audio/highlight.mp3"),
+                ])],
+            ),
+        ]
+        self._install_service([make_row(make_heritage(), scenes, overview=overview)])
+
+        for suffix in ("", "/tour"):
+            with self.subTest(suffix=suffix):
+                response = self.client.get(f"/api/heritages/chua-thien-mu{suffix}")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                payload = body["payload"] if suffix else body
+                self.assertEqual(payload["overview"]["slug"], "s0")
+                self.assertTrue(payload["overview"]["use_ambient_audio_alt"])
+                self.assertEqual([sc["slug"] for sc in payload["scenes"]], ["s2", "s5"])
+                self.assertEqual([sc["use_ambient_audio_alt"] for sc in payload["scenes"]], [False, True])
+                self.assertEqual(
+                    payload["scenes"][1]["interactive"][0]["highlights"][0]["audio_url"],
+                    "https://assets.heritage.vn/audio/highlight.mp3",
+                )
+                if suffix:
+                    self.assertEqual(list(body["playback"]), ["s0", "s2", "s5"])
+                    self.assertEqual(body["playback"]["s5"]["narrationUrl"], "https://assets.heritage.vn/audio/narration.mp3")
+                    self.assertEqual(set(body["playback"]["s5"]), {
+                        "narrationUrl", "captionsUrl", "timedHighlights",
+                        "exploreArea", "exploreTitle", "exploreDescription",
+                    })
+
+    def test_missing_and_null_audio_remain_backward_compatible(self) -> None:
+        for explicit_null in (False, True):
+            with self.subTest(explicit_null=explicit_null):
+                heritage = make_heritage(**({
+                    "ambient_audio_url": None,
+                    "ambient_audio_alt_url": None,
+                    "transition_sfx_url": None,
+                } if explicit_null else {}))
+                highlight = make_interactive_highlight(**({"audio_url": None} if explicit_null else {}))
+                scene = make_scene(interactives=[make_interactive(highlights=[highlight])])
+                self._install_service([make_row(heritage, [scene], overview=make_scene(sequence=-1))])
+                response = self.client.get("/api/heritages/chua-thien-mu/tour")
+                self.assertEqual(response.status_code, 200)
+                payload = response.json()["payload"]
+                for field in ("ambient_audio_url", "ambient_audio_alt_url", "transition_sfx_url"):
+                    self.assertIsNone(payload["heritage"][field])
+                self.assertFalse(payload["overview"]["use_ambient_audio_alt"])
+                self.assertFalse(payload["scenes"][0]["use_ambient_audio_alt"])
+                self.assertIsNone(payload["scenes"][0]["interactive"][0]["highlights"][0]["audio_url"])
+
+    def test_absent_selected_ambience_does_not_borrow_other_url(self) -> None:
+        for use_alt in (False, True):
+            with self.subTest(use_alt=use_alt):
+                heritage = make_heritage(
+                    ambient_audio_url="https://assets.heritage.vn/main.mp3" if use_alt else None,
+                    ambient_audio_alt_url=None if use_alt else "https://assets.heritage.vn/alt.mp3",
+                )
+                self._install_service([make_row(heritage, [make_scene(use_ambient_audio_alt=use_alt)])])
+                response = self.client.get("/api/heritages/chua-thien-mu/tour")
+                self.assertEqual(response.status_code, 200)
+                payload = response.json()["payload"]
+                selected = "ambient_audio_alt_url" if use_alt else "ambient_audio_url"
+                other = "ambient_audio_url" if use_alt else "ambient_audio_alt_url"
+                self.assertIsNone(payload["heritage"][selected])
+                self.assertIsNotNone(payload["heritage"][other])
+                self.assertEqual(payload["scenes"][0]["use_ambient_audio_alt"], use_alt)
+
+    def test_audio_urls_obey_empty_and_host_policy(self) -> None:
+        configure_asset_policy(base_url="https://assets.heritage.vn", allowed_hosts=("assets.heritage.vn",))
+        for url in ("", "https://untrusted.example.com/audio.mp3"):
+            with self.subTest(url=url):
+                heritage = make_heritage(ambient_audio_url=url, ambient_audio_alt_url=url, transition_sfx_url=url)
+                scene = make_scene(interactives=[make_interactive(highlights=[make_interactive_highlight(audio_url=url)])])
+                self._install_service([make_row(heritage, [scene])])
+                response = self.client.get("/api/heritages/chua-thien-mu/tour")
+                self.assertEqual(response.status_code, 200)
+                payload = response.json()["payload"]
+                for field in ("ambient_audio_url", "ambient_audio_alt_url", "transition_sfx_url"):
+                    self.assertIsNone(payload["heritage"][field])
+                self.assertIsNone(payload["scenes"][0]["interactive"][0]["highlights"][0]["audio_url"])
 
 
 # ── R2 / CORS startup config ─────────────────────────────────────────────────

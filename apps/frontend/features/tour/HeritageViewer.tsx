@@ -32,6 +32,7 @@ import sound_on from "@/access/icons/sound_on.png"
 import Pause from "@/access/icons/pause.svg"
 import Play from "@/access/icons/play.svg"
 import { useTourPlayer } from "./player/useTourPlayer";
+import { TOUR_SFX } from "./player/audio-config";
 import ExploreControls from "./components/ExploreControls";
 import ExploreInfoPanel from "./components/ExploreInfoPanel";
 import ExploreTooltip from "./components/ExploreTooltip";
@@ -50,9 +51,14 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
   const router = useRouter();
   const { payload, currentScene, isModelReady } = useHeritageTour();
+  const playbackKey = `${slug}/${sceneKey}`;
+  const [endedScene, setEndedScene] = useState<string | null>(null);
+  const isEnded = endedScene === playbackKey;
+  // Camera và gợi ý "Drag to Look Around" dùng cùng điều kiện mở khóa.
+  const allowLookAround = isEnded && isModelReady;
 
   // Trang thử dùng narration/VTT từ tour.json; payload backend chưa có các URL này.
-  const player = useTourPlayer({ interactiveRoute });
+  const player = useTourPlayer({ interactiveRoute, allowLookAround });
   const { isPlaying, isMuted, setIsMuted, ccOn, setCcOn } = player;
   const progress = player.duration > 0 ? player.currentTime / player.duration * 100 : 0;
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
@@ -76,8 +82,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   // "ended" → narration chạy hết (hoặc scene không có audio): hiện Prev + Next.
   // Lưu kèm `key` = playbackKey để trạng thái cũ của scene trước KHÔNG thể rò rỉ:
   // khi sang scene mới, `endedFor` khác key ⇒ tự động coi như "idle".
-  const playbackKey = `${slug}/${sceneKey}`;
-  const [endedScene, setEndedScene] = useState<string | null>(null);
   // Scene này đã từng báo "chưa kết thúc" chưa — chặn cờ ended cũ lọt vào lúc mới vào.
   const sceneSawNotEnded = useRef(false);
   const lastPlaybackKey = useRef(playbackKey);
@@ -87,8 +91,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   }
 
   const hasAudio = player.hasAudio;
-  // Chỉ "ended" nếu trạng thái ended thuộc ĐÚNG scene hiện tại.
-  const isEnded = endedScene === playbackKey;
 
   // Vừa vào scene: tạm hiện Prev Scene trong ~2 giây đầu, sau đó mới đổi sang
   // Replay Scene. Cho người dùng thời gian ngắn để quay lại scene trước.
@@ -161,6 +163,16 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   // của scene đã chạy xong mới được vào chế độ 3D.
   const showDiveInline = isEnded && player.interactive !== null && player.exploreMode === null;
   const diveLabel = player.initialExploreMode === "walk" ? "Explore in 3D" : "Dive Deeper";
+  const { playExploreReveal, stopExploreReveal } = player;
+  useEffect(() => {
+    if (!showDiveInline || !isModelReady) return;
+    // Một cue cho cả CTA desktop/mobile, chỉ khi nút thực sự được mở khóa.
+    const timer = window.setTimeout(playExploreReveal, TOUR_SFX.exploreReveal.delayMs);
+    return () => {
+      window.clearTimeout(timer);
+      stopExploreReveal();
+    };
+  }, [playbackKey, showDiveInline, isModelReady, playExploreReveal, stopExploreReveal]);
 
   // Vào/ra chế độ điểm tương tác là ĐỔI URL, không phải đổi state: đuôi `/int` là
   // nguồn sự thật duy nhất cho trạng thái đó (`lib/tour-routes.ts`). `useTourPlayer`
@@ -921,7 +933,7 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
           (vào chế độ 3D thì đã có tooltip điều khiển riêng). Tự tắt sau cú kéo
           canvas đầu tiên — xem `LookAroundHint`. Không có model 3D thì không có
           gì để xoay nên ẩn luôn. */}
-      <LookAroundHint hidden={!isEnded || !isModelReady || player.exploreMode !== null} />
+      <LookAroundHint key={playbackKey} hidden={!allowLookAround || player.exploreMode !== null} />
       {isEnded && isModelReady && <ExploreControls interactive={player.interactive} mode={player.exploreMode}
         onEnter={enterExplore} onReset={player.resetExplore} onExit={exitExplore}
         initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}
@@ -936,7 +948,7 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       {player.exploreMode === "walk" && <MobileJoystick
         onChange={player.setWalkStick} onRelease={player.releaseWalkStick} />}
       <HighlightPanel key={player.interactive?.id} highlight={player.selectedHighlight}
-        highlights={player.interactive?.highlights} onClose={player.closeHighlight} />
+        highlights={player.interactive?.highlights} muted={isMuted} onClose={player.closeHighlight} />
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}
     </div>
   );

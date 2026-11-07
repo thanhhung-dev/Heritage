@@ -155,6 +155,8 @@ export interface HeritageScene {
   title: string;
   description: string | null;
   sequence: number;
+  /** Track phụ (ví dụ nội thất/ban đêm); thiếu URL thì im lặng. */
+  use_ambient_audio_alt?: boolean;
   sky: HeritageSkyPreset | null;
   camera: HeritageCamera;
   voice_clips: HeritageVoiceClip[];
@@ -181,6 +183,9 @@ export interface HeritageSummary {
   headline: string | null;
   map_zoom: number | null;
   hover_video_url: string | null;
+  ambient_audio_url?: string | null;
+  ambient_audio_alt_url?: string | null;
+  transition_sfx_url?: string | null;
   community_made: boolean;
   presented_by_logo_url: string | null;
   display_map: boolean;

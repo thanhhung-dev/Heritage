@@ -49,6 +49,7 @@ export function extractTour(html) {
     return {
       id, slug, title: overview ? s.title : s.scene_title,
       description: overview ? s.description : s.scene_desciption, sequence, sky: null,
+      use_ambient_audio_alt: !!s.use_ambient_audio_alt,
       camera: {
         node_name: null, start_position: vector(overview ? s.camera_position : s.start_camera_position),
         start_target: vector(overview ? s.camera_target : s.start_camera_target),
@@ -99,6 +100,9 @@ export function extractTour(html) {
         publish_state: "preview", publish_date: null, headline: t.tapestryHeadline, map_zoom: t.tapestryMapZoom,
         hover_video_url: t.tapestryHoverVideo, community_made: !!t.communityMade, presented_by_logo_url: t.presentedByLogo,
         display_map: !!t.displayMap, splash_image_url: t.splashImage, card_image_url: t.tapestryCardImage,
+        ambient_audio_url: t.tapestry.ambient_audio || null,
+        ambient_audio_alt_url: t.tapestry.ambient_audio_alt || null,
+        transition_sfx_url: null,
         language1: { code: "en", name: "English" }, language2: { code: "ar", name: "Arabic" },
         voices: t.voices.map(voice), voice_length: t.voices.length,
       },

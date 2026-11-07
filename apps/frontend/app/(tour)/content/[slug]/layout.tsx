@@ -180,6 +180,7 @@ function HeritageContentWorkspace({ children }: { children: ReactNode }) {
           modelUrl={fixture?.modelUrl ?? state.modelUrl ?? null}
           fallbackImageUrl={payload.heritage.splash_image_url}
         />
+        {params.sceneKey && !editingScene ? <div className={styles.cornerShadow} aria-hidden="true" /> : null}
         {params.sceneKey ? <SceneSurface interactiveRoute={interactiveRoute} editingScene={editingScene} /> : null}
         {params.sceneKey ? <TourChatWidget /> : null}
         {children}
