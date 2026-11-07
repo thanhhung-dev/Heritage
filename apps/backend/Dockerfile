@@ -28,6 +28,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY apps/__init__.py /app/apps/__init__.py
 COPY apps/backend /app/apps/backend
 COPY corpus /app/corpus
+COPY pipelines/graph /app/pipelines/graph
 
 EXPOSE 8000
 
