@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -9,16 +10,75 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from apps.backend.services.tour_scope import area_system_policy, question_outside_area, resolve_area
 
 
+def _normalize_source_id(raw_id: str) -> str:
+    cleaned = raw_id.strip()
+    if cleaned.startswith("[") and cleaned.endswith("]"):
+        cleaned = cleaned[1:-1].strip()
+    if cleaned.lower().startswith("passage "):
+        cleaned = cleaned[8:].strip()
+    return cleaned
+
+
+def resolve_cited_source_ids(cited_ids: list[str], valid_ids: set[str]) -> list[str]:
+    """Match normalized source IDs against supplied evidence IDs (including missing PSG- prefix)."""
+    resolved: list[str] = []
+    for raw_id in cited_ids:
+        sid = _normalize_source_id(raw_id)
+        if sid not in valid_ids and f"PSG-{sid}" in valid_ids:
+            sid = f"PSG-{sid}"
+        resolved.append(sid)
+    return list(dict.fromkeys(resolved))
+
+
+def conversation_json_schema(context: str = "") -> dict:
+    """Build grammar-friendly JSON schema with `answer` first and strict `source_ids` rules."""
+    passage_ids = list(dict.fromkeys(re.findall(r"^\[Passage ([^\]]+)\]", context, flags=re.MULTILINE)))
+    non_answered_branch = {
+        "properties": {
+            "answer": {"type": "string", "minLength": 1},
+            "answer_type": {
+                "type": "string",
+                "enum": ["conversation", "insufficient_evidence", "out_of_scope"],
+            },
+            "source_ids": {"type": "array", "maxItems": 0},
+        },
+        "required": ["answer", "answer_type", "source_ids"],
+        "additionalProperties": False,
+    }
+    source_items: dict = {"type": "string", "enum": passage_ids} if passage_ids else {"type": "string"}
+    source_array: dict = {
+        "type": "array",
+        "items": source_items,
+        "minItems": 1,
+        **({"maxItems": len(passage_ids)} if passage_ids else {}),
+    }
+    answered_branch = {
+        "properties": {
+            "answer": {"type": "string", "minLength": 1},
+            "answer_type": {"type": "string", "const": "answered"},
+            "source_ids": source_array,
+        },
+        "required": ["answer", "answer_type", "source_ids"],
+        "additionalProperties": False,
+    }
+    return {
+        "type": "object",
+        "required": ["answer", "answer_type", "source_ids"],
+        "anyOf": [answered_branch, non_answered_branch],
+    }
+
+
 class ConversationAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, str_strip_whitespace=True)
 
-    answer_type: Literal["conversation", "answered", "clarification", "insufficient_evidence", "out_of_scope"]
     answer: str = Field(min_length=1)
+    answer_type: Literal["conversation", "answered", "clarification", "insufficient_evidence", "out_of_scope"]
     source_ids: list[str]
     follow_up_questions: list[str] = Field(default_factory=list, max_length=3)
 
     @model_validator(mode="after")
     def check_sources(self) -> Self:
+        self.source_ids = [_normalize_source_id(sid) for sid in self.source_ids]
         if self.answer_type != "answered" and self.source_ids:
             raise ValueError("Only evidence-based answers may cite passages.")
         return self

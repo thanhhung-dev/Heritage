@@ -152,8 +152,11 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
                     answer="Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có.",
                     answer_type="insufficient_evidence", source_ids=[],
                 )
-            elif not answer.source_ids or not set(answer.source_ids) <= {str(e.id) for e in result.evidence}:
-                raise ValueError("Answer must cite supplied passages")
+            else:
+                valid_ids = {str(e.id) for e in result.evidence}
+                answer.source_ids = resolve_cited_source_ids(answer.source_ids, valid_ids)
+                if not answer.source_ids or not set(answer.source_ids) <= valid_ids:
+                    raise ValueError("Answer must cite supplied passages")
     except ValueError:
         # Validation errors can contain generated content; do not log that text.
         log.warning("LLM output không hợp lệ hoặc bị cắt")
