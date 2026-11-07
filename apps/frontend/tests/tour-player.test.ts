@@ -25,7 +25,41 @@ import { HeritageTourContext } from "../context/heritage-tour";
 import { useTourPlayer } from "../features/tour/player/useTourPlayer";
 import { TEST_TOUR } from "../features/tour/tour-data";
 import { interactiveUrl, isInteractivePath, sceneUrl } from "../lib/tour-routes";
+import { resolveSceneByKey, sceneKeys } from "../lib/heritage";
 import type { ExploreArea, HeritageScene } from "../types/heritage";
+
+test("scene routes preserve API slugs and database IDs when sequences have gaps", () => {
+  const base = TEST_TOUR.payload.scenes[0];
+  const payload = {
+    ...TEST_TOUR.payload,
+    scenes: [
+      { ...base, id: 3, slug: "s2", sequence: 1 },
+      { ...base, id: 506, slug: "s3", sequence: 2 },
+      { ...base, id: 508, slug: "s5", sequence: 4 },
+    ],
+  };
+
+  assert.deepEqual(sceneKeys(payload), ["s0", "s2", "s3", "s5"]);
+  assert.equal(resolveSceneByKey(payload, "s2")?.id, 3);
+  assert.equal(resolveSceneByKey(payload, "s3")?.id, 506);
+  assert.equal(resolveSceneByKey(payload, "s5")?.id, 508);
+  assert.equal(resolveSceneByKey(payload, "s0"), payload.overview);
+  for (const key of ["s1", "s4", "s03", "506", "invalid", undefined]) {
+    assert.equal(resolveSceneByKey(payload, key), null);
+  }
+});
+
+test("scene navigation only includes available scenes", () => {
+  const payload = { ...TEST_TOUR.payload, overview: null };
+  assert.deepEqual(sceneKeys(payload), payload.scenes.map((scene) => scene.slug));
+  assert.equal(resolveSceneByKey(payload, "s0"), null);
+  assert.deepEqual(sceneKeys({ ...payload, scenes: [] }), []);
+  assert.deepEqual(sceneKeys(null), []);
+  assert.equal(resolveSceneByKey(null, "s3"), null);
+  for (const scene of TEST_TOUR.payload.scenes) {
+    assert.equal(resolveSceneByKey(TEST_TOUR.payload, scene.slug), scene);
+  }
+});
 
 test("lens badge chọn đúng ID sau khi camera quay và không chọn khi ẩn hoặc thay scene", () => {
   const originalDocument = globalThis.document;
@@ -153,8 +187,8 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
     const currentScene = override ?? [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
     renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
       payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
-      currentScene, status: "ready", error: null, isModelReady: true,
-      modelError: null,
+      currentScene, error: null, isModelReady: true,
+      modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
     } }, createElement(Probe)));
     return result;
@@ -209,8 +243,8 @@ test("chế độ điểm tương tác suy ra từ URL /int, không giữ state 
     const currentScene = [TEST_TOUR.payload.overview, ...TEST_TOUR.payload.scenes].find((scene) => scene?.slug === key) ?? null;
     renderToStaticMarkup(createElement(HeritageTourContext.Provider, { value: {
       payload: TEST_TOUR.payload, heritageSlug: "tapestry-test", currentSceneKey: key,
-      currentScene, status: "ready", error: null, isModelReady: true,
-      modelError: null,
+      currentScene, error: null, isModelReady: true,
+      modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
     } }, createElement(Probe, { interactiveRoute })));
     return result;
@@ -1469,5 +1503,44 @@ test("đổi vùng đi bộ giữa chừng thì frame sau đã kẹp theo biên 
       `chưa kẹp theo biên mới: ${camera.position.toArray()}`);
   } finally {
     harness.restore();
+  }
+});
+
+test("camera nướng trong GLB: đọc vị trí/hướng/fov và dùng điểm ngắm truyền vào", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  const controller = createCameraController(camera, controls);
+
+  const source = new THREE.PerspectiveCamera(38, 1, 0.1, 1000);
+  source.name = "Cam_S1";
+  source.position.set(30, 12, -8);
+  source.lookAt(2, 4, 1);
+  source.updateMatrixWorld(true);
+
+  const second = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+  second.position.set(0, 0, 5);
+  second.lookAt(0, 0, 0);
+  second.updateMatrixWorld(true);
+
+  try {
+    // Có target: OrbitControls quay quanh đúng điểm tác giả đặt trong GLB.
+    controller.useGLBCamera(source, new THREE.Vector3(2, 4, 1));
+    assert.deepEqual(camera.position.toArray(), [30, 12, -8]);
+    assert.deepEqual(controls.target.toArray(), [2, 4, 1]);
+    assert.equal(camera.fov, 38);
+    assert.ok(camera.up.distanceTo(new THREE.Vector3(0, 1, 0)) < 1e-8);
+
+    // Không có target: lùi về điểm cách 1 m theo hướng nhìn, không phải gốc toạ độ.
+    controller.useGLBCamera(second, null);
+    assert.deepEqual(camera.position.toArray(), [0, 0, 5]);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(0, 0, 4)) < 1e-8,
+      `target sai: ${controls.target.toArray()}`);
+    assert.equal(camera.fov, 50);
+  } finally {
+    controls.dispose();
   }
 });

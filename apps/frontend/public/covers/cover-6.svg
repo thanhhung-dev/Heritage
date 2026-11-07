@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#082f49"/>
+      <stop offset="0.45" stop-color="#0e7490"/>
+      <stop offset="1" stop-color="#fcd34d"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#155e75"/>
+      <stop offset="1" stop-color="#082f49"/>
+    </linearGradient>
+    <linearGradient id="sand" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#b45309"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#sky)"/>
+  <circle cx="880" cy="210" r="58" fill="#fef3c7" opacity="0.95"/>
+  <circle cx="880" cy="210" r="96" fill="#fcd34d" opacity="0.2"/>
+  <rect y="248" width="1200" height="152" fill="url(#sea)"/>
+  <g fill="none" stroke="#a5f3fc" opacity="0.35" stroke-width="2">
+    <path d="M0 274 Q120 264 240 274 T480 272 T720 278 T960 270 T1200 276"/>
+    <path d="M0 304 Q140 294 280 304 T560 300 T840 308 T1120 300 T1200 304"/>
+    <path d="M0 338 Q160 328 320 338 T640 334 T960 342 T1200 334"/>
+    <path d="M0 372 Q180 362 360 372 T720 368 T1080 376 T1200 368"/>
+  </g>
+  <path d="M0 400 Q160 318 380 306 Q560 296 700 340 Q840 384 980 372 Q1100 362 1200 400 Z" fill="url(#sand)"/>
+  <g transform="translate(250 250) scale(0.9)">
+    <path d="M0 0 Q-8 -78 18 -132 Q36 -84 32 0 Z" fill="#0b3b2e"/>
+    <path d="M14 -112 Q72 -110 104 -70 Q60 -62 20 -78 Z" fill="#065f46"/>
+    <path d="M16 -84 Q66 -78 92 -44 Q52 -42 20 -54 Z" fill="#047857"/>
+    <path d="M10 -56 Q56 -50 76 -20 Q40 -20 12 -30 Z" fill="#065f46"/>
+    <path d="M-2 -70 Q-44 -74 -66 -46 Q-34 -38 -6 -48 Z" fill="#047857"/>
+  </g>
+  <g transform="translate(430 254) scale(0.6)">
+    <path d="M0 0 Q-8 -78 18 -132 Q36 -84 32 0 Z" fill="#0b3b2e"/>
+    <path d="M14 -112 Q72 -110 104 -70 Q60 -62 20 -78 Z" fill="#065f46"/>
+    <path d="M-2 -70 Q-44 -74 -66 -46 Q-34 -38 -6 -48 Z" fill="#047857"/>
+  </g>
+</svg>

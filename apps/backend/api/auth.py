@@ -10,7 +10,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPBearer
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.backend.core.security import (
@@ -47,13 +47,20 @@ async def get_db() -> AsyncSession:
     async with AsyncSessionLocal() as session:
         yield session
 
+async def role_name(db: AsyncSession, role_id: int | None) -> str:
+    result = await db.execute(
+        text("SELECT name FROM roles WHERE id = :role_id"),
+        {"role_id": role_id},
+    )
+    return (result.scalar_one_or_none() or "USER").lower()
+
 
 @router.post(
     "/register",
     response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
-        400: {"model": ErrorResponse, "description": "Email hoặc username đã tồn tại"},
+        400: {"model": ErrorResponse, "description": "Email or username already exists"},
     },
 )
 async def register(
@@ -80,7 +87,7 @@ async def register(
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email này đã được sử dụng.",
+            detail="This email is already in use.",
         )
     
     # Check if username already exists
@@ -91,17 +98,20 @@ async def register(
     if existing_username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tên đăng nhập này đã tồn tại.",
+            detail="This username is already taken.",
         )
-    
-    # Hash password
     password_hash = hash_password(request.password)
-    
-    # Create new account
+    next_id = (
+        await db.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM account"))
+    ).scalar_one()
+
+    # New registrations are regular USER accounts.
     new_account = AdminAccount(
+        id=int(next_id),
         email=request.email,
         username=request.username,
         password_hash=password_hash,
+        role_id=1,
     )
     
     db.add(new_account)
@@ -114,7 +124,7 @@ async def register(
         account_id=str(new_account.id),
         email=new_account.email,
         username=new_account.username,
-        message="Đăng ký thành công",
+        message="Registration successful",
     )
 
 
@@ -122,68 +132,42 @@ async def register(
     "/login",
     response_model=LoginResponse,
     responses={
-        401: {"model": ErrorResponse, "description": "Thông tin đăng nhập không đúng"},
+        401: {"model": ErrorResponse, "description": "Invalid login credentials"},
     },
 )
 async def login(
     request: LoginRequest,
     db: AsyncSession = Depends(get_db),
 ) -> LoginResponse:
-    """Đăng nhập vào hệ thống.
-    
-    Supports login with username OR email (stored in username field).
-    
-    Args:
-        request: Thông tin đăng nhập (username_or_email, password)
-        db: Database session
-        
-    Returns:
-        LoginResponse: Access token và thông tin người dùng
-        
-    Raises:
-        HTTPException 401: Nếu thông tin đăng nhập không đúng
-    """
-    # Find user by username/email - check both email and username columns
-    username_or_email = request.username_or_email.strip()
-    
-    # Try email first if input contains @
-    if "@" in username_or_email:
-        result = await db.execute(
-            select(AdminAccount).where(AdminAccount.email == username_or_email)
-        )
-    else:
-        result = await db.execute(
-            select(AdminAccount).where(AdminAccount.username == username_or_email)
-        )
-    
+    """Đăng nhập bằng email và mật khẩu."""
+    email = request.email.strip().lower()
+    result = await db.execute(
+        select(AdminAccount).where(AdminAccount.email == email)
+    )
     account = result.scalar_one_or_none()
-    
-    # Verify password
+
     if not account or not verify_password(request.password, account.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email/Tên đăng nhập hoặc mật khẩu không đúng.",
+            detail="Incorrect email or password.",
         )
-    
-    # Check if account is active
+
     if not account.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Tài khoản đã bị khóa hoặc chưa kích hoạt.",
+            detail="This account is locked or not activated.",
         )
-    
-    # Update last login
-    from datetime import datetime, timezone
-    account.last_login_at = datetime.now(timezone.utc)
+
     await db.commit()
 
     # Create access token
+    role = await role_name(db, account.role_id)
     access_token = create_access_token(
         data={
             "sub": str(account.id),
             "email": account.email,
             "username": account.username,
-            "role": "admin"
+            "role": role,
         }
     )
     
@@ -196,7 +180,7 @@ async def login(
             account_id=str(account.id),
             email=account.email,
             username=account.username,
-            role="admin",
+            role=role,
         ),
     )
 
@@ -205,7 +189,7 @@ async def login(
     "/me",
     response_model=UserResponse,
     responses={
-        401: {"model": ErrorResponse, "description": "Chưa đăng nhập hoặc token không hợp lệ"},
+        401: {"model": ErrorResponse, "description": "Not signed in or invalid token"},
     },
 )
 async def get_me(
@@ -231,7 +215,7 @@ async def get_me(
     "/google",
     response_model=LoginResponse,
     responses={
-        401: {"model": ErrorResponse, "description": "Google ID token không hợp lệ"},
+        401: {"model": ErrorResponse, "description": "Invalid Google ID token"},
     },
 )
 async def google_auth(
@@ -261,7 +245,7 @@ async def google_auth(
             if response.status_code != 200:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Google ID token không hợp lệ",
+                    detail="Invalid Google ID token.",
                 )
             
             token_info = response.json()
@@ -271,21 +255,21 @@ async def google_auth(
             if not email:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Không thể lấy email từ Google",
+                    detail="Could not retrieve an email from Google.",
                 )
             
             # Check if email is verified
             if not token_info.get("email_verified"):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Email chưa được xác thực bởi Google",
+                    detail="Your Google email is not verified.",
                 )
             
     except httpx.RequestError as e:
         log.error(f"Failed to verify Google token: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Không thể kết nối đến Google để xác thực",
+            detail="Could not connect to Google for verification.",
         )
     
     # Find or create account
@@ -305,6 +289,7 @@ async def google_auth(
             username=email.split('@')[0],  # Use email prefix as username
             password_hash=password_hash,
             is_active=True,
+            role_id=1,
         )
         
         db.add(account)
@@ -317,23 +302,20 @@ async def google_auth(
         if not account.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Tài khoản đã bị vô hiệu hóa",
+                detail="This account has been disabled.",
             )
         
         log.info(f"Existing Google account logged in: {email} (id={account.id})")
     
-    # Update last login
-    from datetime import datetime, timezone
-    account.last_login_at = datetime.now(timezone.utc)
     await db.commit()
 
-    # Create access token
+    role = await role_name(db, account.role_id)
     access_token = create_access_token(
         data={
             "sub": str(account.id),
             "email": account.email,
             "username": account.username,
-            "role": "admin",
+            "role": role,
             "auth_method": "google",
         }
     )
@@ -345,7 +327,7 @@ async def google_auth(
             account_id=str(account.id),
             email=account.email,
             username=account.username,
-            role="admin",
+            role=role,
         ),
     )
 
@@ -354,8 +336,8 @@ async def google_auth(
     "/forgot-password",
     status_code=status.HTTP_200_OK,
     responses={
-        200: {"description": "Email hướng dẫn khôi phục đã được gửi"},
-        404: {"model": ErrorResponse, "description": "Email không tồn tại trong hệ thống"},
+        200: {"description": "Password reset instructions sent"},
+        404: {"model": ErrorResponse, "description": "Email is not registered"},
     },
 )
 async def forgot_password(
@@ -388,7 +370,7 @@ async def forgot_password(
     if not account:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Email này chưa được đăng ký trong hệ thống.",
+            detail="This email is not registered.",
         )
     
     # Generate reset token (valid for 30 minutes), encoding the account's
@@ -428,7 +410,7 @@ async def forgot_password(
         print(f"{'='*80}\n")
     
     return {
-        "message": "Hướng dẫn khôi phục mật khẩu đã được gửi đến email của bạn. Vui lòng kiểm tra hòm thư."
+        "message": "Password reset instructions have been sent to your email. Please check your inbox."
     }
 
 
@@ -436,7 +418,7 @@ async def forgot_password(
     "/reset-password",
     status_code=status.HTTP_200_OK,
     responses={
-        400: {"model": ErrorResponse, "description": "Token không hợp lệ hoặc đã hết hạn"},
+        400: {"model": ErrorResponse, "description": "Invalid or expired token"},
     },
 )
 async def reset_password(
@@ -461,7 +443,7 @@ async def reset_password(
     if not email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Token không hợp lệ hoặc đã hết hạn",
+            detail="This reset link is invalid or has expired.",
         )
     
     # Find account by email
@@ -473,7 +455,7 @@ async def reset_password(
     if not account:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tài khoản không tồn tại",
+            detail="This account does not exist.",
         )
     
     # Hash new password and persist it to PostgreSQL
@@ -484,7 +466,7 @@ async def reset_password(
     log.info(f"Password reset successfully for: {email}")
     
     return {
-        "message": "Đặt lại mật khẩu thành công!"
+        "message": "Password reset successful."
     }
 
 

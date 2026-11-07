@@ -53,9 +53,22 @@ class SkyPresetOut(BaseModel):
     name: str
     turbidity: float | None = None
     rayleigh: float | None = None
+    mie_coefficient: float | None = Field(
+        default=None, serialization_alias="mieCoefficient"
+    )
+    mie_directional_g: float | None = Field(
+        default=None, serialization_alias="mieDirectionalG"
+    )
     elevation: float | None = None
     azimuth: float | None = None
     exposure: float | None = None
+    cloud_coverage: float | None = Field(
+        default=None, serialization_alias="cloudCoverage"
+    )
+    cloud_density: float | None = Field(
+        default=None, serialization_alias="cloudDensity"
+    )
+    stars: float | None = None
     light_settings: dict[str, Any] | None = None
 
 
@@ -66,6 +79,7 @@ class CameraOut(BaseModel):
     start_target: dict[str, Any] | list[Any] | None = None
     zoom_position: dict[str, Any] | list[Any] | None = None
     zoom_target: dict[str, Any] | list[Any] | None = None
+    path_url: str | None = None
     instant_move: bool
 
 

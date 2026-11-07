@@ -23,7 +23,7 @@ export async function getProfile(): Promise<ProfileData> {
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || "Không thể tải hồ sơ.");
+    throw new Error(error.detail || "Could not load profile.");
   }
 
   return json as ProfileData;
@@ -46,7 +46,7 @@ export async function updateProfile(data: Partial<ProfileData>): Promise<Profile
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || "Lưu hồ sơ thất bại.");
+    throw new Error(error.detail || "Could not save profile.");
   }
 
   return json as ProfileData;
@@ -114,7 +114,7 @@ export async function getBadges(): Promise<Badge[]> {
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || "Không thể tải danh sách huy hiệu.");
+    throw new Error(error.detail || "Could not load badges.");
   }
 
   return json as Badge[];
@@ -136,7 +136,7 @@ export async function getMilestones(): Promise<MilestoneLevel[]> {
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || "Không thể tải cột mốc khám phá.");
+    throw new Error(error.detail || "Could not load milestones.");
   }
 
   return json as MilestoneLevel[];

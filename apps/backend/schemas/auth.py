@@ -22,9 +22,9 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    """Request schema for user login."""
-    
-    username_or_email: str = Field(..., description="Username or email address")
+    """Request schema for email/password login."""
+
+    email: EmailStr = Field(..., description="Email address")
     password: str = Field(..., description="Password")
 
 
@@ -43,7 +43,7 @@ class RegisterResponse(BaseModel):
     account_id: str = Field(..., description="Account UUID")
     email: str = Field(..., description="Email address")
     username: str = Field(..., description="Username")
-    message: str = Field(default="Đăng ký thành công", description="Success message")
+    message: str = Field(default="Registration successful", description="Success message")
 
 
 class LoginResponse(BaseModel):
@@ -89,7 +89,7 @@ class ResetPasswordRequest(BaseModel):
     def validate_password_complexity(cls, v: str) -> str:
         """Validate password complexity."""
         if len(v) < 12:
-            raise ValueError("Mật khẩu phải có ít nhất 12 ký tự")
+            raise ValueError("Password must be at least 12 characters long")
         
         has_upper = any(c.isupper() for c in v)
         has_lower = any(c.islower() for c in v)
@@ -97,6 +97,6 @@ class ResetPasswordRequest(BaseModel):
         has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in v)
         
         if not (has_upper and has_lower and has_digit and has_special):
-            raise ValueError("Mật khẩu phải có chữ hoa, chữ thường, số và ký tự đặc biệt")
+            raise ValueError("Password must include uppercase, lowercase, number, and special characters")
         
         return v

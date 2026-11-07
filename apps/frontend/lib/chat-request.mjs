@@ -9,10 +9,8 @@
 export function requestChat(apiUrl, message, dependencies = {}) {
   const fetchImpl = dependencies.fetchImpl ?? fetch;
   const randomUUID = dependencies.randomUUID ?? (() => crypto.randomUUID());
-  const base = apiUrl.trim().replace(/\/+$/, "");
-  const url = `${base.endsWith("/api") ? base : `${base}/api`}/chat`;
 
-  return fetchImpl(url, {
+  return fetchImpl(chatApiUrl(apiUrl, "/chat"), {
     method: "POST",
     signal: dependencies.signal,
     headers: {
@@ -22,4 +20,19 @@ export function requestChat(apiUrl, message, dependencies = {}) {
     },
     body: JSON.stringify({ message, use_rag: true }),
   });
+}
+
+/**
+ * Join an API base URL to a chat route without duplicating `/api` when the
+ * configured URL already ends with that prefix.
+ *
+ * @param {string} apiUrl
+ * @param {string} route
+ */
+export function chatApiUrl(apiUrl, route) {
+  const base = apiUrl.trim().replace(/\/+$/, "");
+  const apiRoot = /\/api$/i.test(base) ? base : `${base}/api`;
+  const normalizedRoute = route.startsWith("/") ? route : `/${route}`;
+
+  return `${apiRoot}${normalizedRoute}`;
 }

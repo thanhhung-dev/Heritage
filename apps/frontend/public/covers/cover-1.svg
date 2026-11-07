@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b1206"/>
+      <stop offset="0.55" stop-color="#b45309"/>
+      <stop offset="1" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7c2d12"/>
+      <stop offset="1" stop-color="#1c0a04"/>
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#451a03"/>
+      <stop offset="1" stop-color="#1c0a04"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#sky)"/>
+  <circle cx="890" cy="138" r="74" fill="#fde68a" opacity="0.9"/>
+  <circle cx="890" cy="138" r="120" fill="#fbbf24" opacity="0.14"/>
+  <path d="M0 254 Q150 190 300 244 T640 236 T980 258 T1200 232 V400 H0 Z" fill="#7c2d12" opacity="0.55"/>
+  <path d="M0 286 Q170 236 340 282 T700 276 T1040 296 T1200 274 V400 H0 Z" fill="url(#hill)"/>
+  <rect y="316" width="1200" height="84" fill="url(#water)"/>
+  <g fill="#160803">
+    <rect x="286" y="300" width="130" height="18" rx="3"/>
+    <rect x="300" y="274" width="102" height="16" rx="3"/>
+    <rect x="314" y="250" width="74" height="14" rx="3"/>
+    <rect x="334" y="230" width="34" height="12" rx="3"/>
+    <path d="M262 300 Q351 276 440 300 L424 288 Q351 268 278 288 Z"/>
+    <path d="M280 274 Q351 252 422 274 L408 264 Q351 246 294 264 Z"/>
+    <path d="M298 250 Q351 232 404 250 L392 242 Q351 226 310 242 Z"/>
+    <rect x="344" y="180" width="6" height="54"/>
+  </g>
+  <g fill="#fbbf24" opacity="0.55">
+    <rect x="320" y="298" width="8" height="10" rx="1"/>
+    <rect x="344" y="298" width="8" height="10" rx="1"/>
+    <rect x="368" y="298" width="8" height="10" rx="1"/>
+  </g>
+  <path d="M0 372 Q130 356 240 370 T470 366 T700 374 T940 364 T1200 374" stroke="#f59e0b" stroke-width="2" fill="none" opacity="0.32"/>
+  <path d="M0 388 Q160 374 300 386 T580 382 T860 390 T1200 384" stroke="#fbbf24" stroke-width="2" fill="none" opacity="0.2"/>
+</svg>

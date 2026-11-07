@@ -11,6 +11,10 @@ from apps.backend.core.textutil import strip_accents
 from apps.backend.services.graphrag import graphrag_enabled, run_global_query
 
 
+class EmbeddingError(RuntimeError):
+    """Query embedding failed before passage search could run."""
+
+
 @dataclass(frozen=True)
 class PassageEvidence:
     id: str
@@ -57,7 +61,10 @@ class PassageRepository:
             return PassageSearch(query, [])
         with rag_observation('retrieval', as_type='retriever', input={'query': question}) as observation:
             with rag_observation('query.embedding', as_type='embedding'):
-                vectors = await asyncio.to_thread(self.embedder, [question])
+                try:
+                    vectors = await asyncio.to_thread(self.embedder, [question])
+                except Exception as error:
+                    raise EmbeddingError('Không thể tạo embedding cho câu hỏi.') from error
             with rag_observation('retrieval.opensearch'):
                 rows = await self.store.search(question, vectors[0])
             graph_context = []

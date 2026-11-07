@@ -37,16 +37,16 @@ export function AchievementsTab({ badges }: AchievementsTabProps) {
   }
 
   return (
-    <div className={styles.badgesSection}>
-      <div className={styles.badgesHeader}>
-        <div>
-          <h2 className={styles.badgesTitle}>Achievements & Badges</h2>
+    <section className={styles.badgesSection}>
+      <div className={styles.sectionHeader}>
+        <div className={styles.sectionHeading}>
+          <h2 className={styles.sectionTitle}>Achievements & Badges</h2>
           <p className={styles.cardDescription}>
             Every badge you have unlocked (and the ones still waiting) in one place.
           </p>
         </div>
         <span className={styles.badgesEarnedCount}>
-          {earnedCount}/{badges.length} badges earned
+          {earnedCount} of {badges.length} earned
         </span>
       </div>
 
@@ -69,7 +69,7 @@ export function AchievementsTab({ badges }: AchievementsTabProps) {
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 

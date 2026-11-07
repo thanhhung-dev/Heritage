@@ -1,51 +1,61 @@
 "use client";
 
-import type { ReactNode } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-import { useParams, usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { HeritageTourProvider } from "@/context/heritage-tour";
-import HeritageViewer from "@/features/tour/HeritageViewer";
+import ContentLoading from "@/components/Loading/ContentLoading";
+import SceneSurface from "@/features/tour/SceneSurface";
 import HeritageCanvas from "@/features/tour/three/HeritageCanvas";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
-import { DEMO_HERITAGE_PAYLOAD } from "@/lib/demo-heritage";
-import { fetchHeritagePayload } from "@/lib/heritage";
+import { TEST_TOUR } from "@/features/tour/tour-data";
+import { ApiError } from "@/config/api";
+import { fetchTourContent, sceneKeys, type TourPlayback } from "@/lib/heritage";
 import { isInteractivePath } from "@/lib/tour-routes";
 import type { HeritagePayload } from "@/types/heritage";
-import { TEST_TOUR } from "@/features/tour/tour-data";
+import editorStyles from "@/features/tour/dev/scene-editor.module.css";
 import styles from "./content-shell.module.css";
 
-const HeritageChatOverlay = dynamic(
-  () => import("@/features/chat/HeritageChatOverlay").then((module) => module.HeritageChatOverlay),
-  { ssr: false },
+const TourChatWidget = dynamic(
+  () => import("@/features/chat/TourChatWidget").then((module) => module.TourChatWidget),
+  { ssr: false, loading: () => null },
 );
 
 type TourState = {
-  payload: HeritagePayload;
-  status: "ready";
+  /** `null` = payload thật chưa về (đang tải hoặc lỗi). Không còn payload demo. */
+  payload: HeritagePayload | null;
   error: string | null;
-} | {
-  payload: HeritagePayload;
-  status: "demo";
-  error: string | null;
+  /** Audio + timing theo scene, lấy từ `GET /api/heritages/{slug}/tour`. */
+  playback?: Record<string, TourPlayback>;
+  modelUrl: string | null;
 };
+
+const NOT_FOUND_MESSAGE =
+  "Không tìm thấy tour cho địa điểm này. Có thể địa điểm chưa được xuất bản.";
 
 /**
  * Fullscreen 3D tour layout (`/content/{slug}/...`).
  *
- * Rendering is IMMEDIATE: the demo payload is shown right away so the UI team
- * can develop the interface without the backend. The real full single-load
- * payload is fetched in the background and replaces the demo when it arrives.
+ * The tour renders from the single-load payload of
+ * `GET /api/heritages/{slug}/tour` — scenes, narration and the model URL all come
+ * from the database, so the page never shows invented content. While the request
+ * is in flight the splash frame is rendered with the Start button's loading bar
+ * (no separate "loading" screen); only a real failure shows a message.
  * Navigating between `/s0..sN` never refetches.
  */
-export default function HeritageContentLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function HeritageContentLayout({ children }: { children: ReactNode }) {
+  return <Suspense fallback={null}><HeritageContentWorkspace>{children}</HeritageContentWorkspace></Suspense>;
+}
+
+function HeritageContentWorkspace({ children }: { children: ReactNode }) {
   const params = useParams<{ slug: string; sceneKey?: string }>();
+  const router = useRouter();
   const pathname = usePathname();
+  const search = useSearchParams();
+  const editingScene = process.env.NODE_ENV === "development" && search.get("dev") === "scene" && !!params.sceneKey;
   const slug = params.slug;
   // `/content/{slug}/{sceneKey}/int` ⇒ đang ở chế độ điểm tương tác. Layout là nơi
   // biết URL, nên nó quyết định; `HeritageViewer` và `useTourPlayer` chỉ tiêu thụ
@@ -54,40 +64,66 @@ export default function HeritageContentLayout({
   const fixture = slug === "tapestry-test" ? TEST_TOUR : null;
   const [engine, setEngine] = useState<TourEngine | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
-  const isModelReady = engine !== null;
+  /** 0..1 — tiến độ tải GLB, đẩy lên trang splash để thanh loading chạy theo % thật. */
+  const [modelProgress, setModelProgress] = useState(0);
 
   const [state, setState] = useState<TourState>({
-    payload: fixture?.payload ?? DEMO_HERITAGE_PAYLOAD,
-    status: fixture ? "ready" : "demo",
+    payload: fixture?.payload ?? null,
     error: null,
+    playback: fixture?.playback,
+    modelUrl: fixture?.modelUrl ?? null,
   });
+
+  const payload = fixture?.payload ?? state.payload;
+
+  // Scene lấy từ DB (`GET /api/heritages/{slug}/tour`) nên KHÔNG phụ thuộc model 3D:
+  // model có thể chưa có trên R2 mà nội dung scene vẫn phải mở được. Chỉ chặn khi
+  // payload thật đã về và sceneKey không tồn tại (deep-link sai).
+  const sceneKeyValid =
+    !params.sceneKey ||
+    !payload ||
+    sceneKeys(payload).includes(params.sceneKey);
+
+  useEffect(() => {
+    if (params.sceneKey && !sceneKeyValid) {
+      router.replace(`/content/${slug}`);
+    }
+  }, [params.sceneKey, sceneKeyValid, router, slug]);
 
   useEffect(() => {
     if (fixture) return;
     let cancelled = false;
 
-    fetchHeritagePayload(slug)
-      .then((payload) => {
+    fetchTourContent(slug)
+      .then((tour) => {
         if (cancelled) return;
-        // Only use the real payload when it actually has scenes to show.
-        // Otherwise keep the embedded demo so the UI is always visible.
-        const hasContent = !!payload && (!!payload.overview || payload.scenes.length > 0);
-        setState(
-          hasContent
-            ? { payload, status: "ready", error: null }
-            : { payload: DEMO_HERITAGE_PAYLOAD, status: "demo", error: null }
-        );
+        const next = tour?.payload;
+        const hasContent = !!next && (!!next.overview || next.scenes.length > 0);
+        if (!next || !hasContent) {
+          setState({ payload: null, error: NOT_FOUND_MESSAGE, modelUrl: null });
+          return;
+        }
+        setState({
+          payload: next,
+          error: null,
+          playback: tour.playback,
+          modelUrl: tour.modelUrl ?? null,
+        });
       })
       .catch((err) => {
-        if (!cancelled) {
-          setState((prev) => ({
-            ...prev,
-            error:
-              err instanceof Error
-                ? err.message
-                : "Không thể tải dữ liệu từ backend. Đang hiển thị dữ liệu demo.",
-          }));
-        }
+        if (cancelled) return;
+        // 404 = slug không tồn tại/chưa xuất bản: thông báo gọn, không phơi chuỗi
+        // lỗi HTTP thô của apiClient.
+        const notFound = err instanceof ApiError && err.status === 404;
+        setState({
+          payload: null,
+          error: notFound
+            ? NOT_FOUND_MESSAGE
+            : err instanceof Error && err.message
+              ? `Không tải được tour: ${err.message}`
+              : "Không tải được tour từ backend.",
+          modelUrl: null,
+        });
       });
 
     return () => {
@@ -95,27 +131,58 @@ export default function HeritageContentLayout({
     };
   }, [slug, fixture]);
 
+  if (!payload) {
+    // Lỗi thật (404 / backend chết) mới được phép có màn riêng.
+    if (state.error) {
+      return (
+        <div className={styles.shell}>
+          <div className={styles.statusScreen} role="status" aria-live="polite">
+            <p className={styles.statusTitle}>Không mở được tour</p>
+            <p className={styles.statusHint}>{state.error}</p>
+            <Link className={styles.statusLink} href="/">
+              Về trang chủ
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.shell}>
+        <ContentLoading
+          className={styles.initialLoader}
+          label="Loading heritage tour…"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.shell}>
       <HeritageTourProvider
-        payload={fixture?.payload ?? state.payload}
+        payload={payload}
         heritageSlug={slug}
         currentSceneKey={params.sceneKey ?? "s0"}
-        status={fixture ? "ready" : state.status}
-        error={fixture ? null : state.error}
+        error={state.error}
         engine={engine}
         modelError={modelError}
-        playback={fixture?.playback}
+        modelProgress={modelProgress}
+        hasModel={Boolean(fixture?.modelUrl ?? state.modelUrl)}
+        playback={fixture?.playback ?? state.playback}
       >
         <HeritageCanvas
+          viewportClassName={editingScene ? editorStyles.canvasViewport : undefined}
           onReady={setEngine}
           onError={setModelError}
-          modelUrl={fixture?.modelUrl}
+          onProgress={(progress) => setModelProgress(progress.ratio)}
+          // `null` (không phải `undefined`) để báo rõ "chưa có model": HeritageCanvas
+          // chỉ dựng engine khi có URL, còn không thì hiện ảnh splash làm nền.
+          modelUrl={fixture?.modelUrl ?? state.modelUrl ?? null}
+          fallbackImageUrl={payload.heritage.splash_image_url}
         />
-        {params.sceneKey && isModelReady ? <HeritageViewer interactiveRoute={interactiveRoute} /> : null}
+        {params.sceneKey ? <SceneSurface interactiveRoute={interactiveRoute} editingScene={editingScene} /> : null}
+        {params.sceneKey ? <TourChatWidget /> : null}
         {children}
-        {/* Chat stays available on direct scene links while the 3D asset loads. */}
-        {params.sceneKey ? <HeritageChatOverlay /> : null}
       </HeritageTourProvider>
     </div>
   );

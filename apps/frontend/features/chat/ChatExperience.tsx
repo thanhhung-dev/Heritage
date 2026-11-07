@@ -6,17 +6,12 @@ import { ChatLanding } from "./components/ChatLanding";
 import { ChatView } from "./components/ChatView";
 import { CHAT_API_URL, CHAT_SUGGESTIONS } from "./config";
 import type { Message, Source } from "./types";
-import styles from "./chat.module.css";
+import styles from "@/features/chat/chat.module.css";
 import { useHeritageTheme } from "./useHeritageTheme";
 import { HelpButton, TopBar } from "./components/TopBar";
+import { requestChat } from "@/lib/chat-request.mjs";
 
-const SUGGESTIONS = [
-  "Lăng Tự Đức được xây dựng năm nào?",
-  "Cao lầu là món gì?",
-  "Festival Huế tổ chức mấy năm một lần?",
-  "Làng Non Nước nổi tiếng về gì?",
-  "Nhã nhạc cung đình Huế có gì đặc biệt?",
-];
+const SUGGESTIONS = [...CHAT_SUGGESTIONS];
 
 export function ChatExperience() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,11 +38,7 @@ export function ChatExperience() {
       setLoading(true);
 
       try {
-        const response = await fetch(`${CHAT_API_URL}/api/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: userMessage, use_rag: true }),
-        });
+        const response = await requestChat(CHAT_API_URL, userMessage);
         if (!response.ok) throw new Error("Chat request failed");
 
         const data = await response.json();
@@ -93,10 +84,16 @@ export function ChatExperience() {
         },
       }}
     >
-      <div className={styles.app}>
+      <div
+        className={styles.app}
+        data-chat-phase={loading ? "thinking" : hasMessages ? "conversation" : "welcome"}
+      >
+        <div className={styles.atmosphere} aria-hidden="true" />
         <TopBar />
         {!hasMessages ? (
           <ChatLanding
+            input={input}
+            onInputChange={setInput}
             suggestions={SUGGESTIONS}
             onSend={(t) => send(t)}
             loading={loading}

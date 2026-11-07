@@ -132,6 +132,15 @@ async def get_current_user(
     
     return payload
 
+def require_admin(current_user: dict = Depends(get_current_user)) -> dict[str, Any]:
+    """Allow only accounts carrying the ADMIN role claim."""
+    if str(current_user.get("role", "")).lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền quản trị.",
+        )
+    return current_user
+
 
 def create_password_reset_token(email: str) -> str:
     """Create a JWT token for password reset.

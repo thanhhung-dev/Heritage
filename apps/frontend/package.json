@@ -2,7 +2,7 @@
   "name": "Heritage-FE",
   "version": "0.1.0",
   "engines": {
-    "node": "20.19.3",
+    "node": "24.x",
     "npm": "10.8.2"
   },
   "packageManager": "npm@10.8.2",
@@ -26,6 +26,7 @@
     "@t3-oss/env-nextjs": "^0.13.11",
     "antd": "^6.6.2",
     "antd-style": "^4.1.0",
+    "bot-avatars": "^0.2.2",
     "lodash-es": "^4.18.1",
     "marked": "^16.4.2",
     "next": "14.2.0",

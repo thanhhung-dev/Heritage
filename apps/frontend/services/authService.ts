@@ -12,7 +12,7 @@ export interface RegisterData {
 }
 
 export interface LoginData {
-  username_or_email: string;
+  email: string;
   password: string;
 }
 
@@ -49,14 +49,14 @@ export async function registerUser(data: RegisterData): Promise<RegisterResponse
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Đăng ký thất bại');
+    throw new Error(error.detail || 'Registration failed.');
   }
 
   return json as RegisterResponse;
 }
 
 /**
- * Login with username/email and password
+ * Login with email and password
  */
 export async function loginUser(data: LoginData): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -71,7 +71,7 @@ export async function loginUser(data: LoginData): Promise<LoginResponse> {
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Đăng nhập thất bại');
+    throw new Error(error.detail || 'Could not sign in.');
   }
 
   return json as LoginResponse;
@@ -86,10 +86,10 @@ export async function handleRegister(
 ): Promise<void> {
   try {
     const response = await registerUser(data);
-    message.success(response.message || 'Đăng ký thành công!');
+    message.success(response.message || 'Registration successful.');
     if (onSuccess) onSuccess();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Đăng ký thất bại';
+    const errorMessage = error instanceof Error ? error.message : 'Registration failed.';
     message.error(errorMessage);
     throw error;
   }
@@ -108,10 +108,10 @@ export async function handleLogin(
     // Store tokens and user info
     setAuthTokens(response);
     
-    message.success('Đăng nhập thành công!');
+    message.success('Signed in successfully.');
     if (onSuccess) onSuccess();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Đăng nhập thất bại';
+    const errorMessage = error instanceof Error ? error.message : 'Could not sign in.';
     message.error(errorMessage);
     throw error;
   }
@@ -133,7 +133,7 @@ export async function loginWithGoogle(idToken: string): Promise<LoginResponse> {
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Đăng nhập Google thất bại');
+    throw new Error(error.detail || 'Google sign-in failed.');
   }
 
   return json as LoginResponse;
@@ -174,10 +174,10 @@ export async function handleGoogleLogin(
     // Store tokens and user info (including the Google avatar).
     setAuthTokens({ ...response, user });
     
-    message.success('Đăng nhập bằng Google thành công!');
+    message.success('Signed in with Google.');
     if (onSuccess) onSuccess();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Đăng nhập Google thất bại';
+    const errorMessage = error instanceof Error ? error.message : 'Google sign-in failed.';
     message.error(errorMessage);
     throw error;
   }
@@ -199,7 +199,7 @@ export async function forgotPassword(email: string): Promise<{ message: string }
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Gửi yêu cầu thất bại');
+    throw new Error(error.detail || 'Could not send the request.');
   }
 
   return json as { message: string };
@@ -224,7 +224,7 @@ export async function resetPassword(
 
   if (!response.ok) {
     const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Đặt lại mật khẩu thất bại');
+    throw new Error(error.detail || 'Could not reset your password.');
   }
 
   return json as { message: string };

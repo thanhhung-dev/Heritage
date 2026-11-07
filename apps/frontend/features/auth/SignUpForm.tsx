@@ -10,24 +10,22 @@ import styles from "./auth.module.css";
 
 function emailError(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return "Nhập địa chỉ email của bạn.";
-  // Strict email validation as requested
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Vui lòng nhập đúng định dạng email (VD: abc@gmail.com)!";
+  if (!trimmed) return "Enter your email.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Enter a valid email address.";
   return "";
 }
 
 function usernameError(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return "Nhập tên đăng nhập của bạn.";
-  if (trimmed.length < 3) return "Tên đăng nhập phải có ít nhất 3 ký tự.";
-  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return "Tên đăng nhập chỉ được chứa chữ cái, số, _ và -.";
+  if (!trimmed) return "Enter a username.";
+  if (trimmed.length < 3) return "Username must be at least 3 characters.";
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return "Username can only contain letters, numbers, _ and -.";
   return "";
 }
 
 function passwordError(value: string) {
-  if (!value) return "Nhập mật khẩu của bạn.";
-  // Changed to min 6 chars as requested
-  if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự!";
+  if (!value) return "Enter your password.";
+  if (value.length < 6) return "Password must be at least 6 characters.";
   return "";
 }
 
@@ -75,7 +73,7 @@ export function SignUpForm() {
       );
     } catch (err: any) {
       // Extract specific error message from API response
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Something went wrong. Please try again.";
       setApiError(errorMessage);
       console.error("Registration failed:", err);
     } finally {
@@ -90,14 +88,7 @@ export function SignUpForm() {
           showIcon
           type="error"
           message={apiError}
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #ffccc7",
-            color: "#cf1322",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.08)"
-          }}
+          className={styles.alert}
           closable
           onClose={() => setApiError("")}
         />
@@ -124,7 +115,7 @@ export function SignUpForm() {
       </div>
       
       <div className={styles.field}>
-        <label htmlFor={`${id}-username`}>Tên đăng nhập</label>
+        <label htmlFor={`${id}-username`}>Username</label>
         <Input
           ref={usernameRef}
           id={`${id}-username`}
@@ -144,7 +135,7 @@ export function SignUpForm() {
       </div>
       
       <div className={styles.field}>
-        <label htmlFor={`${id}-password`}>Mật khẩu</label>
+        <label htmlFor={`${id}-password`}>Password</label>
         <div className={styles.passwordField}>
           <Input
             ref={passwordRef}
@@ -163,7 +154,7 @@ export function SignUpForm() {
           <button
             type="button"
             className={styles.eye}
-            aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            aria-label={visible ? "Hide password" : "Show password"}
             aria-pressed={visible}
             onClick={() => setVisible(previous => !previous)}
           >
@@ -181,7 +172,7 @@ export function SignUpForm() {
           disabled={!email.trim() || !username.trim() || !password || submitting}
           loading={submitting}
         >
-          Đăng ký
+          Sign Up
         </Button>
       </div>
     </form>

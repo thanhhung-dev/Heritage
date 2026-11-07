@@ -34,18 +34,18 @@ const buttonStyle: CSSProperties = {
 };
 
 function validatePassword(value: string): string {
-  if (!value) return "Nhập mật khẩu mới.";
-  if (value.length < 12) return "Mật khẩu phải có ít nhất 12 ký tự.";
+  if (!value) return "Enter a new password.";
+  if (value.length < 12) return "Password must be at least 12 characters long.";
 
   const hasUpper = /[A-Z]/.test(value);
   const hasLower = /[a-z]/.test(value);
   const hasDigit = /[0-9]/.test(value);
   const hasSpecial = /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(value);
 
-  if (!hasUpper) return "Mật khẩu phải có ít nhất một chữ hoa.";
-  if (!hasLower) return "Mật khẩu phải có ít nhất một chữ thường.";
-  if (!hasDigit) return "Mật khẩu phải có ít nhất một số.";
-  if (!hasSpecial) return "Mật khẩu phải có ít nhất một ký tự đặc biệt.";
+  if (!hasUpper) return "Password must include at least one uppercase letter.";
+  if (!hasLower) return "Password must include at least one lowercase letter.";
+  if (!hasDigit) return "Password must include at least one number.";
+  if (!hasSpecial) return "Password must include at least one special character.";
 
   return "";
 }
@@ -68,7 +68,7 @@ export function ResetPasswordForm() {
 
   const newPasswordError = touched.newPassword ? validatePassword(newPassword) : "";
   const confirmPasswordError = touched.confirmPassword && newPassword !== confirmPassword
-    ? "Mật khẩu xác nhận không khớp."
+    ? "Passwords do not match."
     : "";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -77,7 +77,7 @@ export function ResetPasswordForm() {
     setApiError("");
 
     if (!token) {
-      setApiError("Token không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.");
+      setApiError("This reset link is invalid or has expired. Please request a new one.");
       return;
     }
 
@@ -100,7 +100,7 @@ export function ResetPasswordForm() {
         err?.response?.data?.detail ||
         err?.response?.data?.message ||
         err?.message ||
-        "Đặt lại mật khẩu thất bại. Vui lòng thử lại sau.";
+        "Could not reset your password. Please try again.";
       setApiError(errorMessage);
       console.error("Reset password failed:", err);
     } finally {

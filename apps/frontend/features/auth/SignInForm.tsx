@@ -8,48 +8,48 @@ import { Alert, Button, Input, type InputRef } from "antd";
 import { handleLogin } from "@/services/authService";
 import styles from "./auth.module.css";
 
-function identityError(value: string) {
+function emailError(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return "Nhập email hoặc tên đăng nhập của bạn.";
-  // Strict email validation as requested
-  if (trimmed.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Vui lòng nhập đúng định dạng email (VD: abc@gmail.com)!";
+  if (!trimmed) return "Enter your email.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return "Enter a valid email address.";
+  }
   return "";
 }
 
 function passwordError(value: string) {
-  if (!value) return "Nhập mật khẩu của bạn.";
-  // Min 6 chars validation as requested
-  if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự!";
+  if (!value) return "Enter your password.";
+  if (value.length < 6) return "Password must be at least 6 characters.";
   return "";
 }
 
 export function SignInForm() {
   const id = useId();
   const router = useRouter();
-  const identityRef = useRef<InputRef>(null);
+  const emailRef = useRef<InputRef>(null);
   const passwordRef = useRef<InputRef>(null);
-  const [identity, setIdentity] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
-  const [touched, setTouched] = useState({ identity: false, password: false });
+  const [touched, setTouched] = useState({ email: false, password: false });
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
-  const emailError = touched.identity ? identityError(identity) : "";
+  const emailErr = touched.email ? emailError(email) : "";
   const passwordErr = touched.password ? passwordError(password) : "";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setTouched({ identity: true, password: true });
-    setApiError(""); // Clear previous API errors
-    
-    if (identityError(identity)) { identityRef.current?.focus(); return; }
+    setTouched({ email: true, password: true });
+    setApiError("");
+
+    if (emailError(email)) { emailRef.current?.focus(); return; }
     if (passwordError(password)) { passwordRef.current?.focus(); return; }
     
     setSubmitting(true);
     try {
       await handleLogin(
         {
-          username_or_email: identity.trim(),
+          email: email.trim(),
           password,
         },
         () => {
@@ -59,7 +59,7 @@ export function SignInForm() {
       );
     } catch (err: any) {
       // Extract specific error message from API response
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.";
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Something went wrong. Please try again.";
       setApiError(errorMessage);
       console.error("Login failed:", err);
     } finally {
@@ -74,39 +74,33 @@ export function SignInForm() {
           showIcon
           type="error"
           message={apiError}
-          style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #ffccc7",
-            color: "#cf1322",
-            borderRadius: "8px",
-            marginBottom: "20px",
-            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.08)"
-          }}
+          className={styles.alert}
           closable
           onClose={() => setApiError("")}
         />
       )}
       <div className={styles.field}>
-        <label htmlFor={`${id}-identity`}>Email hoặc tên đăng nhập</label>
+        <label htmlFor={`${id}-email`}>Email</label>
         <Input
-          ref={identityRef}
-          id={`${id}-identity`}
-          name="username"
-          autoComplete="username"
+          ref={emailRef}
+          id={`${id}-email`}
+          name="email"
+          type="email"
+          autoComplete="email"
           autoCapitalize="none"
           spellCheck={false}
           required
           className={styles.input}
-          value={identity}
-          aria-invalid={Boolean(emailError)}
-          aria-describedby={`${id}-identity-error`}
-          onChange={event => setIdentity(event.target.value)}
-          onBlur={() => setTouched(previous => ({ ...previous, identity: true }))}
+          value={email}
+          aria-invalid={Boolean(emailErr)}
+          aria-describedby={`${id}-email-error`}
+          onChange={event => setEmail(event.target.value)}
+          onBlur={() => setTouched(previous => ({ ...previous, email: true }))}
         />
-        <p className={styles.error} id={`${id}-identity-error`} aria-live="polite">{emailError}</p>
+        <p className={styles.error} id={`${id}-email-error`} aria-live="polite">{emailErr}</p>
       </div>
       <div className={styles.field}>
-        <label htmlFor={`${id}-password`}>Mật khẩu</label>
+        <label htmlFor={`${id}-password`}>Password</label>
         <div className={styles.passwordField}>
           <Input
             ref={passwordRef}
@@ -117,7 +111,7 @@ export function SignInForm() {
             required
             className={styles.input}
             value={password}
-            aria-invalid={Boolean(passwordError)}
+            aria-invalid={Boolean(passwordErr)}
             aria-describedby={`${id}-password-error`}
             onChange={event => setPassword(event.target.value)}
             onBlur={() => setTouched(previous => ({ ...previous, password: true }))}
@@ -125,7 +119,7 @@ export function SignInForm() {
           <button
             type="button"
             className={styles.eye}
-            aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            aria-label={visible ? "Hide password" : "Show password"}
             aria-pressed={visible}
             onClick={() => setVisible(previous => !previous)}
           >
@@ -139,17 +133,17 @@ export function SignInForm() {
           htmlType="submit"
           type="primary"
           className={styles.submit}
-          disabled={!identity.trim() || !password || submitting}
+          disabled={!email.trim() || !password || submitting}
           loading={submitting}
         >
-          Đăng nhập
+          Log In
         </Button>
-        <Button 
-          type="text" 
+        <Button
+          type="text"
           className={styles.forgot}
           onClick={() => router.push("/forgot-password")}
         >
-          Quên mật khẩu?
+          Forgot password?
         </Button>
       </div>
     </form>

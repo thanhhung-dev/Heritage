@@ -36,6 +36,11 @@ const isEditable = (target: EventTarget | null) => {
 export function createWalkInput(canvas: HTMLElement) {
   const keys = new Set<string>();
   const drag = { x: 0, y: 0 };
+  /**
+   * Cần gạt ảo trên màn hình (mobile). Không phải pointer event trên canvas nên
+   * không đi qua `drag`; React đẩy giá trị đã chuẩn hoá `[-1, 1]` vào đây.
+   */
+  const stick = { x: 0, y: 0, active: false };
   let pointerId: number | null = null;
   let originX = 0;
   let originY = 0;
@@ -113,6 +118,26 @@ export function createWalkInput(canvas: HTMLElement) {
       keys.clear();
       drag.x = 0;
       drag.y = 0;
+      stick.x = 0;
+      stick.y = 0;
+      stick.active = false;
+    },
+
+    /**
+     * Cần gạt ảo: toạ độ đã chuẩn hoá `[-1, 1]`, gốc ở tâm, y dương là kéo XUỐNG
+     * (lùi) — cùng quy ước với `drag`.
+     */
+    setStick(x: number, y: number) {
+      stick.x = Math.max(-1, Math.min(1, x));
+      stick.y = Math.max(-1, Math.min(1, y));
+      stick.active = true;
+    },
+
+    /** Nhả cần gạt: dừng di chuyển ngay, không giữ quán tính. */
+    releaseStick() {
+      stick.x = 0;
+      stick.y = 0;
+      stick.active = false;
     },
 
     read(): WalkInput {
@@ -128,7 +153,14 @@ export function createWalkInput(canvas: HTMLElement) {
       // (`gs.add(Wt * -t.y)`).
       if (Math.abs(drag.y) >= INPUT_DEAD_ZONE) forward -= drag.y;
 
-      const turn = Math.abs(drag.x) >= INPUT_DEAD_ZONE ? drag.x : 0;
+      // Cần gạt ảo (mobile): dọc = tiến/lùi, ngang = QUAY camera. Trục ngang
+      // cộng dồn với cú kéo trên canvas rồi kẹp `[-1, 1]` để hai nguồn cùng
+      // đẩy một hướng không thành quay gấp đôi.
+      if (stick.active && Math.abs(stick.y) >= INPUT_DEAD_ZONE) forward -= stick.y;
+
+      let turn = Math.abs(drag.x) >= INPUT_DEAD_ZONE ? drag.x : 0;
+      if (stick.active && Math.abs(stick.x) >= INPUT_DEAD_ZONE) turn += stick.x;
+      turn = Math.max(-1, Math.min(1, turn));
 
       return { forward, strafe, turn };
     },

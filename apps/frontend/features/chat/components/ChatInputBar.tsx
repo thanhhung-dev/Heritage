@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpOutlined, BulbOutlined, LoadingOutlined } from "@ant-design/icons";
+import { ArrowUpOutlined, LoadingOutlined } from "@ant-design/icons";
 import { useEffect, useRef } from "react";
 import { OVERLAY_QUICK_SUGGESTIONS } from "@/features/chat/config";
 import styles from "@/features/chat/chat-overlay.module.css";
@@ -46,22 +46,23 @@ export function ChatInputBar({ value, sending, disabled = false, showSuggestions
           </button>
         ))}
       </div>}
-      <div className={styles.inputRow}>
-        <BulbOutlined className={styles.inputIcon} aria-hidden="true" />
+      <div className={styles.inputRow} data-chat-input-row>
         <textarea ref={input} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}
-          placeholder="Ask Mila anything…" aria-label="Message the heritage assistant" rows={1} maxLength={8000}
+          placeholder="Hỏi về di sản…" aria-label="Message the heritage assistant" rows={1} maxLength={8000}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
               if (value.trim() && !sending && !disabled) onSend();
             }
           }} />
-        <button className={styles.sendButton} type="submit" disabled={!value.trim() || sending || disabled}
-          aria-label={sending ? "Waiting for the assistant" : "Send message"}>
-          {sending ? <LoadingOutlined spin /> : <ArrowUpOutlined />}
-        </button>
+        <div className={styles.composerActions}>
+          <button className={styles.sendButton} type="submit" disabled={!value.trim() || sending || disabled}
+            aria-label={sending ? "Waiting for the assistant" : "Send message"}>
+            {sending ? <LoadingOutlined spin /> : <ArrowUpOutlined />}
+          </button>
+        </div>
       </div>
-      <p className={styles.disclaimer}>Mila can make mistakes. Check the sources.</p>
+      <p className={styles.disclaimer}>AI có thể mắc lỗi. Hãy kiểm tra nguồn.</p>
     </form>
   );
 }

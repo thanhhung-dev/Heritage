@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MilaAvatar } from "@/features/chat/components/ChatToggleButton";
 import { ChatMarkdown } from "@/features/chat/components/ChatMarkdown";
 import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
 import { safeSourceUrl } from "@/lib/safe-source-url";
@@ -11,9 +10,10 @@ interface ChatMessageListProps {
   messages: ChatOverlayMessage[];
   sending: boolean;
   onSend: (text?: string) => void;
+  hideWelcome: boolean;
 }
 
-export function ChatMessageList({ messages, sending, onSend }: ChatMessageListProps) {
+export function ChatMessageList({ messages, sending, onSend, hideWelcome }: ChatMessageListProps) {
   const scroll = useRef<HTMLDivElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const [selectedCitation, setSelectedCitation] = useState<string | null>(null);
@@ -25,14 +25,21 @@ export function ChatMessageList({ messages, sending, onSend }: ChatMessageListPr
     <div ref={scroll} className={styles.messages} role="log" aria-live="polite" aria-relevant="additions text"
       aria-label="Heritage AI conversation">
       {messages.map((message) => (
-        <article key={message.id} className={`${styles.message} ${message.role === "user" ? styles.userMessage : ""}`}>
-          {message.role === "assistant" && <MilaAvatar small />}
+        <article key={message.id} aria-hidden={message.id === "mila-welcome" && hideWelcome}
+          className={`${styles.message} ${message.role === "user" ? styles.userMessage : ""} ${message.id === "mila-welcome" ? styles.welcomeMessage : ""}`}>
           <div className={styles.messageBody}>
+            {message.role === "user" && <time className={styles.timestamp} dateTime={message.createdAt}>
+              {new Date(message.createdAt).toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit" })}
+            </time>}
             {message.answerType === "development_mock" && <span className={styles.answerStatus}>Sample answer</span>}
             {message.needsUserChoice && <span className={styles.answerStatus}>Choose a heritage</span>}
             {message.abstained && <span className={styles.answerStatus}>No verified answer</span>}
             <div className={styles.messageText}>
-              {message.role === "assistant" ? <ChatMarkdown content={message.content} /> : <p>{message.content}</p>}
+              {message.role === "assistant" ? (
+                <ChatMarkdown content={message.content} animate={message.id !== "mila-welcome"} />
+              ) : (
+                <p>{message.content}</p>
+              )}
             </div>
             {message.suggestions?.length ? (
               <div className={styles.suggestions}>
@@ -64,15 +71,11 @@ export function ChatMessageList({ messages, sending, onSend }: ChatMessageListPr
                 })}
               </div>
             )}
-            <time className={styles.timestamp} dateTime={message.createdAt}>
-              {new Date(message.createdAt).toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })}
-            </time>
           </div>
         </article>
       ))}
       {sending && (
         <div className={styles.message} role="status" aria-label="AI đang trả lời">
-          <MilaAvatar small />
           <span className={styles.thinking} aria-hidden="true"><i /><i /><i /></span>
         </div>
       )}

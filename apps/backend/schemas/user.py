@@ -19,7 +19,7 @@ def _validate_image_url(value: str | None) -> str | None:
         return None
     parsed = urlparse(trimmed)
     if parsed.scheme.lower() not in _ALLOWED_IMAGE_URL_SCHEMES or not parsed.netloc:
-        raise ValueError("URL phải là một liên kết http:// hoặc https:// hợp lệ.")
+        raise ValueError("URL must be a valid http:// or https:// link.")
     return trimmed
 
 
@@ -69,7 +69,7 @@ class UserProfileUpdate(BaseModel):
     @classmethod
     def validate_featured_badges(cls, v: list[str] | None) -> list[str] | None:
         if v is not None and len(v) > 3:
-            raise ValueError("Chỉ có thể chọn tối đa 3 huy hiệu nổi bật")
+            raise ValueError("You can feature at most 3 badges.")
         return v
 
     @field_validator("avatar_url", "banner_url")

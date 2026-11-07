@@ -47,6 +47,7 @@ export function createExploreController(
     if (!walk) return;
     walk = null;
     boundaryVisible = false;
+    input?.releaseStick();
     input?.detach();
     controls.enableRotate = entryRotate;
     controls.enablePan = entryPan;
@@ -69,6 +70,15 @@ export function createExploreController(
     },
 
     isWalking: () => walk !== null,
+
+    /** Cần gạt ảo trên mobile — chỉ có tác dụng khi đang đi bộ. */
+    setWalkStick(x: number, y: number) {
+      input?.setStick(x, y);
+    },
+
+    releaseWalkStick() {
+      input?.releaseStick();
+    },
 
     enter(mode: ExploreMode, eyeHeight?: number) {
       if (!entry) {
@@ -112,6 +122,9 @@ export function createExploreController(
       }
 
       stopWalk();
+      // Scene view khoá zoom (chỉ kéo xoay), nhưng vào chế độ 3D thì cần zoom
+      // để ngắm kỹ chi tiết. `exit()` trả lại `entryZoom` (false) như cũ.
+      controls.enableZoom = true;
       controls.maxPolarAngle =
         mode === "free" ? Math.PI : Math.max(Math.PI / 2, controls.getPolarAngle());
     },
@@ -132,6 +145,10 @@ export function createExploreController(
       if (entry) {
         cameraController.restore(entry, duration);
         controls.maxPolarAngle = entryMaxPolarAngle;
+        // Trả lại đúng bộ cờ của scene view (zoom/pan đã bị khoá ở đó).
+        controls.enableRotate = entryRotate;
+        controls.enablePan = entryPan;
+        controls.enableZoom = entryZoom;
         entry = null;
       }
     },

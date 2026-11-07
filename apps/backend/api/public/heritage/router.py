@@ -94,6 +94,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
         start_target=sc.cam_start_target,
         zoom_position=sc.cam_zoom_pos,
         zoom_target=sc.cam_zoom_target,
+        path_url=sc.camera_path_url,
         instant_move=sc.instant_move,
     )
 

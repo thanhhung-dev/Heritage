@@ -1,54 +1,30 @@
 from __future__ import annotations
 
-import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, Index, Text
-from sqlalchemy import func, text
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
+from sqlalchemy import Boolean, ForeignKey, String, text
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from apps.backend.db.base import Base
+from apps.backend.db.base import Base, TimestampMixin
 
-
-def _uuid_pk() -> Mapped[uuid.UUID]:
-    """UUID PK with gen_random_uuid() default (matches schema.sql pattern)."""
+def _uuid_pk():
     return mapped_column(PG_UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
 
 
-class AdminAccount(Base):
-    __tablename__ = "admin_account"
+class AdminAccount(Base, TimestampMixin):
+    """Compatibility name for the legacy auth API; storage is ``account``."""
 
-    id: Mapped[uuid.UUID] = _uuid_pk()
-    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True, comment="Email address")
-    username: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False, comment="argon2id")
-    session_token_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
-    last_login_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    __tablename__ = "account"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    created_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
-    created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
-
-
-class AuditLog(Base):
-    __tablename__ = "audit_log"
-
-    id: Mapped[uuid.UUID] = _uuid_pk()
-    admin_id: Mapped[uuid.UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("admin_account.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    action: Mapped[str] = mapped_column(Text, nullable=False)
-    target_type: Mapped[str] = mapped_column(Text, nullable=False)
-    target_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
-    detail: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
-
-    __table_args__ = (
-        Index("idx_audit_admin", "admin_id", created_at.desc()),
-        Index("idx_audit_target", "target_type", "target_id"),
+    locked_until: Mapped[datetime | None] = mapped_column(nullable=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    updated_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    username: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    role_id: Mapped[int | None] = mapped_column(
+        ForeignKey("roles.id", ondelete="RESTRICT"), nullable=True
     )

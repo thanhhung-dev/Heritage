@@ -8,13 +8,9 @@
 - API `category` values take priority. The deployed catalogue currently omits that field, so `heritage-taxonomy.ts` supplies explicitly authored categories for its known tour slugs. Unknown/unclassified sites remain **Uncategorized**; names/descriptions are never used to guess a category. Facets come from the full response.
 - Toolbar, result cards/grid, feedback and pagination have separate presentation responsibilities. Pagination uses real links. Skeletons, live status, keyboard focus, image fallbacks and reduced motion are supported.
 
-The existing mock API serves 30 `HeritageOut` records extended with explicit sample categories from `mocks/heritage-categories.json`. To develop without PostgreSQL, run from the repository root:
-
-```powershell
-node apps/frontend/mocks/mock-server.mjs
-```
-
-Set `NEXT_PUBLIC_API_URL=http://localhost:8001/api` in `apps/frontend/.env.local`, restart Next.js, and open `/search`. Otherwise use the real backend at `http://localhost:8000/api`. This feature does not silently replace API failures with mock results.
+Use the real backend at `http://localhost:8000/api` or the published catalogue below.
+This feature does not silently replace API failures with mock results. The legacy
+mock server and catalogue were removed by `develop`; tests use in-memory fixtures.
 
 For the existing deployed public catalogue, the frontend configuration is:
 

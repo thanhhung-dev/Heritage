@@ -26,7 +26,6 @@ function OverlaySession({ accessToken }: { accessToken: string | null }) {
   const heritage = payload.heritage.title.slice(0, 300);
   const scene = currentScene?.title.slice(0, 300) ?? heritage;
   return <ChatOverlayWidget messages={chat.messages} input={chat.input} sending={chat.sending} error={chat.error}
-    heritageName={heritage} contextLabel={scene} authenticated={Boolean(accessToken)}
     onInputChange={chat.setInput} onNewConversation={chat.newConversation}
     onSend={(text) => void chat.send(text?.replaceAll("{heritage}", heritage).replaceAll("{scene}", scene))} />;
 }

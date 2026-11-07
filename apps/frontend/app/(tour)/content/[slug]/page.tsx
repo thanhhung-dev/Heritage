@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useHeritageTour } from "@/context/heritage-tour";
+import ContentLoading from "@/components/Loading/ContentLoading";
 import { tapestryTourVarsStyle } from "@/styles/theme/heritageTheme";
 import styles from "./content-shell.module.css";
 import { LogoText } from "@/components/LogoText";
@@ -75,15 +76,28 @@ function formatPublishDate(value: string | null | undefined): string | null {
 
 export default function ContentLoadingPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { payload, isModelReady, modelError } = useHeritageTour();
+  const { payload, modelError, isModelReady, modelProgress, hasModel } =
+    useHeritageTour();
   const heritage = payload.heritage;
   const splashImageUrl = heritage.splash_image_url ?? "";
+  const presentedByLogoUrl = heritage.presented_by_logo_url ?? "";
   const splashImageRef = useRef<HTMLImageElement>(null);
+  const presentedByLogoRef = useRef<HTMLImageElement>(null);
   const [loadedSplashUrl, setLoadedSplashUrl] = useState<string | null>(null);
+  const [loadedPresentedByUrl, setLoadedPresentedByUrl] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<PageLocale | null>(
     null,
   );
-  const isReady = (!splashImageUrl || loadedSplashUrl === splashImageUrl) && isModelReady;
+  // Chờ ảnh splash + logo nhà tài trợ để hiển thị giao diện đồng thời; nút Start chờ thêm model 3D.
+  const splashReady = !splashImageUrl || loadedSplashUrl === splashImageUrl;
+  const presentedByReady =
+    !presentedByLogoUrl || loadedPresentedByUrl === presentedByLogoUrl;
+  const visualsReady = splashReady && presentedByReady;
+  const waitingForModel = hasModel && !isModelReady && !modelError;
+  const isReady = visualsReady && !waitingForModel;
+  const loadedPercent = Math.round(modelProgress * 100);
+  // Chỉ hiện % khi server trả Content-Length; không thì giữ hiệu ứng chạy qua lại.
+  const showRealProgress = waitingForModel && modelProgress > 0;
   const sourceLanguage: PageLocale = heritage.language1?.code
     .toLowerCase()
     .startsWith("vi")
@@ -105,7 +119,6 @@ export default function ContentLoadingPage() {
   const durationLabel = heritage.duration_seconds
     ? `${Math.round(heritage.duration_seconds / 60)} min tour`
     : null;
-  const presentedByLogoUrl = heritage.presented_by_logo_url;
   const availableLanguages = [heritage.language1, heritage.language2];
   const englishLanguage = availableLanguages.find((language) =>
     language?.code.toLowerCase().startsWith("en"),
@@ -130,139 +143,178 @@ export default function ContentLoadingPage() {
     }
   }, [splashImageUrl]);
 
+  useEffect(() => {
+    if (presentedByLogoRef.current?.complete && presentedByLogoUrl) {
+      setLoadedPresentedByUrl(presentedByLogoUrl);
+    }
+  }, [presentedByLogoUrl]);
+
   const finishSplashLoading = () => {
     if (splashImageUrl) setLoadedSplashUrl(splashImageUrl);
   };
 
+  const finishPresentedByLoading = () => {
+    if (presentedByLogoUrl) setLoadedPresentedByUrl(presentedByLogoUrl);
+  };
+
   return (
     <main className={styles.loading} style={tapestryTourVarsStyle}>
-      <div className={styles.splashWrap}>
-        <img
-          ref={splashImageRef}
-          className={styles.splash}
-          src={splashImageUrl || undefined}
-          alt=""
-          onLoad={finishSplashLoading}
-          onError={finishSplashLoading}
+      {!visualsReady ? (
+        <ContentLoading
+          className={styles.initialLoader}
+          label="Loading heritage tour…"
         />
-      </div>
-
-      <LogoText className={styles.sHeritageLogo} size={100} />
-
-      <div className={styles.glow} aria-hidden="true" />
-
-      {/* Top-right badge — the sponsor logo wins over the community flag. */}
-      {presentedByLogoUrl ? (
-        <div className={styles.presentedBy}>
-          <div className={styles.presentedByGroup}>
-            <span className={styles.presentedByText}>Presented by</span>
-            <img
-              className={styles.presentedByLogo}
-              src={presentedByLogoUrl}
-              alt="Presented by"
-            />
-          </div>
-        </div>
-      ) : heritage.community_made ? (
-        <div className={styles.communityMade}>
-          <span className={styles.communityMadeBadge}>Community made</span>
-          <span className={styles.communityMadeHover}>
-            This tour was created together with the local community.
-          </span>
-        </div>
       ) : null}
 
-      <div className={styles.pageGroup}>
-        <section className={styles.infoCard} aria-labelledby="heritage-title">
-          {displayRegion ? (
-            <p className={styles.region}>{displayRegion}</p>
-          ) : null}
-          <h1 className={styles.title} id="heritage-title">
-            {displayTitle}
-          </h1>
-          {displayTagline ? (
-            <p className={styles.subtitle}>{displayTagline}</p>
-          ) : null}
-          {displayDescription ? (
-            <div className={styles.aboutTour}>
-              <p className={styles.aboutTourDesc}>{displayDescription}</p>
-            </div>
-          ) : null}
+      <div
+        className={`${styles.loadingStage} ${
+          !visualsReady ? styles.loadingStageHidden : ""
+        }`}
+      >
+        <div className={styles.splashWrap}>
+          <img
+            ref={splashImageRef}
+            className={styles.splash}
+            src={splashImageUrl || undefined}
+            alt=""
+            onLoad={finishSplashLoading}
+            onError={finishSplashLoading}
+          />
+        </div>
 
-          <div className={styles.languages} aria-label="Available languages">
-            {languages.map((language) => (
-              <button
-                className={
-                  language.code === displayLanguage
-                    ? styles.languageActive
-                    : styles.language
-                }
-                key={language.code}
-                type="button"
-                aria-pressed={language.code === displayLanguage}
-                onClick={() => setSelectedLanguage(language.code)}
-              >
-                {language.name}
-              </button>
-            ))}
-          </div>
+        <LogoText className={styles.sHeritageLogo} size={100} />
 
-          {publishDate || durationLabel ? (
-            <p className={styles.publishDate}>
-              {publishDate ? <span>Published {publishDate}</span> : null}
-              {publishDate && durationLabel ? (
-                <span className={styles.metaSep} aria-hidden="true">
-                  ·
-                </span>
-              ) : null}
-              {durationLabel ? (
-                <span className={styles.manifestVersion}>{durationLabel}</span>
-              ) : null}
-            </p>
-          ) : null}
-        </section>
+        <div className={styles.glow} aria-hidden="true" />
 
-        <div className={styles.enterButtonGroup}>
-          <Link
-            className={styles.bottomNav}
-            href={`/content/${slug}/s0`}
-            aria-label={
-              isReady
-                ? "Start the heritage experience"
-                : "Loading heritage assets"
-            }
-            aria-disabled={!isReady}
-            onClick={(event) => {
-              if (!isReady) event.preventDefault();
-            }}
-          >
-            <span
-              className={`${styles.loadingBarMain} ${
-                isReady ? styles.loadingBarMainReady : ""
-              }`}
-            >
-              <span className={styles.loadingBar} aria-hidden="true" />
-              <span
-                className={`${styles.loadingBarFill} ${
-                  isReady
-                    ? styles.loadingBarFillReady
-                    : styles.loadingBarFillLoading
-                }`}
-                aria-hidden="true"
+        {/* Top-right badge — the sponsor logo wins over the community flag. */}
+        {presentedByLogoUrl ? (
+          <div className={styles.presentedBy}>
+            <div className={styles.presentedByGroup}>
+              <span className={styles.presentedByText}>Presented by</span>
+              <img
+                ref={presentedByLogoRef}
+                className={styles.presentedByLogo}
+                src={presentedByLogoUrl}
+                alt="Presented by"
+                onLoad={finishPresentedByLoading}
+                onError={finishPresentedByLoading}
               />
+            </div>
+          </div>
+        ) : heritage.community_made ? (
+          <div className={styles.communityMade}>
+            <span className={styles.communityMadeBadge}>Community made</span>
+            <span className={styles.communityMadeHover}>
+              This tour was created together with the local community.
+            </span>
+          </div>
+        ) : null}
+
+        <div className={styles.pageGroup}>
+          <section className={styles.infoCard} aria-labelledby="heritage-title">
+            {displayRegion ? (
+              <p className={styles.region}>{displayRegion}</p>
+            ) : null}
+            <h1 className={styles.title} id="heritage-title">
+              {displayTitle}
+            </h1>
+            {displayTagline ? (
+              <p className={styles.subtitle}>{displayTagline}</p>
+            ) : null}
+            {displayDescription ? (
+              <div className={styles.aboutTour}>
+                <p className={styles.aboutTourDesc}>{displayDescription}</p>
+              </div>
+            ) : null}
+
+            <div className={styles.languages} aria-label="Available languages">
+              {languages.map((language) => (
+                <button
+                  className={
+                    language.code === displayLanguage
+                      ? styles.languageActive
+                      : styles.language
+                  }
+                  key={language.code}
+                  type="button"
+                  aria-pressed={language.code === displayLanguage}
+                  onClick={() => setSelectedLanguage(language.code)}
+                >
+                  {language.name}
+                </button>
+              ))}
+            </div>
+
+            {publishDate || durationLabel ? (
+              <p className={styles.publishDate}>
+                {publishDate ? <span>Published {publishDate}</span> : null}
+                {publishDate && durationLabel ? (
+                  <span className={styles.metaSep} aria-hidden="true">
+                    ·
+                  </span>
+                ) : null}
+                {durationLabel ? (
+                  <span className={styles.manifestVersion}>{durationLabel}</span>
+                ) : null}
+              </p>
+            ) : null}
+          </section>
+
+          <div className={styles.enterButtonGroup}>
+            <Link
+              className={styles.bottomNav}
+              href={`/content/${slug}/s0`}
+              aria-label={
+                isReady
+                  ? "Start the heritage experience"
+                  : showRealProgress
+                    ? `Loading 3D model ${loadedPercent}%`
+                    : "Loading heritage assets"
+              }
+              aria-disabled={!isReady}
+              onClick={(event) => {
+                if (!isReady) event.preventDefault();
+              }}
+            >
               <span
-                className={`${styles.loadingBarText} ${
-                  isReady ? styles.loadingBarTextReady : ""
+                className={`${styles.loadingBarMain} ${
+                  isReady ? styles.loadingBarMainReady : ""
                 }`}
               >
-                {isReady ? "Start" : "Loading…"}
+                <span className={styles.loadingBar} aria-hidden="true" />
+                <span
+                  className={`${styles.loadingBarFill} ${
+                    isReady
+                      ? styles.loadingBarFillReady
+                      : showRealProgress
+                        ? ""
+                        : styles.loadingBarFillLoading
+                  }`}
+                  style={
+                    showRealProgress
+                      ? { width: `${Math.max(loadedPercent, 2)}%` }
+                      : undefined
+                  }
+                  aria-hidden="true"
+                />
+                <span
+                  className={`${styles.loadingBarText} ${
+                    isReady ? styles.loadingBarTextReady : ""
+                  }`}
+                >
+                  {isReady
+                    ? "Start"
+                    : showRealProgress
+                      ? `Loading… ${loadedPercent}%`
+                      : "Loading…"}
+                </span>
               </span>
-            </span>
-          </Link>
+            </Link>
 
-          {modelError ? (
-            <p className={styles.loadingError} role="alert">{modelError}</p>
-          ) : null}
+            {modelError ? (
+              <p className={styles.loadingError} role="alert">{modelError}</p>
+            ) : null}
+          </div>
         </div>
       </div>
     </main>
