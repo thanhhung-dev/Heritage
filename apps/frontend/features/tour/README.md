@@ -6,6 +6,23 @@
 
 Three.js và types đã cài. Model Tự Đức load trực tiếp từ R2 (`https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/TuDuc/TuDuckt.glb`, lưu trong `model_asset.file_url`) — bucket đã bật CORS cho origin của app nên không cần rewrite qua Next nữa. Nếu đổi sang custom domain thì nhớ thêm host đó vào `R2_ALLOWED_ASSET_HOSTS`. Decoder KTX2/Basis ở `public/three/basis/`, Draco glTF ở `public/three/draco/` (kèm license).
 
+## Audio môi trường, chuyển cảnh và highlight
+
+API `/api/heritages/{slug}/tour` và fixture `tour.json` dùng cùng contract:
+
+- `payload.heritage.ambient_audio_url`: ambience chính (ví dụ ngoại thất), phát lặp trong player, không dừng khi Pause narration.
+- `payload.heritage.ambient_audio_alt_url`: ambience phụ (ví dụ nội thất). Scene có `use_ambient_audio_alt: true` chọn track này; overview cũng hỗ trợ cờ đó. Tapestry Petra dùng hai track ngày/đêm, không phải hai track ngoại thất/nội thất.
+- `payload.heritage.transition_sfx_url`: URL whoosh riêng của di sản, nếu có thì ưu tiên hơn SFX chung. Thiếu/rỗng thì frontend dùng whoosh mặc định trong `player/audio-config.ts`; không cần gán URL cho từng di sản. Phát khi camera bay giữa scene/góc nhìn/điểm tương tác, âm lượng 20%; không phát lúc mở s0 lần đầu hoặc chuyển scene tức thì.
+- `scene.interactive[].highlights[].audio_url`: tự phát khi mở popup; dừng khi đóng, đổi highlight/scene hoặc thu gọn panel. Nếu trình duyệt chặn autoplay, người xem vẫn bấm Play trong popup được.
+
+SFX giao diện dùng chung ở `player/audio-config.ts`: `new_whoosh.mp3` cho chuyển camera và `explore_more.mp3` báo nút Dive Deeper/Explore in 3D xuất hiện. Cue xuất hiện trễ 700 ms, âm lượng 20%, chỉ phát một lần mỗi lần CTA được mở khóa (dùng chung cho desktop/mobile). Pause narration không mở CTA và không phát cue; kết thúc/Skip mới mở. Đổi scene, Replay, vào 3D hoặc rời player sẽ hủy timer và dừng cue cũ. Mute/unmute không phát lại cue. Hai SFX không phát chồng nhau, không dừng ambience. Chưa thêm âm thanh bước chân/orb. Hai URL mặc định vẫn tải từ host Tapestry bên ngoài; khi có asset được phép sử dụng trên R2 của dự án thì thay tại cấu hình chung, không cần thêm bảng/migration.
+
+Mute chung áp dụng cho narration, ambience, SFX và media trong popup. Đổi scene cùng track không tua ambience về đầu; đổi track dừng track cũ. Ẩn tab dừng ambience/SFX và popup media; quay lại chỉ ambience tự tiếp tục. Tháo player giải phóng audio và listeners. Ambience bị chặn autoplay sẽ thử lại ở thao tác tiếp theo.
+
+URL ambience/highlight chưa có vẫn giữ `null`: không tải audio nội dung, không lấy track ambience kia thay thế và không mượn audio Petra cho Tự Đức. Chỉ hai SFX giao diện có mặc định dùng chung như trên. Trường mới optional ở frontend để đọc được API cũ. Backend chuẩn hóa URL riêng trong DB qua `AssetUrlPolicy`; có thể lưu R2 object key hoặc URL thuộc host được cho phép. URL SFX mặc định thuộc cấu hình frontend, không đi qua AssetUrlPolicy của backend.
+
+Migration mới: `apps/backend/migrations/2026-11-07_tour_audio.sql` (chưa chạy). Cần áp dụng migration sau khi được duyệt **trước khi chạy backend với models mới trên DB cũ**: initializer hiện có khả năng tự thêm cột nhưng không giữ default/nullability của ORM. Migration không điền URL hay sửa liên kết audio hiện có.
+
 ## Dev Scene Editor
 
 Chỉ có khi chạy `npm run dev`. Trong scene, bấm **DEV · Scene Editor**, hoặc mở

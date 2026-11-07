@@ -16,6 +16,11 @@ from apps.backend.common.observability import correlation_id, observe_grounded_q
 from apps.backend.common.search.opensearch import PassageStore, SearchError
 from apps.backend.ai.retrieval.passages import EmbeddingError, PassageRepository, PassageSearch, RetrievalQuery
 
+from apps.backend.services.tour_chat import TourChatError, answer_in_area
+
+from apps.backend.api.conversations import get_chat_db, get_conversation_service, mount_conversation_routes
+from apps.backend.services.chat_context import question_with_context, retrieval_question
+
 log = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -26,6 +31,7 @@ async def get_repository():
 
 
 @router.post("/chat", response_model=ChatResponse, responses={
+    504: {"description": "AI vượt quá thời gian chờ 30 giây cho tour có khóa khu vực."},
     500: {"description": "Lỗi retrieval nội bộ; detail chứa code=RETRIEVAL_INTERNAL_ERROR và message."},
     503: {"description": "Lỗi embedding/OpenSearch; detail chứa code=EMBEDDING_FAILED hoặc "
                          "OPENSEARCH_FAILED và message. Lỗi LLM giữ detail dạng chuỗi."},
@@ -45,7 +51,10 @@ async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_rep
         'correlation_id': correlation_id.get(), 'corpus_version': 'opensearch',
         'grounding_verified': False,
     }) as observation:
-        response = await _chat(req, repository)
+        try:
+            response = await asyncio.wait_for(_chat(req, repository), timeout=30)
+        except TimeoutError:
+            raise HTTPException(504, "AI phản hồi quá thời gian chờ 30 giây.") from None
         observation.update(output=response.model_dump(), metadata={
             'resolution_status': response.resolution_status,
             'answer_type': response.answer_type,
@@ -55,6 +64,13 @@ async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_rep
 
 
 async def _chat(req: ChatRequest, repository: PassageRepository):
+    if req.active_area_id:
+        try:
+            return ChatResponse(**await answer_in_area(
+                req, repository, generate_response, get_generation_details,
+            ))
+        except TourChatError as error:
+            raise HTTPException(status_code=error.status, detail=error.detail) from None
     started = time.perf_counter()
     question = req.message.strip()
     if not question:
@@ -64,7 +80,9 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
     result = PassageSearch(RetrievalQuery(question), [])
     retrieval_error = None
     try:
-        result = await repository.search_evidence(question)
+        result = await repository.search_evidence(retrieval_question(
+            question_with_context(req), req.conversation_context,
+        ))
     except EmbeddingError:
         log.exception("Query embedding lỗi")
         retrieval_error = HTTPException(status_code=503, detail={
@@ -114,6 +132,9 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
     def generate():
         answer = generate_response(
             question=question, context=context, conversation=True, retrieval_status=retrieval_status,
+            **({"history": [item.model_dump() for item in req.conversation_context]} if req.conversation_context else {}),
+            **({"scene_context": {"heritage": req.heritage_context, "scene": req.scene_context}}
+               if req.heritage_context or req.scene_context else {}),
         )
         return answer, get_generation_details()
 
@@ -122,6 +143,8 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         if details.truncated is True:
             raise ValueError("Incomplete model answer")
         answer = ConversationAnswer.model_validate_json(raw)
+        if answer.answer_type == "clarification":
+            answer.answer = "Bạn muốn tìm hiểu về di sản hoặc nội dung cụ thể nào?"
         if answer.answer_type == "answered":
             if not result.evidence:
                 # Even schema-valid output cannot turn missing evidence into facts.
@@ -163,3 +186,6 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         resolution_status="not_found" if answer.answer_type == "insufficient_evidence" else "resolved",
         answer_type=answer.answer_type,
     )
+
+
+mount_conversation_routes(router, get_repository, _chat)

@@ -116,6 +116,7 @@ class InteractiveHighlightOut(BaseModel):
     popup_title: str | None = None
     popup_text: str | None = None
     media_url: str | None = None
+    audio_url: str | None = None
     cam_pos: dict[str, Any] | list[Any] | None = None
     cam_target: dict[str, Any] | list[Any] | None = None
     lens_pos: dict[str, Any] | list[Any] | None = None
@@ -159,6 +160,7 @@ class SceneDetailOut(BaseModel):
     title: str
     description: str | None = None
     sequence: int
+    use_ambient_audio_alt: bool = False
     sky: SkyPresetOut | None = None
     camera: CameraOut
     voice_clips: list[VoiceClipOut] = Field(default_factory=list)
@@ -193,6 +195,9 @@ class HeritageOut(BaseModel):
     display_map: bool
     splash_image_url: str | None = None
     card_image_url: str | None = None
+    ambient_audio_url: str | None = None
+    ambient_audio_alt_url: str | None = None
+    transition_sfx_url: str | None = None
 
     language1: LanguageOut | None = None
     language2: LanguageOut | None = None

@@ -1,5 +1,8 @@
 # Kiến trúc chatbot HeritageGraph
 
+Phần hướng dẫn viên trong tour 3D có thêm [khóa phạm vi khu vực](area-locked-tour-guide.md)
+cho Khiêm Lăng/Lăng Tự Đức: contract API, lọc Hybrid/GraphRAG và hướng dẫn dữ liệu local.
+
 Ngày cập nhật: 04/10/2026.
 
 ## 1. Mục tiêu và quyết định kiến trúc

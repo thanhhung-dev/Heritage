@@ -33,6 +33,8 @@ class InteractiveHighlight(Base):
         nullable=True,
     )
 
+    audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     cam_pos: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(
         JSONB,
         nullable=True,

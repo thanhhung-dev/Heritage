@@ -1,0 +1,248 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.modal {
+  position: relative;
+  width: 962px;
+  height: 825px;
+  max-width: 95vw;
+  max-height: 92vh;
+  background-color: #07090e;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.98);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.mediaLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 62%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  background-color: #07090e;
+}
+
+.mediaElement {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  display: block;
+}
+
+.gradientOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(7, 9, 14, 0.1) 0%,
+    rgba(7, 9, 14, 0.5) 45%,
+    rgba(7, 9, 14, 0.96) 82%,
+    #07090e 100%
+  );
+  z-index: 3;
+}
+
+.closeButton {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 40;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.contentContainer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  padding: 0 52px 42px 52px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+.location {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.metaBlock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.825rem;
+  margin-bottom: 18px;
+}
+
+.badge {
+  color: #ff6a1a;
+  font-weight: 600;
+}
+
+.divider {
+  color: #475569;
+  font-size: 0.7rem;
+}
+
+.aboutLink {
+  color: #cbd5e1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.langText {
+  color: #94a3b8;
+}
+
+.descBlock {
+  margin-bottom: 24px;
+}
+
+.description {
+  font-size: 0.885rem;
+  line-height: 1.65;
+  color: #cbd5e1;
+  margin: 0;
+  max-width: 850px;
+}
+
+.contributorsBlock {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 26px;
+}
+
+.contributorItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.contributorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contributorName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.contributorRole {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.actionsBlock {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.customExploreBtn {
+  min-width: 185px !important;
+  height: 44px !important;
+  border-radius: 9999px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  background: linear-gradient(135deg, #ff7e1d 0%, #fa4d09 100%) !important;
+  box-shadow: 0 4px 18px rgba(250, 77, 9, 0.4) !important;
+  color: #ffffff !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+}
+
+.customShareBtn {
+  min-width: 105px !important;
+  height: 44px !important;
+  padding: 0 20px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #f1f5f9 !important;
+  border-radius: 9999px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  gap: 8px;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.customShareBtn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}

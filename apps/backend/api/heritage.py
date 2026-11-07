@@ -68,6 +68,9 @@ def _heritage_out(heritage, voices, voice_length) -> HeritageOut:
         "splash_image_url",
         "hover_video_url",
         "presented_by_logo_url",
+        "ambient_audio_url",
+        "ambient_audio_alt_url",
+        "transition_sfx_url",
     )
     for voice in out.voices:
         _resolve_urls(voice, policy, "headshot_url", "intro_video_url")
@@ -155,7 +158,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
         _resolve_urls(item, policy, "asset_url", "thumb_url")
     for inter in interactive_out:
         for highlight in inter.highlights:
-            _resolve_urls(highlight, policy, "media_url")
+            _resolve_urls(highlight, policy, "media_url", "audio_url")
     for scene_highlight in highlights_out:
         _resolve_urls(scene_highlight, policy, "model_url")
 
@@ -165,6 +168,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
         title=sc.title,
         description=sc.description,
         sequence=sc.sequence,
+        use_ambient_audio_alt=getattr(sc, "use_ambient_audio_alt", False),
         sky=sky_out,
         camera=camera_out,
         voice_clips=voices_out,

@@ -1,8 +1,7 @@
 import { chatApiUrl } from "./chat-request.mjs";
 
 /**
- * Build the bounded guest history accepted by the persisted chat endpoint.
- * Authenticated conversations use their server-side history instead.
+ * Build bounded client history for a new/guest conversation.
  *
  * @param {Array<{role: "user" | "assistant", content: string}>} messages
  * @returns {Array<{role: "user" | "assistant", content: string}>}
@@ -54,7 +53,7 @@ export function requestSceneChat(apiUrl, request, dependencies = {}) {
     headers.Authorization = `Bearer ${dependencies.accessToken}`;
   }
 
-  return fetchImpl(chatApiUrl(apiUrl, "/chat"), {
+  return fetchImpl(chatApiUrl(apiUrl, "/chat/message"), {
     method: "POST",
     headers,
     body: JSON.stringify(request),

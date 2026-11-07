@@ -366,6 +366,21 @@
   background: var(--bg-hover);
 }
 
+.requestError {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: min(90vw, 600px);
+  padding: 10px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  color: var(--danger);
+  font-size: 13px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .atmosphere,
   .landingGreeting {

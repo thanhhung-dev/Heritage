@@ -15,6 +15,10 @@ interface ChatOverlayWidgetProps {
   input: string;
   sending: boolean;
   restoring?: boolean;
+  disabled?: boolean;
+  areaLabel?: string;
+  sceneLabel?: string;
+  suggestions?: readonly { label: string; value: string }[];
   error: string | null;
   onInputChange: (value: string) => void;
   onSend: (text?: string) => void;
@@ -150,7 +154,8 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           data-chat-phase={props.sending ? "thinking" : hasConversation ? "conversation" : "welcome"}
           style={panelDrag.style} data-positioned={Boolean(panelDrag.position)} data-dragging={panelDrag.dragging}
           className={`${styles.panel} ${mode === "expanded" ? styles.panelExpanded : ""}`}
-          role="dialog" aria-modal={false} aria-hidden={!isOpen} aria-label="Heritage AI assistant">
+          role="dialog" aria-modal={false} aria-hidden={!isOpen}
+          aria-label={["Heritage AI assistant", props.areaLabel, props.sceneLabel].filter(Boolean).join(" · ")}>
           <div
             className={styles.ambient}
             aria-hidden="true"
@@ -192,8 +197,10 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
             hideWelcome={hasConversation || props.input.trim().length > 0} />
           {props.restoring && <p className={styles.restoreStatus} role="status">Đang khôi phục hội thoại…</p>}
           {props.error && <p className={styles.error} role="alert">{props.error}</p>}
-          <ChatInputBar value={props.input} sending={props.sending} disabled={props.restoring}
-            showSuggestions={props.messages.length <= 1 && !props.restoring}
+          <ChatInputBar value={props.input} sending={props.sending} disabled={props.restoring || props.disabled}
+            contextLabel={props.sceneLabel}
+            suggestions={props.suggestions}
+            showSuggestions={(props.suggestions !== undefined || props.messages.length <= 1) && !props.restoring && !props.disabled}
             onChange={props.onInputChange} onSend={props.onSend} />
         </section>
     </div>

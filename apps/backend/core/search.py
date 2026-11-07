@@ -66,7 +66,7 @@ class PassageStore:
             'mappings': {'dynamic': 'strict', 'properties': {
                 **{name: {'type': 'keyword'} for name in (
                     'id', 'document_key', 'source_url', 'object_key', 'bucket',
-                    'content_hash', 'embedding_model',
+                    'content_hash', 'embedding_model', 'active_area_id',
                 )},
                 'text': {'type': 'text', 'analyzer': 'vietnamese_folded'},
                 'location_note': {'type': 'text', 'analyzer': 'vietnamese_folded'},
@@ -82,6 +82,10 @@ class PassageStore:
                       response.json().get('error', {}).get('type') == 'resource_already_exists_exception')
             if not exists:
                 response.raise_for_status()
+            else:
+                await self._request('PUT', f'/{self.index}/_mapping', json={
+                    'properties': {'active_area_id': {'type': 'keyword'}},
+                })
         except (httpx.HTTPError, ValueError):
             raise SearchError('Không tạo được passage index trong OpenSearch.') from None
         await self._request('PUT', f'/_search/pipeline/{self.index}-hybrid', json={
@@ -103,22 +107,26 @@ class PassageStore:
             if result.get('errors'):
                 raise SearchError('Một số passage chưa được index; sửa lỗi và import lại để hoàn tất batch.')
 
-    async def search(self, question, vector, limit=20):
+    async def search(self, question, vector, limit=20, *, active_area_id=None):
         threshold = float(os.environ.get('PASSAGE_MIN_SIMILARITY', '0.55'))
         if not math.isfinite(threshold) or not 0 <= threshold <= 1:
             raise ValueError('PASSAGE_MIN_SIMILARITY phải nằm trong [0, 1].')
         model_filter = {'term': {'embedding_model': EMBEDDING_ID}}
+        filters = [model_filter]
+        if active_area_id is not None:
+            filters.append({'term': {'active_area_id': active_area_id}})
+        vector_filter = {'bool': {'filter': filters}} if active_area_id is not None else model_filter
         result = await self._request('POST', f'/{self.index}/_search',
             params={'search_pipeline': f'{self.index}-hybrid'}, json={
                 'size': limit, '_source': {'excludes': ['embedding']},
                 'query': {'hybrid': {'queries': [
-                    {'bool': {'filter': [model_filter], 'must': [{'multi_match': {
+                    {'bool': {'filter': filters, 'must': [{'multi_match': {
                         'query': question, 'fields': ['text', 'location_note^2'],
                         'minimum_should_match': '50%',
                     }}]}},
                     {'function_score': {
                         'query': {'knn': {'embedding': {
-                            'vector': vector, 'filter': model_filter, 'k': limit,
+                            'vector': vector, 'filter': vector_filter, 'k': limit,
                         }}},
                         # Faiss cosine score = (1 + cosine) / 2. Gate returned
                         # scores: 3.3's filtered exact radial fallback converts
@@ -128,9 +136,10 @@ class PassageStore:
                 ]}},
             })
         return [{**hit['_source'], 'id': hit['_id'], 'score': hit['_score']}
-                for hit in result['hits']['hits']]
+                for hit in result['hits']['hits']
+                if active_area_id is None or hit['_source'].get('active_area_id') == active_area_id]
 
-    async def get_passages(self, ids):
+    async def get_passages(self, ids, *, active_area_id=None):
         if not ids:
             return []
         result = await self._request('POST', f'/{self.index}/_mget', json={
@@ -139,7 +148,8 @@ class PassageStore:
         if any('error' in hit for hit in result['docs']):
             raise SearchError('Không đọc được passage từ OpenSearch.')
         return [{**hit['_source'], 'id': hit['_id']} for hit in result['docs']
-                if hit.get('found') and hit['_source']['embedding_model'] == EMBEDDING_ID]
+                if hit.get('found') and hit['_source']['embedding_model'] == EMBEDDING_ID
+                and (active_area_id is None or hit['_source'].get('active_area_id') == active_area_id)]
 
     async def document_chunks(self, object_key, bucket, *, limit=50, after=None):
         """Admin view of one source's chunks; never expose embedding vectors."""
@@ -171,11 +181,13 @@ class PassageStore:
         })
         return result['count'] > 0
 
-    async def export_passages(self, limit, ids=()):
+    async def export_passages(self, limit, ids=(), *, active_area_id=None):
         """Read bounded pages for offline GraphRAG exports, not runtime inventory scans."""
         rows = []
         after = None
         filters = [{'term': {'embedding_model': EMBEDDING_ID}}]
+        if active_area_id is not None:
+            filters.append({'term': {'active_area_id': active_area_id}})
         if ids:
             filters.append({'ids': {'values': [str(i) for i in ids]}})
         while len(rows) < limit:
@@ -189,4 +201,4 @@ class PassageStore:
                 break
             rows.extend({**h['_source'], 'id': h['_id']} for h in hits)
             after = hits[-1]['sort']
-        return rows
+        return [row for row in rows if active_area_id is None or row.get('active_area_id') == active_area_id]

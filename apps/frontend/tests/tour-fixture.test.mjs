@@ -4,13 +4,13 @@ import { extractTour } from "../scripts/extract-tapestry-tour.mjs";
 
 test("trích đúng model, thứ tự scene, camera và highlight từ các bảng có ID khác nhau", () => {
   const t = {
-    tapestry: { tapestry_id: 163 },
+    tapestry: { tapestry_id: 163, ambient_audio: "/day.mp3", ambient_audio_alt: "/night.mp3" },
     threeJS: { set_id: 4 },
     threeJS_sets: { 1: { asset: "/wrong.glb" }, 4: { asset: "/petra.glb" } },
     overview: { overview_id: 100, camera_position: "72.361,41.244,-30.673", camera_target: "-4.888,22.009,8.943", audio_narration_1: "/intro.mp3", narration_cc_1: "/intro.vtt" },
     scenes: [
       { scene_id: 616, scene_sequence: "2", interactive_id: 88, start_camera_position: "46.15,7.356,-24.088", start_camera_target: "14.54,8.074,-1.886" },
-      { scene_id: 617, scene_sequence: "1", interactive_id: null },
+      { scene_id: 617, scene_sequence: "1", interactive_id: null, use_ambient_audio_alt: true },
     ],
     voices: [], sceneVoices: [], mediaItems: [],
     sceneHighlights_overview: {}, threeJS_scene_highlights_overview: {},
@@ -26,6 +26,17 @@ test("trích đúng model, thứ tự scene, camera và highlight từ các bả
   const html = () => `<script>throw new Error('không được chạy');</script><script id="tapestry-data" type="application/json">${JSON.stringify({ t })}</script>`;
   const tour = extractTour(html());
   assert.equal(tour.modelUrl, "/petra.glb");
+  assert.equal(tour.payload.heritage.ambient_audio_url, "/day.mp3");
+  assert.equal(tour.payload.heritage.ambient_audio_alt_url, "/night.mp3");
+  assert.equal(tour.payload.heritage.transition_sfx_url, null);
+  assert.equal(tour.payload.overview.use_ambient_audio_alt, false);
+  assert.equal(tour.payload.scenes[0].use_ambient_audio_alt, true);
+  assert.equal(tour.payload.scenes[1].use_ambient_audio_alt, false);
+  delete t.tapestry.ambient_audio;
+  delete t.tapestry.ambient_audio_alt;
+  const withoutAudio = extractTour(html()).payload.heritage;
+  assert.equal(withoutAudio.ambient_audio_url, null);
+  assert.equal(withoutAudio.ambient_audio_alt_url, null);
   assert.deepEqual(tour.payload.scenes.map((s) => s.id), [617, 616]);
   assert.deepEqual(tour.payload.overview.camera.start_position, [72.361, 41.244, -30.673]);
   assert.deepEqual(tour.payload.scenes[1].camera.start_target, [14.54, 8.074, -1.886]);

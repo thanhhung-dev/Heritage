@@ -18,7 +18,15 @@ export interface DollyTarget {
 }
 
 export function createCameraController(camera: THREE.PerspectiveCamera, controls: OrbitControls) {
-  const snapshot = () => ({ position: camera.position.clone(), target: controls.target.clone(), up: camera.up.clone(), fov: camera.fov });
+  let lookAroundDistance: number | null = null;
+  let lookAroundMinDistance = controls.minDistance;
+  const lookDirection = new THREE.Vector3();
+  const snapshot = () => {
+    const target = controls.target.clone();
+    // Pose dùng cho chuyến bay/Explore giữ khoảng ngắm thật, không lưu pivot 0.1.
+    if (lookAroundDistance !== null) target.sub(camera.position).setLength(lookAroundDistance).add(camera.position);
+    return { position: camera.position.clone(), target, up: camera.up.clone(), fov: camera.fov };
+  };
   let home = snapshot();
   const adoptCurrentPose = () => {
     home = snapshot();
@@ -79,6 +87,26 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     camera.quaternion.copy(rotation);
     controls.enableDamping = damping;
   };
+  const setLookAround = (active: boolean) => {
+    if (active === (lookAroundDistance !== null) || (active && editing)) return;
+    lookDirection.copy(controls.target).sub(camera.position);
+    if (active) {
+      const distance = lookDirection.length();
+      if (distance <= 1e-6) return;
+      lookAroundDistance = distance;
+      lookAroundMinDistance = controls.minDistance;
+      // Tapestry đặt pivot 0.1 phía trước: đổi hướng nhìn, chỉ dịch mắt tối đa 0.2.
+      lookDirection.setLength(0.1);
+      controls.minDistance = Math.min(controls.minDistance, 0.1);
+    } else {
+      lookDirection.setLength(lookAroundDistance!);
+      controls.minDistance = lookAroundMinDistance;
+      lookAroundDistance = null;
+    }
+    controls.target.copy(camera.position).add(lookDirection);
+    // Xoá quán tính cũ nhưng không dịch camera khi đổi cơ chế.
+    syncControls();
+  };
   const allowPose = (position: THREE.Vector3, target: THREE.Vector3) => {
     const distance = position.distanceTo(target);
     controls.minDistance = Math.min(controls.minDistance, distance);
@@ -120,6 +148,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     if (controls.minDistance !== floor) controls.minDistance = floor;
   };
   const restore = (pose: ReturnType<typeof snapshot>, duration = 0) => {
+    setLookAround(false);
     timeline = null;
     flight = null;
     dolly = null;
@@ -153,6 +182,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     syncControls();
   };
   const applyPose = (position: THREE.Vector3, target: THREE.Vector3, fov: number, up: THREE.Vector3) => {
+    setLookAround(false);
     allowPose(position, target);
     camera.position.copy(position);
     controls.target.copy(target);
@@ -257,7 +287,9 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     snapshot,
     restore,
     adoptCurrentPose,
+    setLookAround,
     enableEditing() {
+      setLookAround(false);
       const previous = { enableZoom: controls.enableZoom, enablePan: controls.enablePan };
       editing = true;
       controls.enableZoom = true;
@@ -272,6 +304,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     reset: (duration = 0) => restore(home, duration),
     isFlying: () => flight !== null,
     startTimeline(preset: HeritageCamera, narrationSeconds: number) {
+      setLookAround(false);
       const fromPosition = toVector3(preset.start_position);
       const fromTarget = toVector3(preset.start_target);
       const toPosition = toVector3(preset.zoom_position);
@@ -541,6 +574,7 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       home = snapshot();
     },
     resize(width: number, height: number) {
+      setLookAround(false);
       const halfFov = () => Math.min(THREE.MathUtils.degToRad(camera.fov) / 2,
         Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect));
       const oldHalfFov = halfFov();
