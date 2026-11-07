@@ -102,8 +102,8 @@ services:
       LLAMA_SERVER_URL: ${LLAMA_SERVER_URL_DOCKER:-http://host.docker.internal:8080}
       OPENSEARCH_URL: ${OPENSEARCH_URL_DOCKER:-http://opensearch:9200}
       HEALTHCHECK_SKIP_MODEL: ${HEALTHCHECK_SKIP_MODEL:-0}
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@heritagegraph-db-1:5432/${POSTGRES_DB:-heritagegraph}
-      DB_HOST: heritagegraph-db-1
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}
+      DB_HOST: db
       DB_PORT: 5432
       LANGFUSE_HOST: ${LANGFUSE_HOST_DOCKER:-http://langfuse-web:3000}
     extra_hosts:
