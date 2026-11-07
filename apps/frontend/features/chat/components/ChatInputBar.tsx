@@ -10,11 +10,13 @@ interface ChatInputBarProps {
   sending: boolean;
   disabled?: boolean;
   showSuggestions?: boolean;
+  suggestions?: readonly { label: string; value: string }[];
+  contextLabel?: string;
   onChange: (value: string) => void;
   onSend: (text?: string) => void;
 }
 
-export function ChatInputBar({ value, sending, disabled = false, showSuggestions = true, onChange, onSend }: ChatInputBarProps) {
+export function ChatInputBar({ value, sending, disabled = false, showSuggestions = true, suggestions = OVERLAY_QUICK_SUGGESTIONS, contextLabel, onChange, onSend }: ChatInputBarProps) {
   const input = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { input.current?.focus(); }, []);
   useEffect(() => {
@@ -40,15 +42,18 @@ export function ChatInputBar({ value, sending, disabled = false, showSuggestions
       if (value.trim() && !sending && !disabled) onSend();
     }}>
       {showSuggestions && <div className={`${styles.suggestions} ${styles.quickSuggestions}`} aria-label="Câu hỏi gợi ý">
-        {OVERLAY_QUICK_SUGGESTIONS.map((suggestion) => (
-          <button key={suggestion.label} type="button" disabled={sending || disabled} onClick={() => onSend(suggestion.value)}>
+        {suggestions.map((suggestion) => (
+          <button key={suggestion.value} type="button" title={suggestion.value} aria-label={suggestion.value}
+            disabled={sending || disabled} onClick={() => onSend(suggestion.value)}>
             {suggestion.label}
           </button>
         ))}
       </div>}
       <div className={styles.inputRow} data-chat-input-row>
         <textarea ref={input} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}
-          placeholder="Hỏi về di sản…" aria-label="Message the heritage assistant" rows={1} maxLength={8000}
+          placeholder="Hỏi về di sản…"
+          aria-label={contextLabel ? `Hỏi về câu chuyện ${contextLabel}` : "Message the heritage assistant"}
+          rows={1} maxLength={8000}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();

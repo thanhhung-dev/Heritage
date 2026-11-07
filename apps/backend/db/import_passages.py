@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from apps.backend.services.tour_scope import resolve_area
 
 from apps.backend.core.embedding import EMBEDDING_DIMENSION, EMBEDDING_ID, embed_texts
 from apps.backend.core.search import PassageStore
@@ -39,6 +40,16 @@ async def import_passages(payload: object, *, store=None, embedder=embed_texts,
             'object_key': row.get('source_object_key') or row.get('object_key') or doc.get('object_key') or '',
             'bucket': row.get('bucket') or os.environ.get('R2_BUCKET', ''),
         }
+        document_area = doc.get('active_area_id')
+        passage_area = row.get('active_area_id')
+        if document_area is not None and passage_area is not None:
+            if resolve_area(document_area).id != resolve_area(passage_area).id:
+                raise ValueError('Khu vực passage không khớp tài liệu nguồn.')
+        area_id = passage_area if passage_area is not None else document_area
+        if area_id is not None:
+            if not isinstance(area_id, str):
+                raise ValueError('active_area_id phải là text.')
+            metadata['active_area_id'] = resolve_area(area_id).id
         if any(not isinstance(v, str) for v in metadata.values()):
             raise ValueError('Metadata passage phải là text.')
         digest = hashlib.sha256(content.encode()).hexdigest()

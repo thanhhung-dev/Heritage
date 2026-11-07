@@ -317,6 +317,10 @@
   transition: opacity .3s ease, transform .3s ease;
 }
 
+.welcomeMessage .messageText {
+  font-weight: 400;
+}
+
 .welcomeMessage[aria-hidden="true"] {
   opacity: 0;
   transform: translateY(-8px);

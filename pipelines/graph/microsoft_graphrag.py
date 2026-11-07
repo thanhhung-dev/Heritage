@@ -14,23 +14,31 @@ from contextlib import redirect_stdout
 from importlib.metadata import version
 from pathlib import Path
 
+from apps.backend.services.tour_scope import mentions_foreign_site, resolve_area
+
 PROJECT = Path(__file__).resolve().parents[2]
 VERSION = '3.3.0'
 TABLES = ('entities', 'relationships', 'communities', 'community_reports', 'text_units', 'documents')
 
 
-def export_snapshot(rows, root: Path) -> None:
+def export_snapshot(rows, root: Path, *, active_area_id: str | None = None) -> None:
     """Publish immutable OpenSearch text and its original source mapping."""
     root = root.resolve()
     if root.exists():
         raise FileExistsError('Use a new snapshot directory.')
     if not rows:
         raise ValueError('No passages selected.')
+    area = resolve_area(active_area_id) if active_area_id else None
+    if area and any(row.get('active_area_id') != area.id or mentions_foreign_site(
+            row['text'] + ' ' + row.get('location_note', ''), area) for row in rows):
+        raise ValueError('Area snapshots require exclusively tagged, in-area passages.')
     root.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.export-', dir=root.parent) as temporary:
         stage = Path(temporary) / 'snapshot'
         (stage / 'input').mkdir(parents=True)
         manifest = {'snapshot_id': uuid.uuid4().hex, 'graphrag_version': VERSION, 'documents': {}}
+        if area:
+            manifest['active_area_id'] = area.id
         for row in rows:
             identity = str(row['id'])
             filename_id = identity if re.fullmatch(r'[A-Za-z0-9_-]+', identity) else hashlib.sha256(identity.encode()).hexdigest()
@@ -42,12 +50,30 @@ def export_snapshot(rows, root: Path) -> None:
                 'content_hash': row['content_hash'], 'bucket': row.get('bucket', ''),
                 'doc': row.get('location_note') or f"Passage {row['id']}",
                 'text_sha256': hashlib.sha256(content.encode()).hexdigest(),
+                **({'active_area_id': area.id} if area else {}),
             }
         (stage / 'source-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
                                                    encoding='utf-8')
-        (stage / 'settings.yaml').write_text((PROJECT / 'graphrag/settings.example.yaml').read_text(),
+        (stage / 'settings.yaml').write_text((PROJECT / 'graphrag/settings.example.yaml').read_text(encoding='utf-8'),
                                              encoding='utf-8')
         stage.rename(root)
+
+
+def validate_area_snapshot(root: Path, active_area_id: str) -> dict:
+    """Check all input/lineage BEFORE loading or querying graph communities."""
+    area = resolve_area(active_area_id)
+    manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
+    if manifest.get('active_area_id') != area.id or not manifest.get('documents'):
+        raise ValueError('Snapshot does not belong exclusively to this area.')
+    for name, source in manifest['documents'].items():
+        if Path(name).name != name or source.get('active_area_id') != area.id:
+            raise ValueError('Snapshot document is outside the area.')
+        content = (root / 'input' / name).read_bytes()
+        if hashlib.sha256(content).hexdigest() != source['text_sha256']:
+            raise ValueError('Snapshot source text changed.')
+        if mentions_foreign_site(content.decode('utf-8') + ' ' + source.get('doc', ''), area):
+            raise ValueError('Mixed-area source in snapshot.')
+    return manifest
 
 
 def build_global_response(answer, context_reports, reports, communities, units, documents, manifest,
@@ -109,6 +135,7 @@ def build_global_response(answer, context_reports, reports, communities, units, 
                 'source_passage_ids': passage_ids,
             })
     return {'answer': answer, 'snapshot_id': manifest['snapshot_id'],
+            **({'active_area_id': manifest['active_area_id']} if manifest.get('active_area_id') else {}),
             'context_reports': selected_reports, 'sources': [sources[k] for k in sorted(sources)],
             'graph_context': graph_context,
             'source_scope': 'community_context', 'grounding_verified': False}
@@ -149,10 +176,13 @@ def configure_worker(root):
 
 
 async def index_snapshot(root):
+    manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
+    if manifest.get('active_area_id'):
+        validate_area_snapshot(root, manifest['active_area_id'])
     config = configure_worker(root)
     if (root / 'index-ready.json').exists():
         raise FileExistsError('Never reindex a published snapshot; export a new one.')
-    manifest = json.loads((root / 'source-manifest.json').read_text())
+    manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
     for name, source in manifest['documents'].items():
         if hashlib.sha256((root / 'input' / name).read_bytes()).hexdigest() != source['text_sha256']:
             raise ValueError('Exported text changed since R2 verification.')
@@ -173,8 +203,10 @@ async def index_snapshot(root):
             'tables': {name: len(table) for name, table in tables.items()}}
 
 
-async def query_snapshot(root, message, community_level):
-    if json.loads((root / 'index-ready.json').read_text()) != snapshot_hashes(root):
+async def query_snapshot(root, message, community_level, *, active_area_id=None):
+    if active_area_id:
+        validate_area_snapshot(root, active_area_id)
+    if json.loads((root / 'index-ready.json').read_text(encoding='utf-8')) != snapshot_hashes(root):
         raise ValueError('Published snapshot changed; create and index a new snapshot.')
     config = configure_worker(root)
     tables = load_tables(root)
@@ -192,7 +224,7 @@ async def query_snapshot(root, message, community_level):
     if not isinstance(answer, str) or not answer.strip() or not isinstance(context, dict):
         raise ValueError('Unsupported GraphRAG response.')
     context_reports = context['reports'].to_dict('records') if 'reports' in context else []
-    manifest = json.loads((root / 'source-manifest.json').read_text())
+    manifest = json.loads((root / 'source-manifest.json').read_text(encoding='utf-8'))
     return build_global_response(answer, context_reports,
                                  *[tables[t].to_dict('records') for t in
                                    ('community_reports', 'communities', 'text_units', 'documents')], manifest,
@@ -200,12 +232,13 @@ async def query_snapshot(root, message, community_level):
                                  relationships=tables['relationships'].to_dict('records'))
 
 
-async def export_from_search(root, limit, passage_ids):
+async def export_from_search(root, limit, passage_ids, *, active_area_id=None):
     from apps.backend.core.search import PassageStore
 
     async with PassageStore() as store:
-        rows = await store.export_passages(limit, passage_ids)
-    export_snapshot(rows, root)
+        options = {'active_area_id': resolve_area(active_area_id).id} if active_area_id else {}
+        rows = await store.export_passages(limit, passage_ids, **options)
+    export_snapshot(rows, root, active_area_id=active_area_id)
     return {'root': str(root), 'passage_count': len(rows)}
 
 
@@ -216,6 +249,7 @@ def main():
     parser.add_argument('--env-file', type=Path)
     parser.add_argument('--limit', type=int, default=10)
     parser.add_argument('--passage-ids', nargs='*', default=[])
+    parser.add_argument('--active-area-id', help='Export an exclusively area-tagged snapshot.')
     args = parser.parse_args()
     if args.limit <= 0:
         parser.error('--limit must be positive')
@@ -227,12 +261,14 @@ def main():
         # Upstream progress output must not corrupt the worker's JSON protocol.
         with redirect_stdout(sys.stderr):
             if args.command == 'export':
-                result = asyncio.run(export_from_search(root, args.limit, args.passage_ids))
+                result = asyncio.run(export_from_search(root, args.limit, args.passage_ids,
+                                                       active_area_id=args.active_area_id))
             elif args.command == 'index':
                 result = asyncio.run(index_snapshot(root))
             else:
                 request = json.load(sys.stdin)
-                result = asyncio.run(query_snapshot(root, request['message'], request.get('community_level', 0)))
+                result = asyncio.run(query_snapshot(root, request['message'], request.get('community_level', 0),
+                                                    active_area_id=request.get('active_area_id')))
         print(json.dumps(result, ensure_ascii=False))
         return 0
     except Exception as error:

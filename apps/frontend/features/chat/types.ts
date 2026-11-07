@@ -14,4 +14,7 @@ export interface Message {
   sources?: Source[];
   correctedFrom?: string;
   correctedTo?: string;
+  answerType?: string;
+  needsUserChoice?: boolean;
+  abstained?: boolean;
 }
