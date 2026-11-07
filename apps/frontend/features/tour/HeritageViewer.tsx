@@ -124,14 +124,14 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
     return () => window.clearTimeout(timer);
   }, [playbackKey]);
 
-  // Tự động phát narration khi vào scene (overview s0 hoặc sau khi bấm Next/Prev).
+  // Chỉ tự phát narration sau khi camera, màn che và SFX chuyển cảnh đã xong.
   // Trình duyệt chỉ cho autoplay sau một thao tác người dùng; ở đây người dùng đã
   // bấm "Bắt đầu trải nghiệm" hoặc nút điều hướng nên thường đã có gesture.
   // Nếu bị chặn, useNarration sẽ ghi lỗi — nuốt lỗi để không hiện cảnh báo.
   const autoplayRef = useRef(player.play);
   autoplayRef.current = player.play;
   useEffect(() => {
-    if (!hasAudio) return;
+    if (!hasAudio || isEnded || player.isSceneTransitioning || player.exploreMode !== null) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
       if (!cancelled) void autoplayRef.current().catch(() => {});
@@ -140,7 +140,7 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [hasAudio, playbackKey]);
+  }, [hasAudio, isEnded, playbackKey, player.isSceneTransitioning, player.exploreMode]);
 
   // Chuyển cảnh: màn đen mờ dần che lúc camera bay, rồi mở ra (kiểu CyArk Tapestry).
   // Dùng CSS transition của .sceneFade qua thuộc tính opacity điều khiển bằng class.

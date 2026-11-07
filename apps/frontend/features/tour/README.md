@@ -23,6 +23,12 @@ URL ambience/highlight chưa có vẫn giữ `null`: không tải audio nội du
 
 Migration mới: `apps/backend/migrations/2026-11-07_tour_audio.sql` (chưa chạy). Cần áp dụng migration sau khi được duyệt **trước khi chạy backend với models mới trên DB cũ**: initializer hiện có khả năng tự thêm cột nhưng không giữ default/nullability của ORM. Migration không điền URL hay sửa liên kết audio hiện có.
 
+## Mây động
+
+Mây trong tour dùng `scene.sky.cloudCoverage` và `cloudDensity` hiện có; một trong hai bằng 0 hoặc thiếu thì giữ trời quang. `three/clouds.ts` dựng lớp mây trôi chậm, đổi sắc theo độ cao mặt trời, nằm sau model và không dịch chuyển theo vị trí camera. Mây vẫn trôi khi Pause narration.
+
+Nền trời tiếp tục được nướng thành cubemap; PMREM/ánh sáng chỉ cập nhật khi đổi preset, không nướng lại theo chuyển động mây. Noise texture được tạo một lần, không tải thêm asset hay thư viện. Khi cảnh đứng yên, mây yêu cầu tối đa 24 frame/giây trên desktop và 15 trên mobile. Ẩn tab hoặc bật `prefers-reduced-motion` sẽ dừng chuyển động; tháo engine giải phóng geometry, material và texture.
+
 ## Dev Scene Editor
 
 Chỉ có khi chạy `npm run dev`. Trong scene, bấm **DEV · Scene Editor**, hoặc mở

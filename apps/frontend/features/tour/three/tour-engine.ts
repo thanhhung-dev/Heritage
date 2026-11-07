@@ -363,11 +363,12 @@ export function createTourEngine(
     // badge đang thu nhỏ/phình ra phải kéo theo việc vẽ tiếp, nếu không nó đứng
     // hình sau frame đầu vì vòng lặp này chỉ vẽ khi có gì đó thay đổi.
     const badgesAnimating = highlights.update(camera, delta);
+    const cloudsMoved = environment.update(delta);
 
     // `walkMoved` phải có mặt ở đây: khi đi bộ ta đã BỎ `controls.update()` nên
     // `cameraChanged` luôn false, và bước đi không tự sinh frame nào khác — thiếu
     // nó thì người dùng bấm W mà hình đứng im.
-    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating) {
+    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating || cloudsMoved) {
       renderer.render(scene, camera);
       needsRender = false;
       trackFrame(delta);

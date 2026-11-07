@@ -8,9 +8,15 @@ export function useTourAudio(ambientUrl: string | null, transitionUrl: string | 
   const ambientRef = useRef<HTMLAudioElement | null>(null);
   const transitionRef = useRef<HTMLAudioElement | null>(null);
   const exploreRef = useRef<HTMLAudioElement | null>(null);
+  const finishTransitionRef = useRef<(() => void) | null>(null);
   const transitionSource = transitionUrl || TOUR_SFX.transition.url;
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
+
+  const stopTransition = useCallback(() => {
+    finishTransitionRef.current?.();
+    transitionRef.current?.pause();
+  }, []);
 
   const startAmbient = useCallback(() => {
     const audio = ambientRef.current;
@@ -43,12 +49,13 @@ export function useTourAudio(ambientUrl: string | null, transitionUrl: string | 
     audio.muted = mutedRef.current;
     transitionRef.current = audio;
     return () => {
+      stopTransition();
       transitionRef.current = null;
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
     };
-  }, [transitionSource]);
+  }, [transitionSource, stopTransition]);
 
   useEffect(() => {
     const audio = new Audio(TOUR_SFX.exploreReveal.url);
@@ -73,13 +80,13 @@ export function useTourAudio(ambientUrl: string | null, transitionUrl: string | 
     const visibility = () => {
       if (document.hidden) {
         ambientRef.current?.pause();
-        transitionRef.current?.pause();
+        stopTransition();
         exploreRef.current?.pause();
       } else startAmbient();
     };
     document.addEventListener("visibilitychange", visibility);
     return () => document.removeEventListener("visibilitychange", visibility);
-  }, [startAmbient]);
+  }, [startAmbient, stopTransition]);
 
   const stopExploreReveal = useCallback(() => {
     const audio = exploreRef.current;
@@ -89,23 +96,39 @@ export function useTourAudio(ambientUrl: string | null, transitionUrl: string | 
   }, []);
 
   const playTransition = useCallback(() => {
+    stopTransition();
     const audio = transitionRef.current;
-    if (!audio || document.hidden) return;
+    if (!audio || document.hidden) return Promise.resolve();
     stopExploreReveal();
-    audio.pause();
     audio.currentTime = 0;
-    void audio.play().catch(() => {});
-  }, [stopExploreReveal]);
+    return new Promise<void>((resolve) => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        ["ended", "error", "abort"].forEach((event) => audio.removeEventListener(event, finish));
+        finishTransitionRef.current = null;
+        audio.pause();
+        resolve();
+      };
+      // Không để narration bị treo nếu request SFX bị kẹt mà không báo lỗi.
+      const timer = window.setTimeout(finish, 10000);
+      finishTransitionRef.current = finish;
+      ["ended", "error", "abort"].forEach((event) => audio.addEventListener(event, finish));
+      void audio.play().catch(finish);
+    });
+  }, [stopExploreReveal, stopTransition]);
 
   const playExploreReveal = useCallback(() => {
     const audio = exploreRef.current;
     if (!audio || document.hidden) return;
     // Hai SFX dùng chung không phát chồng; ambience không bị gián đoạn.
-    transitionRef.current?.pause();
+    stopTransition();
     audio.pause();
     audio.currentTime = 0;
     void audio.play().catch(() => {});
-  }, []);
+  }, [stopTransition]);
 
-  return { playTransition, playExploreReveal, stopExploreReveal };
+  return { playTransition, stopTransition, playExploreReveal, stopExploreReveal };
 }

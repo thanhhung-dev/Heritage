@@ -114,12 +114,16 @@ export default function HighlightPanel({ highlight, highlights = [], muted = fal
   const audioUrl = safeUrl(highlight.audio_url);
   const captionsUrl = safeUrl(highlight.captions_url);
   const mediaFailed = mediaUrl !== null && mediaUrl === failedMediaUrl;
-  const supportedMedia = highlight.media_type === "image" || highlight.media_type === "video";
+  // API cũ chỉ trả media_url: nhận ảnh theo pathname, không xét query/fragment.
+  const mediaType = highlight.media_type ?? (
+    mediaUrl && /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(mediaUrl.split(/[?#]/, 1)[0]) ? "image" : null
+  );
+  const supportedMedia = mediaType === "image" || mediaType === "video";
   const title = highlight.popup_title ?? "Highlight";
   const viewedCount = highlights.filter((item) => visited.includes(item.id)).length;
   const showTracker = highlights.length > 0;
   const allFound = showTracker && viewedCount === highlights.length;
-  const showVideo = !!mediaUrl && !mediaFailed && highlight.media_type === "video";
+  const showVideo = !!mediaUrl && !mediaFailed && mediaType === "video";
   const showAudio = !!audioUrl && failedAudioUrl !== audioUrl;
   return (
     <aside id="hotspot-popup" className={`${styles.hotspotPopup} ${styles.playpenInfoParent} ${collapsed ? `${styles.collapsed}${nudge ? ` ${styles.nudge}` : ""}` : ""}`}
@@ -136,7 +140,7 @@ export default function HighlightPanel({ highlight, highlights = [], muted = fal
       
       <h2 id="hotspot-popup-title" className={styles["playpenInfo-Title"]} hidden={collapsed}>{title}</h2>
       <div id="playpenInfoInner" className={styles.infoInner} hidden={collapsed}>
-        {mediaUrl && !mediaFailed && highlight.media_type === "image" && (
+        {mediaUrl && !mediaFailed && mediaType === "image" && (
           <div id="playpenInfo-ImgGroup" className={styles.infoImgGroup}>
             <button className={styles.infoImageButton} type="button" aria-label="Expand image" onClick={() => setExpandedImage(true)}>
               <Image id="playpenInfo-Img" className={`${styles.hotspotPopupMedia} ${styles["playpenInfo-Img"]}`} src={mediaUrl}
@@ -171,7 +175,7 @@ export default function HighlightPanel({ highlight, highlights = [], muted = fal
           onTimeUpdate={(event) => trackProgress(event.currentTarget)}
           onLoadedMetadata={(event) => trackProgress(event.currentTarget)} />)}
         <div id="playpenInfo-DescGroup" className={styles.infoDescGroup}>
-          <p ref={descriptionRef} id="hotspot-popup-text" className={styles["playpenInfo-Desc"]}>{highlight.popup_text}</p>
+          <p ref={descriptionRef} id="hotspot-popup-text" className={`${styles["playpenInfo-Desc"]} ${readMore ? styles.infoDescExpanded : ""}`}>{highlight.popup_text}</p>
           {highlight.media_credit && <div id="playpenInfo-credit" className={styles.infoCredit}>{highlight.media_credit}</div>}
         </div>
         {(canReadMore || readMore) && (
