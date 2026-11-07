@@ -159,11 +159,12 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
             ))}
           </div>
 
-          <div className={styles.actionsBlock}>
+         <div className={styles.actionsBlock}>
             <Button
               variant="primary"
-              className={styles.customExploreBtn}
-              onClick={handleExplore}
+              href={slug ? `/content/${slug}` : undefined}
+              onClick={onClose}
+              style={{ borderRadius: "9999px" }}
             >
               Explore
             </Button>
@@ -171,6 +172,7 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
             <Button
               className={styles.customShareBtn}
               onClick={handleShare}
+              style={{ borderRadius: "9999px" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -179,9 +181,9 @@ export const HeritageInfoModal: React.FC<HeritageInfoModalProps> = ({ item, onCl
               </svg>
               Share
             </Button>
-          </div>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };

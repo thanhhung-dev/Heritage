@@ -13,6 +13,7 @@ import {
 } from "@/features/home";
 import type { TriptychCardData } from "@/components/TriptychCard/TriptychCard";
 import { getHeritages } from "@/services/heritage.service";
+import ContentLoading from "@/components/Loading/ContentLoading";
 
 const FALLBACK_HERITAGE_ITEMS: any[] = [
   {
@@ -227,11 +228,10 @@ export default function HomePage() {
           backgroundColor: "#07090e",
         }}
       >
-        <div className="flex h-screen items-center justify-center text-white">Loading...</div>
+     <ContentLoading label="Loading heritage experiences..." />
       </div>
     );
   }
-
   return (
     <div
       style={{
