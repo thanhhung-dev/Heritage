@@ -1,17 +1,27 @@
-import { mentionsOtherTourArea } from "./tour-chat-scope.mjs";
+import { mentionsOtherTourArea, type TourArea } from "./tour-chat-scope";
 
-/** @typedef {{ label: string, value: string }} SceneSuggestion */
-/** @typedef {{ id: string, title: string }} TourArea */
-/** @typedef {{ title: string, description?: string | null }} Story */
-
-function plainText(value, limit) {
-  if (typeof value !== "string") return "";
-  return value.replace(/<[^>]*>/g, " ").replace(/https?:\/\/\S+/gi, "")
-    .replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, limit);
+export interface SceneSuggestion {
+  label: string;
+  value: string;
 }
 
-/** @param {string} subject @returns {SceneSuggestion[]} */
-function questionsFor(subject) {
+export interface Story {
+  title: string;
+  description?: string | null;
+}
+
+function plainText(value: unknown, limit: number): string {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/https?:\/\/\S+/gi, "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, limit);
+}
+
+function questionsFor(subject: string): SceneSuggestion[] {
   // Keep the four compact labels from the reference UI. The full question,
   // rather than its display label, carries the active story/heritage context.
   return [
@@ -25,17 +35,19 @@ function questionsFor(subject) {
 /**
  * Produce render-time suggestions from the active story, independent of model
  * response state. An old response can never restore an earlier story's chips.
- * @param {TourArea | null} area
- * @param {Story | null} scene
- * @param {string} sceneKey
- * @returns {{ contextLabel: string | null, suggestions: SceneSuggestion[] }}
  */
-export function buildSceneChatSuggestions(area, scene, sceneKey) {
+export function buildSceneChatSuggestions(
+  area: Pick<TourArea, "id" | "title"> | null,
+  scene: Story | null,
+  sceneKey: string,
+): { contextLabel: string | null; suggestions: SceneSuggestion[] } {
   if (!area) return { contextLabel: null, suggestions: [] };
-  if (!scene || mentionsOtherTourArea(`${scene.title} ${scene.description ?? ""}`, area.id)) return {
-    contextLabel: null,
-    suggestions: questionsFor(`di sản ${area.title}`),
-  };
+  if (!scene || mentionsOtherTourArea(`${scene.title} ${scene.description ?? ""}`, area.id)) {
+    return {
+      contextLabel: null,
+      suggestions: questionsFor(`di sản ${area.title}`),
+    };
+  }
 
   const key = plainText(sceneKey, 12);
   const title = plainText(scene.title, 64) || `Câu chuyện ${key || "hiện tại"}`;

@@ -1,17 +1,3 @@
-/**
- * Shared types for the Heritage 3D tour.
- *
- * Mirrors 1:1 the backend response schemas in
- * `apps/backend/schemas/heritage.py` (HeritageContentOut).
- *
- * Contract — `GET /api/heritages/{slug}` returns:
- *   { heritage, overview, scenes[] }
- *   - overview  : the intro scene (sequence -1), slug "s0"
- *   - scenes    : regular scenes (sequence 0..N-1), slug "s1".."sN"
- */
-
-// ── Leaf types (no forward refs) ─────────────────────────────────────────────
-
 export interface HeritageLanguage {
   code: string;
   name: string;

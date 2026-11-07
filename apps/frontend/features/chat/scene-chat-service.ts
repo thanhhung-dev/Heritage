@@ -1,4 +1,4 @@
-import { createConversationContext } from "@/lib/scene-chat-request.mjs";
+import { createConversationContext } from "@/lib/scene-chat-request";
 import { ChatApiError, sendChatMessage, type ChatMessageRequest, type ChatReply } from "@/services/chatService";
 import type { Message } from "./types";
 

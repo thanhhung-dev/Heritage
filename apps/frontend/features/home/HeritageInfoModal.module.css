@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.82);
+  background-color: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   display: flex;
@@ -16,7 +16,7 @@
   height: 825px;
   max-width: 95vw;
   max-height: 92vh;
-  background-color: #07090e;
+  background-color: #0A0E14;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.98);

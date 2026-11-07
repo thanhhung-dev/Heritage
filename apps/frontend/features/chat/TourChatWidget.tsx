@@ -4,11 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useHeritageTour } from "@/context/heritage-tour";
 import { AUTH_CHANGE_EVENT } from "@/lib/auth";
-import { resolveTourArea } from "@/lib/tour-chat-scope.mjs";
-import { buildSceneChatSuggestions } from "@/lib/scene-chat-suggestions.mjs";
+import { resolveTourArea } from "@/lib/tour-chat-scope";
+import { buildSceneChatSuggestions } from "@/lib/scene-chat-suggestions";
 import { ChatOverlayWidget } from "@/features/chat/components/ChatOverlayWidget";
 import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
-import { getConversationAccountId, useConversationSession } from "./useConversationSession";
+import { getConversationAccountId, useConversationSession } from "@/hooks/useConversationSession";
 import type { Message } from "./types";
 
 const WELCOME_MESSAGE_ID = "mila-welcome";
@@ -68,11 +68,6 @@ function AreaTourChat() {
   const overlayMessages = useMemo<ChatOverlayMessage[]>(() => chat.messages.map((message) => ({
     id: message.id, role: message.role, content: message.content,
     createdAt: message.createdAt ?? new Date(0).toISOString(),
-    citations: (message.sources ?? []).map((source, index) => ({
-      id: `${message.id}-${source.chunk_id ?? index}`, message_id: message.id,
-      source_title: source.doc ?? source.heading ?? "Nguồn tham khảo",
-      source_url: source.url ?? null, relevance_score: null,
-    })),
   })), [chat.messages]);
 
   return <ChatOverlayWidget

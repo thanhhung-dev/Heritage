@@ -7,127 +7,13 @@ import {
   DiscoverMoreSection,
   HeritageCarouselSection,
   HeritageInfoModal,
+  FALLBACK_HERITAGE_ITEMS,
   getCardImageUrl,
   selectFeaturedTriptychItems,
   type HeritageItem,
 } from "@/features/home";
 import type { TriptychCardData } from "@/components/TriptychCard/TriptychCard";
 import { getHeritages } from "@/services/heritage.service";
-
-const FALLBACK_HERITAGE_ITEMS: any[] = [
-  {
-    id: 1,
-    slug: "lang-tu-duc",
-    title: "Lăng Tự Đức",
-    region: "Huế",
-    card_image_url:
-      "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1200&q=80",
-    splash_image_url:
-      "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1200&q=80",
-    hover_video_url: "/tuc-duc-hover.mp4",
-    publish_date: "2025-01-01T00:00:00Z",
-    language1: { name: "Vietnamese" },
-    description:
-      "Khám phá Khiêm Lăng, công trình gắn liền với vua Tự Đức, thông qua không gian 3D, văn bia Khiêm Cung Ký và khu lăng mộ.",
-    voices: [
-      {
-        id: 101,
-        name: "Ngọc Ngân",
-        title: "Người thuyết minh tiếng Việt",
-        headshot_url:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-      {
-        id: 102,
-        name: "Hung Heo",
-        title: "Cultural Interpreter, Musician",
-        headshot_url:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-      {
-        id: 103,
-        name: "Hung Heo",
-        title: "Cultural Interpreter, Dancer",
-        headshot_url:
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-    ],
-  },
-  {
-    id: 2,
-    slug: "cung-an-dinh",
-    title: "Cung An Định",
-    region: "Huế",
-    card_image_url:
-      "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=1200&q=80",
-    splash_image_url:
-      "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=1200&q=80",
-    publish_date: "2025-01-01T00:00:00Z",
-    language1: { name: "Vietnamese" },
-    description:
-      "Cung An Định được vua Khải Định cho xây dựng đầu thế kỷ 20 bên bờ sông An Cựu, mang kiến trúc cung đình kết hợp phong cách châu Âu. Sau này cung gắn liền với cuộc đời Nam Phương hoàng hậu – vị hoàng hậu cuối cùng của Việt Nam.",
-    voices: [
-      {
-        id: 201,
-        name: "Hung Heo",
-        title: "Former Museum Curator",
-        headshot_url:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-      {
-        id: 202,
-        name: "Hung Heo",
-        title: "Cultural Interpreter, Musician",
-        headshot_url:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-      {
-        id: 203,
-        name: "Hung Heo",
-        title: "Cultural Interpreter, Dancer",
-        headshot_url:
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-    ],
-  },
-  {
-    id: 3,
-    slug: "ngu-hanh-son",
-    title: "Ngũ Hành Sơn",
-    region: "Đà Nẵng",
-    card_image_url:
-      "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80",
-    splash_image_url:
-      "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80",
-    publish_date: "2025-01-01T00:00:00Z",
-    language1: { name: "Vietnamese" },
-    description:
-      "Quần thể gồm sáu ngọn núi đá vôi nhô lên trên một bãi cát ven biển, nổi tiếng với các hang động huyền bí và làng đá mỹ nghệ truyền thống Non Nước.",
-    voices: [
-      {
-        id: 301,
-        name: "Hung Heo",
-        title: "Former Museum Curator",
-        headshot_url:
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-      {
-        id: 302,
-        name: "Hung Heo",
-        title: "Cultural Interpreter, Musician",
-        headshot_url:
-          "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-      {
-        id: 303,
-        name: "Hung Heo",
-        title: "Cultural Interpreter, Dancer",
-        headshot_url:
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&h=100&q=80",
-      },
-    ],
-  },
-];
 
 function preloadImage(url: string): Promise<void> {
   if (!url || typeof window === "undefined") return Promise.resolve();
@@ -181,7 +67,11 @@ export default function HomePage() {
     };
   }, []);
 
-  const sourceList = (apiItems.length > 0 ? apiItems : FALLBACK_HERITAGE_ITEMS) as unknown as HeritageItem[];
+  const sourceList = (loading
+    ? []
+    : apiItems.length > 0
+      ? apiItems
+      : FALLBACK_HERITAGE_ITEMS) as unknown as HeritageItem[];
 
   const featuredItems = sourceList.slice(0, 5);
   const artifactItems = sourceList;
@@ -214,24 +104,6 @@ export default function HomePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          position: "relative",
-          width: "100%",
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#07090e",
-        }}
-      >
-        <div className="flex h-screen items-center justify-center text-white">Loading...</div>
-      </div>
-    );
-  }
-
   return (
     <div
       style={{
@@ -243,8 +115,8 @@ export default function HomePage() {
       }}
     >
       <HeroSection
-        items={apiItems.length > 0 ? apiItems : (FALLBACK_HERITAGE_ITEMS as any)}
-        loading={false}
+        items={apiItems.length > 0 ? apiItems : (loading ? undefined : (FALLBACK_HERITAGE_ITEMS as any))}
+        loading={loading}
         onInfo={handleOpenInfoModal}
       />
 
@@ -252,6 +124,7 @@ export default function HomePage() {
         title="Featured Experiences"
         description="Curated virtual journeys and immersive stories"
         items={featuredItems}
+        loading={loading}
         onCardClick={handleOpenInfoModal}
       />
 
@@ -259,6 +132,7 @@ export default function HomePage() {
         title="Artifacts & Treasures"
         description="The tools, art, and objects that shape human history"
         items={artifactItems}
+        loading={loading}
         onCardClick={handleOpenInfoModal}
       />
 
@@ -266,6 +140,7 @@ export default function HomePage() {
         title="People & Traditions"
         description="Community members share personal stories and memories"
         items={traditionItems}
+        loading={loading}
         onCardClick={handleOpenInfoModal}
       />
 
@@ -273,6 +148,7 @@ export default function HomePage() {
         title="Festivals & Community Practices"
         description="The rituals and customs that bring heritage to life"
         items={festivalItems}
+        loading={loading}
         onCardClick={handleOpenInfoModal}
       />
 

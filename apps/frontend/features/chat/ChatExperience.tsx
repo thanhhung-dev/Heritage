@@ -10,7 +10,7 @@ import styles from "@/features/chat/chat.module.css";
 import { useHeritageTheme } from "./useHeritageTheme";
 import { HelpButton, TopBar } from "./components/TopBar";
 import { AUTH_CHANGE_EVENT } from "@/lib/auth";
-import { getConversationAccountId, useConversationSession } from "./useConversationSession";
+import { getConversationAccountId, useConversationSession } from "@/hooks/useConversationSession";
 
 const SUGGESTIONS = [...CHAT_SUGGESTIONS];
 

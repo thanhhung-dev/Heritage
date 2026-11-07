@@ -16,7 +16,7 @@ export interface ChatOverlayMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
-  citations: ChatOverlayCitation[];
+  citations?: ChatOverlayCitation[];
   needsUserChoice?: boolean;
   abstained?: boolean;
   answerType?: string | null;

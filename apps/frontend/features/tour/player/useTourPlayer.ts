@@ -15,13 +15,6 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
   captionsUrl?: string | null;
   /** Cùng điều kiện hiện gợi ý Drag to Look Around; Pause không tự mở khóa. */
   allowLookAround?: boolean;
-  /**
-   * URL đang là route điểm tương tác `/content/{slug}/{sceneKey}/int`.
-   *
-   * Truyền vào từ layout (nơi biết URL) thay vì gọi hook router ở đây: hook này
-   * được test bằng `renderToStaticMarkup` không có App Router context, mà
-   * `useRouter()` của `next/navigation` sẽ throw khi thiếu context đó.
-   */
   interactiveRoute?: boolean;
 } = {}) {
   const { engine, payload, currentSceneKey, currentScene, scenePlayback } = useHeritageTour();
@@ -80,7 +73,7 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     engine?.setPlaybackTime(0, false);
     let cancelled = false;
     setSceneError(null);
-    // Lần đầu vào s0 đặt ngay tại A; các lần chuyển scene vẫn bay mượt.
+    // Bay từ góc hiện tại tới góc mở đầu; chỉ instant_move mới đặt ngay.
     // Metadata audio đến sau sẽ bật timeline mà không hủy chuyến bay này.
     if (scenePlayback && currentScene) {
       // Timeline preset của cảnh TRƯỚC phải tắt trước: nó ghi pose mỗi frame nên

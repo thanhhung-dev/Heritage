@@ -1,12 +1,17 @@
 import { API_BASE_URL } from "@/config/api";
 import { getAccessToken } from "@/lib/auth";
-import { isConversationId, requestConversationHistory } from "@/lib/conversation-storage.mjs";
-import { requestSceneChat } from "@/lib/scene-chat-request.mjs";
+import { parseApiResponse, ApiError } from "@/lib/api";
+import { isConversationId, requestConversationHistory } from "@/lib/conversation-storage";
+import { requestSceneChat } from "@/lib/scene-chat-request";
 import { safeSourceUrl } from "@/lib/safe-source-url";
-import { validateTourReply } from "@/lib/tour-chat-scope.mjs";
+import { validateTourReply } from "@/lib/tour-chat-scope";
 import type { Message, Source } from "@/features/chat/types";
 
-export interface ChatContextMessage { role: "user" | "assistant"; content: string }
+export interface ChatContextMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface ChatMessageRequest {
   message: string;
   conversation_id?: string;
@@ -31,28 +36,35 @@ export interface ChatReply {
 }
 
 export interface ConversationSummary {
-  id: string; title: string; heritage_id: number | null; active_area_id: string | null;
-  created_at: string; updated_at: string;
+  id: string;
+  title: string;
+  heritage_id: number | null;
+  active_area_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
-export interface ConversationHistory { id: string; activeAreaId: string | null; messages: Message[]; totalMessages: number }
 
-export class ChatApiError extends Error {
-  constructor(message: string, public readonly status: number) { super(message); this.name = "ChatApiError"; }
+export interface ConversationHistory {
+  id: string;
+  activeAreaId: string | null;
+  messages: Message[];
+  totalMessages: number;
 }
+
+/**
+ * Standard Chat API Error for backward compatibility.
+ */
+export class ChatApiError extends ApiError {
+  constructor(message: string, status: number) {
+    super(message, status);
+    this.name = "ChatApiError";
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
-async function responseData(response: Response): Promise<unknown> {
-  const data: unknown = await response.json().catch(() => null);
-  if (!response.ok) {
-    const detail = isRecord(data) ? data.detail : null;
-    const text = typeof detail === "string" ? detail : isRecord(detail) && typeof detail.message === "string" ? detail.message : null;
-    throw new ChatApiError(response.status === 401
-      ? "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại."
-      : text ?? "Không thể kết nối dịch vụ chat. Vui lòng thử lại.", response.status);
-  }
-  return data;
-}
+
 function sourcesFrom(value: unknown): Source[] {
   if (!Array.isArray(value)) throw new ChatApiError("Trích dẫn từ máy chủ không đúng định dạng.", 502);
   return value.flatMap((source): Source[] => {
@@ -67,6 +79,7 @@ function sourcesFrom(value: unknown): Source[] {
     }];
   });
 }
+
 function outcomeFrom(data: Record<string, unknown>) {
   return {
     correctedFrom: typeof data.corrected_from === "string" ? data.corrected_from : undefined,
@@ -79,41 +92,79 @@ function outcomeFrom(data: Record<string, unknown>) {
 
 export async function sendChatMessage(request: ChatMessageRequest, signal?: AbortSignal): Promise<ChatReply> {
   const response = await requestSceneChat(API_BASE_URL, request, { accessToken: getAccessToken(), signal });
-  const data = await responseData(response);
-  if (!isRecord(data) || !isConversationId(data.conversation_id) || !isConversationId(data.message_id) || typeof data.answer !== "string") {
+  const data = await parseApiResponse<Record<string, unknown>>(response);
+
+  if (!isRecord(data) || typeof data.answer !== "string") {
     throw new ChatApiError("Phản hồi chat không đúng định dạng.", 502);
   }
-  const followUpQuestions = request.active_area_id ? validateTourReply(data, request.active_area_id)
-    : Array.isArray(data.follow_up_questions) ? data.follow_up_questions.filter((item): item is string => typeof item === "string").slice(0, 3) : [];
+
+  const conversationId = isConversationId(data.conversation_id)
+    ? data.conversation_id
+    : request.conversation_id || crypto.randomUUID();
+  const messageId = isConversationId(data.message_id)
+    ? data.message_id
+    : crypto.randomUUID();
+
+  const followUpQuestions =
+    request.active_area_id && data.active_area_id
+      ? validateTourReply(data, request.active_area_id)
+      : Array.isArray(data.follow_up_questions)
+        ? data.follow_up_questions.filter((item): item is string => typeof item === "string").slice(0, 3)
+        : Array.isArray(data.suggestions)
+          ? data.suggestions.filter((item): item is string => typeof item === "string").slice(0, 3)
+          : [];
+
   return {
-    conversationId: data.conversation_id, messageId: data.message_id,
-    answer: data.answer, sources: sourcesFrom(data.sources), followUpQuestions, ...outcomeFrom(data),
+    conversationId,
+    messageId,
+    answer: data.answer,
+    sources: sourcesFrom(data.sources),
+    followUpQuestions,
+    ...outcomeFrom(data),
   };
 }
 
 export async function listConversations(signal?: AbortSignal): Promise<ConversationSummary[]> {
-  const data = await responseData(await requestConversationHistory(API_BASE_URL, { limit: 100 }, { accessToken: getAccessToken(), signal }));
+  const response = await requestConversationHistory(API_BASE_URL, { limit: 100 }, { accessToken: getAccessToken(), signal });
+  const data = await parseApiResponse<unknown>(response);
   if (!Array.isArray(data)) throw new ChatApiError("Danh sách hội thoại không đúng định dạng.", 502);
   return data.filter((row): row is ConversationSummary => isRecord(row) && isConversationId(row.id) && typeof row.title === "string");
 }
 
 export async function getConversationHistory(id: string, signal?: AbortSignal, offset = 0): Promise<ConversationHistory> {
-  const data = await responseData(await requestConversationHistory(API_BASE_URL, { id, limit: 100, offset }, { accessToken: getAccessToken(), signal }));
+  const response = await requestConversationHistory(API_BASE_URL, { id, limit: 100, offset }, { accessToken: getAccessToken(), signal });
+  const data = await parseApiResponse<Record<string, unknown>>(response);
+
   if (!isRecord(data) || data.id !== id || !Array.isArray(data.messages) || typeof data.total_messages !== "number") {
     throw new ChatApiError("Lịch sử chat không đúng định dạng.", 502);
   }
+
   const messages = data.messages.map((row): Message => {
     if (!isRecord(row) || !isConversationId(row.id) || row.conversation_id !== id
         || (row.role !== "user" && row.role !== "assistant") || typeof row.content !== "string") {
       throw new ChatApiError("Tin nhắn trong lịch sử không đúng định dạng.", 502);
     }
-    return { id: row.id, role: row.role, content: row.content, sources: sourcesFrom(row.sources),
-      createdAt: typeof row.created_at === "string" ? row.created_at : undefined, ...outcomeFrom(row) };
+    return {
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      sources: sourcesFrom(row.sources),
+      createdAt: typeof row.created_at === "string" ? row.created_at : undefined,
+      ...outcomeFrom(row),
+    };
   });
-  return { id, activeAreaId: typeof data.active_area_id === "string" ? data.active_area_id : null, messages, totalMessages: data.total_messages };
+
+  return {
+    id,
+    activeAreaId: typeof data.active_area_id === "string" ? data.active_area_id : null,
+    messages,
+    totalMessages: data.total_messages,
+  };
 }
 
 export async function deleteConversation(id: string, signal?: AbortSignal): Promise<void> {
   const response = await requestConversationHistory(API_BASE_URL, { id, method: "DELETE" }, { accessToken: getAccessToken(), signal });
-  if (!response.ok) await responseData(response);
+  if (!response.ok) {
+    await parseApiResponse(response);
+  }
 }
