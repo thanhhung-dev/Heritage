@@ -227,7 +227,7 @@ export default function HomePage() {
           backgroundColor: "#07090e",
         }}
       >
-        <ContentLoading label="Loading heritage experiences…" />
+        <div className="flex h-screen items-center justify-center text-white">Loading...</div>
       </div>
     );
   }
@@ -246,7 +246,6 @@ export default function HomePage() {
         items={apiItems.length > 0 ? apiItems : (FALLBACK_HERITAGE_ITEMS as any)}
         loading={false}
         onInfo={handleOpenInfoModal}
-        onCardClick={handleOpenInfoModal}
       />
 
       <HeritageCarouselSection
