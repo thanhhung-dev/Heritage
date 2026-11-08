@@ -118,6 +118,22 @@ export function pickGLBCamera(names: string[], sequence: number, sceneCount: num
   return -1;
 }
 
+/**
+ * Kiểm tra trình duyệt có hỗ trợ WebGL hay không trước khi khởi tạo WebGLRenderer.
+ * Ở môi trường SSR/Node test (không có `window`/`document` hoặc canvas thật), trả `true`.
+ */
+export function isWebGLAvailable(): boolean {
+  if (typeof window === "undefined" || typeof document === "undefined") return true;
+  if (!("WebGLRenderingContext" in window)) return false;
+  try {
+    const canvas = document.createElement("canvas");
+    if (typeof canvas.getContext !== "function") return true;
+    return Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
 export function createTourEngine(
   host: HTMLDivElement,
   modelUrl: string,
@@ -430,6 +446,43 @@ export function createTourEngine(
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
 
+  let contextLost = false;
+  const contextListeners = new Set<(lost: boolean) => void>();
+  const notifyContextLost = (lost: boolean) => {
+    contextLost = lost;
+    for (const listener of contextListeners) listener(lost);
+  };
+  const onContextLost = (event: Event) => {
+    if (disposed) return;
+    event.preventDefault();
+    renderer.setAnimationLoop(null);
+    notifyContextLost(true);
+  };
+  const onContextRestored = () => {
+    if (disposed) return;
+    notifyContextLost(false);
+    invalidate();
+  };
+  renderer.domElement.addEventListener("webglcontextlost", onContextLost);
+  renderer.domElement.addEventListener("webglcontextrestored", onContextRestored);
+
+  let pendingSubLoads = 0;
+  const loadingListeners = new Set<(loading: boolean) => void>();
+  const trackSubLoad = async <T>(promise: Promise<T>): Promise<T> => {
+    pendingSubLoads += 1;
+    if (pendingSubLoads === 1 && !disposed) {
+      for (const listener of loadingListeners) listener(true);
+    }
+    try {
+      return await promise;
+    } finally {
+      pendingSubLoads = Math.max(0, pendingSubLoads - 1);
+      if (pendingSubLoads === 0 && !disposed) {
+        for (const listener of loadingListeners) listener(false);
+      }
+    }
+  };
+
   /** Tên node rỗng được coi là "điểm ngắm" của mọi camera trong GLB. */
   const CAMERA_TARGET_NAMES = ["cam_target", "camera_target", "cameratarget", "target"];
 
@@ -666,7 +719,7 @@ export function createTourEngine(
       try {
         // Dùng chung loader (và cache) với model: file path chỉ vài chục KB nên
         // nằm lại cache cũng không đáng kể, đổi lại là đổi cảnh không tải lại.
-        const gltf = await loader.load(url);
+        const gltf = await trackSubLoad(loader.load(url));
         // Cảnh đã đổi (hoặc engine đã đóng) trong lúc chờ ⇒ lần nạp này vô nghĩa.
         if (disposed || token !== cameraPathToken) return false;
         releaseCameraPath();
@@ -770,7 +823,21 @@ export function createTourEngine(
     },
     onHighlightSelect: highlights.subscribe,
     setSceneHighlights: (items: TimedSceneHighlight[]) =>
-      timedHighlights.set(items),
+      items.length > 0 ? trackSubLoad(timedHighlights.set(items)) : timedHighlights.set(items),
+    onContextLostChange(listener: (lost: boolean) => void) {
+      contextListeners.add(listener);
+      if (contextLost) listener(true);
+      return () => {
+        contextListeners.delete(listener);
+      };
+    },
+    onLoadingChange(listener: (loading: boolean) => void) {
+      loadingListeners.add(listener);
+      listener(pendingSubLoads > 0);
+      return () => {
+        loadingListeners.delete(listener);
+      };
+    },
     setPlaybackTime: (seconds: number, playing = false) => {
       playbackTime = seconds;
       playbackClock = seconds;
@@ -779,12 +846,16 @@ export function createTourEngine(
     },
     dispose() {
       disposed = true;
+      contextListeners.clear();
+      loadingListeners.clear();
       releaseCameraPath();
       observer.disconnect();
       renderer.setAnimationLoop(null);
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
+      renderer.domElement.removeEventListener("webglcontextrestored", onContextRestored);
       detachPointerState();
       highlights.dispose();
       timedHighlights.dispose();

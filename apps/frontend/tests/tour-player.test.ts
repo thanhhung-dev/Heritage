@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createCameraController } from "../features/tour/three/camera-controller";
-import { shouldEvaluateHover } from "../features/tour/three/tour-engine";
+import { isWebGLAvailable, shouldEvaluateHover } from "../features/tour/three/tour-engine";
 import { createExploreController } from "../features/tour/three/explore-controller";
 import {
   clampPointToExploreArea,
@@ -1625,5 +1625,36 @@ test("camera nướng trong GLB: đọc vị trí/hướng/fov và dùng điểm
     assert.equal(camera.fov, 50);
   } finally {
     controls.dispose();
+  }
+});
+
+test("isWebGLAvailable phát hiện đúng môi trường hỗ trợ hoặc thiếu WebGL", () => {
+  // Môi trường SSR/Node (không có window): trả true để không chặn render tĩnh.
+  assert.equal(isWebGLAvailable(), true);
+
+  const globals = globalThis as unknown as Record<string, unknown>;
+  const prevWindow = globals.window;
+  const prevDoc = globals.document;
+  try {
+    // Có window nhưng không có WebGLRenderingContext ⇒ báo false (#errorPage).
+    globals.window = {};
+    globals.document = { createElement: () => ({ getContext: () => null }) };
+    assert.equal(isWebGLAvailable(), false);
+
+    // Có WebGLRenderingContext nhưng getContext trả null ⇒ báo false (#errorPage).
+    globals.window = { WebGLRenderingContext: function WebGL() {} };
+    globals.document = { createElement: () => ({ getContext: () => null }) };
+    assert.equal(isWebGLAvailable(), false);
+
+    // Có WebGLRenderingContext và getContext("webgl2") trả context hợp lệ ⇒ báo true.
+    globals.document = {
+      createElement: () => ({
+        getContext: (type: string) => (type === "webgl2" ? {} : null),
+      }),
+    };
+    assert.equal(isWebGLAvailable(), true);
+  } finally {
+    globals.window = prevWindow;
+    globals.document = prevDoc;
   }
 });

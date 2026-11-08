@@ -4661,3 +4661,742 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
     transition: none;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Cinematic Bars & Autoplay Ring Details
+   ───────────────────────────────────────────────────────────── */
+
+.cinematicBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 0;
+  background-color: #000;
+  z-index: 35;
+  pointer-events: none;
+  transition: height 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cinematicBar--top {
+  top: 0;
+}
+
+.cinematicBar--bottom {
+  bottom: 0;
+}
+
+.cinematicBarActive {
+  height: 6vh;
+}
+
+.autoplay-icon-wrap {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.autoplay-ring {
+  width: 28px;
+  height: 28px;
+  transform: rotate(-90deg);
+}
+
+.autoplay-ring-bg {
+  fill: none;
+  stroke: rgba(240, 232, 221, 0.22);
+  stroke-width: 3;
+}
+
+.autoplay-ring-fill {
+  fill: none;
+  stroke: #fef0d7;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.08s linear;
+}
+
+.autoplay-icon {
+  position: absolute;
+  font-size: 9px;
+  color: #fef0d7;
+  line-height: 1;
+}
+
+.autoplay-label {
+  padding-right: 8px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile Explore Tooltip & 3D Rotate Tooltip
+   ───────────────────────────────────────────────────────────── */
+
+.exploreMobileTooltip {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.5s ease,
+    visibility 0.5s ease;
+}
+
+@media (max-width: 1000px) {
+  .exploreMobileTooltip.visible {
+    display: flex;
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.joystickTooltipIcon-wrap {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+
+.joystickTooltipText {
+  text-align: center;
+  font-weight: 400;
+  font-size: var(--font-size-14);
+  color: #fef1d7;
+  background-color: var(--white-opacity-6);
+  backdrop-filter: blur(5px) saturate(1.2);
+  -webkit-backdrop-filter: blur(5px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+  width: max-content;
+  padding: 6px 14px;
+  border-radius: 30px;
+}
+
+.rotateTooltip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.45s ease,
+    visibility 0.45s ease;
+}
+
+.rotateTooltip.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.rotateTooltipText {
+  text-align: center;
+  font-weight: 400;
+  font-size: var(--font-size-14);
+  color: #fef1d7;
+  background-color: var(--white-opacity-6, rgba(255, 255, 255, 0.06));
+  backdrop-filter: blur(5px) saturate(1.2);
+  -webkit-backdrop-filter: blur(5px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
+  padding: 6px 18px;
+  border-radius: 30px;
+}
+
+.rotateTooltipGif {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.rotateToolTip {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Media Carousel (Voices + Scene Media Items) & Interactive Strip
+   ───────────────────────────────────────────────────────────── */
+
+.mediaCarousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.carouselViewport {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+  scrollbar-width: none;
+  padding: 4px 2px;
+}
+
+.carouselViewport::-webkit-scrollbar {
+  display: none;
+}
+
+.carouselTrack {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+}
+
+.voicesList {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voiceItem {
+  display: flex;
+  align-items: center;
+}
+
+.voice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 6px;
+  border-radius: 999px;
+  background: rgba(28, 27, 26, 0.78);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  color: #f0e8dd;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.voice:hover {
+  transform: translateY(-2px);
+  border-color: rgba(240, 232, 221, 0.55);
+  background: rgba(45, 43, 41, 0.9);
+}
+
+.voiceIconSvg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.voiceAvatar {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.voiceAvatar_img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.voiceRing {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid #ff9b2d;
+  pointer-events: none;
+}
+
+.voiceText {
+  font-size: var(--font-size-12);
+  font-weight: 500;
+  color: #fef0d7;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mediaList {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mediaCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 10px;
+  background: rgba(28, 27, 26, 0.78);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  border: 1px solid rgba(240, 232, 221, 0.2);
+  color: #f0e8dd;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.mediaCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(240, 232, 221, 0.55);
+  background: rgba(45, 43, 41, 0.9);
+}
+
+.mediaCardThumbWrap {
+  position: relative;
+  width: 44px;
+  height: 34px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #2b2927;
+}
+
+.mediaCardThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mediaCardTypeIcon {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 12px;
+  height: 12px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+.mediaCardTitle {
+  font-size: var(--font-size-12);
+  color: #f0e8dd;
+  white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.intMediaCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 10px;
+  background: rgba(28, 27, 26, 0.78);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  color: #f0e8dd;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.intMediaCardActive,
+.intMediaCard:hover {
+  border-color: #ff9b2d;
+  transform: translateY(-1px);
+}
+
+.intMediaCardThumb {
+  width: 40px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
+}
+
+.intMediaCardBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 155, 45, 0.25);
+  color: #fef0d7;
+  font-size: var(--font-size-11);
+  font-weight: 600;
+}
+
+.intMediaCardTitle {
+  font-size: var(--font-size-12);
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Voice Blur Stage & PopUp Modals (#popUpParent)
+   ───────────────────────────────────────────────────────────── */
+
+.oVoiceBlurOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  pointer-events: none;
+  opacity: 0;
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  background: rgba(0, 0, 0, 0);
+  transition:
+    opacity 0.35s ease,
+    backdrop-filter 0.35s ease,
+    background 0.35s ease;
+}
+
+.oVoiceBlurOverlayActive {
+  opacity: 1;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.oVoiceStage {
+  position: fixed;
+  inset: 0;
+  z-index: 701;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.oVoiceStageActive {
+  opacity: 1;
+  background: radial-gradient(
+    circle at center,
+    rgba(254, 240, 215, 0.08) 0%,
+    transparent 65%
+  );
+}
+
+.popUpParent {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.popUpParentActive {
+  display: flex;
+  pointer-events: auto;
+}
+
+.popUpOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.closeButton {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(28, 27, 26, 0.85);
+  border: 1px solid rgba(240, 232, 221, 0.28);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.closeButton:hover {
+  transform: scale(1.08);
+  border-color: rgba(240, 232, 221, 0.6);
+}
+
+.closeButton img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(0.95);
+}
+
+.overflowPage_closeButton {
+  top: 28px;
+  right: 28px;
+}
+
+.popUpGroup {
+  position: relative;
+  z-index: 5;
+  width: min(860px, 90vw);
+  max-height: 86dvh;
+  padding: 28px;
+  border-radius: 18px;
+  background: rgba(24, 23, 22, 0.92);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  color: #f0e8dd;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.overviewVoicePop {
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+}
+
+.oLeftGroup {
+  flex-shrink: 0;
+}
+
+.oImg {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(240, 232, 221, 0.35);
+}
+
+.oRightGroup {
+  flex: 1;
+  min-width: 0;
+}
+
+.oRightTextGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popUpVoiceHeading {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  color: #fef0d7;
+}
+
+.popUpVoiceRole {
+  margin: 0;
+  font-size: var(--font-size-13);
+  color: rgba(240, 232, 221, 0.72);
+}
+
+.popUpVoiceBio {
+  margin: 4px 0 0;
+  font-size: var(--font-size-14);
+  line-height: 1.6;
+  color: rgba(240, 232, 221, 0.9);
+}
+
+.overview_video_VoicePop,
+.sceneVoicePop {
+  flex-direction: column;
+}
+
+.spVideo {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  justify-content: center;
+}
+
+.popUpVideoPlayer {
+  width: 100%;
+  max-height: 56dvh;
+  display: block;
+  background: #000;
+}
+
+.voiceCaptionSlot {
+  min-height: 20px;
+  text-align: center;
+}
+
+.voiceCaptionText {
+  font-size: var(--font-size-13);
+  color: #fef0d7;
+}
+
+.ovText,
+.spText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oLeftText_parent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.oLeft_text {
+  font-size: var(--font-size-14);
+  line-height: 1.55;
+  color: rgba(240, 232, 221, 0.85);
+}
+
+.spLeftText {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  color: #fef0d7;
+}
+
+.spRightText {
+  font-size: var(--font-size-13);
+  color: rgba(240, 232, 221, 0.75);
+  white-space: pre-line;
+}
+
+.imagePop {
+  align-items: center;
+}
+
+.iMediaItem {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f0e0d;
+}
+
+.iMediaAsset {
+  max-width: 100%;
+  max-height: 58dvh;
+  object-fit: contain;
+  display: block;
+}
+
+.iText {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iTextTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: #fef0d7;
+}
+
+.iTextCaption {
+  margin: 0;
+  font-size: var(--font-size-14);
+  line-height: 1.55;
+  color: rgba(240, 232, 221, 0.85);
+}
+
+.iTextCredit {
+  margin: 0;
+  font-size: var(--font-size-11);
+  font-style: italic;
+  color: rgba(240, 232, 221, 0.6);
+  text-align: right;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   WebGL Error & Graphics Context Lost Templates (#errorPage, #graphicsLostPage)
+   ───────────────────────────────────────────────────────────── */
+
+.errorPage {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.errorOverlay_bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.errorTextParent {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+  width: 90vw;
+  padding: 32px 36px;
+  border-radius: 18px;
+  background: rgba(28, 27, 26, 0.92);
+  border: 1px solid rgba(240, 232, 221, 0.22);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  color: #f0e8dd;
+}
+
+.errorTitle {
+  font-size: 22px;
+  font-weight: 600;
+  color: #fef0d7;
+  margin-bottom: 12px;
+}
+
+.errorText {
+  font-size: var(--font-size-14);
+  line-height: 1.6;
+  color: rgba(240, 232, 221, 0.85);
+}
+
+.errorActions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.errorReload {
+  padding: 10px 24px;
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(240, 232, 221, 0.1) 100%
+  );
+  border: 1px solid rgba(240, 232, 221, 0.35);
+  color: #fef0d7;
+  font-size: var(--font-size-13);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.errorReload:hover {
+  transform: scale(1.04);
+  border-color: #ff9b2d;
+}
+
