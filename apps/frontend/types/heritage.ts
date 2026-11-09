@@ -1,17 +1,3 @@
-/**
- * Shared types for the Heritage 3D tour.
- *
- * Mirrors 1:1 the backend response schemas in
- * `apps/backend/schemas/heritage.py` (HeritageContentOut).
- *
- * Contract — `GET /api/heritages/{slug}` returns:
- *   { heritage, overview, scenes[] }
- *   - overview  : the intro scene (sequence -1), slug "s0"
- *   - scenes    : regular scenes (sequence 0..N-1), slug "s1".."sN"
- */
-
-// ── Leaf types (no forward refs) ─────────────────────────────────────────────
-
 export interface HeritageLanguage {
   code: string;
   name: string;
@@ -100,10 +86,18 @@ export interface HeritageMediaItem {
   sort_order: number;
 }
 
+export interface GuideStory {
+  id: string;
+  label: string;
+  question: string;
+  source_ids: string[];
+}
+
 export interface HeritageInteractiveHighlight {
   id: number;
   popup_title: string | null;
   popup_text: string | null;
+  guide_stories?: GuideStory[];
   /** Thumbnail từ tour nguồn; API backend hiện chưa trả trường này. */
   thumb_url?: string | null;
   media_url: string | null;
@@ -154,7 +148,10 @@ export interface HeritageScene {
   slug: string;
   title: string;
   description: string | null;
+  guide_stories?: GuideStory[];
   sequence: number;
+  /** Track phụ (ví dụ nội thất/ban đêm); thiếu URL thì im lặng. */
+  use_ambient_audio_alt?: boolean;
   sky: HeritageSkyPreset | null;
   camera: HeritageCamera;
   voice_clips: HeritageVoiceClip[];
@@ -181,6 +178,9 @@ export interface HeritageSummary {
   headline: string | null;
   map_zoom: number | null;
   hover_video_url: string | null;
+  ambient_audio_url?: string | null;
+  ambient_audio_alt_url?: string | null;
+  transition_sfx_url?: string | null;
   community_made: boolean;
   presented_by_logo_url: string | null;
   display_map: boolean;

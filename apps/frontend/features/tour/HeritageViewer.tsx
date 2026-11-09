@@ -32,12 +32,19 @@ import sound_on from "@/access/icons/sound_on.png"
 import Pause from "@/access/icons/pause.svg"
 import Play from "@/access/icons/play.svg"
 import { useTourPlayer } from "./player/useTourPlayer";
+import { TOUR_SFX } from "./player/audio-config";
 import ExploreControls from "./components/ExploreControls";
 import ExploreInfoPanel from "./components/ExploreInfoPanel";
-import ExploreTooltip from "./components/ExploreTooltip";
+import ExploreTooltip, { RotateTooltip } from "./components/ExploreTooltip";
 import LookAroundHint from "./components/LookAroundHint";
 import MobileJoystick from "./components/MobileJoystick";
 import HighlightPanel from "./components/HighlightPanel";
+import {
+  InteractiveMediaCarousel,
+  SceneMediaCarousel,
+  TourMediaPopups,
+  type ActiveTourPopup,
+} from "./components/MediaCarousels";
 import Replay from "@/access/icons/replay.svg"
 import skip_voicer from "@/access/icons/skip_voicer.svg"
 import styles from "./styles.module.css";
@@ -49,10 +56,15 @@ const UI_ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-e
 export default function HeritageViewer({ interactiveRoute = false }: { interactiveRoute?: boolean }) {
   const { slug, sceneKey } = useParams<{ slug: string; sceneKey: string }>();
   const router = useRouter();
-  const { payload, currentScene, isModelReady } = useHeritageTour();
+  const { payload, currentScene, isModelReady, engine, modelError } = useHeritageTour();
+  const playbackKey = `${slug}/${sceneKey}`;
+  const [endedScene, setEndedScene] = useState<string | null>(null);
+  const isEnded = endedScene === playbackKey;
+  // Camera và gợi ý "Drag to Look Around" dùng cùng điều kiện mở khóa.
+  const allowLookAround = isEnded && isModelReady;
 
   // Trang thử dùng narration/VTT từ tour.json; payload backend chưa có các URL này.
-  const player = useTourPlayer({ interactiveRoute });
+  const player = useTourPlayer({ interactiveRoute, allowLookAround });
   const { isPlaying, isMuted, setIsMuted, ccOn, setCcOn } = player;
   const progress = player.duration > 0 ? player.currentTime / player.duration * 100 : 0;
   const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
@@ -62,9 +74,16 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   // UI state
   const [menuOpen, setMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activePopup, setActivePopup] = useState<ActiveTourPopup>(null);
+  const [visitedVoices, setVisitedVoices] = useState<Set<string>>(() => new Set());
+  const wasPlayingBeforePopupRef = useRef(false);
+  const [isSecondaryLoading, setIsSecondaryLoading] = useState(false);
+  const [isGraphicsLost, setIsGraphicsLost] = useState(false);
+  const isWebGLError = modelError === "WEBGL_UNSUPPORTED";
 
-  // Carousel refs
-  const intViewportRef = useRef<HTMLDivElement>(null);
+  // Timeline scrubbing state
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const isScrubbingRef = useRef(false);
 
   // Scene navigation
   const keys = sceneKeys(payload);
@@ -76,8 +95,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   // "ended" → narration chạy hết (hoặc scene không có audio): hiện Prev + Next.
   // Lưu kèm `key` = playbackKey để trạng thái cũ của scene trước KHÔNG thể rò rỉ:
   // khi sang scene mới, `endedFor` khác key ⇒ tự động coi như "idle".
-  const playbackKey = `${slug}/${sceneKey}`;
-  const [endedScene, setEndedScene] = useState<string | null>(null);
   // Scene này đã từng báo "chưa kết thúc" chưa — chặn cờ ended cũ lọt vào lúc mới vào.
   const sceneSawNotEnded = useRef(false);
   const lastPlaybackKey = useRef(playbackKey);
@@ -87,8 +104,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   }
 
   const hasAudio = player.hasAudio;
-  // Chỉ "ended" nếu trạng thái ended thuộc ĐÚNG scene hiện tại.
-  const isEnded = endedScene === playbackKey;
 
   // Vừa vào scene: tạm hiện Prev Scene trong ~2 giây đầu, sau đó mới đổi sang
   // Replay Scene. Cho người dùng thời gian ngắn để quay lại scene trước.
@@ -98,8 +113,23 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   useEffect(() => {
     // Vào scene mới: về "idle" ngay (bỏ trạng thái ended của scene trước).
     setEndedScene(null);
+    setActivePopup(null);
     sceneSawNotEnded.current = false;
   }, [playbackKey]);
+
+  useEffect(() => {
+    if (!engine) {
+      setIsSecondaryLoading(false);
+      setIsGraphicsLost(false);
+      return;
+    }
+    const offLoad = engine.onLoadingChange(setIsSecondaryLoading);
+    const offLost = engine.onContextLostChange(setIsGraphicsLost);
+    return () => {
+      offLoad();
+      offLost();
+    };
+  }, [engine]);
 
   useEffect(() => {
     // Chưa có audio (chưa gắn URL narration) thì coi như scene đã kết thúc.
@@ -122,14 +152,14 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
     return () => window.clearTimeout(timer);
   }, [playbackKey]);
 
-  // Tự động phát narration khi vào scene (overview s0 hoặc sau khi bấm Next/Prev).
+  // Chỉ tự phát narration sau khi camera, màn che và SFX chuyển cảnh đã xong.
   // Trình duyệt chỉ cho autoplay sau một thao tác người dùng; ở đây người dùng đã
   // bấm "Bắt đầu trải nghiệm" hoặc nút điều hướng nên thường đã có gesture.
   // Nếu bị chặn, useNarration sẽ ghi lỗi — nuốt lỗi để không hiện cảnh báo.
   const autoplayRef = useRef(player.play);
   autoplayRef.current = player.play;
   useEffect(() => {
-    if (!hasAudio) return;
+    if (!hasAudio || isEnded || player.isSceneTransitioning || player.exploreMode !== null) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
       if (!cancelled) void autoplayRef.current().catch(() => {});
@@ -138,7 +168,7 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [hasAudio, playbackKey]);
+  }, [hasAudio, isEnded, playbackKey, player.isSceneTransitioning, player.exploreMode]);
 
   // Chuyển cảnh: màn đen mờ dần che lúc camera bay, rồi mở ra (kiểu CyArk Tapestry).
   // Dùng CSS transition của .sceneFade qua thuộc tính opacity điều khiển bằng class.
@@ -161,6 +191,16 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   // của scene đã chạy xong mới được vào chế độ 3D.
   const showDiveInline = isEnded && player.interactive !== null && player.exploreMode === null;
   const diveLabel = player.initialExploreMode === "walk" ? "Explore in 3D" : "Dive Deeper";
+  const { playExploreReveal, stopExploreReveal } = player;
+  useEffect(() => {
+    if (!showDiveInline || !isModelReady) return;
+    // Một cue cho cả CTA desktop/mobile, chỉ khi nút thực sự được mở khóa.
+    const timer = window.setTimeout(playExploreReveal, TOUR_SFX.exploreReveal.delayMs);
+    return () => {
+      window.clearTimeout(timer);
+      stopExploreReveal();
+    };
+  }, [playbackKey, showDiveInline, isModelReady, playExploreReveal, stopExploreReveal]);
 
   // Vào/ra chế độ điểm tương tác là ĐỔI URL, không phải đổi state: đuôi `/int` là
   // nguồn sự thật duy nhất cho trạng thái đó (`lib/tour-routes.ts`). `useTourPlayer`
@@ -243,9 +283,75 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   const exploreActive = player.exploreMode !== null;
   const hotspotPlayback = exploreActive && player.selectedHighlight !== null;
 
-  const scrollCarousel = (ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) => {
-    ref.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
+  const seekToClientX = (clientX: number) => {
+    if (player.duration <= 0) return;
+    const bar = timelineRef.current;
+    if (!bar) return;
+    const rect = bar.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    if (isEnded && ratio < 0.995) {
+      sceneSawNotEnded.current = false;
+      setEndedScene(null);
+    }
+    player.seek(ratio * player.duration);
   };
+
+  const openPopup = (next: ActiveTourPopup) => {
+    if (!next) return;
+    wasPlayingBeforePopupRef.current = isPlaying;
+    if (isPlaying) player.pause();
+    if (next.kind === "overview_voice") {
+      setVisitedVoices((prev) => new Set(prev).add(`ov:${next.voice.id}`));
+    } else if (next.kind === "scene_voice") {
+      setVisitedVoices((prev) => new Set(prev).add(`clip:${next.clip.id}`));
+    }
+    setActivePopup(next);
+  };
+
+  const closePopup = () => {
+    setActivePopup(null);
+    if (wasPlayingBeforePopupRef.current && !isEnded) {
+      wasPlayingBeforePopupRef.current = false;
+      void player.play().catch(() => {});
+    }
+  };
+
+  // Autoplay indicator: đếm ngược 5 giây khi hết narration ở scene không có Dive Deeper
+  const AUTOPLAY_DURATION_MS = 5000;
+  const canAutoplayNext =
+    isEnded &&
+    hasAudio &&
+    !exploreActive &&
+    !activePopup &&
+    player.interactive === null &&
+    index >= 0 &&
+    index < keys.length - 1;
+  const [autoplayProgress, setAutoplayProgress] = useState(0);
+  const [autoplayDismissedFor, setAutoplayDismissedFor] = useState<string | null>(null);
+  const showAutoplay = canAutoplayNext && autoplayDismissedFor !== playbackKey;
+
+  useEffect(() => {
+    if (!showAutoplay) {
+      setAutoplayProgress(0);
+      return;
+    }
+    const startedAt = performance.now();
+    const interval = window.setInterval(() => {
+      const elapsedMs = performance.now() - startedAt;
+      const ratio = Math.min(1, elapsedMs / AUTOPLAY_DURATION_MS);
+      setAutoplayProgress(ratio);
+      if (ratio >= 1) {
+        window.clearInterval(interval);
+        if (index >= 0 && index < keys.length - 1) {
+          router.push(`/content/${slug}/${keys[index + 1]}`);
+        }
+      }
+    }, 50);
+    return () => window.clearInterval(interval);
+  }, [showAutoplay, index, keys, router, slug]);
+
+  const AUTOPLAY_CIRCUMFERENCE = 2 * Math.PI * 15.5;
 
   return (
     <div className={styles.viewer} style={tapestryTourVarsStyle}>
@@ -316,6 +422,62 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
         <p>{payload.heritage.region}</p>
       </footer>
 
+      {/* Top thin loading progress bar */}
+      <div
+        id="topLoadingBar"
+        className={styles.top_loading_bar}
+        style={{
+          display:
+            isSecondaryLoading || player.isSceneTransitioning ? "block" : "none",
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Cinematic top/bottom bars */}
+      <div
+        aria-hidden="true"
+        className={`${styles.cinematicBar} ${styles["cinematicBar--top"]} ${sceneFading ? styles.cinematicBarActive : ""}`}
+        id="cinematicBarTop"
+      />
+      <div
+        aria-hidden="true"
+        className={`${styles.cinematicBar} ${styles["cinematicBar--bottom"]} ${sceneFading ? styles.cinematicBarActive : ""}`}
+        id="cinematicBarBottom"
+      />
+
+      {/* Autoplay countdown indicator */}
+      <div
+        className={styles["autoplay-indicator"]}
+        id="autoplayIndicator"
+        role="status"
+        style={{ display: showAutoplay ? "flex" : "none" }}
+        onClick={() => setAutoplayDismissedFor(playbackKey)}
+      >
+        <div className={styles["autoplay-icon-wrap"]} aria-hidden="true">
+          <svg className={styles["autoplay-ring"]} viewBox="0 0 36 36">
+            <circle
+              className={styles["autoplay-ring-bg"]}
+              cx="18"
+              cy="18"
+              r="15.5"
+            />
+            <circle
+              className={styles["autoplay-ring-fill"]}
+              id="autoplayRingFill"
+              cx="18"
+              cy="18"
+              r="15.5"
+              style={{
+                strokeDasharray: `${AUTOPLAY_CIRCUMFERENCE}`,
+                strokeDashoffset: `${(1 - autoplayProgress) * AUTOPLAY_CIRCUMFERENCE}`,
+              }}
+            />
+          </svg>
+          <span className={styles["autoplay-icon"]}>▶</span>
+        </div>
+        <span className={styles["autoplay-label"]}>Autoplay</span>
+      </div>
+
       {/* Scene-transition blackout */}
       <div className={`${styles.sceneFade} ${sceneFading ? styles.sceneFadeActive : ""}`} aria-hidden="true" />
 
@@ -345,48 +507,78 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
           id="mediaStripContent"
           style={{ display: "block" }}
         >
-          {/* Interactive media carousel */}
-          <div className={styles.intMediaCarousel} id="intMediaCarousel">
-            <button
-              tabIndex={0}
-              className={`${styles.carouselArrow} ${styles.navIconBg}`}
-              id="intCarouselArrow_left"
-              aria-label="Scroll left"
-              onClick={() => scrollCarousel(intViewportRef, -1)}
-            >
-              <LeftOutlined
-                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                aria-hidden="true"
-              />
-            </button>
+          {/* Voices + media items carousel (Scene view) */}
+          <SceneMediaCarousel
+            visible={!exploreActive}
+            isOverview={sceneKey === "s0"}
+            voices={payload.heritage.voices ?? []}
+            voiceClips={scene?.voice_clips ?? []}
+            mediaItems={scene?.media ?? []}
+            visitedVoices={visitedVoices}
+            onSelectOverviewVoice={(voice) =>
+              openPopup({ kind: "overview_voice", voice })
+            }
+            onSelectSceneVoiceClip={(clip) =>
+              openPopup({ kind: "scene_voice", clip })
+            }
+            onSelectMediaItem={(item) =>
+              openPopup({ kind: "media_item", item })
+            }
+          />
 
-            <div
-              className={styles.intCarouselViewport}
-              id="intCarouselViewport"
-              ref={intViewportRef}
-            >
-              <div
-                className={styles.intMediaCarouselItems}
-                id="intMediaCarouselItems"
-              />
-            </div>
+          {/* Interactive media carousel (Explore view) */}
+          <InteractiveMediaCarousel
+            visible={exploreActive}
+            highlights={player.interactive?.highlights ?? []}
+            selectedHighlightId={player.selectedHighlight?.id ?? null}
+            onSelectHighlight={(id) => player.selectHighlight(id)}
+          />
 
-            <button
-              tabIndex={0}
-              className={`${styles.carouselArrow} ${styles.navIconBg}`}
-              id="intCarouselArrow_right"
-              aria-label="Scroll right"
-              onClick={() => scrollCarousel(intViewportRef, 1)}
-            >
-              <RightOutlined
-                className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-
-          {/* Playback timeline */}
-          <div className={styles.playbackTimeline} id="playbackTimeline">
+          {/* Playback timeline (click or drag to seek) */}
+          <div
+            ref={timelineRef}
+            className={`${styles.playbackTimeline} ${isEnded ? styles["playbackTimeline--done"] : ""}`}
+            id="playbackTimeline"
+            role="slider"
+            tabIndex={player.duration > 0 ? 0 : -1}
+            aria-label="Scene narration progress"
+            aria-valuemin={0}
+            aria-valuemax={Math.round(player.duration)}
+            aria-valuenow={Math.round(player.currentTime)}
+            style={{ cursor: player.duration > 0 ? "pointer" : "default" }}
+            onPointerDown={(event) => {
+              if (player.duration <= 0) return;
+              isScrubbingRef.current = true;
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+              seekToClientX(event.clientX);
+            }}
+            onPointerMove={(event) => {
+              if (!isScrubbingRef.current) return;
+              seekToClientX(event.clientX);
+            }}
+            onPointerUp={(event) => {
+              if (!isScrubbingRef.current) return;
+              isScrubbingRef.current = false;
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
+            }}
+            onPointerCancel={() => {
+              isScrubbingRef.current = false;
+            }}
+            onKeyDown={(event) => {
+              if (player.duration <= 0) return;
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                if (isEnded) {
+                  sceneSawNotEnded.current = false;
+                  setEndedScene(null);
+                }
+                player.seekBy(-5);
+              } else if (event.key === "ArrowRight") {
+                event.preventDefault();
+                player.seekBy(5);
+              }
+            }}
+          >
             <div
               className={styles.playbackTimelineFill}
               id="playbackTimelineFill"
@@ -921,7 +1113,7 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
           (vào chế độ 3D thì đã có tooltip điều khiển riêng). Tự tắt sau cú kéo
           canvas đầu tiên — xem `LookAroundHint`. Không có model 3D thì không có
           gì để xoay nên ẩn luôn. */}
-      <LookAroundHint hidden={!isEnded || !isModelReady || player.exploreMode !== null} />
+      <LookAroundHint key={playbackKey} hidden={!allowLookAround || player.exploreMode !== null} />
       {isEnded && isModelReady && <ExploreControls interactive={player.interactive} mode={player.exploreMode}
         onEnter={enterExplore} onReset={player.resetExplore} onExit={exitExplore}
         initialMode={player.initialExploreMode} onSelectHighlight={player.selectHighlight}
@@ -929,6 +1121,9 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       {/* Chế độ đi bộ: gợi ý điều khiển giữa màn hình + panel giới thiệu bên phải.
           Bản gốc cũng bật hai thứ này cùng lúc với việc vào `free_explore`. */}
       {player.exploreMode === "walk" && <ExploreTooltip key={`tip-${playbackKey}`} />}
+      {(player.exploreMode === "standard" || player.exploreMode === "free") && (
+        <RotateTooltip key={`rot-${playbackKey}`} />
+      )}
       {player.exploreMode === "walk" && <ExploreInfoPanel key={`info-${playbackKey}`}
         title={player.exploreTitle} description={player.exploreDescription} />}
       {/* Đi bộ trên mobile: không có WASD nên thay bằng cần gạt ảo. CSS chỉ bật
@@ -936,7 +1131,67 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       {player.exploreMode === "walk" && <MobileJoystick
         onChange={player.setWalkStick} onRelease={player.releaseWalkStick} />}
       <HighlightPanel key={player.interactive?.id} highlight={player.selectedHighlight}
-        highlights={player.interactive?.highlights} onClose={player.closeHighlight} />
+        highlights={player.interactive?.highlights} muted={isMuted} onClose={player.closeHighlight} />
+      <TourMediaPopups activePopup={activePopup} muted={isMuted} onClose={closePopup} />
+
+      {/* WebGL check failed template (#errorPage) */}
+      <div
+        className={styles.errorPage}
+        id="errorPage"
+        role="alert"
+        style={{ display: isWebGLError ? "flex" : "none" }}
+      >
+        <div className={styles.errorOverlay_bg} id="errorOverlay_bg" />
+        <div className={styles.errorTextParent} id="errorTextParent">
+          <div className={styles.errorTitle} id="errorTitle">
+            WebGL check failed
+          </div>
+          <div className={styles.errorText} id="errorText">
+            To display a Tapestry in 3D we rely on{" "}
+            <a
+              href="https://en.wikipedia.org/wiki/WebGL"
+              target="_blank"
+              rel="noreferrer"
+            >
+              WebGL
+            </a>
+            , a standard rendering library in most modern browsers. Your browser
+            appears to be incompatible or WebGL has been disabled. Please refer
+            to your browser&apos;s documentation to enable WebGL or hardware
+            acceleration.
+          </div>
+        </div>
+      </div>
+
+      {/* WebGL graphics context lost template (#graphicsLostPage) */}
+      <div
+        className={styles.errorPage}
+        id="graphicsLostPage"
+        role="alert"
+        style={{ display: isGraphicsLost ? "flex" : "none" }}
+      >
+        <div className={styles.errorOverlay_bg} />
+        <div className={styles.errorTextParent}>
+          <div className={styles.errorTitle}>Graphics stopped responding</div>
+          <div className={styles.errorText}>
+            Your browser&apos;s 3D graphics stopped while playing this tour and
+            did not recover automatically. This usually means the device ran low
+            on graphics memory or the browser paused the page. Try closing other
+            tabs and reload the tour.
+          </div>
+          <div className={styles.errorActions}>
+            <button
+              type="button"
+              className={styles.errorReload}
+              id="graphicsLostReload"
+              onClick={() => window.location.reload()}
+            >
+              Reload the tour
+            </button>
+          </div>
+        </div>
+      </div>
+
       {(player.error || player.captionsError) && <p className={styles.playerError} role="alert">{player.error || player.captionsError}</p>}
     </div>
   );

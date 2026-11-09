@@ -293,6 +293,40 @@ class ObservabilityTests(unittest.TestCase):
         self.assertIsNone(_langfuse_client())
         _langfuse_client.cache_clear()
 
+    @patch("langfuse.Langfuse")
+    @patch.dict(
+        "os.environ",
+        {
+            "LANGFUSE_ENABLED": "true",
+            "LANGFUSE_PUBLIC_KEY": "pk-lf-test",
+            "LANGFUSE_SECRET_KEY": "sk-lf-test",
+            "LANGFUSE_HOST": "http://localhost:3003",
+            "LANGFUSE_TIMEOUT": "45",
+        },
+        clear=False,
+    )
+    def test_langfuse_client_respects_timeout_and_shuts_down_safely(
+        self, langfuse_cls: Mock
+    ) -> None:
+        from apps.backend.core.observability import _langfuse_client, shutdown_langfuse
+
+        _langfuse_client.cache_clear()
+        instance = Mock()
+        langfuse_cls.return_value = instance
+
+        client = _langfuse_client()
+        self.assertIs(client, instance)
+        langfuse_cls.assert_called_once_with(
+            public_key="pk-lf-test",
+            secret_key="sk-lf-test",
+            host="http://localhost:3003",
+            timeout=45,
+        )
+
+        shutdown_langfuse()
+        instance.shutdown.assert_called_once_with()
+        self.assertEqual(_langfuse_client.cache_info().currsize, 0)
+
     @patch(
         "apps.backend.api.chat.generate_response",
         side_effect=RuntimeError("token=private-dependency-secret"),

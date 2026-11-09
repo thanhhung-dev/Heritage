@@ -17,6 +17,9 @@ Set-Location -Path $PSScriptRoot
 
 $python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
 if (-not (Test-Path $python)) {
+    $python = Join-Path (Split-Path $PSScriptRoot -Parent) ".venv\Scripts\python.exe"
+}
+if (-not (Test-Path $python)) {
     Write-Host "ERROR: khong thay .venv\Scripts\python.exe" -ForegroundColor Red
     Write-Host "  python -m venv .venv" -ForegroundColor Yellow
     Write-Host "  .venv\Scripts\pip install -r apps\backend\requirements.txt" -ForegroundColor Yellow
@@ -28,3 +31,4 @@ if ($Port -gt 0) { $cliArgs += @("--port", "$Port") }
 
 Write-Host "Starting Heritage Backend API..." -ForegroundColor Cyan
 & $python @cliArgs
+exit $LASTEXITCODE

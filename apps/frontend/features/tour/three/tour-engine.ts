@@ -118,6 +118,22 @@ export function pickGLBCamera(names: string[], sequence: number, sceneCount: num
   return -1;
 }
 
+/**
+ * Kiểm tra trình duyệt có hỗ trợ WebGL hay không trước khi khởi tạo WebGLRenderer.
+ * Ở môi trường SSR/Node test (không có `window`/`document` hoặc canvas thật), trả `true`.
+ */
+export function isWebGLAvailable(): boolean {
+  if (typeof window === "undefined" || typeof document === "undefined") return true;
+  if (!("WebGLRenderingContext" in window)) return false;
+  try {
+    const canvas = document.createElement("canvas");
+    if (typeof canvas.getContext !== "function") return true;
+    return Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
 export function createTourEngine(
   host: HTMLDivElement,
   modelUrl: string,
@@ -146,7 +162,8 @@ export function createTourEngine(
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.maxPolarAngle = Math.PI / 2;
+  // Tapestry: damping 0.08, giữ miền xoay dọc mặc định 0 → π của OrbitControls.
+  controls.dampingFactor = 0.08;
   // Scene view chỉ "kéo để nhìn quanh": không zoom, không pan. Chế độ 3D
   // (`enterExplore`) tự bật lại zoom — xem `explore-controller`.
   controls.enableZoom = false;
@@ -178,6 +195,8 @@ export function createTourEngine(
   let playbackClock = 0;
   let playbackSynced = 0;
   let playbackPlaying = false;
+  let sceneLookAround = false;
+  let sceneLookAroundAllowed = false;
 
   const syncPlayback = () => {
     playbackClock = playbackTime;
@@ -321,9 +340,12 @@ export function createTourEngine(
     const pathMoved = updateCameraPath(playbackClock);
     const cameraDriven = cameraFlying || dollyMoved || timelineMoved || pathMoved;
 
- 
     const walking = explore.isWalking();
     const walkMoved = walking ? explore.updateWalk(delta) : false;
+    const looking = sceneLookAround && sceneLookAroundAllowed && !playbackPlaying && !cameraDriven && !walking;
+    cameraController.setLookAround(looking);
+    // Chỉ mở xoay khi scene cho hiện gợi ý nhìn quanh, không phải mỗi khi Pause.
+    if (sceneLookAround) controls.enableRotate = looking;
     const cameraChanged = cameraDriven || walking ? false : controls.update();
     // Ăn pose mà OrbitControls vừa tính (damping, quay tay) để frame sau không giật
     // về pose cũ khi camera đang/đã dí gần badge.
@@ -357,11 +379,12 @@ export function createTourEngine(
     // badge đang thu nhỏ/phình ra phải kéo theo việc vẽ tiếp, nếu không nó đứng
     // hình sau frame đầu vì vòng lặp này chỉ vẽ khi có gì đó thay đổi.
     const badgesAnimating = highlights.update(camera, delta);
+    const cloudsMoved = environment.update(delta);
 
     // `walkMoved` phải có mặt ở đây: khi đi bộ ta đã BỎ `controls.update()` nên
     // `cameraChanged` luôn false, và bước đi không tự sinh frame nào khác — thiếu
     // nó thì người dùng bấm W mà hình đứng im.
-    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating) {
+    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating || cloudsMoved) {
       renderer.render(scene, camera);
       needsRender = false;
       trackFrame(delta);
@@ -422,6 +445,43 @@ export function createTourEngine(
   renderer.domElement.addEventListener("pointermove", onPointerMove);
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
+
+  let contextLost = false;
+  const contextListeners = new Set<(lost: boolean) => void>();
+  const notifyContextLost = (lost: boolean) => {
+    contextLost = lost;
+    for (const listener of contextListeners) listener(lost);
+  };
+  const onContextLost = (event: Event) => {
+    if (disposed) return;
+    event.preventDefault();
+    renderer.setAnimationLoop(null);
+    notifyContextLost(true);
+  };
+  const onContextRestored = () => {
+    if (disposed) return;
+    notifyContextLost(false);
+    invalidate();
+  };
+  renderer.domElement.addEventListener("webglcontextlost", onContextLost);
+  renderer.domElement.addEventListener("webglcontextrestored", onContextRestored);
+
+  let pendingSubLoads = 0;
+  const loadingListeners = new Set<(loading: boolean) => void>();
+  const trackSubLoad = async <T>(promise: Promise<T>): Promise<T> => {
+    pendingSubLoads += 1;
+    if (pendingSubLoads === 1 && !disposed) {
+      for (const listener of loadingListeners) listener(true);
+    }
+    try {
+      return await promise;
+    } finally {
+      pendingSubLoads = Math.max(0, pendingSubLoads - 1);
+      if (pendingSubLoads === 0 && !disposed) {
+        for (const listener of loadingListeners) listener(false);
+      }
+    }
+  };
 
   /** Tên node rỗng được coi là "điểm ngắm" của mọi camera trong GLB. */
   const CAMERA_TARGET_NAMES = ["cam_target", "camera_target", "cameratarget", "target"];
@@ -549,7 +609,17 @@ export function createTourEngine(
   };
 
   return {
- 
+    /** Temporary authoring controls; cleanup restores the normal tour's locks. */
+    enableCameraEditing: cameraController.enableEditing,
+
+    setSceneLookAround(active: boolean, allowed = false) {
+      sceneLookAround = active;
+      sceneLookAroundAllowed = allowed;
+      if (!active || !allowed) cameraController.setLookAround(false);
+      controls.enableRotate = !active || (allowed && !playbackPlaying);
+      invalidate();
+    },
+
     enterExplore(mode: ExploreMode, eyeHeight?: number) {
       // Pose trước khi vào Explore là "góc về" khi người dùng bấm Reset.
       cameraController.adoptCurrentPose();
@@ -649,7 +719,7 @@ export function createTourEngine(
       try {
         // Dùng chung loader (và cache) với model: file path chỉ vài chục KB nên
         // nằm lại cache cũng không đáng kể, đổi lại là đổi cảnh không tải lại.
-        const gltf = await loader.load(url);
+        const gltf = await trackSubLoad(loader.load(url));
         // Cảnh đã đổi (hoặc engine đã đóng) trong lúc chờ ⇒ lần nạp này vô nghĩa.
         if (disposed || token !== cameraPathToken) return false;
         releaseCameraPath();
@@ -753,7 +823,21 @@ export function createTourEngine(
     },
     onHighlightSelect: highlights.subscribe,
     setSceneHighlights: (items: TimedSceneHighlight[]) =>
-      timedHighlights.set(items),
+      items.length > 0 ? trackSubLoad(timedHighlights.set(items)) : timedHighlights.set(items),
+    onContextLostChange(listener: (lost: boolean) => void) {
+      contextListeners.add(listener);
+      if (contextLost) listener(true);
+      return () => {
+        contextListeners.delete(listener);
+      };
+    },
+    onLoadingChange(listener: (loading: boolean) => void) {
+      loadingListeners.add(listener);
+      listener(pendingSubLoads > 0);
+      return () => {
+        loadingListeners.delete(listener);
+      };
+    },
     setPlaybackTime: (seconds: number, playing = false) => {
       playbackTime = seconds;
       playbackClock = seconds;
@@ -762,12 +846,16 @@ export function createTourEngine(
     },
     dispose() {
       disposed = true;
+      contextListeners.clear();
+      loadingListeners.clear();
       releaseCameraPath();
       observer.disconnect();
       renderer.setAnimationLoop(null);
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
+      renderer.domElement.removeEventListener("webglcontextrestored", onContextRestored);
       detachPointerState();
       highlights.dispose();
       timedHighlights.dispose();

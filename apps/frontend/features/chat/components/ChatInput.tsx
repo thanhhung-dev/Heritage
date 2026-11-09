@@ -12,6 +12,7 @@ interface ChatInputProps {
   onSubmit: () => void;
   placeholder?: string;
   loading?: boolean;
+  allowAttachments?: boolean;
 }
 
 export default function ChatInput({
@@ -20,6 +21,7 @@ export default function ChatInput({
   onSubmit,
   placeholder = "Nhắn tin...",
   loading,
+  allowAttachments = true,
 }: ChatInputProps) {
   const [open, setOpen] = useState(false);
 
@@ -81,11 +83,11 @@ export default function ChatInput({
       value={value}
       onChange={onChange}
       onSubmit={() => {
-        if (value.trim() || items.length > 0) {
+      if (value.trim() || (allowAttachments && items.length > 0)) {
           onSubmit();
         }
       }}
-      header={senderHeader}
+      header={allowAttachments ? senderHeader : undefined}
       placeholder={placeholder}
       loading={loading}
     />

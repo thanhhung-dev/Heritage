@@ -6,6 +6,41 @@
 
 Three.js và types đã cài. Model Tự Đức load trực tiếp từ R2 (`https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/TuDuc/TuDuckt.glb`, lưu trong `model_asset.file_url`) — bucket đã bật CORS cho origin của app nên không cần rewrite qua Next nữa. Nếu đổi sang custom domain thì nhớ thêm host đó vào `R2_ALLOWED_ASSET_HOSTS`. Decoder KTX2/Basis ở `public/three/basis/`, Draco glTF ở `public/three/draco/` (kèm license).
 
+## Audio môi trường, chuyển cảnh và highlight
+
+API `/api/heritages/{slug}/tour` và fixture `tour.json` dùng cùng contract:
+
+- `payload.heritage.ambient_audio_url`: ambience chính (ví dụ ngoại thất), phát lặp trong player, không dừng khi Pause narration.
+- `payload.heritage.ambient_audio_alt_url`: ambience phụ (ví dụ nội thất). Scene có `use_ambient_audio_alt: true` chọn track này; overview cũng hỗ trợ cờ đó. Tapestry Petra dùng hai track ngày/đêm, không phải hai track ngoại thất/nội thất.
+- `payload.heritage.transition_sfx_url`: URL whoosh riêng của di sản, nếu có thì ưu tiên hơn SFX chung. Thiếu/rỗng thì frontend dùng whoosh mặc định trong `player/audio-config.ts`; không cần gán URL cho từng di sản. Phát khi camera bay giữa scene/góc nhìn/điểm tương tác, âm lượng 20%; không phát lúc mở s0 lần đầu hoặc chuyển scene tức thì.
+- `scene.interactive[].highlights[].audio_url`: tự phát khi mở popup; dừng khi đóng, đổi highlight/scene hoặc thu gọn panel. Nếu trình duyệt chặn autoplay, người xem vẫn bấm Play trong popup được.
+
+SFX giao diện dùng chung ở `player/audio-config.ts`: `new_whoosh.mp3` cho chuyển camera và `explore_more.mp3` báo nút Dive Deeper/Explore in 3D xuất hiện. Cue xuất hiện trễ 700 ms, âm lượng 20%, chỉ phát một lần mỗi lần CTA được mở khóa (dùng chung cho desktop/mobile). Pause narration không mở CTA và không phát cue; kết thúc/Skip mới mở. Đổi scene, Replay, vào 3D hoặc rời player sẽ hủy timer và dừng cue cũ. Mute/unmute không phát lại cue. Hai SFX không phát chồng nhau, không dừng ambience. Chưa thêm âm thanh bước chân/orb. Hai URL mặc định vẫn tải từ host Tapestry bên ngoài; khi có asset được phép sử dụng trên R2 của dự án thì thay tại cấu hình chung, không cần thêm bảng/migration.
+
+Mute chung áp dụng cho narration, ambience, SFX và media trong popup. Đổi scene cùng track không tua ambience về đầu; đổi track dừng track cũ. Ẩn tab dừng ambience/SFX và popup media; quay lại chỉ ambience tự tiếp tục. Tháo player giải phóng audio và listeners. Ambience bị chặn autoplay sẽ thử lại ở thao tác tiếp theo.
+
+URL ambience/highlight chưa có vẫn giữ `null`: không tải audio nội dung, không lấy track ambience kia thay thế và không mượn audio Petra cho Tự Đức. Chỉ hai SFX giao diện có mặc định dùng chung như trên. Trường mới optional ở frontend để đọc được API cũ. Backend chuẩn hóa URL riêng trong DB qua `AssetUrlPolicy`; có thể lưu R2 object key hoặc URL thuộc host được cho phép. URL SFX mặc định thuộc cấu hình frontend, không đi qua AssetUrlPolicy của backend.
+
+Migration mới: `apps/backend/migrations/2026-11-07_tour_audio.sql` (chưa chạy). Cần áp dụng migration sau khi được duyệt **trước khi chạy backend với models mới trên DB cũ**: initializer hiện có khả năng tự thêm cột nhưng không giữ default/nullability của ORM. Migration không điền URL hay sửa liên kết audio hiện có.
+
+## Mây động
+
+Mây trong tour dùng `scene.sky.cloudCoverage` và `cloudDensity` hiện có; một trong hai bằng 0 hoặc thiếu thì giữ trời quang. `three/clouds.ts` dựng lớp mây trôi chậm, đổi sắc theo độ cao mặt trời, nằm sau model và không dịch chuyển theo vị trí camera. Mây vẫn trôi khi Pause narration.
+
+Nền trời tiếp tục được nướng thành cubemap; PMREM/ánh sáng chỉ cập nhật khi đổi preset, không nướng lại theo chuyển động mây. Noise texture được tạo một lần, không tải thêm asset hay thư viện. Khi cảnh đứng yên, mây yêu cầu tối đa 24 frame/giây trên desktop và 15 trên mobile. Ẩn tab hoặc bật `prefers-reduced-motion` sẽ dừng chuyển động; tháo engine giải phóng geometry, material và texture.
+
+## Dev Scene Editor
+
+Chỉ có khi chạy `npm run dev`. Trong scene, bấm **DEV · Scene Editor**, hoặc mở
+`/content/lang-tu-duc/s1?dev=scene`. Production bỏ qua tham số này và vẫn hiện tour thường.
+
+- Chọn A hoặc B để xem góc đã lưu; xoay/kéo/zoom model rồi bấm **Lấy góc … từ camera** để chụp góc mới. Có thể chỉnh Position, Target và FOV (Enter hoặc blur để áp dụng).
+- Lấy đủ A/B rồi bấm Play hoặc kéo timeline. Scene có narration dùng thời lượng và đồng hồ audio thật, không autoplay khi vào editor. Scene không có audio cho nhập thời lượng preview.
+- Scene dùng `camera.path_url` cần chủ động **Chuyển sang A → B** trước khi chỉnh. Chỉ bản nháp đổi; path gốc không bị xóa.
+- **Lưu nháp** lưu riêng theo di sản + scene ID + scene key trong localStorage của trình duyệt hiện tại. **Xuất JSON** tải tài liệu `*.scene-draft.json` có version, định danh scene, nội dung, hai pose và thời lượng; đây **không phải** payload cập nhật API. Chưa có import hoặc publish vào backend.
+- **Khôi phục** đưa editor về dữ liệu gốc, chưa ghi đè bản nháp đã lưu. **Thoát Dev** mở player thường từ dữ liệu gốc. Thay đổi chưa lưu được cảnh báo khi bấm đổi scene/thoát hoặc reload/đóng tab.
+- Editor thay thế `HeritageViewer`, dùng lại canvas/engine đang có; không mount đồng thời hai player ghi camera. Khi rời editor, dừng preview, audio và camera path.
+
 ## Chạy thử dữ liệu Tapestry
 
 Mở `/content/tapestry-test`, chờ tải rồi Bắt đầu trải nghiệm. Trang này đọc `features/tour/tour.json`, không gọi backend và không dùng tọa độ Petra cho model Tự Đức.

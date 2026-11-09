@@ -18,6 +18,9 @@
       "headline": "Journey to Ad-Deir: Petra’s Largest Carved Monument",
       "map_zoom": 12,
       "hover_video_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/petra_hover_2_compressed.mp4",
+      "ambient_audio_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Ambient/petra_desert_day.mp3",
+      "ambient_audio_alt_url": "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/petra-data/Ambient/petra_desert_night.mp3",
+      "transition_sfx_url": null,
       "community_made": false,
       "presented_by_logo_url": null,
       "display_map": false,
@@ -70,6 +73,7 @@
     "overview": {
       "id": 164,
       "slug": "s0",
+      "use_ambient_audio_alt": false,
       "title": "Ad Deir Monastery",
       "description": "Explore Petra’s iconic Ad Deir Monastery through detailed 3D scenes and expert insights. Discover its architecture, cultural fusion, and spiritual legacy in this guided virtual experience.",
       "sequence": -1,
@@ -108,6 +112,7 @@
       {
         "id": 616,
         "slug": "s1",
+        "use_ambient_audio_alt": true,
         "title": "Where the Desert Came to Life",
         "description": "Petra, once called Raqmu, thrived as a crossroads of trade where the Nabataeans turned desert into life. Masters of water and stone, they built hidden channels and vibrant architecture, reminders of a people who connected worlds through ingenuity and resilience.",
         "sequence": 0,
@@ -455,6 +460,7 @@
       {
         "id": 617,
         "slug": "s2",
+        "use_ambient_audio_alt": false,
         "title": "Climbing to Purpose",
         "description": "The climb to Ad Deir winds past sandstone alive with color and echoes of ancient trade. At the summit, its vast façade stirs awe, a reminder of Nabataean mastery. Beyond, trails descend into wadis, desert valleys that lie dry until rains briefly bring them to life.",
         "sequence": 1,
@@ -725,6 +731,7 @@
       {
         "id": 618,
         "slug": "s3",
+        "use_ambient_audio_alt": false,
         "title": "The Stories of Trade",
         "description": "From the hills above Petra, one can imagine caravans below, markets alive with voices, and goods from across the world. The Nabataeans thrived through trade and trust. Today, their descendants feel pride in this heritage and their role as its protectors.",
         "sequence": 2,
@@ -1000,6 +1007,7 @@
       {
         "id": 622,
         "slug": "s4",
+        "use_ambient_audio_alt": false,
         "title": "The Silence Inside",
         "description": "Inside Ad Deir, torchlight reveals interior features rarely seen clearly. Carved niches and subtle decorations suggest the chamber was used for rituals or contemplation, highlighting its spiritual importance to the Nabatean people.",
         "sequence": 3,
@@ -1245,6 +1253,7 @@
       {
         "id": 623,
         "slug": "s5",
+        "use_ambient_audio_alt": false,
         "title": "Engineering the Impossible",
         "description": "North of the Monastery, carved channels and hidden cisterns reveal engineering marvels. The Nabataeans captured every drop of rain, slowing floods with terraces and dams, turning desert to life. Today, as flash floods grow more severe, these ancient methods guide efforts to protect Petra’s future.",
         "sequence": 4,
@@ -1540,6 +1549,7 @@
       {
         "id": 703,
         "slug": "s6",
+        "use_ambient_audio_alt": false,
         "title": "A Place Still Lived In",
         "description": "Petra is more than stone, it has long been home. Bedouin families lived in its carved spaces, guided travelers, and passed down stories. Their roots run deep, like trees among the rocks. To protect Petra is also to honor its descendants -  proud stewards of this living heritage.",
         "sequence": 5,
@@ -1722,6 +1732,7 @@
       {
         "id": 704,
         "slug": "s7",
+        "use_ambient_audio_alt": false,
         "title": "Petra’s Future Is in Our Hands",
         "description": "Petra’s future rests on choices we make today. Visitors help by walking marked trails, leaving no trace, and respecting its stones. True preservation also means valuing local communities, sharing food, music, and stories. To protect Petra is to honor both place and people.",
         "sequence": 6,

@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Spin, Empty, Button, Result } from 'antd';
-import { LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Empty, Button, Result } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
+import ContentLoading from '@/components/Loading/ContentLoading';
 import styles from './states.module.css';
 
 interface LoadingStateProps {
@@ -14,10 +15,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   tip = 'Đang tải…',
   className = '',
 }) => (
-  <div className={`${styles.loading} ${className}`} role="status" aria-live="polite" aria-atomic="true">
-    <span className={styles.srOnly}>{tip}</span>
-    <span aria-hidden="true"><Spin size="large" indicator={<LoadingOutlined spin />} /></span>
-  </div>
+  <ContentLoading className={`${styles.loading} ${className}`} label={tip} />
 );
 
 interface EmptyStateProps {

@@ -7,7 +7,7 @@ export interface ButtonProps {
   children?: ReactNode;
   href?: string;
   onClick?: () => void;
-  variant?: "primary";
+  variant?: "primary" | "secondary";
   className?: string;
   style?: CSSProperties;
   target?: string;
@@ -22,7 +22,7 @@ export function Button({
   style,
   target,
 }: ButtonProps) {
-  const variantClass = variant === "primary" ? styles.primary : "";
+  const variantClass = styles[variant];
   const classes = [styles.btn, variantClass, className]
     .filter(Boolean)
     .join(" ");
@@ -35,6 +35,7 @@ export function Button({
         rel={target === "_blank" ? "noopener" : undefined}
         className={classes}
         style={style}
+        onClick={onClick}
       >
         {children}
       </a>

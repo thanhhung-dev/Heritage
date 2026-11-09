@@ -26,9 +26,10 @@ const NUDGE_INTERVAL_MS = 10_000;
  *   │  └─ nhóm nút Read More / Read Less
  *   └─ orbTracker              ← ghim tuyệt đối ở đáy panel, ngoài vùng cuộn
  */
-export default function HighlightPanel({ highlight, highlights = [], onClose }: {
+export default function HighlightPanel({ highlight, highlights = [], muted = false, onClose }: {
   highlight: HeritageInteractiveHighlight | null;
   highlights?: HeritageInteractiveHighlight[];
+  muted?: boolean;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -61,7 +62,14 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
     const frame = requestAnimationFrame(() => closeRef.current?.focus());
     const video = videoRef.current;
     const audio = audioRef.current;
-    return () => { cancelAnimationFrame(frame); video?.pause(); audio?.pause(); };
+    const visibility = () => { if (document.hidden) { video?.pause(); audio?.pause(); } };
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      document.removeEventListener("visibilitychange", visibility);
+      cancelAnimationFrame(frame);
+      video?.pause();
+      audio?.pause();
+    };
   }, [highlightId]);
   useEffect(() => {
     if (!collapsed) { setNudge(false); return; }
@@ -106,12 +114,16 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
   const audioUrl = safeUrl(highlight.audio_url);
   const captionsUrl = safeUrl(highlight.captions_url);
   const mediaFailed = mediaUrl !== null && mediaUrl === failedMediaUrl;
-  const supportedMedia = highlight.media_type === "image" || highlight.media_type === "video";
+  // API cũ chỉ trả media_url: nhận ảnh theo pathname, không xét query/fragment.
+  const mediaType = highlight.media_type ?? (
+    mediaUrl && /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(mediaUrl.split(/[?#]/, 1)[0]) ? "image" : null
+  );
+  const supportedMedia = mediaType === "image" || mediaType === "video";
   const title = highlight.popup_title ?? "Highlight";
   const viewedCount = highlights.filter((item) => visited.includes(item.id)).length;
   const showTracker = highlights.length > 0;
   const allFound = showTracker && viewedCount === highlights.length;
-  const showVideo = !!mediaUrl && !mediaFailed && highlight.media_type === "video";
+  const showVideo = !!mediaUrl && !mediaFailed && mediaType === "video";
   const showAudio = !!audioUrl && failedAudioUrl !== audioUrl;
   return (
     <aside id="hotspot-popup" className={`${styles.hotspotPopup} ${styles.playpenInfoParent} ${collapsed ? `${styles.collapsed}${nudge ? ` ${styles.nudge}` : ""}` : ""}`}
@@ -128,7 +140,7 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
       
       <h2 id="hotspot-popup-title" className={styles["playpenInfo-Title"]} hidden={collapsed}>{title}</h2>
       <div id="playpenInfoInner" className={styles.infoInner} hidden={collapsed}>
-        {mediaUrl && !mediaFailed && highlight.media_type === "image" && (
+        {mediaUrl && !mediaFailed && mediaType === "image" && (
           <div id="playpenInfo-ImgGroup" className={styles.infoImgGroup}>
             <button className={styles.infoImageButton} type="button" aria-label="Expand image" onClick={() => setExpandedImage(true)}>
               <Image id="playpenInfo-Img" className={`${styles.hotspotPopupMedia} ${styles["playpenInfo-Img"]}`} src={mediaUrl}
@@ -139,7 +151,7 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
         )}
         {showVideo && (
           <video key={highlight.id} ref={videoRef} id="playpenInfo-Vid" className={`${styles.hotspotPopupMedia} ${styles["playpenInfo-Vid"]}`}
-            src={mediaUrl} controls playsInline preload="metadata" crossOrigin="anonymous" aria-label={title}
+            src={mediaUrl} controls muted={muted} playsInline preload="metadata" crossOrigin="anonymous" aria-label={title}
             onPlay={() => audioRef.current?.pause()} onError={() => setFailedMediaUrl(mediaUrl)}
             onTimeUpdate={(event) => trackProgress(event.currentTarget)}
             onLoadedMetadata={(event) => trackProgress(event.currentTarget)}>
@@ -158,12 +170,12 @@ export default function HighlightPanel({ highlight, highlights = [], onClose }: 
         )}
         {audioUrl && (failedAudioUrl === audioUrl ? <>
           <p role="status">Không tải được audio.</p><a href={audioUrl} target="_blank" rel="noreferrer">Mở audio</a>
-        </> : <audio key={`${highlight.id}-audio`} ref={audioRef} id="audioHighlight" src={audioUrl} controls preload="metadata"
+        </> : <audio key={`${highlight.id}-audio`} ref={audioRef} id="audioHighlight" src={audioUrl} controls autoPlay muted={muted} preload="metadata"
           aria-label={`Audio: ${title}`} onPlay={() => videoRef.current?.pause()} onError={() => setFailedAudioUrl(audioUrl)}
           onTimeUpdate={(event) => trackProgress(event.currentTarget)}
           onLoadedMetadata={(event) => trackProgress(event.currentTarget)} />)}
         <div id="playpenInfo-DescGroup" className={styles.infoDescGroup}>
-          <p ref={descriptionRef} id="hotspot-popup-text" className={styles["playpenInfo-Desc"]}>{highlight.popup_text}</p>
+          <p ref={descriptionRef} id="hotspot-popup-text" className={`${styles["playpenInfo-Desc"]} ${readMore ? styles.infoDescExpanded : ""}`}>{highlight.popup_text}</p>
           {highlight.media_credit && <div id="playpenInfo-credit" className={styles.infoCredit}>{highlight.media_credit}</div>}
         </div>
         {(canReadMore || readMore) && (

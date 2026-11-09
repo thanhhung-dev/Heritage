@@ -1,0 +1,6 @@
+.text {
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  vertical-align: middle;
+}

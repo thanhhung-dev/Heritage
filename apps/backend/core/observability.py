@@ -218,16 +218,37 @@ def _langfuse_client() -> Any | None:
         logging.getLogger(__name__).warning("langfuse_credentials_missing")
         return None
     try:
+        timeout = int(float(os.environ.get("LANGFUSE_TIMEOUT", "60")))
+    except ValueError:
+        timeout = 60
+    try:
         from langfuse import Langfuse
 
         return Langfuse(
             public_key=public_key,
             secret_key=secret_key,
             host=os.environ.get("LANGFUSE_HOST", "http://localhost:3003"),
+            timeout=timeout,
         )
     except Exception:  # noqa: BLE001 -- optional telemetry must remain fail-open
         logging.getLogger(__name__).warning("langfuse_setup_failed")
         return None
+
+
+def shutdown_langfuse() -> None:
+    """Flush and shut down the cached Langfuse client if initialized."""
+    if _langfuse_client.cache_info().currsize == 0:
+        return
+    try:
+        client = _langfuse_client()
+        if client is not None:
+            shutdown = getattr(client, "shutdown", None) or getattr(client, "flush", None)
+            if callable(shutdown):
+                shutdown()
+    except Exception:  # noqa: BLE001 -- telemetry shutdown must remain fail-open
+        logging.getLogger(__name__).warning("langfuse_shutdown_failed")
+    finally:
+        _langfuse_client.cache_clear()
 
 
 def send_grounded_qa(metadata: dict[str, Any]) -> None:
@@ -427,6 +448,7 @@ def setup_tracing(app: Any, settings: Any, engine: Any = None) -> TracingRuntime
 
 
 def shutdown_tracing(runtime: TracingRuntime | None) -> None:
+    shutdown_langfuse()
     if not runtime:
         return
     try:

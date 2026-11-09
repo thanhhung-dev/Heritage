@@ -2,6 +2,12 @@
 .claude
 .freebuff
 .vscode
+.cache
+.venv
+.venv-*
+venv
+tmp
+*.deb
 **/__pycache__
 **/*.pyc
 **/.DS_Store

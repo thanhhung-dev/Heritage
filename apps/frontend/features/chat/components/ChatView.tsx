@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Bubble, Sources } from "@ant-design/x";
+import { Bubble } from "@ant-design/x";
 import type { BubbleListProps } from "@ant-design/x";
-import type { Message, Source } from "@/features/chat/types";
+import type { Message } from "@/features/chat/types";
 import ChatInput from "./ChatInput";
 import { ChatActions } from "./ChatActions";
-import { HeritageLogoMini } from "@/components/Logo/HeritageLogoMinimal";
+import { MilaAvatar } from "@/features/chat/components/ChatToggleButton";
 import styles from "../chat.module.css";
 
 interface ChatViewProps {
@@ -15,20 +15,7 @@ interface ChatViewProps {
   loading: boolean;
   onInputChange: (value: string) => void;
   onSend: (text?: string) => void;
-}
-
-function SourceFooter({ sources }: { sources: Source[] }) {
-  return (
-    <Sources
-      title="Nguồn"
-      items={sources.map((s, i) => ({
-        key: i,
-        title: s.doc || "Nguồn",
-        description: s.heading,
-        url: s.url,
-      }))}
-    />
-  );
+  compact?: boolean;
 }
 
 export function ChatView({
@@ -37,6 +24,7 @@ export function ChatView({
   loading,
   onInputChange,
   onSend,
+  compact = false,
 }: ChatViewProps) {
   const listRef = useRef<React.ComponentRef<typeof Bubble.List>>(null);
 
@@ -56,9 +44,6 @@ export function ChatView({
         msg.role === "assistant" ? (
           <div className={styles.assistantFooter}>
             <ChatActions content={msg.content} />
-            {msg.sources && msg.sources.length > 0 && (
-              <SourceFooter sources={msg.sources} />
-            )}
           </div>
         ) : undefined,
     })),
@@ -72,7 +57,7 @@ export function ChatView({
               <div className={styles.thinkingSpin}>
                 <div className={styles.thinkingSpinRing}>
                   <div className={styles.thinkingLogo}>
-                    <HeritageLogoMini size={28} />
+                    <MilaAvatar />
                   </div>
                 </div>
                 <span className={styles.thinkingSpinText}>Đang suy nghĩ…</span>
@@ -87,7 +72,7 @@ export function ChatView({
     <>
       <Bubble.List
         ref={listRef}
-        className={styles.chatMessages}
+        className={`${styles.chatMessages} ${compact ? styles.compactChatMessages : ""}`}
         autoScroll={false}
         styles={{ scroll: { height: "100%" } }}
         items={items}
@@ -100,12 +85,12 @@ export function ChatView({
           ai: {
             placement: "start",
             variant: "borderless",
-            avatar: <HeritageLogoMini size={28} />,
+            avatar: <MilaAvatar />,
           },
         }}
       />
 
-      <div className={styles.inputArea}>
+      <div className={`${styles.inputArea} ${compact ? styles.compactInputArea : ""}`}>
         <div className={styles.inputAreaInner}>
           <ChatInput
             value={input}
@@ -113,9 +98,10 @@ export function ChatView({
             onSubmit={() => onSend()}
             placeholder="Hỏi thêm…"
             loading={loading}
+            allowAttachments={!compact}
           />
-          <div className={styles.inputAreaDisclaimer}>
-            HeritageGraph có thể mắc lỗi. Kiểm tra thông tin. · 100% local
+          <div className={`${styles.inputAreaDisclaimer} ${compact ? styles.compactDisclaimer : ""}`}>
+            Trợ lý AI có thể mắc lỗi. Hãy đối chiếu thông tin với nguồn tham khảo.
           </div>
         </div>
       </div>

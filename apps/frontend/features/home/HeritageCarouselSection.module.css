@@ -193,14 +193,71 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
+.cardMedia,
+.cardImageError {
+  position: absolute;
+  inset: 0;
+}
+
+.cardMediaLoading,
+.cardSkeleton {
+  animation: cardPulse 1.8s ease-in-out infinite;
+}
+
+.cardSkeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.cardSkeletonTitle,
+.cardSkeletonRegion {
+  display: block;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.cardSkeletonTitle {
+  width: 76%;
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.cardSkeletonRegion {
+  width: 48%;
+  height: 12px;
+}
+
+@keyframes cardPulse {
+  0%, 100% {
+    background-color: rgba(22, 24, 29, 0.6);
+  }
+  50% {
+    background-color: rgba(34, 40, 52, 0.75);
+  }
+}
+
+.cardImageError {
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.cardImageError {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+
 .cardImage {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  opacity: 0;
+  transition: transform 0.5s ease, opacity 0.3s ease;
 }
+
+.cardImageReady { opacity: 1; }
 
 .card:hover .cardImage {
   transform: scale(1.05);
@@ -269,4 +326,8 @@
     width: 170px;
     height: 270px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardImage { transition: none; }
 }

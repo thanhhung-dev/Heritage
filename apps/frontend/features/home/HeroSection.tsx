@@ -60,6 +60,7 @@ export const herotile = HeroTile;
 
 export interface HeroSectionProps {
   items?: TriptychCardData[];
+  loading?: boolean;
   title?: React.ReactNode;
   description?: string;
   subDescription?: string;
@@ -82,12 +83,12 @@ export const FEATURED_HERO_SLUGS = [
   ["ngu-hanh-son", "marble-mountains"],
 ] as const;
 
-function getCardImageUrl(item?: TriptychCardData): string {
+export function getCardImageUrl(item?: TriptychCardData): string {
   if (!item) return LOCAL_FALLBACK_IMAGE;
   return item.splash_image_url || item.card_image_url || LOCAL_FALLBACK_IMAGE;
 }
 
-function selectFeaturedTriptychItems(
+export function selectFeaturedTriptychItems(
   sourceItems: TriptychCardData[]
 ): TriptychCardData[] {
   if (sourceItems.length === 0) {
@@ -117,6 +118,7 @@ function selectFeaturedTriptychItems(
 
 export function HeroSection({
   items,
+  loading = false,
   title,
   description,
   subDescription,
@@ -198,7 +200,7 @@ export function HeroSection({
           .filter(Boolean)
           .join(" ")}
       >
-        {/* Cột bên trái: HeroTile (.hp_hero_left) */}
+        {/* Cột bên trái: HeroTile (.hp_hero_left) luôn hiển thị ngay lập tức */}
         <HeroTile
           eyebrow={eyebrow}
           title={title}
@@ -206,9 +208,36 @@ export function HeroSection({
           subDescription={subDescription}
         />
 
-        {/* Cột bên phải: Triptych Section (.hp_triptych). Ẩn khi chưa có dữ liệu
-            để layout `--hp-tt-n: 0` không tạo ra khung rỗng. */}
-        {displayItems.length > 0 ? (
+        {/* Cột bên phải: Triptych Section (.hp_triptych). Khi đang tải thì hiển thị
+            sẵn khung 3 thẻ; khi tải xong mà rỗng thì ẩn để không tạo khung trống. */}
+        {loading ? (
+          <section
+            className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
+            id="hp_triptych"
+            aria-label="Featured Experiences"
+            aria-busy="true"
+            style={{ "--hp-tt-n": 3 } as CSSProperties}
+          >
+            {[0, 1, 2].map((idx) => (
+              <div
+                key={`hero-skeleton-${idx}`}
+                className={`${triptychStyles.hp_triptych_card} ${triptychStyles.hp_triptych_card_skeleton}`}
+                data-index={idx}
+                aria-hidden="true"
+              >
+                <div className={triptychStyles.hp_triptych_card_overlay} />
+                <div className={triptychStyles.hp_triptych_card_content}>
+                  <div className={triptychStyles.hp_triptych_card_text}>
+                    <div className={triptychStyles.hp_triptych_card_heading}>
+                      <span className={triptychStyles.hp_triptych_skeleton_title} />
+                      <span className={triptychStyles.hp_triptych_skeleton_sub} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        ) : displayItems.length > 0 ? (
           <section
             className={`${triptychStyles.hp_triptych} ${styles.heroTriptych}`}
             id="hp_triptych"

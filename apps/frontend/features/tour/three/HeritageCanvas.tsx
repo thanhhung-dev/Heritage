@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createTourEngine, type TourEngine } from "./tour-engine";
+import { createTourEngine, isWebGLAvailable, type TourEngine } from "./tour-engine";
 import type { ModelProgress } from "./model-loader";
 import styles from "../styles.module.css";
 
@@ -11,9 +11,12 @@ export default function HeritageCanvas({
   onProgress,
   modelUrl,
   fallbackImageUrl,
+  viewportClassName,
 }: {
   onReady: (engine: TourEngine | null) => void;
   onError?: (error: string) => void;
+  /** Editor viewport bounds; changing these resizes, never recreates the engine. */
+  viewportClassName?: string;
   /** Tiến độ tải GLB (0..1) — dùng cho thanh loading ở trang splash. */
   onProgress?: (progress: ModelProgress) => void;
   /**
@@ -40,6 +43,10 @@ export default function HeritageCanvas({
       return;
     }
     onReady(null);
+    if (!isWebGLAvailable()) {
+      onError?.("WEBGL_UNSUPPORTED");
+      return;
+    }
     const handleEngineError = (cause: unknown) => {
       onError?.(
         cause instanceof Error ? cause.message : "Không thể khởi tạo hoặc tải model 3D.",
@@ -63,7 +70,7 @@ export default function HeritageCanvas({
 
   return (
     <>
-      <div className={styles.threeCanvas} ref={hostRef} />
+      <div className={viewportClassName ?? styles.threeCanvas} ref={hostRef} />
       {!modelUrl && fallbackImageUrl ? (
         <img className={styles.modelFallback} src={fallbackImageUrl} alt="" />
       ) : null}

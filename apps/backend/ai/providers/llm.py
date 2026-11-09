@@ -9,6 +9,11 @@ from functools import lru_cache
 import httpx
 from opentelemetry import trace
 
+from apps.backend.ai.answering.conversation import (
+    ConversationAnswer,
+    conversation_json_schema,
+    conversation_messages,
+)
 from apps.backend.common.observability import DEPENDENCY_HEALTH, rag_observation
 from apps.backend.ai.answering.prompt import chat_messages
 
@@ -39,7 +44,9 @@ def get_generation_details() -> GenerationDetails:
     return generation_details.get() or GenerationDetails()
 
 
-def _llama_server_generate(messages: list[dict], max_tokens: int) -> str:
+def _llama_server_generate(
+    messages: list[dict], max_tokens: int, *, response_format: dict | None = None,
+) -> str:
     base_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8080").rstrip("/")
     timeout = float(os.environ.get("LLAMA_SERVER_TIMEOUT", "300"))
     with trace.get_tracer(__name__).start_as_current_span(
@@ -56,6 +63,8 @@ def _llama_server_generate(messages: list[dict], max_tokens: int) -> str:
                     "messages": messages,
                     "temperature": 0.0,
                     "max_tokens": max_tokens,
+                    **({"response_format": response_format,
+                        "chat_template_kwargs": {"enable_thinking": False}} if response_format else {}),
                 },
                 timeout=timeout,
             )
@@ -83,13 +92,16 @@ def _llama_server_generate(messages: list[dict], max_tokens: int) -> str:
             raise
 
 
-def _llama_cpp_generate(model, messages: list[dict], max_tokens: int) -> str:
+def _llama_cpp_generate(
+    model, messages: list[dict], max_tokens: int, *, response_format: dict | None = None,
+) -> str:
     output = model.create_chat_completion(
         messages=messages,
         max_tokens=max_tokens,
         temperature=0.0,
         top_p=1.0,
         repeat_penalty=1.0,
+        **({"response_format": response_format} if response_format else {}),
     )
     usage = output.get("usage")
     usage = usage if isinstance(usage, dict) else {}
@@ -135,11 +147,18 @@ def get_model():
 
 
 def generate_response_with_details(
-    question: str, context: str = "", max_tokens: int = MAX_TOKENS
+    question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
+    conversation: bool = False, retrieval_status: str = "available",
+    active_area_id: str | None = None, history: list[dict] | None = None,
+    scene_context: dict | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    messages = chat_messages(context, question)
+    messages = (conversation_messages(context, question, retrieval_status, active_area_id=active_area_id, history=history, scene_context=scene_context)
+                if conversation else chat_messages(context, question))
+    options = {"response_format": {
+        "type": "json_object", "schema": conversation_json_schema(context),
+    }} if conversation else {}
 
     with rag_observation('generation', as_type='generation', input=messages) as observation:
         observation.update(
@@ -147,9 +166,9 @@ def generate_response_with_details(
             model_parameters={'temperature': 0.0, 'max_tokens': max_tokens},
         )
         if backend == "llama_server":
-            answer = _llama_server_generate(messages, max_tokens=max_tokens)
+            answer = _llama_server_generate(messages, max_tokens=max_tokens, **options)
         else:
-            answer = _llama_cpp_generate(model, messages, max_tokens=max_tokens)
+            answer = _llama_cpp_generate(model, messages, max_tokens=max_tokens, **options)
 
         details = get_generation_details()
         observation.update(
@@ -169,6 +188,12 @@ def generate_response_with_details(
 
 
 def generate_response(
-    question: str, context: str = "", max_tokens: int = MAX_TOKENS
+    question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
+    conversation: bool = False, retrieval_status: str = "available",
+    active_area_id: str | None = None, history: list[dict] | None = None,
+    scene_context: dict | None = None,
 ) -> str:
-    return generate_response_with_details(question, context, max_tokens).answer
+    return generate_response_with_details(
+        question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
+        active_area_id=active_area_id, history=history, scene_context=scene_context,
+    ).answer

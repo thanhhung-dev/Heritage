@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createCameraController } from "../features/tour/three/camera-controller";
-import { shouldEvaluateHover } from "../features/tour/three/tour-engine";
+import { isWebGLAvailable, shouldEvaluateHover } from "../features/tour/three/tour-engine";
 import { createExploreController } from "../features/tour/three/explore-controller";
 import {
   clampPointToExploreArea,
@@ -25,7 +25,41 @@ import { HeritageTourContext } from "../context/heritage-tour";
 import { useTourPlayer } from "../features/tour/player/useTourPlayer";
 import { TEST_TOUR } from "../features/tour/tour-data";
 import { interactiveUrl, isInteractivePath, sceneUrl } from "../lib/tour-routes";
+import { resolveSceneByKey, sceneKeys } from "../lib/heritage";
 import type { ExploreArea, HeritageScene } from "../types/heritage";
+
+test("scene routes preserve API slugs and database IDs when sequences have gaps", () => {
+  const base = TEST_TOUR.payload.scenes[0];
+  const payload = {
+    ...TEST_TOUR.payload,
+    scenes: [
+      { ...base, id: 3, slug: "s2", sequence: 1 },
+      { ...base, id: 506, slug: "s3", sequence: 2 },
+      { ...base, id: 508, slug: "s5", sequence: 4 },
+    ],
+  };
+
+  assert.deepEqual(sceneKeys(payload), ["s0", "s2", "s3", "s5"]);
+  assert.equal(resolveSceneByKey(payload, "s2")?.id, 3);
+  assert.equal(resolveSceneByKey(payload, "s3")?.id, 506);
+  assert.equal(resolveSceneByKey(payload, "s5")?.id, 508);
+  assert.equal(resolveSceneByKey(payload, "s0"), payload.overview);
+  for (const key of ["s1", "s4", "s03", "506", "invalid", undefined]) {
+    assert.equal(resolveSceneByKey(payload, key), null);
+  }
+});
+
+test("scene navigation only includes available scenes", () => {
+  const payload = { ...TEST_TOUR.payload, overview: null };
+  assert.deepEqual(sceneKeys(payload), payload.scenes.map((scene) => scene.slug));
+  assert.equal(resolveSceneByKey(payload, "s0"), null);
+  assert.deepEqual(sceneKeys({ ...payload, scenes: [] }), []);
+  assert.deepEqual(sceneKeys(null), []);
+  assert.equal(resolveSceneByKey(null, "s3"), null);
+  for (const scene of TEST_TOUR.payload.scenes) {
+    assert.equal(resolveSceneByKey(TEST_TOUR.payload, scene.slug), scene);
+  }
+});
 
 test("lens badge chọn đúng ID sau khi camera quay và không chọn khi ẩn hoặc thay scene", () => {
   const originalDocument = globalThis.document;
@@ -156,6 +190,8 @@ test("Dive Deeper lấy khu vực, điểm và mode từ đúng cảnh của tou
       currentScene, error: null, isModelReady: true,
       modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
+      selectedHighlight: null, setSelectedHighlight() {}, chatMode: "scene",
+      narrationStatus: "not_started", reportNarration() {},
     } }, createElement(Probe)));
     return result;
   }
@@ -212,6 +248,8 @@ test("chế độ điểm tương tác suy ra từ URL /int, không giữ state 
       currentScene, error: null, isModelReady: true,
       modelError: null, modelProgress: 1, hasModel: true,
       engine: null, scenePlayback: TEST_TOUR.playback[key],
+      selectedHighlight: null, setSelectedHighlight() {}, chatMode: "scene",
+      narrationStatus: "not_started", reportNarration() {},
     } }, createElement(Probe, { interactiveRoute })));
     return result;
   }
@@ -330,6 +368,85 @@ test("camera focus tới đúng preset dù orbit còn quán tính damping", () =
     controls.autoRotateSpeed = 8;
     controls.update(0.1);
     controls.autoRotate = false;
+    controller.flyToPreset(preset, false, 1.2);
+    controller.update(1.2);
+    controls.update();
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(19, 12, -7)) < 1e-8);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(2, 3, -1)) < 1e-8);
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("scene look-around xoay sát camera, giữ hướng khi thoát và trả lại bán kính orbit", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  const controller = createCameraController(camera, controls);
+  const preset = { start_position: [19, 12, -7], start_target: [2, 3, -1] } as Parameters<typeof controller.applyPreset>[0];
+  try {
+    controller.applyPreset(preset);
+    const position = camera.position.clone();
+    const direction = camera.getWorldDirection(new THREE.Vector3());
+    const radius = camera.position.distanceTo(controls.target);
+    const minDistance = controls.minDistance;
+    controller.setLookAround(true);
+    controller.setLookAround(true);
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 8;
+    for (let i = 0; i < 90; i++) controls.update(1 / 60);
+    controls.autoRotate = false;
+    assert.ok(direction.angleTo(camera.getWorldDirection(new THREE.Vector3())) > 0.5);
+    assert.ok(camera.position.distanceTo(position) < 0.201, "look-around không được bay quanh công trình");
+    assert.ok(Math.abs(camera.position.distanceTo(controls.target) - 0.1) < 1e-8);
+    const lookedPosition = camera.position.clone();
+    const lookedDirection = camera.getWorldDirection(new THREE.Vector3());
+    // Snapshot dùng cho chuyển cảnh/Explore vẫn giữ khoảng ngắm đầy đủ.
+    assert.ok(Math.abs(controller.snapshot().position.distanceTo(controller.snapshot().target) - radius) < 1e-8);
+    controller.setLookAround(false);
+    controls.update();
+    assert.ok(camera.position.distanceTo(lookedPosition) < 1e-8);
+    assert.ok(camera.getWorldDirection(new THREE.Vector3()).angleTo(lookedDirection) < 1e-7);
+    assert.ok(Math.abs(camera.position.distanceTo(controls.target) - radius) < 1e-8);
+    assert.equal(controls.minDistance, minDistance);
+    controls.autoRotate = true;
+    for (let i = 0; i < 30; i++) controls.update(1 / 60);
+    controls.autoRotate = false;
+    assert.ok(camera.position.distanceTo(lookedPosition) > 1, "Explore vẫn phải orbit với bán kính gốc");
+  } finally {
+    controls.dispose();
+  }
+});
+
+test("camera narration/seek/đổi cảnh tiếp quản sau look-around mà không giữ điểm xoay 0.1", () => {
+  const document = new EventTarget();
+  const element = Object.assign(new EventTarget(), {
+    style: {}, ownerDocument: document, getRootNode: () => document,
+  }) as unknown as HTMLElement;
+  const camera = new THREE.PerspectiveCamera();
+  const controls = new OrbitControls(camera, element);
+  const controller = createCameraController(camera, controls);
+  const preset = {
+    start_position: [19, 12, -7], start_target: [2, 3, -1],
+    zoom_position: [3, 8, 5], zoom_target: [-2, 1, 7],
+  } as Parameters<typeof controller.applyPreset>[0];
+  try {
+    controller.applyPreset(preset);
+    controller.setLookAround(true);
+    assert.equal(controller.startTimeline(preset, 8), true);
+    controller.updateTimeline(4);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(11, 10, -1)) < 1e-8);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(0, 2, 3)) < 1e-8);
+    controller.setLookAround(true);
+    controller.updateTimeline(2);
+    assert.ok(camera.position.distanceTo(new THREE.Vector3(15, 11, -4)) < 1e-8);
+    assert.ok(controls.target.distanceTo(new THREE.Vector3(1, 2.5, 1)) < 1e-8);
+    controller.setLookAround(true);
     controller.flyToPreset(preset, false, 1.2);
     controller.update(1.2);
     controls.update();
@@ -1508,5 +1625,36 @@ test("camera nướng trong GLB: đọc vị trí/hướng/fov và dùng điểm
     assert.equal(camera.fov, 50);
   } finally {
     controls.dispose();
+  }
+});
+
+test("isWebGLAvailable phát hiện đúng môi trường hỗ trợ hoặc thiếu WebGL", () => {
+  // Môi trường SSR/Node (không có window): trả true để không chặn render tĩnh.
+  assert.equal(isWebGLAvailable(), true);
+
+  const globals = globalThis as unknown as Record<string, unknown>;
+  const prevWindow = globals.window;
+  const prevDoc = globals.document;
+  try {
+    // Có window nhưng không có WebGLRenderingContext ⇒ báo false (#errorPage).
+    globals.window = {};
+    globals.document = { createElement: () => ({ getContext: () => null }) };
+    assert.equal(isWebGLAvailable(), false);
+
+    // Có WebGLRenderingContext nhưng getContext trả null ⇒ báo false (#errorPage).
+    globals.window = { WebGLRenderingContext: function WebGL() {} };
+    globals.document = { createElement: () => ({ getContext: () => null }) };
+    assert.equal(isWebGLAvailable(), false);
+
+    // Có WebGLRenderingContext và getContext("webgl2") trả context hợp lệ ⇒ báo true.
+    globals.document = {
+      createElement: () => ({
+        getContext: (type: string) => (type === "webgl2" ? {} : null),
+      }),
+    };
+    assert.equal(isWebGLAvailable(), true);
+  } finally {
+    globals.window = prevWindow;
+    globals.document = prevDoc;
   }
 });
