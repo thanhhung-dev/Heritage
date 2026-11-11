@@ -22,11 +22,12 @@ import httpx
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
+from apps.backend.ai.ingestion.metadata import resolve_metadata
 from apps.backend.core.corpus import chunk_text_spans
 from pipelines.ingestion.package import PackageValidationError, validate_package
 
 MAX_BYTES = 16 * 1024 * 1024
-PROCESSOR_VERSION = "r2-text-v1"
+PROCESSOR_VERSION = "r2-text-v2-tour-metadata"
 
 
 class IngestionError(ValueError):
@@ -165,6 +166,10 @@ def run_ingestion(
             if kind not in {"txt", "md", "html", "pdf"}:
                 raise IngestionError("Chỉ hỗ trợ txt, md, html, pdf; đặt format nếu link không có đuôi file.")
             text = _extract(data, kind)
+            try:
+                metadata = resolve_metadata(spec, text=text)
+            except ValueError as exc:
+                raise IngestionError(str(exc)) from None
             doc_key = "DOC-" + _hash(spec["source_url"].encode())
             content_hash = _hash(text.encode())
             doc = {field: spec.get(field) for field in (
@@ -172,6 +177,7 @@ def run_ingestion(
             )}
             doc.update(key=doc_key, raw_text=text, content_hash=content_hash,
                        object_key=spec["object_key"], license=spec.get("license"))
+            doc.update(metadata)
             package["documents"].append(doc)
             raw_path = f"raw/{doc_key}/{_hash(data)}.{kind}"
             artifact(raw_path, data, spec["object_key"])

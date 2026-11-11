@@ -1056,31 +1056,6 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Autoplay Indicator
-   ───────────────────────────────────────────────────────────── */
-
-.autoplay-indicator {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 6px;
-  border-radius: 20px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  color: #fff;
-  font-size: var(--font-size-12);
-  font-family: inherit;
-  pointer-events: none;
-  user-select: none;
-  transition: opacity 0.3s ease;
-}
-
-/* ─────────────────────────────────────────────────────────────
    Voice / Narrator Avatars
    ───────────────────────────────────────────────────────────── */
 
@@ -4663,7 +4638,7 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Cinematic Bars & Autoplay Ring Details
+   Cinematic Bars
    ───────────────────────────────────────────────────────────── */
 
 .cinematicBar {
@@ -4687,48 +4662,6 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 
 .cinematicBarActive {
   height: 6vh;
-}
-
-.autoplay-icon-wrap {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.autoplay-ring {
-  width: 28px;
-  height: 28px;
-  transform: rotate(-90deg);
-}
-
-.autoplay-ring-bg {
-  fill: none;
-  stroke: rgba(240, 232, 221, 0.22);
-  stroke-width: 3;
-}
-
-.autoplay-ring-fill {
-  fill: none;
-  stroke: #fef0d7;
-  stroke-width: 3;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.08s linear;
-}
-
-.autoplay-icon {
-  position: absolute;
-  font-size: 9px;
-  color: #fef0d7;
-  line-height: 1;
-}
-
-.autoplay-label {
-  padding-right: 8px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -4832,14 +4765,32 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   margin-bottom: 10px;
   width: 100%;
   pointer-events: auto;
+  animation: voiceFadeIn 0.15s ease-out;
+}
+
+@keyframes voiceFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .carouselViewport {
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   max-width: 100%;
   scrollbar-width: none;
-  padding: 4px 2px;
+  padding: 80px 12px 20px;
+  margin-block: -76px -16px;
+  clip-path: inset(-60px 0);
+  will-change: transform;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center bottom;
 }
 
 .carouselViewport::-webkit-scrollbar {
@@ -4848,9 +4799,12 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 
 .carouselTrack {
   display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
   align-items: center;
   gap: 10px;
   width: max-content;
+  margin-inline: auto;
 }
 
 .voicesList {
@@ -4860,73 +4814,191 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
 }
 
 .voiceItem {
-  display: flex;
+  position: relative;
+  display: none;
   align-items: center;
+}
+
+.voiceItem:has(.voiceActive) {
+  display: flex;
+}
+
+.voiceItem:focus-within {
+  z-index: 10;
 }
 
 .voice {
-  display: inline-flex;
+  display: none;
+  margin: 3px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  position: relative;
+  width: 50px;
+  height: 50px;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px 4px 6px;
-  border-radius: 999px;
-  background: rgba(28, 27, 26, 0.78);
-  backdrop-filter: blur(10px) saturate(1.2);
-  -webkit-backdrop-filter: blur(10px) saturate(1.2);
-  border: 1px solid rgba(240, 232, 221, 0.22);
-  color: #f0e8dd;
+  flex-direction: column;
+  filter: grayscale(1);
+  pointer-events: none;
+  opacity: 0;
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    background-color 0.2s ease;
 }
 
-.voice:hover {
-  transform: translateY(-2px);
-  border-color: rgba(240, 232, 221, 0.55);
-  background: rgba(45, 43, 41, 0.9);
+.voice.voiceActive {
+  display: flex;
+  filter: grayscale(0) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.38));
+  pointer-events: auto;
+  opacity: 1;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.3s ease;
+}
+
+.voice.voiceActive:focus-visible {
+  transform: scale(1.15) translateY(-4px);
 }
 
 .voiceIconSvg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.85;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .voiceAvatar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
   position: relative;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  flex-shrink: 0;
+  z-index: 1;
 }
 
 .voiceAvatar_img {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px 14px 14px 2px;
+  border: none;
   object-fit: cover;
   display: block;
+  position: relative;
+  z-index: 1;
+  transition: box-shadow 0.3s ease;
+}
+
+.voice:focus-visible .voiceAvatar_img {
+  box-shadow: 0 0 0 2px #fff;
 }
 
 .voiceRing {
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  border: 2px solid #ff9b2d;
+  display: none !important;
+  width: 55px;
+  height: 55px;
   pointer-events: none;
 }
 
 .voiceText {
-  font-size: var(--font-size-12);
-  font-weight: 500;
-  color: #fef0d7;
+  display: none;
+  align-items: center;
+  flex-direction: column;
+  font-size: var(--font-size-8, 8px);
+  height: auto;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 120px));
+  color: #fff;
+  background-color: var(--black-opacity-60, rgba(0, 0, 0, 0.6));
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  box-shadow: none;
+  pointer-events: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   white-space: nowrap;
-  max-width: 160px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  animation: voiceFadeIn 0.15s ease-out;
+}
+
+.voice.voiceActive:focus-visible .voiceText {
+  display: flex;
+}
+
+.voiceText_name,
+.voiceText_title {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.4;
+  pointer-events: none;
+  background-color: transparent;
+}
+
+.mediaStrip:has(.voice:focus-visible) .closedCaptionsGroup {
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :global(html:not(.no-hover)) .carouselViewport:hover {
+    transform: scale(1.3);
+  }
+
+  :global(html:not(.no-hover)) .voiceItem:hover {
+    z-index: 10;
+  }
+
+  :global(html:not(.no-hover)) .voice.voiceActive:hover {
+    transform: scale(1.15) translateY(-4px);
+    filter: grayscale(0) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.69)) saturate(1.1) brightness(1.15);
+  }
+
+  :global(html:not(.no-hover)) .voiceItem:hover .voiceAvatar_img {
+    box-shadow: 0 0 0 2px #fff;
+  }
+
+  :global(html:not(.no-hover)) .voice.voiceActive:hover .voiceText {
+    display: flex;
+  }
+
+  :global(html:not(.no-hover)) .mediaStrip:has(.mediaCarousel:hover) .closedCaptionsGroup {
+    opacity: 0;
+  }
+}
+
+@media (hover: none) {
+  .voice.voiceActive:focus .voiceText {
+    display: flex;
+  }
+
+  .mediaStrip:has(.voice:focus) .closedCaptionsGroup {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carouselViewport,
+  .voice,
+  .voiceText,
+  .voiceAvatar_img {
+    transition: none;
+  }
+
+  .mediaCarousel,
+  .voiceText {
+    animation: none;
+  }
+
+  :global(html:not(.no-hover)) .carouselViewport:hover,
+  :global(html:not(.no-hover)) .voice.voiceActive:hover,
+  .voice.voiceActive:focus-visible {
+    transform: none;
+  }
 }
 
 .mediaList {
@@ -5399,4 +5471,3 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   transform: scale(1.04);
   border-color: #ff9b2d;
 }
-

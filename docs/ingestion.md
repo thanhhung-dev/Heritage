@@ -23,7 +23,68 @@ Output mặc định `data/ingestion/corpus-vN/` gồm raw bytes, passage JSON,
 gọi embedding, không upload R2, không ghi DB. Review text và metadata trước import.
 Cùng input/config có cùng output; nội dung thay đổi phải dùng version/output mới.
 
+### Metadata cho transcript tour
+
+Metadata phải là **trường JSON riêng** trong `documents[]` của config nguồn hoặc
+package, không chỉ là YAML nằm trong `raw_text`/`text`. Passage kế thừa từ document;
+nếu cả hai cùng khai báo thì phải khớp sau chuẩn hóa alias khu vực, không override
+âm thầm. Importer không đoán khu vực/cảnh từ nội dung hoặc tên file audio.
+
+| Trường | Kiểu / ý nghĩa |
+| --- | --- |
+| `content_type` | `tour_script`, `historical_source` hoặc `editorial_note` |
+| `heritage_slug` | Slug di sản; phải thuộc `active_area_id` nếu cùng khai báo |
+| `active_area_id` | Khu vực trong registry; ví dụ `lang-tu-duc` được chuẩn hóa thành `khiem-lang` |
+| `scene_id` | Số nguyên dương int64, không phải chuỗi hay boolean |
+| `scene_key` | `s0`, `s1`, ...; không dùng tên file audio làm định danh cảnh |
+| `language` | Mã ngôn ngữ, ví dụ `vi` hoặc `en-US` |
+
+`tour_script` bắt buộc đủ sáu trường. Package cũ không khai báo metadata mới vẫn
+được chấp nhận; không tự gắn khu vực hay chứng nhận là nguồn lịch sử. Header mở đầu
+có `content_type: tour_script` nhưng thiếu metadata JSON bị từ chối, không được
+âm thầm đưa vào index như nguồn thường. Đây chỉ là nhận diện khai báo transcript,
+không phải parser YAML đầy đủ.
+
+Xem `pipelines/ingestion/r2_sources.example.json` cho cấu hình mẫu. ID cảnh trong
+ví dụ chỉ là placeholder, phải thay bằng ID từ tour thật đã đối chiếu. Importer
+chỉ kiểm tra kiểu/định dạng và khu vực, không truy vấn DB để xác minh quan hệ cảnh.
+Đặc biệt cần đối chiếu cặp `scene_id: 508` / `scene_key: s4` trước khi dùng: dữ liệu
+development ghi nhận ngày 2026-11-07 là ID 508 / s5 và audio s4.mp3.
+
+Giữ nguyên text, timestamp, offset và hash khi chỉ bổ sung metadata vào package
+hiện có; ID/key passage vẫn được giữ nguyên khi import. Không tự thay tên nguồn
+dạng hash: cung cấp `documents[].title` hoặc `location_note` có nghĩa. Review riêng
+ghi chú biên tập, không coi chúng là sử liệu hoặc tự xóa chúng khỏi kho đang chạy.
+
+Processor hiện là `r2-text-v2-tour-metadata`: dựng lại từ nguồn với processor mới
+có thể sinh ID passage mới vì digest thay đổi. Dùng `corpus_version` và output mới,
+không ghi đè release cũ. Điều này khác với chỉ bổ sung metadata vào package đã có.
+
 ## 2. Embed và index vào OpenSearch
+
+### Kiểm tra offline trước khi cho phép ghi
+
+```bash
+python -m apps.backend.db.import_passages \
+  data/ingestion/corpus-v2/package.json --dry-run
+```
+
+Cả CLI trên và `apps.backend.ai.ingestion.import_passages` hỗ trợ `--dry-run`.
+Chế độ này chỉ đọc JSON, kiểm tra text/metadata/ID và in danh sách passage kèm
+phân loại (`unclassified` nếu chưa khai báo); không in text hoặc vector. Không đọc
+`.env` kể cả khi có `--env-file`, không tải model/embedding, không kết nối dịch vụ,
+không tạo index/mapping. Có thể chạy với Python thuần không có dependencies backend.
+Exit code 0 là kiểm tra hợp lệ, 1 là không hợp lệ. Chế độ này không kiểm tra vector
+ngay cả khi có `--reuse-embeddings`, quan hệ scene trong DB, mapping trên server,
+hay tính đúng lịch sử. Đây không thay thế provenance/span validator của package.
+
+**Chưa import lại transcript vào index phục vụ.** Runtime hiện chưa tách transcript
+làm ngữ cảnh khỏi passage làm bằng chứng lịch sử; thêm `active_area_id` có thể khiến
+transcript được chọn như nguồn trả lời. `content_type` và `draft` không phải cơ chế
+chặn xuất bản. Việc phân luồng runtime, đối chiếu dữ liệu server, cập nhật mapping,
+import thử vào index riêng và chuyển index cần được duyệt riêng.
+
+### Thao tác ghi — chỉ chạy sau khi được phê duyệt
 
 ```bash
 docker compose up -d opensearch
@@ -35,6 +96,9 @@ Tên module được giữ cho CLI, nhưng importer **không còn dùng PostgreS
 Importer validate batch, tạo embedding BGE-M3 1024 chiều, rồi upsert vào
 `OPENSEARCH_INDEX` (mặc định `heritage-passages-v1`). Index lưu nguyên văn chunk,
 vector, phiên bản embedding, tên tài liệu, source URL và mapping nguồn R2.
+Mapping có metadata tour dạng keyword và `scene_id` dạng long; import thường
+cập nhật các trường mapping mới nếu index đã tồn tại. Đây là thao tác ghi trên
+OpenSearch, không được thực hiện bởi `--dry-run`.
 BM25 có analyzer lowercase/asciifolding và chuẩn hóa đ/d để tìm không dấu.
 Hybrid search dùng normalization pipeline của OpenSearch, không RRF/BM25 Python.
 

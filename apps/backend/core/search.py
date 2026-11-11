@@ -52,6 +52,12 @@ class PassageStore:
 
     async def ensure_index(self):
         """Explicit ingestion setup, never executed on the question-answer path."""
+        tour_properties = {
+            **{name: {'type': 'keyword'} for name in (
+                'active_area_id', 'content_type', 'heritage_slug', 'scene_key', 'language',
+            )},
+            'scene_id': {'type': 'long'},
+        }
         mapping = {
             'settings': {
                 'index.knn': True, 'number_of_shards': 1, 'number_of_replicas': 0,
@@ -66,8 +72,9 @@ class PassageStore:
             'mappings': {'dynamic': 'strict', 'properties': {
                 **{name: {'type': 'keyword'} for name in (
                     'id', 'document_key', 'source_url', 'object_key', 'bucket',
-                    'content_hash', 'embedding_model', 'active_area_id',
+                    'content_hash', 'embedding_model',
                 )},
+                **tour_properties,
                 'text': {'type': 'text', 'analyzer': 'vietnamese_folded'},
                 'location_note': {'type': 'text', 'analyzer': 'vietnamese_folded'},
                 'passage_index': {'type': 'integer'},
@@ -84,7 +91,7 @@ class PassageStore:
                 response.raise_for_status()
             else:
                 await self._request('PUT', f'/{self.index}/_mapping', json={
-                    'properties': {'active_area_id': {'type': 'keyword'}},
+                    'properties': tour_properties,
                 })
         except (httpx.HTTPError, ValueError):
             raise SearchError('Không tạo được passage index trong OpenSearch.') from None

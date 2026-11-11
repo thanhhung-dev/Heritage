@@ -317,42 +317,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
     }
   };
 
-  // Autoplay indicator: đếm ngược 5 giây khi hết narration ở scene không có Dive Deeper
-  const AUTOPLAY_DURATION_MS = 5000;
-  const canAutoplayNext =
-    isEnded &&
-    hasAudio &&
-    !exploreActive &&
-    !activePopup &&
-    player.interactive === null &&
-    index >= 0 &&
-    index < keys.length - 1;
-  const [autoplayProgress, setAutoplayProgress] = useState(0);
-  const [autoplayDismissedFor, setAutoplayDismissedFor] = useState<string | null>(null);
-  const showAutoplay = canAutoplayNext && autoplayDismissedFor !== playbackKey;
-
-  useEffect(() => {
-    if (!showAutoplay) {
-      setAutoplayProgress(0);
-      return;
-    }
-    const startedAt = performance.now();
-    const interval = window.setInterval(() => {
-      const elapsedMs = performance.now() - startedAt;
-      const ratio = Math.min(1, elapsedMs / AUTOPLAY_DURATION_MS);
-      setAutoplayProgress(ratio);
-      if (ratio >= 1) {
-        window.clearInterval(interval);
-        if (index >= 0 && index < keys.length - 1) {
-          router.push(`/content/${slug}/${keys[index + 1]}`);
-        }
-      }
-    }, 50);
-    return () => window.clearInterval(interval);
-  }, [showAutoplay, index, keys, router, slug]);
-
-  const AUTOPLAY_CIRCUMFERENCE = 2 * Math.PI * 15.5;
-
   return (
     <div className={styles.viewer} style={tapestryTourVarsStyle}>
       <div className={styles.topNavBar}>
@@ -445,39 +409,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
         id="cinematicBarBottom"
       />
 
-      {/* Autoplay countdown indicator */}
-      <div
-        className={styles["autoplay-indicator"]}
-        id="autoplayIndicator"
-        role="status"
-        style={{ display: showAutoplay ? "flex" : "none" }}
-        onClick={() => setAutoplayDismissedFor(playbackKey)}
-      >
-        <div className={styles["autoplay-icon-wrap"]} aria-hidden="true">
-          <svg className={styles["autoplay-ring"]} viewBox="0 0 36 36">
-            <circle
-              className={styles["autoplay-ring-bg"]}
-              cx="18"
-              cy="18"
-              r="15.5"
-            />
-            <circle
-              className={styles["autoplay-ring-fill"]}
-              id="autoplayRingFill"
-              cx="18"
-              cy="18"
-              r="15.5"
-              style={{
-                strokeDasharray: `${AUTOPLAY_CIRCUMFERENCE}`,
-                strokeDashoffset: `${(1 - autoplayProgress) * AUTOPLAY_CIRCUMFERENCE}`,
-              }}
-            />
-          </svg>
-          <span className={styles["autoplay-icon"]}>▶</span>
-        </div>
-        <span className={styles["autoplay-label"]}>Autoplay</span>
-      </div>
-
       {/* Scene-transition blackout */}
       <div className={`${styles.sceneFade} ${sceneFading ? styles.sceneFadeActive : ""}`} aria-hidden="true" />
 
@@ -511,8 +442,8 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
           <SceneMediaCarousel
             visible={!exploreActive}
             isOverview={sceneKey === "s0"}
-            voices={payload.heritage.voices ?? []}
-            voiceClips={scene?.voice_clips ?? []}
+            voices={isEnded ? payload.heritage.voices ?? [] : []}
+            voiceClips={isEnded ? scene?.voice_clips ?? [] : []}
             mediaItems={scene?.media ?? []}
             visitedVoices={visitedVoices}
             onSelectOverviewVoice={(voice) =>

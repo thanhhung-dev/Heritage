@@ -44,37 +44,21 @@ export function SceneMediaCarousel({
   onSelectSceneVoiceClip: (clip: HeritageVoiceClip) => void;
   onSelectMediaItem: (item: HeritageMediaItem) => void;
 }) {
-  const viewportRef = useRef<HTMLDivElement>(null);
   const sortedClips = [...voiceClips].sort((a, b) => a.sort_order - b.sort_order);
-  const sortedMedia = [...mediaItems].sort((a, b) => a.sort_order - b.sort_order);
+  const sortedMedia = isOverview ? [] : [...mediaItems].sort((a, b) => a.sort_order - b.sort_order);
   const hasVoices = isOverview ? voices.length > 0 : sortedClips.length > 0;
   const hasMedia = sortedMedia.length > 0;
   const shouldDisplay = visible && (hasVoices || hasMedia);
 
   return (
     <div
-      className={`${styles.mediaCarousel} ${styles.fadeIn}`}
+      className={styles.mediaCarousel}
       id="mediaCarousel"
       style={{ display: shouldDisplay ? "flex" : "none" }}
     >
-      <button
-        type="button"
-        tabIndex={0}
-        className={`${styles.carouselArrow} ${styles.navIconBg}`}
-        id="carouselArrow_left"
-        aria-label="Scroll left"
-        onClick={() => scrollByOffset(viewportRef, -1)}
-      >
-        <LeftOutlined
-          className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-          aria-hidden="true"
-        />
-      </button>
-
       <div
         className={styles.carouselViewport}
         id="carouselViewport"
-        ref={viewportRef}
       >
         <div className={styles.carouselTrack} id="carouselTrack">
           <div className={styles.voicesList} id="voicesList">
@@ -87,7 +71,7 @@ export function SceneMediaCarousel({
                       <button
                         type="button"
                         tabIndex={0}
-                        className={styles.voice}
+                        className={`${styles.voice} ${styles.voiceActive}`}
                         id={`voice_${index + 1}`}
                         aria-label={`Listen to ${voice.name}`}
                         onClick={() => onSelectOverviewVoice(voice)}
@@ -118,7 +102,10 @@ export function SceneMediaCarousel({
                           className={`${styles.voiceText} ${styles.rightToLeftText}`}
                           id={`voiceText_${index + 1}`}
                         >
-                          {voice.name}
+                          <div className={styles.voiceText_name}>{voice.name}</div>
+                          {voice.title && (
+                            <div className={styles.voiceText_title}>{voice.title}</div>
+                          )}
                         </div>
                       </button>
                     </div>
@@ -132,7 +119,7 @@ export function SceneMediaCarousel({
                       <button
                         type="button"
                         tabIndex={0}
-                        className={styles.voice}
+                        className={`${styles.voice} ${styles.voiceActive}`}
                         id={`voice_${index + 1}`}
                         aria-label={`Listen ${clip.voice.name} talk about ${clip.bubble_text ?? ""}`}
                         onClick={() => onSelectSceneVoiceClip(clip)}
@@ -163,7 +150,10 @@ export function SceneMediaCarousel({
                           className={`${styles.voiceText} ${styles.rightToLeftText}`}
                           id={`voiceText_${index + 1}`}
                         >
-                          {clip.bubble_text ?? clip.voice.name}
+                          <div className={styles.voiceText_name}>{clip.voice.name}</div>
+                          {clip.voice.title && (
+                            <div className={styles.voiceText_title}>{clip.voice.title}</div>
+                          )}
                         </div>
                       </button>
                     </div>
@@ -206,20 +196,6 @@ export function SceneMediaCarousel({
           </div>
         </div>
       </div>
-
-      <button
-        type="button"
-        tabIndex={0}
-        className={`${styles.carouselArrow} ${styles.navIconBg}`}
-        id="carouselArrow_right"
-        aria-label="Scroll right"
-        onClick={() => scrollByOffset(viewportRef, 1)}
-      >
-        <RightOutlined
-          className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-          aria-hidden="true"
-        />
-      </button>
     </div>
   );
 }

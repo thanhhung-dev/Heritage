@@ -1,4 +1,5 @@
 """OpenSearch passage contract; integration tests use a disposable local index."""
+import importlib
 import json
 import os
 import unittest
@@ -19,6 +20,27 @@ def vectors(texts):
 
 
 class SearchTransportTests(unittest.IsolatedAsyncioTestCase):
+    async def test_new_and_existing_indexes_accept_typed_tour_metadata(self):
+        for name in ('apps.backend.core.search', 'apps.backend.common.search.opensearch'):
+            for exists in (False, True):
+                with self.subTest(module=name, exists=exists):
+                    writes = []
+                    def respond(request):
+                        if request.url.path == '/heritage-passages-v1' and exists:
+                            return httpx.Response(400, json={
+                                'error': {'type': 'resource_already_exists_exception'}})
+                        writes.append((request.url.path, json.loads(request.content)))
+                        return httpx.Response(200, json={})
+                    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                        async with importlib.import_module(name).PassageStore(client=client) as store:
+                            await store.ensure_index()
+                    path = '/heritage-passages-v1/_mapping' if exists else '/heritage-passages-v1'
+                    body = next(body for target, body in writes if target == path)
+                    properties = body['properties'] if exists else body['mappings']['properties']
+                    for field in ('content_type', 'heritage_slug', 'scene_key', 'language', 'active_area_id'):
+                        self.assertEqual(properties[field], {'type': 'keyword'})
+                    self.assertEqual(properties['scene_id'], {'type': 'long'})
+
     async def test_partial_bulk_failure_is_reported_not_a_successful_import(self):
         def respond(request):
             if request.url.path == '/_bulk':

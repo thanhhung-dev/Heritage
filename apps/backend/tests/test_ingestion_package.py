@@ -58,6 +58,21 @@ class IngestionPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(PackageValidationError, "observed_at"):
             validate_package(package)
 
+    def test_transcript_metadata_is_validated_at_document_and_passage_boundaries(self):
+        metadata = {'content_type': 'tour_script', 'heritage_slug': 'lang-tu-duc',
+                    'active_area_id': 'khiem-lang', 'scene_id': 42,
+                    'scene_key': 's0', 'language': 'vi'}
+        package = valid_package()
+        package['documents'][0].update(metadata)
+        self.assertIs(validate_package(package), package)
+        package['passages'][0]['scene_key'] = 's2'
+        with self.assertRaisesRegex(PackageValidationError, 'scene_key'):
+            validate_package(package)
+        del package['passages'][0]['scene_key']
+        del package['documents'][0]['scene_id']
+        with self.assertRaisesRegex(PackageValidationError, 'scene_id'):
+            validate_package(package)
+
 
 if __name__ == "__main__":
     unittest.main()

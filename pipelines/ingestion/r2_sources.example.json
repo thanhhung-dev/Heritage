@@ -7,10 +7,29 @@
       "object_key": "knowledge/curated/thien-mu/lich-su.md",
       "source_url": "https://YOUR-ORIGINAL-SOURCE/thien-mu",
       "title": "Lịch sử chùa Thiên Mụ",
+      "content_type": "historical_source",
+      "active_area_id": "chua-thien-mu",
+      "language": "vi",
       "region": "hue",
       "source_type": "official",
       "tier": 1,
       "observed_at": "2026-10-14T00:00:00Z"
+    },
+    {
+      "url": "https://YOUR-R2-DOMAIN/tour-context/vi/lang-tu-duc/s0.md",
+      "object_key": "tour-context/vi/lang-tu-duc/s0.md",
+      "source_url": "https://YOUR-PUBLIC-SOURCE/tour-context/vi/lang-tu-duc/s0.md",
+      "title": "VÍ DỤ transcript overview — thay scene_id bằng ID đã đối chiếu",
+      "content_type": "tour_script",
+      "heritage_slug": "lang-tu-duc",
+      "active_area_id": "khiem-lang",
+      "scene_id": 1,
+      "scene_key": "s0",
+      "language": "vi",
+      "region": "hue",
+      "source_type": "other",
+      "tier": 4,
+      "observed_at": "2026-11-11T00:00:00Z"
     }
   ]
 }

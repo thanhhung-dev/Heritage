@@ -1,4 +1,6 @@
+import asyncio
 import hashlib
+import importlib
 import io
 import json
 import tempfile
@@ -7,7 +9,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 from pypdf import PdfWriter
@@ -99,6 +101,38 @@ class R2IngestionTests(unittest.TestCase):
         self.assertIn("Built in 1601.", text)
         self.assertNotIn("MENU", text)
         self.assertNotIn("EVIL", text)
+
+    def test_transcript_config_metadata_is_preserved_and_header_alone_is_rejected(self):
+        text = '---\ncontent_type: tour_script\n---\n00:00:00s\nLời thuyết minh.'
+        with self.client(text.encode()) as client:
+            with self.assertRaisesRegex(IngestionError, 'content_type'):
+                run_ingestion(self.config, self.output, client=client)
+        self.assertFalse(self.output.exists())
+        metadata = {'content_type': 'tour_script', 'heritage_slug': 'lang-tu-duc',
+                    'active_area_id': 'lang-tu-duc', 'scene_id': 42,
+                    'scene_key': 's0', 'language': 'vi'}
+        self.config['documents'][0].update(metadata)
+        with self.client(text.encode()) as client:
+            path = run_ingestion(self.config, self.output, client=client)
+        package = json.loads(path.read_text())
+        doc = package['documents'][0]
+        self.assertEqual({key: doc[key] for key in metadata},
+                         {**metadata, 'active_area_id': 'khiem-lang'})
+        self.assertEqual(doc['raw_text'], text)
+        for passage in package['passages']:
+            self.assertEqual(passage['text'], text[passage['char_start']:passage['char_end']])
+        for name in ('apps.backend.db.import_passages', 'apps.backend.ai.ingestion.import_passages'):
+            with self.subTest(importer=name):
+                store = AsyncMock()
+                count = asyncio.run(importlib.import_module(name).import_passages(
+                    package, store=store,
+                    embedder=lambda texts: [[1.0] + [0.0] * 1023 for _ in texts]))
+                self.assertEqual(count, len(package['passages']))
+                rows = store.index_passages.call_args.args[0]
+                for saved, original in zip(rows, package['passages']):
+                    self.assertEqual({key: saved[key] for key in metadata},
+                                     {**metadata, 'active_area_id': 'khiem-lang'})
+                    self.assertEqual((saved['id'], saved['text']), (original['key'], original['text']))
 
     def test_failure_does_not_publish_partial_output_or_leak_url(self):
         for status, body, limit in ((403, b"denied", 1000), (200, b"x" * 1001, 1000),

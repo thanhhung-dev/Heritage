@@ -5,6 +5,8 @@ import hashlib
 from datetime import datetime
 from typing import Any
 
+from apps.backend.ai.ingestion.metadata import resolve_metadata
+
 _SOURCE_TYPES = {"official", "academic", "management", "press", "encyclopedia", "other"}
 _ENTITY_TYPES = {"person", "place", "event", "artifact"}
 _ALIAS_TYPES = {"official", "historical", "common", "sino_vietnamese", "english", "typo"}
@@ -74,6 +76,10 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
             raise PackageValidationError(f"{path}.tier: must be between 1 and 4")
         if not isinstance(raw_text, str):
             raise PackageValidationError(f"{path}.raw_text: must be a string")
+        try:
+            resolve_metadata(doc, text=raw_text)
+        except ValueError as exc:
+            raise PackageValidationError(f"{path}: {exc}") from None
         expected_hash = hashlib.sha256(raw_text.encode()).hexdigest()
         if doc.get("content_hash", expected_hash) != expected_hash:
             raise PackageValidationError(f"{path}.content_hash: does not match raw_text")
@@ -94,6 +100,10 @@ def validate_package(package: dict[str, Any]) -> dict[str, Any]:
         expected = doc_by_key[doc_key]["raw_text"][start:end]
         if passage.get("text") != expected:
             raise PackageValidationError(f"{path}.text: does not match document span")
+        try:
+            resolve_metadata(doc_by_key[doc_key], passage, text=doc_by_key[doc_key]['raw_text'])
+        except ValueError as exc:
+            raise PackageValidationError(f"{path}: {exc}") from None
         passage_by_key[key] = passage
 
     entity_keys: set[str] = set()
