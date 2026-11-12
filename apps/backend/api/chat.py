@@ -9,8 +9,9 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from apps.backend.ai.answering.conversation import ConversationAnswer
+from apps.backend.ai.answering.conversation import ConversationAnswer, resolve_cited_source_ids
 from apps.backend.api.public.chat.schemas import ChatRequest, ChatResponse
+from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.core.llm import generate_response, get_generation_details
 from apps.backend.core.observability import correlation_id, observe_grounded_qa, rag_observation
 from apps.backend.core.search import PassageStore, SearchError
@@ -31,7 +32,7 @@ async def get_repository():
 
 
 @router.post("/chat", response_model=ChatResponse, responses={
-    504: {"description": "AI vượt quá thời gian chờ 30 giây cho tour có khóa khu vực."},
+    504: {"description": "AI vượt CHAT_TIMEOUT_SECONDS (mặc định 120 giây)."},
     500: {"description": "Lỗi retrieval nội bộ; detail chứa code=RETRIEVAL_INTERNAL_ERROR và message."},
     503: {"description": "Lỗi embedding/OpenSearch; detail chứa code=EMBEDDING_FAILED hoặc "
                          "OPENSEARCH_FAILED và message. Lỗi LLM giữ detail dạng chuỗi."},
@@ -51,10 +52,11 @@ async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_rep
         'correlation_id': correlation_id.get(), 'corpus_version': 'opensearch',
         'grounding_verified': False,
     }) as observation:
+        timeout = chat_timeout_seconds()
         try:
-            response = await asyncio.wait_for(_chat(req, repository), timeout=30)
+            response = await asyncio.wait_for(_chat(req, repository), timeout=timeout)
         except TimeoutError:
-            raise HTTPException(504, "AI phản hồi quá thời gian chờ 30 giây.") from None
+            raise HTTPException(504, f"AI phản hồi quá thời gian chờ {timeout:g} giây.") from None
         observation.update(output=response.model_dump(), metadata={
             'resolution_status': response.resolution_status,
             'answer_type': response.answer_type,

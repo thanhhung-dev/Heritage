@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -54,6 +55,19 @@ class StartupSettings:
     cors_origins: tuple[str, ...] = field(default_factory=tuple)
     r2_public_base_url: str | None = None
     r2_allowed_asset_hosts: tuple[str, ...] = field(default_factory=tuple)
+    chat_timeout_seconds: float = 120.0
+
+
+def chat_timeout_seconds(environ: Mapping[str, str] | None = None) -> float:
+    """One deadline policy for transient, persisted and area-locked chat."""
+    env = os.environ if environ is None else environ
+    try:
+        timeout = float(env.get("CHAT_TIMEOUT_SECONDS", "").strip() or "120")
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError
+    except ValueError:
+        raise ValueError("CHAT_TIMEOUT_SECONDS must be a finite positive number of seconds.") from None
+    return timeout
 
 
 def _is_http_url(value: str) -> bool:
@@ -104,6 +118,11 @@ def validate_startup_config(
 
     env = os.environ if environ is None else environ
     errors: list[str] = []
+
+    try:
+        chat_timeout = chat_timeout_seconds(env)
+    except ValueError as error:
+        errors.append(str(error))
 
     database_url = env.get("DATABASE_URL", "").strip()
     # Chat uses OpenSearch. PostgreSQL remains optional for heritage/business APIs.
@@ -235,6 +254,7 @@ def validate_startup_config(
         cors_origins=tuple(configured_cors_origins),
         r2_public_base_url=r2_public_base_url,
         r2_allowed_asset_hosts=r2_allowed_asset_hosts,
+        chat_timeout_seconds=chat_timeout,
     )
 
 

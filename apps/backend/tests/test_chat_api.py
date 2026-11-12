@@ -1,5 +1,8 @@
+import asyncio
 import importlib
 import json
+import os
+import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
@@ -239,6 +242,54 @@ class ChatApiTests(unittest.TestCase):
 
 class ChatGenerationContractTests(unittest.TestCase):
     """Exercise both entry points through generation, mocking only external IO."""
+
+    def test_default_and_configured_deadlines_cover_standalone_and_tour_chat(self):
+        wait_for = asyncio.wait_for
+        for module_name in ("apps.backend.api.chat", "apps.backend.api.public.chat.router"):
+            with patch.object(REGISTRY, "register"):
+                api = importlib.import_module(module_name)
+            for area in (None, "khiem-lang"):
+                for budget, expected_status in (("", 200), ("0.01", 504), ("0.3", 200)):
+                    with self.subTest(api=module_name, area=area, budget=budget):
+                        evidence = SimpleNamespace(
+                            id="42", text="Khiêm Lăng gắn với vua Tự Đức.", active_area_id=area,
+                            to_source=lambda: {"passage_id": "42", "active_area_id": area},
+                        )
+                        repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(
+                            query=SimpleNamespace(ambiguous=False, corrections=[], intent=frozenset()),
+                            evidence=[evidence], graph_context=[],
+                        )))
+                        app = FastAPI()
+                        app.include_router(api.router, prefix="/api")
+                        app.dependency_overrides[api.get_repository] = lambda: repository
+
+                        def generate(**kwargs):
+                            time.sleep(.06)
+                            return model_answer("Khiêm Lăng gắn với vua Tự Đức.")
+
+                        async def deadline(coro, timeout):
+                            # Scale the default seconds to milliseconds: a 60-second
+                            # answer must outlive the old 30s limit, not the new 120s.
+                            return await wait_for(coro, timeout=timeout * .001 if not budget else timeout)
+
+                        with (
+                            patch.dict(os.environ, {"CHAT_TIMEOUT_SECONDS": budget}),
+                            patch.object(api, "generate_response", side_effect=generate),
+                            patch.object(api, "get_generation_details", return_value=SimpleNamespace(
+                                truncated=False, model="test", token_usage=10,
+                            )),
+                            patch.object(api.asyncio, "wait_for", side_effect=deadline),
+                            TestClient(app) as client,
+                        ):
+                            response = client.post("/api/chat", json={
+                                "message": "Khiêm Lăng gắn với ai?", "active_area_id": area,
+                            })
+                        self.assertEqual(response.status_code, expected_status, response.text)
+                        if expected_status == 200:
+                            self.assertEqual(response.json()["sources"][0]["passage_id"], "42")
+                        else:
+                            self.assertIn("0.01", response.json()["detail"])
+                            self.assertNotIn("Khiêm Lăng", response.text)
 
     @patch.dict("os.environ", {"INFERENCE_BACKEND": "llama_server"})
     def test_single_generation_preserves_question_and_controls_citations(self):

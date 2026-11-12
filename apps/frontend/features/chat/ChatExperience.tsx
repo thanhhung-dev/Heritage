@@ -28,8 +28,7 @@ export function ChatExperience() {
 
 function AccountChatExperience() {
   const chat = useConversationSession({ scope: "standalone", initialMessages: initialStandaloneMessages });
-  const { messages, input, sending, restoring, setInput, send } = chat;
-  const loading = sending || restoring;
+  const { messages, input, sending: loading, setInput, send } = chat;
   const theme = useHeritageTheme();
   const hasMessages = messages.length > 0;
 

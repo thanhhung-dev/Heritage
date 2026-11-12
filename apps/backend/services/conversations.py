@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.models.admin import AdminAccount
 from apps.backend.models.chat import ChatMessage, Conversation, MessageCitation
 from apps.backend.models.heritage import Heritage
@@ -22,8 +23,6 @@ from apps.backend.schemas.chat import (
     ConversationResponse, MessageCitationResponse,
 )
 from apps.backend.services.chat_context import bounded_history
-
-CHAT_TIMEOUT_SECONDS = 30
 
 
 class ChatServiceError(Exception):
@@ -133,6 +132,7 @@ class ConversationService:
         self, request: ChatMessageCreate, account_id: int | None,
         answerer: Callable[[ChatMessageCreate, list[ChatContextMessage]], Awaitable[GroundedAnswer]],
     ) -> ChatResponse:
+        timeout = chat_timeout_seconds()
         try:
             if account_id is not None:
                 await self.require_account(account_id)
@@ -184,7 +184,7 @@ class ConversationService:
             if request.conversation_id is None:
                 self.db.add(conversation)
 
-            answer = await asyncio.wait_for(answerer(effective_request, history), timeout=CHAT_TIMEOUT_SECONDS)
+            answer = await asyncio.wait_for(answerer(effective_request, history), timeout=timeout)
             if not answer.answer.strip() or answer.resolution_status == "unavailable":
                 raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.")
             if answer.answer_type == "answered" and not answer.sources:
@@ -225,7 +225,7 @@ class ConversationService:
             return response
         except TimeoutError:
             await self.db.rollback()
-            raise ChatServiceError("timeout", "AI xử lý quá thời gian 30 giây. Vui lòng thử lại.") from None
+            raise ChatServiceError("timeout", f"AI phản hồi quá thời gian chờ {timeout:g} giây. Vui lòng thử lại.") from None
         except BaseException:
             await self.db.rollback()
             raise

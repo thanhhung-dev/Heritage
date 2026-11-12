@@ -6,6 +6,14 @@
 
 Three.js và types đã cài. Model Tự Đức load trực tiếp từ R2 (`https://pub-2fc54e5237344dc9b845f2ff2c9309f8.r2.dev/TuDuc/TuDuckt.glb`, lưu trong `model_asset.file_url`) — bucket đã bật CORS cho origin của app nên không cần rewrite qua Next nữa. Nếu đổi sang custom domain thì nhớ thêm host đó vào `R2_ALLOWED_ASSET_HOSTS`. Decoder KTX2/Basis ở `public/three/basis/`, Draco glTF ở `public/three/draco/` (kèm license).
 
+## Chat tạm thời trong tour và trang chat
+
+- Hai giao diện dùng chung `useConversationSession` và gửi `POST /api/chat`, không dùng `/api/chat/message`.
+- Mỗi lượt gửi lại tối đa 6 tin nhắn gần nhất, tổng 6.000 ký tự; vẫn truyền phạm vi di sản, cảnh và điểm đang chọn. Đổi cảnh trong cùng tour giữ lịch sử, cập nhật context cho lượt gửi tiếp theo.
+- Không tạo/lưu `conversation_id`, không tự đọc lịch sử server. Hội thoại chỉ nằm trong bộ nhớ giao diện; tải lại trang, mở phiên mới hoặc đổi phạm vi sẽ bắt đầu lại. Dữ liệu hội thoại đã lưu trước đây không bị xóa.
+- Chuyển endpoint không bỏ retrieval của backend và không thêm fallback trả lời khi model/kho dữ liệu lỗi.
+- Kiểm tra cutover: 4 targeted tests và TypeScript đã qua; smoke trình duyệt dùng hook thật với response giả lập xác nhận lượt thứ hai của tài khoản đăng nhập giữ history, cập nhật cảnh, reset phiên và không khôi phục khi reload. Trang Next local không phản hồi trong lần kiểm tra; chưa xác minh giao diện tích hợp hoặc model thật.
+
 ## Audio môi trường, chuyển cảnh và highlight
 
 API `/api/heritages/{slug}/tour` và fixture `tour.json` dùng cùng contract:

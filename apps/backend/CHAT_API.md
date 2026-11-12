@@ -137,10 +137,26 @@ retrieval filters, area-only graph snapshots, source validation and safe follow-
 questions. Scene changes supply current story labels while retaining the same
 area-owned conversation. Assistant history is never accepted as source evidence.
 
-Inference is bounded by `asyncio.wait_for(..., 30)`. Both messages and all citations
-commit in one transaction before a 201 response. Timeout, cancellation, provider
-failure, invalid output and persistence errors roll back partial turns. A row
-lock serializes continuation/deletion of the same conversation.
+Chat inference is bounded by `CHAT_TIMEOUT_SECONDS` (default **120 seconds**),
+shared by `/api/chat`, `/api/chat/message` and area-locked tour generation in both
+router paths. Set it in the backend environment to a finite positive number of
+seconds; invalid values fail startup. This is the total retrieval-plus-generation
+budget at the chat boundary, not an additional budget for each phase.
+`LLAMA_SERVER_TIMEOUT` remains the separate upstream HTTP timeout; increasing it
+alone does not extend the chat deadline. A 504 detail reports the configured
+chat limit rather than a hard-coded 30 seconds.
+
+The backend initializes BGE-M3 and encodes a short warmup query in its lifespan
+before accepting requests. First-start imports/model loading therefore do not
+consume the first user's chat deadline. Startup can take longer on a cold cache;
+wait for `Query embedding model ready` and Uvicorn's startup-complete log before
+sending chat requests. Embedding initialization failure fails startup and releases
+database/tracing resources instead of reporting a ready API with a cold model.
+
+Both messages and all citations commit in one transaction before a 201 response.
+Timeout, cancellation, provider failure, invalid output and persistence errors
+roll back partial turns. A row lock serializes continuation/deletion of the same
+conversation.
 
 | Failure | Persisted API result |
 | --- | --- |
@@ -154,8 +170,8 @@ lock serializes continuation/deletion of the same conversation.
 
 Local fallback is enabled only with `APP_ENVIRONMENT=local` and
 `CHAT_DEVELOPMENT_FALLBACK=true` (local default). Local primary inference has an
-8-second budget within the outer 30-second limit. Standalone chat can try Gemini
-through `GOOGLE_API_KEY`; if unavailable, it returns a clearly labeled Development
+8-second budget within the configured outer chat limit (120 seconds by default).
+Standalone chat can try Gemini through `GOOGLE_API_KEY`; if unavailable, it returns a clearly labeled Development
 mock. It uses actual retrieved sources where available and a clearly labeled demo
 source otherwise. It never invents a public source URL. Locked tours abstain on
 outage without calling general Gemini or attaching demo/foreign citations.

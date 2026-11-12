@@ -25,7 +25,6 @@ export interface SceneChatRequest extends ChatMessageRequest {
     description: string | null;
     sequence: number;
   } | null;
-  conversation_id?: string;
   conversation_context?: SceneChatContextMessage[];
 }
 

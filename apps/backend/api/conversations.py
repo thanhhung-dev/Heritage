@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from fastapi import Depends, HTTPException, Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.core.security import get_current_user
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.schemas.chat import (
@@ -86,7 +87,8 @@ def mount_conversation_routes(router, get_repository, pipeline):
     """Use identical persistence/auth semantics for both existing router paths."""
     @router.post("/chat/message", response_model=ChatResponse, status_code=201, responses={
         401: {"description": "JWT không hợp lệ"}, 403: {"description": "Không phải chủ sở hữu"},
-        500: {"description": "AI hoặc lưu trữ hội thoại lỗi"}, 504: {"description": "AI quá 30 giây"},
+        500: {"description": "AI hoặc lưu trữ hội thoại lỗi"},
+        504: {"description": "AI vượt CHAT_TIMEOUT_SECONDS (mặc định 120 giây)."},
     })
     async def create_chat_message(
         request: ChatMessageCreate,
@@ -126,14 +128,14 @@ def mount_conversation_routes(router, get_repository, pipeline):
             except TimeoutError:
                 if local_fallback:
                     return await fallback()
-                raise ChatServiceError("timeout", "AI phản hồi quá thời gian chờ 30 giây.") from None
+                raise ChatServiceError("timeout", f"AI phản hồi quá thời gian chờ {chat_timeout_seconds():g} giây.") from None
             except HTTPException as error:
                 if error.status_code == 422:
                     raise
                 if local_fallback and error.status_code in {500, 503, 504}:
                     return await fallback()
                 if error.status_code == 504:
-                    raise ChatServiceError("timeout", "AI phản hồi quá thời gian chờ 30 giây.") from None
+                    raise ChatServiceError("timeout", error.detail) from None
                 raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.") from None
         with conversation_errors():
             return await service.send(request, account_id, answerer)

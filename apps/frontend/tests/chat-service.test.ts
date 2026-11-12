@@ -45,13 +45,20 @@ function browser(t: TestContext) {
   return values;
 }
 
-test("both clients receive the same persisted contract and matching scoped citations", async (t) => {
+test("transient chat accepts replies without persistence IDs and preserves scoped citations", async (t) => {
   const values = browser(t);
   const requests: RequestInit[] = [];
-  globalThis.fetch = async (_url, init) => { requests.push(init ?? {}); return new Response(JSON.stringify(reply), { status: 201 }); };
+  globalThis.fetch = async (_url, init) => {
+    requests.push(init ?? {});
+    return new Response(JSON.stringify({
+      answer: reply.answer, answer_type: reply.answer_type, active_area_id: reply.active_area_id,
+      sources: reply.sources, follow_up_questions: [], needs_user_choice: false, abstained: false,
+    }));
+  };
   const result = await sendChatMessage({ message: "Câu hỏi", active_area_id: "khiem-lang" });
-  assert.equal(result.conversationId, conversationId);
-  assert.equal(result.messageId, messageId);
+  assert.equal(result.answer, reply.answer);
+  assert.equal("conversationId" in result, false);
+  assert.match(result.messageId, /^[0-9a-f-]{36}$/i);
   assert.equal(result.sources[0].doc, "Nguồn Khiêm Lăng");
   assert.equal((requests[0].headers as Record<string, string>).Authorization, "Bearer test-access-token");
   values.delete("heritage_access_token");

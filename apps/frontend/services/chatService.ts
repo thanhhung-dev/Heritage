@@ -14,7 +14,6 @@ export interface ChatContextMessage {
 
 export interface ChatMessageRequest {
   message: string;
-  conversation_id?: string;
   conversation_context?: ChatContextMessage[];
   active_area_id?: string;
   heritage_id?: number;
@@ -24,7 +23,6 @@ export interface ChatMessageRequest {
 }
 
 export interface ChatReply {
-  conversationId: string;
   messageId: string;
   answer: string;
   sources: Source[];
@@ -125,9 +123,6 @@ export async function sendChatMessage(request: ChatMessageRequest, signal?: Abor
     }
   }
 
-  const conversationId = isConversationId(data.conversation_id)
-    ? data.conversation_id
-    : request.conversation_id || crypto.randomUUID();
   const messageId = isConversationId(data.message_id)
     ? data.message_id
     : crypto.randomUUID();
@@ -142,7 +137,6 @@ export async function sendChatMessage(request: ChatMessageRequest, signal?: Abor
           : [];
 
   return {
-    conversationId,
     messageId,
     answer: data.answer,
     sources: sourcesFrom(data.sources),

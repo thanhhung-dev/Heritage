@@ -8,7 +8,7 @@ export interface ConversationContextMessage {
 export type SceneChatDependencies = ApiDependencies;
 
 /**
- * Build bounded client history for a new/guest conversation.
+ * Build bounded client history for each transient chat request.
  */
 export function createConversationContext(
   messages: Array<{ role: "user" | "assistant" | string; content: string }>,
@@ -40,7 +40,7 @@ export function createConversationContext(
 }
 
 /**
- * Send a tour-scoped chat request using the structured conversation API.
+ * Send chat context without creating or resuming a persisted conversation.
  */
 export function requestSceneChat(
   apiUrl: string,
@@ -48,7 +48,7 @@ export function requestSceneChat(
   dependencies: SceneChatDependencies = {},
 ): Promise<Response> {
   return apiFetch(
-    "/chat/message",
+    "/chat",
     {
       method: "POST",
       body: JSON.stringify(request),

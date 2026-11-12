@@ -1,6 +1,8 @@
 """FastAPI app chính cho chatbot văn hóa Đà Nẵng - Huế."""
 
+import asyncio
 import logging
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -8,6 +10,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from apps.backend.api import auth, chat, health, heritage, profile
+from apps.backend.core import embedding
 from apps.backend.core.assets import configure_asset_policy
 from apps.backend.core.config import cors_origins, validate_startup_config
 from apps.backend.core.email import EmailConfig, init_email_service
@@ -51,6 +54,10 @@ async def lifespan(app: FastAPI):
     tracing = setup_tracing(app, settings, engine)
     app.state.settings = settings
     try:
+        started = time.perf_counter()
+        log.info("Warming up query embedding model before accepting requests")
+        await asyncio.to_thread(embedding.embed_texts, ["Di sản văn hóa"])
+        log.info("Query embedding model ready in %.2f seconds", time.perf_counter() - started)
         yield
     finally:
         shutdown_tracing(tracing)

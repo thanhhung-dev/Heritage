@@ -5,6 +5,7 @@ import asyncio
 import json
 
 from apps.backend.ai.answering.conversation import ConversationAnswer
+from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.services.chat_context import retrieval_question
 from apps.backend.services.tour_guide import GUIDE_STORIES, guide_stories
 from apps.backend.services.tour_scope import (
@@ -102,8 +103,9 @@ async def answer_in_area(request, repository, generate, generation_details, *, r
                        scene_context=scene_hint)
         return raw, generation_details()
 
+    timeout = chat_timeout_seconds()
     try:
-        raw, details = await asyncio.wait_for(asyncio.to_thread(infer), timeout=30)
+        raw, details = await asyncio.wait_for(asyncio.to_thread(infer), timeout=timeout)
         if details.truncated is True:
             raise ValueError("Truncated answer")
         answer = ConversationAnswer.model_validate_json(raw)
@@ -112,7 +114,7 @@ async def answer_in_area(request, repository, generate, generation_details, *, r
         if story and answer.answer_type == "answered" and not set(story.source_ids) <= set(answer.source_ids):
             raise ValueError("Story must cite its reviewed sources")
     except TimeoutError as error:
-        raise TourChatError(504, "AI phản hồi quá thời gian chờ. Vui lòng thử lại.") from error
+        raise TourChatError(504, f"AI phản hồi quá thời gian chờ {timeout:g} giây. Vui lòng thử lại.") from error
     except Exception as error:
         raise TourChatError(503, "Model trả lời hiện không khả dụng.") from error
     if not allowed_output(answer.answer, area) or answer.answer_type == "out_of_scope":

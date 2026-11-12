@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
 
+from apps.backend.common.config import chat_timeout_seconds
+
 log = logging.getLogger(__name__)
 
 # Project root
@@ -66,6 +68,7 @@ class StartupSettings:
     smtp_sender_name: str = "Heritage Support"
     smtp_use_tls: bool = True
     frontend_base_url: str = "http://localhost:3000"
+    chat_timeout_seconds: float = 120.0
 
 
 def _is_http_url(value: str) -> bool:
@@ -116,6 +119,11 @@ def validate_startup_config(
 
     env = os.environ if environ is None else environ
     errors: list[str] = []
+
+    try:
+        chat_timeout = chat_timeout_seconds(env)
+    except ValueError as error:
+        errors.append(str(error))
 
     database_url = env.get("DATABASE_URL", "").strip()
     # Chat uses OpenSearch. PostgreSQL remains optional for heritage/business APIs.
@@ -275,6 +283,7 @@ def validate_startup_config(
         smtp_sender_name=smtp_sender_name,
         smtp_use_tls=smtp_use_tls,
         frontend_base_url=frontend_base_url,
+        chat_timeout_seconds=chat_timeout,
     )
 
 

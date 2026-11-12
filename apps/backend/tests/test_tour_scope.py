@@ -169,7 +169,6 @@ class AreaApiTests(unittest.TestCase):
 
     def test_timeout_is_504_and_does_not_publish_partial_answer(self):
         async def expire(coro, timeout):
-            self.assertEqual(timeout, 30)
             coro.close()
             raise TimeoutError()
         with patch("apps.backend.services.tour_chat.asyncio.wait_for", side_effect=expire):

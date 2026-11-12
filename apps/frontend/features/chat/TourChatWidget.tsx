@@ -45,26 +45,35 @@ function AreaTourChat() {
     selectedHighlight, narrationStatus } = useHeritageTour();
   const area = resolveTourArea(heritageSlug);
   const hasIdentity = !!currentScene && currentScene.id > 0 && payload.heritage.id > 0;
+  const chatContext = useMemo(() => ({
+    active_area_id: area?.id,
+    ...(Number.isInteger(payload.heritage.id) && payload.heritage.id > 0 ? { heritage_id: payload.heritage.id } : {}),
+    heritage_context: {
+      id: payload.heritage.id, slug: heritageSlug, title: payload.heritage.title, region: payload.heritage.region,
+    },
+    scene_context: currentScene ? {
+      id: currentScene.id, key: currentSceneKey, slug: currentScene.slug,
+      title: currentScene.title, description: currentScene.description?.slice(0, 300) ?? null,
+      sequence: currentScene.sequence,
+    } : null,
+    ...(hasIdentity ? {
+      tour_context: {
+        scene_id: currentScene!.id, mode: chatMode,
+        highlight_id: selectedHighlight?.id ?? null, narration: narrationStatus,
+      }
+    } : {}),
+  }), [
+    area?.id, payload.heritage.id, heritageSlug,
+    payload.heritage.title, payload.heritage.region,
+    currentScene?.id, currentSceneKey, currentScene?.slug,
+    currentScene?.title, currentScene?.description, currentScene?.sequence,
+    hasIdentity, chatMode, selectedHighlight?.id, narrationStatus,
+  ]);
   const chat = useConversationSession({
     scope: `tour:${payload.heritage.id}:${area?.id ?? heritageSlug}`,
     initialMessages: initialTourMessages,
     disabled: !area || !hasIdentity,
-    context: {
-      active_area_id: area?.id,
-      ...(Number.isInteger(payload.heritage.id) && payload.heritage.id > 0 ? { heritage_id: payload.heritage.id } : {}),
-      heritage_context: {
-        id: payload.heritage.id, slug: heritageSlug, title: payload.heritage.title, region: payload.heritage.region,
-      },
-      scene_context: currentScene ? {
-        id: currentScene.id, key: currentSceneKey, slug: currentScene.slug,
-        title: currentScene.title, description: currentScene.description?.slice(0, 1000) ?? null,
-        sequence: currentScene.sequence,
-      } : null,
-      ...(hasIdentity ? { tour_context: {
-        scene_id: currentScene!.id, mode: chatMode,
-        highlight_id: selectedHighlight?.id ?? null, narration: narrationStatus,
-      } } : {}),
-    },
+    context: chatContext,
   });
   const sceneSuggestions = useMemo(
     () => buildSceneChatSuggestions(area, currentScene, currentSceneKey, selectedHighlight, chat.completedStoryIds),
@@ -79,7 +88,7 @@ function AreaTourChat() {
   })), [chat.messages]);
 
   return <ChatOverlayWidget
-    messages={overlayMessages} input={chat.input} sending={chat.sending} restoring={chat.restoring} disabled={!area || !hasIdentity}
+    messages={overlayMessages} input={chat.input} sending={chat.sending} disabled={!area || !hasIdentity}
     areaLabel={area?.title}
     sceneLabel={`${sceneSuggestions.contextLabel ?? area?.title ?? ""} · ${chatMode === "scene" ? "Theo cảnh" : chatMode === "walk" ? "Đi bộ 3D" : "Khám phá 3D"}`}
     suggestions={sceneSuggestions.suggestions}

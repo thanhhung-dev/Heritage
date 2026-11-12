@@ -14,7 +14,6 @@ interface ChatOverlayWidgetProps {
   messages: ChatOverlayMessage[];
   input: string;
   sending: boolean;
-  restoring?: boolean;
   disabled?: boolean;
   areaLabel?: string;
   sceneLabel?: string;
@@ -101,7 +100,7 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
     observer.observe(inputEl);
     if (inputEl.parentElement) observer.observe(inputEl.parentElement);
     return () => observer.disconnect();
-  }, [isOpen, mode, props.messages.length, props.restoring, props.error]);
+  }, [isOpen, mode, props.messages.length, props.error]);
 
   useEffect(() => {
     if (!isOpen) { setWelcomeGlowMounted(false); return; }
@@ -198,12 +197,11 @@ export function ChatOverlayWidget(props: ChatOverlayWidgetProps) {
           </p>}
           <ChatMessageList messages={props.messages} sending={props.sending} onSend={props.onSend}
             hideWelcome={hasConversation || props.input.trim().length > 0} />
-          {props.restoring && <p className={styles.restoreStatus} role="status">Đang khôi phục hội thoại…</p>}
           {props.error && <p className={styles.error} role="alert">{props.error}</p>}
-          <ChatInputBar value={props.input} sending={props.sending} disabled={props.restoring || props.disabled}
+          <ChatInputBar value={props.input} sending={props.sending} disabled={props.disabled}
             contextLabel={props.sceneLabel}
             suggestions={props.suggestions}
-            showSuggestions={(props.suggestions !== undefined || props.messages.length <= 1) && !props.restoring && !props.disabled}
+            showSuggestions={(props.suggestions !== undefined || props.messages.length <= 1) && !props.disabled}
             onChange={props.onInputChange} onSend={props.onSend} />
         </section>
     </div>

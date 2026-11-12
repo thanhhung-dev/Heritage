@@ -393,10 +393,11 @@ class ChatConversationTests(unittest.TestCase):
         def slow(**kwargs):
             time.sleep(.08)
             return self.generate.return_value
-        with patch.object(conversation_service, "CHAT_TIMEOUT_SECONDS", .01), patch.object(chat_api, "generate_response", side_effect=slow):
+        with patch.dict(os.environ, {"CHAT_TIMEOUT_SECONDS": "0.01"}), patch.object(chat_api, "generate_response", side_effect=slow):
             for extra in ({}, {"conversation_id": created["conversation_id"]}):
                 response = self.client.post("/api/chat/message", headers=self.headers(), json={"message": "test", **extra})
                 self.assertEqual(response.status_code, 504, response.text)
+                self.assertIn("0.01", response.json()["detail"])
         time.sleep(.1)
         self.assertEqual(self.counts(), (1, 2, 1))
 
