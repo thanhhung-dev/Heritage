@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import {
-  parseBoundaries, regionAt, visibleHeritages, splitMapPanels, createProjection,
+  parseBoundaries, parseDistricts, regionAt, districtAt, visibleHeritages,
+  splitMapPanels, filterMainlandDistricts, createProjection, createInverseProjection,
   type BoundaryCollection,
 } from "../features/map/geography";
 
 const boundaryPath = new URL("../public/map/hue-da-nang.geojson", import.meta.url);
+const districtPath = new URL("../public/map/hue-da-nang-districts.geojson", import.meta.url);
 const boundaries = () => parseBoundaries(JSON.parse(readFileSync(boundaryPath, "utf8")));
+const districts = () => parseDistricts(JSON.parse(readFileSync(districtPath, "utf8")));
 
 test("map uses the post-merger Hue and Da Nang boundaries, including Quang Nam and islands", () => {
   const data = boundaries();
@@ -83,5 +86,27 @@ test("both panels project north up and east right without mutating source coordi
 test("malformed boundary data is rejected instead of rendering misleading geometry", () => {
   for (const value of [null, {}, { type: "FeatureCollection", features: [] }]) {
     assert.throws(() => parseBoundaries(value));
+    assert.throws(() => parseDistricts(value));
   }
+});
+
+test("post-merger wards/communes load, filter mainland, and invert projection accurately", () => {
+  const data = districts();
+  const hueCount = data.features.filter((f) => f.properties.region === "hue").length;
+  const dnCount = data.features.filter((f) => f.properties.region === "da-nang").length;
+  assert.equal(hueCount, 40);
+  assert.equal(dnCount, 94);
+
+  const mainlandDistricts = filterMainlandDistricts(data);
+  assert.ok(mainlandDistricts.features.length < data.features.length, "Hoang Sa offshore unit is excluded from mainland");
+
+  const { mainland } = splitMapPanels(boundaries());
+  const project = createProjection(mainland);
+  const unproject = createInverseProjection(mainland);
+  const sample: [number, number] = [108.202, 16.054];
+  const [lng, lat] = unproject(project(sample));
+  assert.ok(Math.abs(lng - sample[0]) < 1e-9 && Math.abs(lat - sample[1]) < 1e-9);
+
+  const hit = districtAt(mainlandDistricts, sample);
+  assert.ok(hit !== null && hit.properties.region === "da-nang");
 });

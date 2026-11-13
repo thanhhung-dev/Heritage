@@ -7,9 +7,11 @@ import { CloseOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import type { MapHandle } from "@/features/map/HeritageMap";
 import {
   parseBoundaries,
+  parseDistricts,
   REGION_NAMES,
   visibleHeritages,
   type BoundaryCollection,
+  type DistrictCollection,
 } from "@/features/map/geography";
 import PortraitCard from "@/components/PortraitCard/PortraitCard";
 import { apiClient, ApiError } from "@/config/api";
@@ -28,6 +30,7 @@ export default function MapPage() {
   const selectionTrigger = useRef<HTMLButtonElement | null>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const [boundaries, setBoundaries] = useState<BoundaryCollection | null>(null);
+  const [districts, setDistricts] = useState<DistrictCollection | null>(null);
   const [mapAttempt, setMapAttempt] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -68,6 +71,7 @@ export default function MapPage() {
   useEffect(() => {
     const controller = new AbortController();
     setBoundaries(null);
+    setDistricts(null);
     setMapReady(false);
     setMapError(null);
     fetch("/map/hue-da-nang.geojson", { signal: controller.signal })
@@ -83,6 +87,17 @@ export default function MapPage() {
           setMapError(
             error instanceof Error ? error.message : "Không tải được bản đồ.",
           );
+      });
+    fetch("/map/hue-da-nang-districts.geojson", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return parseDistricts(await response.json());
+      })
+      .then((data) => {
+        if (!controller.signal.aborted && data) setDistricts(data);
+      })
+      .catch(() => {
+        // Optional sub-region overlay; keep main 3D map functional if it fails.
       });
     return () => controller.abort();
   }, [mapAttempt]);
@@ -303,6 +318,7 @@ export default function MapPage() {
               <HeritageMap
                 controlsRef={map}
                 data={boundaries}
+                districts={districts}
                 locations={locations}
                 selectedSlug={selectedPlace?.slug ?? null}
                 onSelect={selectPlace}

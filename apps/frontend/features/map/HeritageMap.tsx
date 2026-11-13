@@ -5,16 +5,18 @@
 // 作者全平台ID：宋夏天Dazzle；公众号：送你整个夏天
 // Source: https://github.com/songsummer920-dazzle/three-scope-map-skill
 // Modified for HeritageGraph: React 18 host for the adapted classic map-only scene.
-import { useEffect, useImperativeHandle, useRef, type Ref } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import type { HeritageSummary } from "@/types/heritage";
 import { createMapEngine, type MapEngine } from "./map-engine";
-import type { BoundaryCollection, Located } from "./geography";
+import { REGION_NAMES, type BoundaryCollection, type DistrictCollection, type Located, type RegionId } from "./geography";
 import styles from "./map.module.css";
 
 export type MapHandle = Pick<MapEngine, "zoom" | "resetView" | "focus">;
+type HoveredDistrict = { name: string; region: RegionId; x: number; y: number };
 type Props = {
   controlsRef: Ref<MapHandle>;
   data: BoundaryCollection;
+  districts?: DistrictCollection | null;
   onBackgroundClick: () => void;
   locations: Located<HeritageSummary>[];
   selectedSlug: string | null;
@@ -28,6 +30,7 @@ export default function HeritageMap(props: Props) {
   const engine = useRef<MapEngine | null>(null);
   const markerElements = useRef(new Map<string, HTMLButtonElement>());
   const callbacks = useRef(props);
+  const [hoveredDistrict, setHoveredDistrict] = useState<HoveredDistrict | null>(null);
   callbacks.current = props;
   useImperativeHandle(props.controlsRef, () => ({
     zoom: (factor) => engine.current?.zoom(factor),
@@ -46,13 +49,26 @@ export default function HeritageMap(props: Props) {
         },
         onError: (message) => callbacks.current.onError(message),
         onBackgroundClick: () => callbacks.current.onBackgroundClick(),
+        onDistrictHover: (district, point) => {
+          setHoveredDistrict(district && point ? {
+            name: district.properties.name,
+            region: district.properties.region,
+            x: point.x,
+            y: point.y,
+          } : null);
+        },
       });
       engine.current = map;
+      map.setDistricts(callbacks.current.districts ?? null);
       return () => { map.dispose(); engine.current = null; };
     } catch {
       callbacks.current.onError("Không khởi tạo được WebGL. Kiểm tra hỗ trợ đồ họa của trình duyệt rồi thử lại.");
     }
   }, [props.data]);
+
+  useEffect(() => {
+    engine.current?.setDistricts(props.districts ?? null);
+  }, [props.data, props.districts]);
 
   useEffect(() => {
     engine.current?.setMarkers(props.locations.flatMap((place) => {
@@ -85,6 +101,16 @@ export default function HeritageMap(props: Props) {
           </button>
         ))}
       </div>
+      {hoveredDistrict ? (
+        <div
+          className={styles.districtTooltip}
+          style={{ left: hoveredDistrict.x, top: hoveredDistrict.y }}
+          aria-hidden="true"
+        >
+          <span>{hoveredDistrict.name}</span>
+          <span className={styles.districtRegion}>{REGION_NAMES[hoveredDistrict.region]}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

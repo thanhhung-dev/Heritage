@@ -1,12 +1,19 @@
 .mapPage {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100svh;
+  width: 100%;
+  height: 100svh;
+  min-height: 620px;
   padding: 116px 48px 56px;
+  overflow: hidden;
   color: var(--text);
   font-family: var(--font-brand);
-  background: radial-gradient(ellipse at 68% 48%, #ff9b2d08, transparent 58%), var(--bg);
+  background:
+    radial-gradient(ellipse 65% 68% at 65% 50%, #ff9b2d38 0%, #ff9b2d1a 40%, transparent 78%),
+    radial-gradient(circle at 22% 24%, #ff9b2d10, transparent 52%),
+    var(--bg);
 }
 
 .mapExperience {
@@ -15,14 +22,18 @@
   align-items: center;
   gap: clamp(32px, 5vw, 88px);
   width: min(1280px, 100%);
+  pointer-events: none;
 }
 
 .mapAside {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
   min-width: 0;
+  pointer-events: auto;
 }
 
 .exploreSummary { width: 100%; text-align: center; }
@@ -117,8 +128,8 @@
 .retryButton { min-height: 44px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; }
 .retryButton:hover { border-color: var(--accent); }
 
-.mapFigure { min-width: 0; margin: 0; }
-.mapFrame { position: relative; width: 100%; height: clamp(540px, 68vw, 700px); min-width: 0; }
+.mapFigure { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; margin: 0; pointer-events: auto; }
+.mapFrame { position: relative; width: 100%; height: 100%; min-width: 0; }
 .mapControls {
   position: absolute;
   z-index: 2;
@@ -154,15 +165,14 @@
 @media (max-width: 1000px) {
   .mapPage { padding-inline: 28px; }
   .mapExperience { grid-template-columns: 240px minmax(0, 1fr); gap: 24px; }
-  .mapFrame { height: 560px; }
 }
 
 @media (max-width: 760px) {
-  .mapPage { padding: 88px 20px 120px; }
-  .mapExperience { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .mapPage { height: auto; min-height: 100svh; overflow: visible; padding: 88px 20px 120px; }
+  .mapExperience { grid-template-columns: minmax(0, 1fr); gap: 36px; pointer-events: auto; }
   .mapAside { grid-row: 2; width: min(300px, 100%); justify-self: center; }
-  .mapFigure { grid-row: 1; }
-  .mapFrame { height: clamp(340px, 100vw, 510px); }
+  .mapFigure { position: relative; inset: auto; grid-row: 1; height: clamp(340px, 100vw, 510px); }
+  .mapFrame { height: 100%; }
   .mapCaption { max-width: 300px; margin-inline: auto; }
   .eyebrow { margin-bottom: 20px; }
   .stat dd { font-size: 44px; }

@@ -29,6 +29,17 @@ polygon or coordinate is removed, translated, or simplified.
 Data is a visualization source, not a legal survey or navigation chart. No
 endorsement by GSO, OCHA or HDX is implied.
 
+## Post-merger commune/ward/special-zone boundaries (`hue-da-nang-districts.geojson`)
+
+Source: `thanglequoc/vietnamese-provinces-database` (`geojson_11Mar2026.zip` & `donvi_tinhthanh.json`),
+reflecting the 2025 administrative restructuring (40 units in Huế, 94 units in Đà Nẵng).
+
+- Repository: https://github.com/thanglequoc/vietnamese-provinces-database
+- HeritageGraph modifications: merged the 134 individual ward/commune GeoJSON files for
+  Huế (`20_hue`) and Đà Nẵng (`21_đa_nang`), attached `id`, `name`, and `region` (`hue` | `da-nang`)
+  from `donvi_tinhthanh.json`, and simplified geometry (`0.0004°` tolerance, 4 decimal places)
+  for WebGL line rendering. Offshore polygons (`lng > 110°E`) are filtered at render time.
+
 ## Decorative terrain textures
 
 `textures/terrain-{diffuse,height,normal,roughness}.jpg` are the classic Three

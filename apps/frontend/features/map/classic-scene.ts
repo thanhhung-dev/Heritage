@@ -6,7 +6,7 @@
 // native React lifecycle. Geometry, side shader, chase ribbon and HUD arcs
 // adapted from classic/ZhejiangThreeMap.tsx at f8c9369; no terrain imagery.
 import * as THREE from "three";
-import type { BoundaryFeature, Coordinate, Polygon } from "./geography";
+import type { BoundaryFeature, Coordinate, DistrictCollection, DistrictFeature, Polygon } from "./geography";
 
 export const MAP_THEME_PRIMARY = "#ff9b2d";
 const accent = new THREE.Color(MAP_THEME_PRIMARY);
@@ -141,6 +141,18 @@ function chaseLight(rings: Coordinate[][], project: Projection) {
   } };
 }
 
+export function createDistrictLines(districts: DistrictCollection, project: Projection) {
+  const rings = districts.features.flatMap((feature) => feature.geometry.coordinates.flat());
+  return boundary(rings, project, 44.35, 0.26);
+}
+
+export function createDistrictHighlight(feature: DistrictFeature, project: Projection) {
+  const rings = feature.geometry.coordinates.flat();
+  const line = boundary(rings, project, 44.45, 0.9);
+  line.renderOrder = 15;
+  return line;
+}
+
 export function createClassicRegion(feature: BoundaryFeature, project: Projection) {
   const group = new THREE.Group();
   group.userData.region = feature.properties.id;
@@ -149,9 +161,9 @@ export function createClassicRegion(feature: BoundaryFeature, project: Projectio
   const rings = polygons.flat();
   const geometry = new THREE.ShapeGeometry(shapes);
   const fill = new THREE.MeshStandardMaterial({
-    color: tint(feature.properties.id === "hue" ? -0.39 : -0.43, -0.65),
-    emissive: tint(-0.5, -0.65), emissiveIntensity: 0.1,
-    roughness: 0.95, metalness: 0.03, side: THREE.DoubleSide,
+    color: tint(feature.properties.id === "hue" ? -0.34 : -0.38, -0.58),
+    emissive: tint(-0.44, -0.55), emissiveIntensity: 0.22,
+    roughness: 0.9, metalness: 0.05, side: THREE.DoubleSide,
   });
   const surface = new THREE.Mesh(geometry, fill);
   surface.position.z = 44;
@@ -161,7 +173,7 @@ export function createClassicRegion(feature: BoundaryFeature, project: Projectio
   base.position.z = 23.9;
   group.add(base);
   const highlightMaterial = new THREE.MeshBasicMaterial({
-    color: accent, transparent: true, opacity: 0.045, blending: THREE.AdditiveBlending,
+    color: accent, transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide, depthWrite: false,
   });
   const highlight = new THREE.Mesh(geometry, highlightMaterial);
@@ -174,37 +186,52 @@ export function createClassicRegion(feature: BoundaryFeature, project: Projectio
   } };
 }
 
-// Same arc layout, radii, tick count and subdued opacity as the classic HUD base.
+// Subtle hologram dot-matrix and hairline coordinate grid with radial edge fade.
 export function createHudRing() {
-  const plate = new THREE.Group(), rotor = new THREE.Group();
+  const plate = new THREE.Group();
   plate.position.z = 12;
-  plate.scale.setScalar(0.9);
-  plate.add(rotor);
-  for (const [inner, outer, opacity] of [[356, 362, 0.055], [244, 248, 0.035]]) {
-    rotor.add(new THREE.Mesh(new THREE.RingGeometry(inner, outer, 160), new THREE.MeshBasicMaterial({
-      color: accent, transparent: true, opacity, blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide, depthWrite: false,
-    })));
-  }
-  const arcMaterial = new THREE.LineBasicMaterial({ color: accent, transparent: true, opacity: 0.24, depthWrite: false });
-  const specs = [[0.1, 0.92, 390], [1.42, 2.04, 390], [2.56, 3.3, 390], [4.1, 4.82, 390],
-    [5.22, 5.9, 390], [0.72, 1.34, 316], [2.12, 2.78, 316], [3.56, 4.2, 316],
-    [5.02, 5.58, 316], [0.18, 0.62, 252], [3.18, 3.76, 252]];
-  for (const [start, end, radius] of specs) {
-    const points = Array.from({ length: 73 }, (_, i) => {
-      const angle = start + (end - start) * i / 72;
-      return new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 2);
-    });
-    rotor.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), arcMaterial));
-  }
-  const ticks: THREE.Vector3[] = [];
-  for (let i = 0; i < 48; i++) {
-    if (i % 4 === 0) continue;
-    const angle = Math.PI * 2 * i / 48;
-    for (const radius of [344, i % 2 === 0 ? 370 : 362]) ticks.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, 3));
-  }
-  rotor.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ticks), arcMaterial));
-  return { plate, rotor };
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: {
+      color: { value: accent.clone() },
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv * 2.0 - 1.0;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 color;
+      varying vec2 vUv;
+
+      void main() {
+        float r = length(vUv);
+        if (r > 1.0) discard;
+        float radialFade = pow(1.0 - smoothstep(0.15, 1.0, r), 1.45);
+
+        vec2 cell = fract(vUv * 22.0) - 0.5;
+        float dotDist = length(cell);
+        float dots = (1.0 - smoothstep(0.04, 0.085, dotDist)) * 0.24;
+
+        vec2 gridCell = abs(fract(vUv * 5.5 - 0.5) - 0.5) / fwidth(vUv * 5.5);
+        float gridLine = 1.0 - min(min(gridCell.x, gridCell.y), 1.0);
+        float grid = gridLine * 0.065;
+
+        float alpha = (dots + grid) * radialFade;
+        if (alpha < 0.002) discard;
+        gl_FragColor = vec4(color, alpha);
+      }`,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(920, 920), material);
+  plate.add(mesh);
+  return {
+    plate,
+    update(_time: number, _reduced: boolean) {},
+  };
 }
 
 export function disposeScene(scene: THREE.Scene) {

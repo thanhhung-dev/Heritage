@@ -67,5 +67,25 @@
 .marker:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .marker[aria-pressed="true"] .markerCore { width: 12px; height: 12px; background: #fff4df; }
 @keyframes ripple { from { transform: scale(0.5); opacity: 0.85; } to { transform: scale(1.5); opacity: 0; } }
+.districtTooltip {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid #ff9b2d66;
+  border-radius: 6px;
+  background: #0a0e14f2;
+  color: var(--text);
+  font: 12px/1.4 var(--font-brand);
+  transform: translate(-50%, calc(-100% - 14px));
+  pointer-events: none;
+  white-space: nowrap;
+}
+.districtRegion {
+  color: var(--accent);
+  font-size: 11px;
+}
 @media (max-width: 600px) { .markerName { max-width: 150px; font-size: 11px; } }
 @media (prefers-reduced-motion: reduce) { .markerPulse { animation: none; } }
