@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { Button, ConfigProvider, theme } from "antd";
 import { CloseOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import type { Map as MapLibreMap } from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+import type { MapHandle } from "@/features/map/HeritageMap";
+import {
+  parseBoundaries,
+  REGION_NAMES,
+  visibleHeritages,
+  type BoundaryCollection,
+} from "@/features/map/geography";
 import PortraitCard from "@/components/PortraitCard/PortraitCard";
 import { apiClient, ApiError } from "@/config/api";
 import { PUBLIC_ROUTE_BY_KEY } from "@/config/public-navigation";
@@ -14,109 +18,16 @@ import type { HeritageSummary } from "@/types/heritage";
 import styles from "@/app/(public)/map/map.module.css";
 
 const route = PUBLIC_ROUTE_BY_KEY.map;
-const MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-type MapLibrary = typeof import("maplibre-gl");
-type LocatedHeritage = HeritageSummary & { lat: number; lng: number };
-
-function hasValidCoordinates(
-  heritage: HeritageSummary,
-): heritage is LocatedHeritage {
-  return (
-    typeof heritage.lat === "number" &&
-    Number.isFinite(heritage.lat) &&
-    heritage.lat >= -90 &&
-    heritage.lat <= 90 &&
-    typeof heritage.lng === "number" &&
-    Number.isFinite(heritage.lng) &&
-    heritage.lng >= -180 &&
-    heritage.lng <= 180
-  );
-}
-
-function fitLocations(map: MapLibreMap, locations: LocatedHeritage[], animate = true) {
-  if (!locations.length) return;
-  const lngs = locations.map((place) => place.lng);
-  const lats = locations.map((place) => place.lat);
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  map.fitBounds(
-    [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
-    {
-      padding: Math.max(32, Math.min(72, map.getContainer().clientWidth * 0.1)),
-      maxZoom: 14,
-      duration: animate && !reducedMotion ? 500 : 0,
-    },
-  );
-}
-
-function PlaceMarker({
-  map,
-  library,
-  place,
-  selected,
-  onSelect,
-}: {
-  map: MapLibreMap;
-  library: MapLibrary;
-  place: LocatedHeritage;
-  selected: boolean;
-  onSelect: (slug: string, trigger: HTMLButtonElement) => void;
-}) {
-  const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const [highlighted, setHighlighted] = useState(false);
-
-  useEffect(() => {
-    const element = document.createElement("div");
-    element.className = styles.markerAnchor;
-    const marker = new library.Marker({ element, anchor: "center" })
-      .setLngLat([place.lng, place.lat])
-      .addTo(map);
-    setContainer(element);
-    return () => { marker.remove(); };
-  }, [map, library, place.lng, place.lat]);
-
-  useEffect(() => {
-    if (container) container.style.zIndex = highlighted ? "3" : selected ? "2" : "1";
-  }, [container, highlighted, selected]);
-
-  return container ? createPortal(
-    <button
-      type="button"
-      className={styles.markerVisual}
-      data-heritage-marker={place.slug}
-      data-selected={selected}
-      data-highlighted={highlighted}
-      aria-label={`Xem thông tin ${place.title}`}
-      aria-pressed={selected}
-      aria-controls={selected ? "heritage-selected-card" : undefined}
-      onPointerEnter={() => setHighlighted(true)}
-      onPointerLeave={() => setHighlighted(false)}
-      onFocus={() => setHighlighted(true)}
-      onBlur={() => setHighlighted(false)}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect(place.slug, event.currentTarget);
-      }}
-    >
-      <span className={styles.markerPulse} aria-hidden="true" />
-      <span className={styles.markerRing} aria-hidden="true" />
-      <span className={styles.markerGlow} aria-hidden="true" />
-      <span className={styles.markerCore} aria-hidden="true" />
-      {highlighted || selected ? (
-        <span className={styles.markerLabel} aria-hidden="true">
-          <span className={styles.markerName}>{place.title}</span>
-        </span>
-      ) : null}
-    </button>,
-    container,
-  ) : null;
-}
+const HeritageMap = dynamic(() => import("@/features/map/HeritageMap"), {
+  ssr: false,
+});
 
 export default function MapPage() {
   const router = useRouter();
-  const canvas = useRef<HTMLDivElement | null>(null);
+  const map = useRef<MapHandle>(null);
   const selectionTrigger = useRef<HTMLButtonElement | null>(null);
-  const [map, setMap] = useState<MapLibreMap | null>(null);
-  const [library, setLibrary] = useState<MapLibrary | null>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const [boundaries, setBoundaries] = useState<BoundaryCollection | null>(null);
   const [mapAttempt, setMapAttempt] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -136,14 +47,17 @@ export default function MapPage() {
       signal: controller.signal,
     })
       .then((response) => {
-        if (!Array.isArray(response)) throw new Error("Invalid heritage response");
+        if (!Array.isArray(response))
+          throw new Error("Invalid heritage response");
         if (!controller.signal.aborted) setHeritages(response);
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setLocationsError(error instanceof ApiError
-          ? `Máy chủ dữ liệu trả lỗi HTTP ${error.status}. Vui lòng thử lại.`
-          : "Không kết nối được máy chủ dữ liệu. Vui lòng thử lại.");
+        setLocationsError(
+          error instanceof ApiError
+            ? `Máy chủ dữ liệu trả lỗi HTTP ${error.status}. Vui lòng thử lại.`
+            : "Không kết nối được máy chủ dữ liệu. Vui lòng thử lại.",
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) setLocationsLoading(false);
@@ -152,213 +66,277 @@ export default function MapPage() {
   }, [requestVersion]);
 
   useEffect(() => {
-    if (!canvas.current) return;
-    let cancelled = false;
-    let instance: MapLibreMap | undefined;
-    let observer: ResizeObserver | undefined;
-    setMap(null);
+    const controller = new AbortController();
+    setBoundaries(null);
     setMapReady(false);
     setMapError(null);
-    const timeout = window.setTimeout(() => {
-      if (!cancelled) setMapError("Bản đồ tải chậm. Kiểm tra kết nối mạng hoặc thử lại.");
-    }, 20000);
-
-    import("maplibre-gl").then((lib) => {
-      if (cancelled || !canvas.current) return;
-      // MapLibre 6 ships a separate module worker. Pin it to the installed version.
-      lib.setWorkerUrl(
-        `https://unpkg.com/maplibre-gl@${lib.getVersion()}/dist/maplibre-gl-worker.mjs`,
-      );
-      instance = new lib.Map({
-        container: canvas.current,
-        style: MAP_STYLE,
-        center: [108, 16.2],
-        zoom: 8,
-        minZoom: 2,
-        maxZoom: 18,
-        renderWorldCopies: false,
-        attributionControl: { compact: true },
+    fetch("/map/hue-da-nang.geojson", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Không tải được ranh giới bản đồ.");
+        return parseBoundaries(await response.json());
+      })
+      .then((data) => {
+        if (!controller.signal.aborted) setBoundaries(data);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted)
+          setMapError(
+            error instanceof Error ? error.message : "Không tải được bản đồ.",
+          );
       });
-      const currentMap = instance;
-      const ready = () => {
-        if (cancelled) return;
-        window.clearTimeout(timeout);
-        setMapReady(true);
-        setMapError(null);
-      };
-      currentMap.on("load", ready);
-      currentMap.on("idle", () => {
-        if (currentMap.isStyleLoaded()) ready();
-      });
-      currentMap.on("error", () => {
-        if (!currentMap.getStyle()) {
-          setMapError("Không tải được nền bản đồ. Vui lòng thử lại.");
-        }
-      });
-      currentMap.on("click", (event) => {
-        const target = event.originalEvent.target;
-        if (!(target instanceof Element) || !target.closest("[data-heritage-marker]")) {
-          setSelectedSlug(null);
-        }
-      });
-      observer = new ResizeObserver(() => currentMap.resize());
-      observer.observe(canvas.current);
-      setLibrary(lib);
-      setMap(currentMap);
-    }).catch(() => {
-      if (!cancelled) {
-        window.clearTimeout(timeout);
-        setMapError("Không khởi tạo được bản đồ. Hãy kiểm tra WebGL và kết nối mạng.");
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-      observer?.disconnect();
-      instance?.remove();
-    };
+    return () => controller.abort();
   }, [mapAttempt]);
 
   const locations = useMemo(
-    () => heritages.filter(hasValidCoordinates).filter((place) => place.display_map !== false),
-    [heritages],
+    () => (boundaries ? visibleHeritages(heritages, boundaries) : []),
+    [heritages, boundaries],
   );
-  const regionCount = new Set(locations.map((place) => place.region).filter(Boolean)).size;
   const selectedPlace = locations.find((place) => place.slug === selectedSlug);
-  const statsPending = locationsLoading || Boolean(locationsError);
+  const statsPending =
+    locationsLoading || Boolean(locationsError) || !boundaries;
 
   useEffect(() => {
-    if (map) fitLocations(map, locations, false);
-  }, [map, locations]);
+    if (mapReady || mapError) return;
+    const timer = window.setTimeout(
+      () => setMapError("Bản đồ tải chậm. Kiểm tra kết nối và thử lại."),
+      20000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [mapReady, mapError, mapAttempt]);
+
+  useEffect(() => {
+    if (!selectedPlace) return;
+    closeButton.current?.focus({ preventScroll: true });
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      document.getElementById("heritage-selected-card")?.scrollIntoView({
+        block: "center",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+    }
+  }, [selectedPlace]);
+
+  const selectPlace = (slug: string, trigger: HTMLButtonElement) => {
+    selectionTrigger.current = trigger;
+    setSelectedSlug(slug);
+    const place = locations.find((location) => location.slug === slug);
+    if (place) map.current?.focus([place.lng, place.lat]);
+  };
 
   const closeCard = () => {
     setSelectedSlug(null);
-    if (selectionTrigger.current?.isConnected) selectionTrigger.current.focus();
+    map.current?.resetView();
+    const list = selectionTrigger.current?.closest("details");
+    if (list && !list.open) {
+      list.querySelector("summary")?.focus();
+    } else {
+      selectionTrigger.current?.focus();
+    }
   };
+  const handleMapBackgroundClick = () => {
+    setSelectedSlug(null);
+    map.current?.resetView();
+  };
+  useEffect(() => {
+    if (!selectedSlug) return;
+    const onDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (
+        target.closest("#heritage-selected-card") ||
+        target.closest("[data-heritage-marker]") ||
+        target.closest(`.${styles.siteList}`)
+      ) {
+        return;
+      }
+      closeCard();
+    };
+    document.addEventListener("pointerdown", onDocumentPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocumentPointerDown);
+  }, [selectedSlug]);
 
   return (
-    <ConfigProvider theme={{
-      algorithm: theme.darkAlgorithm,
-      token: {
-        colorPrimary: "#ff9b2d", colorBgContainer: "#22201d",
-        colorText: "#f0f2f3", borderRadius: 10, fontFamily: "Poppins, Arial, sans-serif",
-      },
-    }}>
-      <section
-        className={styles.mapPage}
-        aria-label={route.title}
-        onKeyDown={(event) => {
-          if (event.key === "Escape" && selectedSlug) {
-            event.stopPropagation();
-            closeCard();
-          }
-        }}
-      >
-        <h1 className={styles.visuallyHidden}>{route.title}</h1>
-        <div className={styles.mapExperience}>
-          <aside className={styles.mapAside} aria-label="Thông tin di sản đang chọn">
-            {selectedPlace ? (
-              <div key={selectedPlace.slug} id="heritage-selected-card" className={styles.selectedCard}>
-                <Button
-                  className={styles.closeCard}
-                  type="text"
-                  shape="circle"
-                  icon={<CloseOutlined />}
-                  aria-label={`Đóng thẻ ${selectedPlace.title}`}
-                  onClick={closeCard}
-                />
-                <PortraitCard
-                  item={{
-                    slug: selectedPlace.slug,
-                    title: selectedPlace.title,
-                    description: selectedPlace.description,
-                    region: selectedPlace.region,
-                    card_image_url: selectedPlace.card_image_url || selectedPlace.splash_image_url,
-                    hover_image_url: selectedPlace.splash_image_url,
-                    published: selectedPlace.publish_date,
-                    language_label: selectedPlace.language1?.name,
-                    href: `/content/${encodeURIComponent(selectedPlace.slug)}/s0`,
-                  }}
-                  style={{ width: "100%", height: "auto", aspectRatio: "2 / 3", borderRadius: 18 }}
-                  onInfo={(slug) => router.push(`/content/${encodeURIComponent(slug)}`)}
-                  exploreLabel="Khám phá"
-                  infoLabel="Thông tin"
-                />
-              </div>
-            ) : null}
-            <div className={styles.exploreSummary}>
-              <dl className={styles.mapStats}>
-                <div className={styles.stat}>
-                  <dt>ĐỊA ĐIỂM</dt>
-                  <dd>{statsPending ? "—" : locations.length}</dd>
-                </div>
-                <div className={styles.stat}>
-                  <dt>KHU VỰC</dt>
-                  <dd>{statsPending ? "—" : regionCount}</dd>
-                </div>
-              </dl>
-              <p className={styles.mapDescription}>Khám phá những câu chuyện di sản</p>
-              <a className={styles.listLink} href={PUBLIC_ROUTE_BY_KEY.library.href}>
-                <UnorderedListOutlined aria-hidden="true" />
-                <span>Duyệt danh sách địa điểm</span>
-              </a>
+    <section
+      className={styles.mapPage}
+      aria-label={route.title}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && selectedSlug) {
+          event.stopPropagation();
+          closeCard();
+        }
+      }}
+    >
+      <h1 className={styles.visuallyHidden}>
+        Khám phá di sản Huế và Đà Nẵng trên bản đồ 3D
+      </h1>
+      <div className={styles.mapExperience}>
+        <aside className={styles.mapAside} aria-label="Khám phá di sản">
+          {selectedPlace ? (
+            <div
+              key={selectedPlace.slug}
+              id="heritage-selected-card"
+              className={styles.selectedCard}
+            >
+              <button
+                ref={closeButton}
+                className={styles.closeCard}
+                type="button"
+                aria-label={`Đóng thẻ ${selectedPlace.title}`}
+                onClick={closeCard}
+              >
+                <CloseOutlined />
+              </button>
+              <PortraitCard
+                item={{
+                  slug: selectedPlace.slug,
+                  title: selectedPlace.title,
+                  description: selectedPlace.description,
+                  region: REGION_NAMES[selectedPlace.mapRegion],
+                  card_image_url:
+                    selectedPlace.card_image_url ||
+                    selectedPlace.splash_image_url,
+                  hover_image_url: selectedPlace.splash_image_url,
+                  published: selectedPlace.publish_date,
+                  language_label: selectedPlace.language1?.name,
+                  href: `/content/${encodeURIComponent(selectedPlace.slug)}/s0`,
+                }}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  aspectRatio: "2 / 3",
+                  borderRadius: 14,
+                }}
+                onInfo={(slug) =>
+                  router.push(`/content/${encodeURIComponent(slug)}`)
+                }
+                exploreLabel="Khám phá"
+                infoLabel="Thông tin"
+              />
             </div>
-            <div className={styles.statusArea}>
-              {locationsLoading ? (
-                <p role="status" className={styles.inlineStatus}>Đang tải địa điểm…</p>
-              ) : locationsError ? (
-                <div role="alert" className={styles.inlineStatus}>
-                  <p>{locationsError}</p>
-                  <Button size="small" onClick={() => setRequestVersion((value) => value + 1)}>
-                    Thử lại
-                  </Button>
-                </div>
-              ) : !locations.length ? (
-                <p role="status" className={styles.inlineStatus}>
-                  Chưa có địa điểm với tọa độ hợp lệ.
+          ) : null}
+          <div className={styles.exploreSummary}>
+            <p className={styles.eyebrow}>HUẾ & ĐÀ NẴNG</p>
+            <dl className={styles.mapStats}>
+              <div className={styles.stat}>
+                <dt>Địa điểm di sản</dt>
+                <dd>{statsPending ? "—" : locations.length}</dd>
+              </div>
+              <div className={styles.stat}>
+                <dt>Khu vực</dt>
+                <dd>{boundaries ? "02" : "—"}</dd>
+              </div>
+            </dl>
+            <p className={styles.mapDescription}>Khám phá di sản miền Trung</p>
+            <p className={styles.regionNote}>
+              Ranh giới mới · Đà Nẵng gồm Quảng Nam cũ
+            </p>
+          </div>
+          <details className={styles.siteList}>
+            <summary>
+              <UnorderedListOutlined aria-hidden="true" />
+              Duyệt danh sách di sản
+            </summary>
+            <nav aria-label="Danh sách di sản Huế và Đà Nẵng">
+              <ul>
+                {locations.map((place) => (
+                  <li key={place.slug}>
+                    <button
+                      type="button"
+                      aria-pressed={selectedPlace?.slug === place.slug}
+                      aria-controls={
+                        selectedPlace?.slug === place.slug
+                          ? "heritage-selected-card"
+                          : undefined
+                      }
+                      onClick={(event) =>
+                        selectPlace(place.slug, event.currentTarget)
+                      }
+                    >
+                      <span>{place.title}</span>
+                      <span className={styles.listRegion}>
+                        {REGION_NAMES[place.mapRegion]}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {!locations.length ? (
+                <p className={styles.listEmpty}>
+                  Chưa có địa điểm để hiển thị.
                 </p>
               ) : null}
-            </div>
-            <p className={styles.visuallyHidden} role="status" aria-live="polite">
-              {selectedPlace ? `Đã mở thẻ ${selectedPlace.title}, ${selectedPlace.region ?? ""}.` : ""}
-            </p>
-          </aside>
-          <div className={styles.mapFrame} role="region" aria-label={`Bản đồ với ${locations.length} địa điểm di sản`}>
-            <div ref={canvas} className={styles.mapCanvas} />
-            {map && library ? locations.map((place) => (
-              <PlaceMarker
-                key={place.id}
-                map={map}
-                library={library}
-                place={place}
-                selected={selectedSlug === place.slug}
-                onSelect={(slug, trigger) => {
-                  selectionTrigger.current = trigger;
-                  setSelectedSlug(slug);
+            </nav>
+          </details>
+          <div className={styles.statusArea}>
+            {locationsLoading ? (
+              <p role="status" className={styles.inlineStatus}>
+                Đang tải địa điểm…
+              </p>
+            ) : locationsError ? (
+              <div role="alert" className={styles.inlineStatus}>
+                <p>{locationsError}</p>
+                <button
+                  className={styles.retryButton}
+                  type="button"
+                  onClick={() => setRequestVersion((value) => value + 1)}
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : boundaries && !locations.length ? (
+              <p role="status" className={styles.inlineStatus}>
+                Chưa có di sản được hiển thị với tọa độ hợp lệ trong Huế–Đà
+                Nẵng.
+              </p>
+            ) : null}
+          </div>
+          <p className={styles.visuallyHidden} role="status" aria-live="polite">
+            {selectedPlace
+              ? `Đã mở thẻ ${selectedPlace.title}, ${REGION_NAMES[selectedPlace.mapRegion]}.`
+              : ""}
+          </p>
+        </aside>
+        <figure className={styles.mapFigure}>
+          <div className={styles.mapFrame}>
+            {boundaries && !mapError ? (
+              <HeritageMap
+                controlsRef={map}
+                data={boundaries}
+                locations={locations}
+                selectedSlug={selectedPlace?.slug ?? null}
+                onSelect={selectPlace}
+                onBackgroundClick={handleMapBackgroundClick}
+                onReady={() => {
+                  setMapReady(true);
+                  setMapError(null);
+                }}
+                onError={(message) => {
+                  setMapReady(false);
+                  setMapError(message);
                 }}
               />
-            )) : null}
+            ) : null}
             {!mapReady || mapError ? (
-              <div className={styles.mapNotice} role={mapError ? "alert" : "status"}>
-                <span>{mapError || "Đang tải bản đồ…"}</span>
+              <div
+                className={styles.mapNotice}
+                role={mapError ? "alert" : "status"}
+              >
+                <span>{mapError || "Loading…"}</span>
                 {mapError ? (
-                  <Button size="small" onClick={() => setMapAttempt((value) => value + 1)}>
+                  <button
+                    className={styles.retryButton}
+                    type="button"
+                    onClick={() => setMapAttempt((value) => value + 1)}
+                  >
                     Tải lại bản đồ
-                  </Button>
+                  </button>
                 ) : null}
               </div>
             ) : null}
-            <div className={styles.mapControls} role="group" aria-label="Điều khiển bản đồ">
-              <Button aria-label="Phóng to bản đồ" disabled={!map} onClick={() => map?.zoomIn()}>+</Button>
-              <Button aria-label="Thu nhỏ bản đồ" disabled={!map} onClick={() => map?.zoomOut()}>−</Button>
-              <Button disabled={!map || !locations.length} onClick={() => {
-                if (map) fitLocations(map, locations);
-              }}>Tất cả địa điểm</Button>
-            </div>
           </div>
-        </div>
-      </section>
-    </ConfigProvider>
+        </figure>
+      </div>
+    </section>
   );
 }
