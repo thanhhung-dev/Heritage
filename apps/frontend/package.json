@@ -28,6 +28,7 @@
     "antd-style": "^4.1.0",
     "bot-avatars": "^0.2.2",
     "lodash-es": "^4.18.1",
+    "maplibre-gl": "6.17.0",
     "marked": "^16.4.2",
     "next": "14.2.0",
     "polished": "^4.3.1",
