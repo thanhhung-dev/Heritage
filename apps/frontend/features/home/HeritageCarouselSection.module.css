@@ -1,333 +1,390 @@
-/* ==========================================================================
-   HeritageCarouselSection.module.css
-   Cinematic Ambient Blurred Backdrop (sectionBackdropContainer)
-   - ambientImageBlur: Nền mờ lấy theo thẻ đang hover/active (blur 80px)
-   - ambientRadialGlow: Quầng sáng xanh biển đặc trưng Figma (Ocean Cyan Glow)
-   - ambientDarkFade: Gradient tối chuyển tiếp giữa các section
-   ========================================================================== */
+.homePage {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: clip;
+  background: #07090e;
+}
+
+.carouselGroup {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: #151c29;
+}
+
+.carouselGroupImage {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.carouselGroup::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 14, 20, .6), rgba(10, 14, 20, .45) 50%, rgba(10, 14, 20, .8));
+  pointer-events: none;
+}
 
 .carouselSection {
-  width: 100%;
+  --card-width: 220px;
+  --card-height: 330px;
+  --section-gutter: 48px;
+  --controls-gutter: 86px;
+  --backdrop-left: #2d3a50;
+  --backdrop-right: #524a40;
   position: relative;
-  overflow: hidden;
-  margin-top: 40px;
+  isolation: isolate;
+  width: 100%;
+  min-width: 0;
+  min-height: 494px;
+  padding-top: 20px;
   box-sizing: border-box;
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  background: #0a0e14;
 }
 
-/* Khung chứa lớp nền mờ chuyển màu sâu (Cinematic Ambient Backdrop) */
-.sectionBackdropContainer {
+.carouselSection.transparentSection {
+  background: transparent;
+}
+
+.festivalSection {
+  --controls-gutter: 28px;
+}
+
+.sectionBackdrop {
   position: absolute;
   inset: 0;
+  z-index: -1;
   overflow: hidden;
-  z-index: 0;
   pointer-events: none;
+  background:
+    radial-gradient(ellipse at 15% 35%, var(--backdrop-left), transparent 62%),
+    radial-gradient(ellipse at 78% 30%, var(--backdrop-right), transparent 66%),
+    #151c29;
 }
 
-/* 1. Lớp ảnh nền mờ sâu */
-.ambientImageBlur {
+.ambientImage {
   position: absolute;
-  inset: -40px;
-  background-size: cover;
+  inset: -46.5px -118px;
   background-position: center;
-  filter: blur(80px) brightness(0.3) saturate(1.25);
-  transform: scale(1.15) translateZ(0);
-  transition: background-image 0.7s ease-in-out;
-  will-change: transform, filter;
+  background-size: cover;
+  filter: blur(20px);
+  opacity: .85;
+  animation: ambientReveal .45s ease both;
 }
 
-/* 2. Quầng sáng màu xanh biển đặc trưng như Figma (Ocean Cyan Glow) */
-.ambientRadialGlow {
-  position: absolute;
-  top: 5%;
-  right: 5%;
-  width: 750px;
-  height: 480px;
-  background: radial-gradient(
-    circle,
-    rgba(0, 168, 204, 0.2) 0%,
-    rgba(14, 116, 144, 0.12) 40%,
-    rgba(11, 12, 14, 0) 70%
-  );
-  filter: blur(80px);
-  pointer-events: none;
-  transform: translateZ(0);
-  will-change: transform;
-}
-
-/* 3. Lớp gradient tối chuyển tiếp giữa các section */
-.ambientDarkFade {
+.ambientFade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(11, 12, 14, 0.7) 0%,
-    rgba(11, 12, 14, 0.35) 50%,
-    #0b0c0e 100%
-  );
-  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 70% at center, transparent 30%, rgba(10, 14, 20, .3) 60%, rgba(10, 14, 20, .7) 85%, #0a0e14),
+    linear-gradient(to top, rgba(10, 14, 20, .49), rgba(10, 14, 20, .43) 30%, rgba(10, 14, 20, .4) 60%, rgba(10, 14, 20, .1) 90%, transparent) bottom / 100% 98px no-repeat;
 }
 
-/* Nội dung nổi bật bên trên (z-index: 2) */
 .sectionHeader {
   position: relative;
   z-index: 2;
-  transform: translateZ(0);
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  padding: 0 32px;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 24px;
+  min-height: 68px;
+  padding-inline: var(--section-gutter) var(--controls-gutter);
   box-sizing: border-box;
 }
 
 .headerLeft {
   display: flex;
-  flex-direction: column;
-}
-
-.titleRow {
-  display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
+  min-width: 0;
 }
 
 .diamondIcon {
-  display: inline-flex;
-  width: 12px;
-  height: 12px;
-  color: #ff6422;
-  flex-shrink: 0;
+  flex: 0 0 27px;
+  color: #ff9b2d;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 36px;
+  text-shadow: 0 0 20px rgba(255, 155, 45, .4);
 }
 
 .sectionTitle {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #ffffff;
   margin: 0;
-  letter-spacing: -0.01em;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 40px;
+  letter-spacing: -.26px;
+  overflow-wrap: anywhere;
 }
 
 .sectionDescription {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 6px 0 0;
-  line-height: 1.4;
-  padding-left: 22px;
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, .8);
+  font-size: 15px;
+  line-height: 22px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .55);
 }
 
-/* Cặp nút mũi tên tròn điều hướng 32px */
 .navButtons {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
 }
 
-.navButton {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+.navButton.navButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
   padding: 0;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  transition: background .2s ease, border-color .2s ease;
 }
 
-.navButton:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: scale(1.05);
+.navButton.navButton:not(:disabled):hover {
+  border-color: rgba(255, 155, 45, .6);
+  background: rgba(255, 155, 45, .15);
 }
 
-.navButton:active {
-  transform: scale(0.95);
+.navButton.navButton:disabled {
+  opacity: .3;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
 }
 
-/* Danh sách cuộn ngang (Horizontal Scroll Carousel) */
+.navButton:focus-visible,
+.personCard:focus-visible {
+  outline: 2px solid #ff9b2d;
+  outline-offset: 4px;
+}
+
 .scrollContainer {
   position: relative;
-  z-index: 2;
-  transform: translateZ(0);
   display: flex;
+  align-items: flex-start;
   gap: 16px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding: 16px 32px 32px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  min-width: 0;
+  min-height: 406px;
+  padding: 40px var(--section-gutter) 36px;
   box-sizing: border-box;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--section-gutter);
+  scrollbar-width: none;
 }
 
 .scrollContainer::-webkit-scrollbar {
   display: none;
 }
 
-/* Card di sản: 200px x 320px, border kính mờ */
-.card {
-  flex: 0 0 200px;
-  width: 200px;
-  height: 320px;
-  border-radius: 18px;
-  overflow: hidden;
+.cardSlot {
   position: relative;
+  flex: 0 0 var(--card-width);
+  width: var(--card-width);
+  height: var(--card-height);
   scroll-snap-align: start;
+}
+
+.cardSlot:hover,
+.cardSlot:focus-within {
+  z-index: 3;
+}
+
+.cardSlot .portraitCard,
+.personCard {
+  width: var(--card-width);
+  height: var(--card-height);
+}
+
+.cardSlot .cardSkeleton {
+  display: block;
+  width: var(--card-width);
+  height: var(--card-height);
+  border-radius: 14px;
+}
+
+.personCard {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(20, 26, 36, .6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, .35);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+}
+
+.personCard {
   cursor: pointer;
-  background-color: rgba(22, 24, 29, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-  text-decoration: none;
+  transform-origin: center bottom;
+  transition: transform .35s ease, box-shadow .35s ease;
+}
+
+.loadNotice {
+  margin: 8px var(--section-gutter) 0;
+}
+
+.personImage {
   display: block;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.18);
-}
-
-.cardMedia,
-.cardImageError {
-  position: absolute;
-  inset: 0;
-}
-
-.cardMediaLoading,
-.cardSkeleton {
-  animation: cardPulse 1.8s ease-in-out infinite;
-}
-
-.cardSkeleton {
-  cursor: default;
-  pointer-events: none;
-}
-
-.cardSkeletonTitle,
-.cardSkeletonRegion {
-  display: block;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.cardSkeletonTitle {
-  width: 76%;
-  height: 16px;
-  margin-bottom: 8px;
-}
-
-.cardSkeletonRegion {
-  width: 48%;
-  height: 12px;
-}
-
-@keyframes cardPulse {
-  0%, 100% {
-    background-color: rgba(22, 24, 29, 0.6);
-  }
-  50% {
-    background-color: rgba(34, 40, 52, 0.75);
-  }
-}
-
-.cardImageError {
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-
-.cardImageError {
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
-}
-
-.cardImage {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
-  transition: transform 0.5s ease, opacity 0.3s ease;
+  transition: transform .45s ease;
 }
 
-.cardImageReady { opacity: 1; }
-
-.card:hover .cardImage {
-  transform: scale(1.05);
-}
-
-/* Lớp phủ đáy thẻ */
 .cardOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0) 45%,
-    rgba(0, 0, 0, 0.4) 65%,
-    rgba(0, 0, 0, 0.88) 100%
-  );
   pointer-events: none;
-  z-index: 1;
+  background: linear-gradient(to top, rgba(10, 14, 20, .98), rgba(10, 14, 20, .8) 30%, rgba(10, 14, 20, .3) 55%, transparent);
+  opacity: .7;
 }
 
-/* Chữ ở đáy card */
 .cardContent {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 16px 14px;
-  z-index: 2;
-  box-sizing: border-box;
+  inset: auto 0 0;
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  padding: 16px;
 }
 
 .cardTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff;
-  line-height: 1.3;
-  margin: 0 0 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: -webkit-box;
+  overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 25px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .7);
 }
 
 .cardRegion {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0;
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: rgba(255, 255, 255, .7);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 18px;
+}
+
+.statePanel {
+  flex: 1 0 100%;
+  display: grid;
+  align-content: center;
+  min-height: var(--card-height);
+  min-width: 0;
+}
+
+.statePanel :global(.ant-alert) {
+  max-width: 680px;
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.personDetail {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding-block: 16px;
+}
+
+.personDetail p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.personDetail .personRole {
+  color: #ff9b2d;
+}
+
+@keyframes ambientReveal {
+  from { opacity: 0; }
+  to { opacity: .85; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .personCard:hover {
+    transform: scale(1.08);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .5), 0 0 24px rgba(255, 155, 45, .2);
+  }
+
+  .personCard:hover .personImage {
+    transform: scale(1.05);
+  }
 }
 
 @media (max-width: 640px) {
+  .carouselSection {
+    --card-width: 170px;
+    --card-height: 255px;
+    --section-gutter: 20px;
+    min-height: 420px;
+  }
+
   .sectionHeader {
-    padding: 0 20px;
+    gap: 12px;
+    padding-inline: var(--section-gutter);
   }
 
-  .scrollContainer {
-    padding: 12px 20px 24px;
+  .headerLeft { gap: 10px; }
+  .diamondIcon { flex-basis: 20px; font-size: 20px; }
+  .sectionTitle { font-size: 22px; line-height: 30px; }
+  .sectionDescription { font-size: 13px; line-height: 19px; }
+
+  .navButtons {
+    gap: 6px;
   }
 
-  .card {
-    flex: 0 0 170px;
-    width: 170px;
-    height: 270px;
+  .navButton.navButton {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
   }
+
+  .scrollContainer { min-height: 331px; }
+  .cardTitle { font-size: 18px; line-height: 23px; }
+  .cardRegion { font-size: 11px; line-height: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cardImage { transition: none; }
+  .ambientImage,
+  .navButton,
+  .personCard,
+  .personImage {
+    animation: none;
+    transition: none;
+  }
+
+  .cardSlot :global(.hp_portrait_card),
+  .cardSlot :global(.hp_portrait_card) * {
+    transition: none;
+  }
+
+  .cardSlot :global(.ant-skeleton) * {
+    animation: none;
+  }
 }
