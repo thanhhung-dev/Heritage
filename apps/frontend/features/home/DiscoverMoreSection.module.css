@@ -1,152 +1,123 @@
-/* ==========================================================================
-   DiscoverMoreSection.module.css
-   CTA Section "Discover More"
-   Nền: radial-gradient(45% 55% at 50% 60%, rgba(195, 90, 30, 0.16) 0%, rgba(11, 12, 14, 0) 100%), #0B0C0E;
-   Khung Bounding Box: max-width 1280px, padding 2 bên 80px
-   Subtitle: 1 dòng duy nhất, max-width 650px, white-space: nowrap
-   ========================================================================== */
-
 .discoverSection {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  background: radial-gradient(
-      45% 55% at 50% 60%,
-      rgba(195, 90, 30, 0.16) 0%,
-      rgba(11, 12, 14, 0) 100%
-    ),
-    #0b0c0e;
-  padding: 64px 20px 48px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
+  border-top: 1px solid rgba(255, 155, 45, 0.15);
+  background:
+    linear-gradient(0deg, rgba(0, 0, 0, 0.2), rgba(255, 155, 45, 0.086)),
+    #000;
+  padding: 80px 24px;
+  font-family: "Poppins", sans-serif;
+  text-align: center;
 }
 
 .content {
-  position: relative;
-  z-index: 1;
-  max-width: 1280px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 80px;
-  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-sizing: border-box;
+  gap: 11px;
+  max-width: 600px;
+  margin-inline: auto;
 }
 
 .title {
-  font-size: 32px;
+  margin: 0;
+  padding-block: 2px;
+  color: #fff;
+  font-size: 38px;
   font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.015em;
-  color: #ffffff;
-  margin: 0 0 8px;
+  line-height: 1.5;
 }
 
 .subtitle {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.5;
+  margin: 0;
   color: rgba(255, 255, 255, 0.65);
-  max-width: 650px;
-  margin: 0 auto 24px;
-  text-align: center;
-  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
 .buttonGroup {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 16px;
-  flex-wrap: wrap;
+  padding-top: 21px;
 }
 
-/* Nút "Browse Library": Nền cam #FF6422, bo tròn 9999px, box-shadow: 0 4px 18px */
-.btnPrimary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #ff6422;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  padding: 10px 24px;
-  border-radius: 9999px;
-  box-shadow: 0 4px 18px rgba(255, 100, 34, 0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-  border: none;
-  cursor: pointer;
-}
-
-.btnPrimary:hover {
-  background: #ff7536;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(255, 100, 34, 0.45);
-}
-
-.btnPrimary:active {
-  transform: translateY(0);
-}
-
-/* Nút "Explore Map": Nền mờ kính tối rgba(255, 255, 255, 0.08), viền mỏng border 1px solid rgba(255, 255, 255, 0.15) */
+.btnPrimary,
 .btnSecondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 500;
+  min-height: 51px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 13px 31px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
   text-decoration: none;
-  padding: 10px 24px;
-  border-radius: 9999px;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-  cursor: pointer;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.btnSecondary:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+.btnPrimary {
+  background: linear-gradient(135.75deg, #ff9b2d, #fa500f);
+  box-shadow: 0 4px 10px rgba(255, 155, 45, 0.35);
 }
 
-.btnSecondary:active {
-  transform: translateY(0);
+.btnSecondary {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.95);
 }
 
-@media (max-width: 768px) {
-  .discoverSection {
-    padding: 48px 16px 36px;
+@media (hover: hover) {
+  .btnPrimary:hover {
+    box-shadow: 0 4px 16px rgba(255, 155, 45, 0.5);
   }
 
-  .content {
-    padding: 0 20px;
+  .btnSecondary:hover {
+    border-color: rgba(255, 255, 255, 0.32);
+    background-color: rgba(255, 255, 255, 0.16);
+  }
+}
+
+.btnPrimary:focus-visible,
+.btnSecondary:focus-visible {
+  outline: 2px solid #ff9b2d;
+  outline-offset: 4px;
+}
+
+@media (max-width: 640px) {
+  .discoverSection {
+    padding: 48px 20px;
   }
 
   .title {
-    font-size: 26px;
+    font-size: 30px;
   }
 
   .subtitle {
-    font-size: 13px;
-    white-space: normal;
-    margin-bottom: 20px;
+    font-size: 14px;
   }
 
   .buttonGroup {
-    flex-direction: column;
-    width: 100%;
-    gap: 10px;
+    gap: 12px;
+    padding-top: 13px;
   }
 
   .btnPrimary,
   .btnSecondary {
-    width: 100%;
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btnPrimary,
+  .btnSecondary {
+    transition: none;
   }
 }

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Avatar, Button, ConfigProvider, Modal, theme } from "antd";
 import {
   HeroSection,
-  FEATURED_HERO_SLUGS,
   DiscoverMoreSection,
   HeritageCarouselSection,
   HeritageInfoModal,
@@ -131,10 +130,6 @@ export default function HomePage() {
     () => featuredItems.filter((item) => FESTIVAL_HERITAGE_SLUGS.has(item.slug)),
     [featuredItems],
   );
-  const tuDucCard = featuredItems.find((item) =>
-    FEATURED_HERO_SLUGS[0].some((slug) => slug === item.slug),
-  );
-  const backdropUrl = tuDucCard?.card_image_url;
 
   const openHeritageInfo = (slug: string) => {
     setModalItem(apiItems.find((item) => item.slug === slug) ?? null);
@@ -148,65 +143,56 @@ export default function HomePage() {
     <div className={styles.homePage}>
       <HeroSection items={apiItems} loading={loading} onInfo={openHeritageInfo} />
 
-      <div className={styles.carouselGroup}>
-        {backdropUrl && (
-          <div
-            className={styles.carouselGroupImage}
-            style={{ backgroundImage: `url(${JSON.stringify(backdropUrl)})` }}
-            aria-hidden="true"
-          />
-        )}
-        <HeritageCarouselSection
-          title="Featured Experiences"
-          description="Curated selection of our favorite Tapestry experiences"
-          items={featuredItems}
-          sharedBackdrop
-          loading={loading}
-          error={apiError}
-          onRetry={retry}
-          onCardClick={openHeritageInfo}
-          emptyMessage="Chưa có trải nghiệm di sản được xuất bản."
-        />
+      <HeritageCarouselSection
+        title="Featured Experiences"
+        description="Curated selection of our favorite Tapestry experiences"
+        items={featuredItems}
+        useFirstCardBackdrop
+        loading={loading}
+        error={apiError}
+        onRetry={retry}
+        onCardClick={openHeritageInfo}
+        emptyMessage="Chưa có trải nghiệm di sản được xuất bản."
+      />
 
-        <HeritageCarouselSection
-          title="Artifacts & Treasures"
-          description="The tools, art, and objects that shape human history"
-          items={artifactItems}
-          sharedBackdrop
-          loading={loading}
-          error={apiError}
-          onRetry={retry}
-          onCardClick={openHeritageInfo}
-          emptyMessage="Chưa có nội dung hiện vật và bảo vật."
-        />
+      <HeritageCarouselSection
+        title="Artifacts & Treasures"
+        description="The tools, art, and objects that shape human history"
+        items={artifactItems}
+        useFirstCardBackdrop
+        loading={loading}
+        error={apiError}
+        onRetry={retry}
+        onCardClick={openHeritageInfo}
+        emptyMessage="Chưa có nội dung hiện vật và bảo vật."
+      />
 
-        <HeritageCarouselSection
-          title="People & Traditions"
-          description="Community members share their personal stories and memories"
-          items={peopleItems}
-          sharedBackdrop
-          loading={loading}
-          error={apiError}
-          onRetry={retry}
-          onCardClick={(key) => {
-            setSelectedPerson(peopleItems.find((item) => item.slug === key) ?? null);
-          }}
-          emptyMessage="Chưa có câu chuyện từ nhân vật và cộng đồng."
-        />
+      <HeritageCarouselSection
+        title="People & Traditions"
+        description="Community members share their personal stories and memories"
+        items={peopleItems}
+        useFirstCardBackdrop
+        loading={loading}
+        error={apiError}
+        onRetry={retry}
+        onCardClick={(key) => {
+          setSelectedPerson(peopleItems.find((item) => item.slug === key) ?? null);
+        }}
+        emptyMessage="Chưa có câu chuyện từ nhân vật và cộng đồng."
+      />
 
-        <HeritageCarouselSection
-          title="Festivals & Community Practices"
-          description="Discover festivals and traditions through the places that keep them alive"
-          className={styles.festivalSection}
-          items={festivalItems}
-          sharedBackdrop
-          loading={loading}
-          error={apiError}
-          onRetry={retry}
-          onCardClick={openHeritageInfo}
-          emptyMessage="Chưa có nội dung lễ hội và sinh hoạt cộng đồng."
-        />
-      </div>
+      <HeritageCarouselSection
+        title="Festivals & Community Practices"
+        description="Discover festivals and traditions through the places that keep them alive"
+        className={styles.festivalSection}
+        items={festivalItems}
+        useFirstCardBackdrop
+        loading={loading}
+        error={apiError}
+        onRetry={retry}
+        onCardClick={openHeritageInfo}
+        emptyMessage="Chưa có nội dung lễ hội và sinh hoạt cộng đồng."
+      />
 
       <DiscoverMoreSection />
       <HeritageInfoModal item={modalItem} onClose={() => setModalItem(null)} />
