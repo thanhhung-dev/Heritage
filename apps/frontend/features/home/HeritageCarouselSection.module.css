@@ -5,33 +5,6 @@
   background: #07090e;
 }
 
-.carouselGroup {
-  position: relative;
-  isolation: isolate;
-  overflow: clip;
-  background: #151c29;
-}
-
-.carouselGroupImage {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  filter: blur(20px);
-  pointer-events: none;
-}
-
-.carouselGroup::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(180deg, rgba(10, 14, 20, .6), rgba(10, 14, 20, .45) 50%, rgba(10, 14, 20, .8));
-  pointer-events: none;
-}
-
 .carouselSection {
   --card-width: 220px;
   --card-height: 330px;
@@ -49,10 +22,6 @@
   color: #fff;
   font-family: "Poppins", sans-serif;
   background: #0a0e14;
-}
-
-.carouselSection.transparentSection {
-  background: transparent;
 }
 
 .festivalSection {
@@ -78,6 +47,9 @@
   background-size: cover;
   filter: blur(20px);
   opacity: .85;
+}
+
+.animatedBackdrop {
   animation: ambientReveal .45s ease both;
 }
 
@@ -143,25 +115,35 @@
 }
 
 .navButton.navButton {
-  display: inline-flex;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  min-width: 42px;
-  height: 42px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, .2);
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .08);
-  transition: background .2s ease, border-color .2s ease;
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.2);
+  border-image: none;
+  background: rgba(255, 255, 255, 0.08);
+  transition: 0.3s;
 }
 
-.navButton.navButton:not(:disabled):hover {
+.navButtons .navButton.navButton:not(:disabled):hover {
+  color: rgba(255, 255, 255, 0.9);
   border-color: rgba(255, 155, 45, .6);
   background: rgba(255, 155, 45, .15);
 }
 
 .navButton.navButton:disabled {
+  cursor: not-allowed;
   opacity: .3;
   background: rgba(255, 255, 255, .08);
   color: #fff;
@@ -359,20 +341,14 @@
     gap: 6px;
   }
 
-  .navButton.navButton {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-  }
-
   .scrollContainer { min-height: 331px; }
   .cardTitle { font-size: 18px; line-height: 23px; }
   .cardRegion { font-size: 11px; line-height: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ambientImage,
-  .navButton,
+  .animatedBackdrop,
+  .navButton.navButton,
   .personCard,
   .personImage {
     animation: none;
