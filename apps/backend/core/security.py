@@ -104,10 +104,14 @@ def bearer_token(
     return credentials.credentials
 
 
+def access_claims(token: str = Depends(bearer_token)) -> dict[str, Any]:
+    return decode_access_token(token)
+
+
 async def get_current_user(
-    token: str = Depends(bearer_token), db: AsyncSession = Depends(get_auth_db),
+    payload: dict = Depends(access_claims), token: str = Depends(bearer_token),
+    db: AsyncSession = Depends(get_auth_db),
 ) -> dict[str, Any]:
-    payload = decode_access_token(token)
     if await is_revoked(db, token):
         raise unauthorized("Token has been revoked.")
     return payload

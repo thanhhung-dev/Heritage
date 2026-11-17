@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.backend.core.security import bearer_token, decode_access_token, get_auth_db
+from apps.backend.core.security import access_claims, bearer_token, get_auth_db
 from apps.backend.schemas.auth import AdminLoginRequest, ErrorResponse, LoginResponse
 from apps.backend.services.admin_auth import login_admin, logout_admin
 
@@ -23,7 +23,10 @@ async def login(request: AdminLoginRequest, response: Response, db: AsyncSession
 
 
 @router.post("/logout", status_code=204, responses=errors)
-async def logout(token: str = Depends(bearer_token), db: AsyncSession = Depends(get_auth_db)):
+async def logout(
+    payload: dict = Depends(access_claims), token: str = Depends(bearer_token),
+    db: AsyncSession = Depends(get_auth_db),
+):
     """Revoke only this bearer token. Repeated logout returns 204 until expiry."""
-    await logout_admin(db, token, decode_access_token(token))
+    await logout_admin(db, token, payload)
     return Response(status_code=204, headers={"Cache-Control": "no-store"})
