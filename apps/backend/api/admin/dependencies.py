@@ -12,10 +12,10 @@ from apps.backend.common.storage.r2 import R2Storage
 
 def local_only(request: Request):
     if os.environ.get('APP_ENVIRONMENT', 'local') not in {'local', 'test'}:
-        raise HTTPException(403, 'API chưa có auth, chỉ được dùng trong môi trường local/test.')
+        raise HTTPException(403, 'API quản trị tài liệu chỉ hỗ trợ môi trường local/test.')
     if (not request.client or request.client.host not in {'127.0.0.1', '::1'}
             or request.url.hostname not in {'localhost', '127.0.0.1', '::1'}):
-        raise HTTPException(403, 'API quản trị chưa có auth, chỉ nhận kết nối loopback.')
+        raise HTTPException(403, 'API quản trị tài liệu chỉ nhận kết nối loopback.')
     origin = request.headers.get('origin')
     if origin and origin not in [*cors_origins(), str(request.base_url).rstrip('/')]:
         raise HTTPException(403, 'Origin không được phép gọi API quản trị local.')
