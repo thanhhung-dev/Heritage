@@ -11,12 +11,28 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.backend.db.base import AsyncSessionLocal
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 30
 ph = PasswordHasher()
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+async def get_auth_db():
+    """Share one authentication transaction per request; fail closed on DB errors."""
+    if AsyncSessionLocal.kw.get("bind") is None:
+        raise HTTPException(503, "Authentication database requires DATABASE_URL.")
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except SQLAlchemyError:
+            await session.rollback()
+            raise HTTPException(503, "Authentication database unavailable; check configuration and migrations.") from None
 
 
 def signing_key() -> str:

@@ -6,6 +6,7 @@ Import order matters — các model phụ thuộc theo thứ tự:
 from apps.backend.db.base import Base, TimestampMixin, AsyncSessionLocal, engine, DATABASE_URL  # noqa: F401
 
 from apps.backend.models.admin import AdminAccount  # noqa: F401
+from apps.backend.models.revoked_token import RevokedToken  # noqa: F401
 from apps.backend.models.user import (  # noqa: F401
     UserProfile, UserConsent,
     BadgeDefinition, UserBadge,
@@ -33,7 +34,7 @@ __all__ = [
     # base
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
     # admin / identity
-    "AdminAccount",
+    "AdminAccount", "RevokedToken",
     # profile & gamification
     "UserProfile", "UserConsent",
     "BadgeDefinition", "UserBadge",

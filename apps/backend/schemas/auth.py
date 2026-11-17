@@ -28,10 +28,16 @@ class LoginRequest(BaseModel):
     password: str = Field(..., description="Password")
 
 
+class AdminLoginRequest(LoginRequest):
+    """Admin sign-in uses the existing email/password contract."""
+
+    password: str = Field(..., min_length=1, description="Account password")
+
+
 class UserResponse(BaseModel):
     """User information in responses."""
     
-    account_id: str = Field(..., description="Account UUID")
+    account_id: str = Field(..., description="Account ID as a string")
     email: str = Field(..., description="Email address")
     username: str = Field(..., description="Username")
     role: str = Field(default="user", description="User role")
