@@ -2,6 +2,7 @@
 import secrets
 from datetime import timedelta
 
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.backend.core.security import create_access_token, hash_password, unauthorized, verify_password
@@ -15,7 +16,9 @@ ADMIN_ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 async def login_admin(db: AsyncSession, request: LoginRequest) -> LoginResponse:
     account = await account_by(db, email=str(request.email).strip().lower())
-    valid = verify_password(request.password, account["password_hash"] if account else _dummy_hash)
+    valid = await run_in_threadpool(
+        verify_password, request.password, account["password_hash"] if account else _dummy_hash,
+    )
     if not valid or not is_available(account):
         raise unauthorized("Incorrect email or password.")
     require_admin_role(account)
