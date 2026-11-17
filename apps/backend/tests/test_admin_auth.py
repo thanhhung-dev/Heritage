@@ -4,6 +4,7 @@ import os
 import secrets
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -234,6 +235,25 @@ class AdminAuthTests(unittest.TestCase):
         self.assertEqual(self.client.get("/protected-admin", headers=self.headers(token)).status_code, 200)
         self.assertEqual(self.client.post("/api/admin/logout", headers=self.headers(token)).status_code, 204)
         self.assertEqual(self.client.get("/api/auth/me", headers=self.headers(token)).status_code, 401)
+
+    def test_equivalent_jwt_signature_encodings_cannot_bypass_revocation(self):
+        token = self.login().json()["access_token"]
+        alias = token + "="
+        self.assertEqual(security.decode_access_token(alias), security.decode_access_token(token))
+        self.assertEqual(self.client.post("/api/admin/logout", headers=self.headers(alias)).status_code, 204)
+        for credential in (token, alias):
+            self.assertEqual(self.client.get("/api/auth/me", headers=self.headers(credential)).status_code, 401)
+            self.assertEqual(self.client.post("/api/admin/logout", headers=self.headers(credential)).status_code, 204)
+        self.assertEqual(self.sql("SELECT COUNT(*) FROM revoked_access_token")[0][0], 1)
+
+    def test_concurrent_logout_is_safe(self):
+        token = self.login().json()["access_token"]
+        def logout(_):
+            with TestClient(self.app) as client:
+                return client.post("/api/admin/logout", headers=self.headers(token)).status_code
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            self.assertEqual(list(executor.map(logout, range(2))), [204, 204])
+        self.assertEqual(self.sql("SELECT COUNT(*) FROM revoked_access_token")[0][0], 1)
 
     def test_every_admin_knowledge_route_enforces_authentication_and_role(self):
         regular = security.create_access_token({"sub": "2", "role": "user"})
