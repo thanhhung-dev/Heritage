@@ -2,10 +2,10 @@
 import os
 
 from fastapi import Depends, HTTPException, Request
-from apps.backend.core.security import require_admin
+from sqlalchemy.exc import SQLAlchemyError
 
 from apps.backend.common.config import cors_origins
-from apps.backend.common.db.base import AsyncSessionLocal
+from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.common.services.knowledge import KnowledgeService
 from apps.backend.common.storage.r2 import R2Storage
 

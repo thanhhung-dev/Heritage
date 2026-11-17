@@ -1,4 +1,4 @@
-"""Unauthenticated local-only R2 knowledge administration. Never expose publicly."""
+"""Admin-only R2 knowledge administration with the existing local restriction."""
 from __future__ import annotations
 
 import asyncio
@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.exc import SQLAlchemyError
 
 from apps.backend.core.config import cors_origins
+from apps.backend.core.security import require_admin
 from apps.backend.core.r2 import R2Storage
 from apps.backend.core.search import PassageStore, SearchError
 from apps.backend.db.base import AsyncSessionLocal
@@ -28,8 +29,8 @@ def local_only(request: Request):
         raise HTTPException(403, 'Origin không được phép gọi API quản trị local.')
 
 
-router = APIRouter(prefix='/admin', tags=['Admin knowledge (LOCAL ONLY, no auth)'],
-                   dependencies=[Depends(local_only)])
+router = APIRouter(prefix='/admin', tags=['Admin knowledge'],
+                   dependencies=[Depends(require_admin), Depends(local_only)])
 
 
 def get_storage():

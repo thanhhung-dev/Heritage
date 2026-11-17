@@ -15,6 +15,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.backend.db.base import AsyncSessionLocal
+from apps.backend.services.account_access import authorize_admin
+from apps.backend.services.token_revocation import is_revoked
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
@@ -102,14 +104,19 @@ def bearer_token(
     return credentials.credentials
 
 
-async def get_current_user(token: str = Depends(bearer_token)) -> dict[str, Any]:
-    return decode_access_token(token)
+async def get_current_user(
+    token: str = Depends(bearer_token), db: AsyncSession = Depends(get_auth_db),
+) -> dict[str, Any]:
+    payload = decode_access_token(token)
+    if await is_revoked(db, token):
+        raise unauthorized("Token has been revoked.")
+    return payload
 
 
-def require_admin(current_user: dict = Depends(get_current_user)) -> dict[str, Any]:
-    if str(current_user.get("role", "")).lower() != "admin":
-        raise HTTPException(403, "Administrator permission required.")
-    return current_user
+async def require_admin(
+    current_user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_auth_db),
+) -> dict[str, Any]:
+    return await authorize_admin(db, current_user)
 
 
 def create_password_reset_token(email: str) -> str:

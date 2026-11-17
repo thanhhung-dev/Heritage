@@ -10,7 +10,7 @@ from apps.backend.api.admin.uploads import router as uploads
 router = APIRouter(
     prefix="/admin",
     tags=["Admin knowledge"],
-    dependencies=[Depends(local_only), Depends(require_admin)],
+    dependencies=[Depends(require_admin), Depends(local_only)],
 )
 router.include_router(storage.router)
 router.include_router(documents.router)
