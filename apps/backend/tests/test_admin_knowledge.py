@@ -2,6 +2,7 @@
 import asyncio
 import io
 import os
+import secrets
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -13,6 +14,8 @@ from botocore.exceptions import ClientError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy import text
+from sqlalchemy.pool import NullPool
 
 
 class MemoryS3:
@@ -85,17 +88,27 @@ class AdminKnowledgeTests(unittest.TestCase):
         from apps.backend.api import admin_knowledge as api
         from apps.backend.models.knowledge import KnowledgeDocument, KnowledgeUpload
         from apps.backend.core.r2 import R2Storage
+        from apps.backend.core.security import create_access_token, get_auth_db
+        from apps.backend.models.revoked_token import RevokedToken
         self.api = api
         self.env = self.enterContext(patch.dict(os.environ, {
             'APP_ENVIRONMENT': 'local', 'R2_KNOWLEDGE_PREFIX': 'knowledge/',
             'R2_UPLOAD_MAX_BYTES': '100', 'CORS_ORIGINS': '',
+            'JWT_SECRET_KEY': secrets.token_urlsafe(48), 'JWT_ISSUER': '', 'JWT_AUDIENCE': '',
         }))
         self.temp = self.enterContext(tempfile.TemporaryDirectory())
-        self.engine = create_async_engine(f'sqlite+aiosqlite:///{Path(self.temp) / "test.db"}')
+        self.engine = create_async_engine(f'sqlite+aiosqlite:///{Path(self.temp) / "test.db"}', poolclass=NullPool)
+        self.addCleanup(lambda: asyncio.run(self.engine.dispose()))
         async def create():
             async with self.engine.begin() as conn:
                 await conn.run_sync(lambda c: KnowledgeDocument.metadata.create_all(
                     c, tables=[KnowledgeDocument.__table__, KnowledgeUpload.__table__]))
+                await conn.run_sync(lambda c: RevokedToken.__table__.create(c))
+                await conn.execute(text('CREATE TABLE roles (id INTEGER PRIMARY KEY, name TEXT)'))
+                await conn.execute(text('CREATE TABLE account (id INTEGER PRIMARY KEY, email TEXT, '
+                    'username TEXT, password_hash TEXT, is_active BOOLEAN, locked_until TIMESTAMP, role_id INTEGER)'))
+                await conn.execute(text("INSERT INTO roles VALUES (2, 'ADMIN')"))
+                await conn.execute(text("INSERT INTO account VALUES (1, 'admin@example.com', 'admin', '', 1, NULL, 2)"))
         asyncio.run(create())
         factory = async_sessionmaker(self.engine, expire_on_commit=False)
         self.factory = factory
@@ -110,9 +123,10 @@ class AdminKnowledgeTests(unittest.TestCase):
         app.include_router(api.router, prefix='/api')
         app.dependency_overrides[api.get_storage] = lambda: self.storage
         app.dependency_overrides[api.get_db] = database
+        app.dependency_overrides[get_auth_db] = database
         self.client = self.enterContext(TestClient(app, base_url='http://127.0.0.1:8000',
                                                   client=('127.0.0.1', 50000)))
-        self.addCleanup(lambda: asyncio.run(self.engine.dispose()))
+        self.client.headers['Authorization'] = 'Bearer ' + create_access_token({'sub': '1', 'role': 'admin'})
 
     def upload(self, *, document_id=None, text=b'Thien Mu nam 1601.', parent='knowledge/hue/'):
         payload = {'parent_prefix': parent, 'filename': 'lich-su.txt',
