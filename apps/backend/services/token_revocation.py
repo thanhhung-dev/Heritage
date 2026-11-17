@@ -1,6 +1,7 @@
 """Database-backed revocation shared by all authenticated endpoints."""
 from datetime import datetime, timezone
 from hashlib import sha256
+from base64 import urlsafe_b64decode
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -10,7 +11,12 @@ from apps.backend.models.revoked_token import RevokedToken
 
 
 def token_digest(token: str) -> str:
-    return sha256(token.encode("utf-8")).hexdigest()
+    # HMAC signatures can have equivalent base64url spellings (e.g. extra padding).
+    # Hash the verified signing input and decoded signature, so aliases cannot
+    # bypass logout. Callers must verify the JWT before computing this digest.
+    signing_input, signature = token.rsplit(".", 1)
+    signature_bytes = urlsafe_b64decode(signature + "=" * (-len(signature) % 4))
+    return sha256(signing_input.encode("utf-8") + b"." + signature_bytes).hexdigest()
 
 
 async def is_revoked(db: AsyncSession, token: str) -> bool:
