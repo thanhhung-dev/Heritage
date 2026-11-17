@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import httpx
+from anyio import CancelScope
 from botocore.exceptions import ClientError
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -113,8 +114,14 @@ class AdminKnowledgeTests(unittest.TestCase):
         factory = async_sessionmaker(self.engine, expire_on_commit=False)
         self.factory = factory
         async def database():
-            async with factory() as session:
+            session = factory()
+            try:
                 yield session
+            finally:
+                # HTTP error handling can cancel dependency teardown. Wait for
+                # SQLite to close before the TestClient stops its event loop.
+                with CancelScope(shield=True):
+                    await session.close()
         self.s3 = MemoryS3()
         self.storage = R2Storage(client=self.s3, bucket='test-bucket')
         self.passages = MemoryPassages()
