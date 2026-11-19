@@ -15,7 +15,7 @@ FastAPI/Python, Pydantic 2 DTOs, async SQLAlchemy 2 services, PostgreSQL, Argon2
 | BE-03 | DONE | Strict administrator-only activation/deactivation API |
 | BE-04 | DONE | Every protected session checks current availability and credential generation; old tokens stay invalid after reactivation |
 | BE-05 | DONE | Validated persisted pipeline CRUD, optimistic revisions, cursor pagination and history-safe deletion |
-| BE-06 | PARTIAL verification | Durable scoped trigger/status, concurrent duplicate protection and real worker implemented; live external smoke test outstanding |
+| BE-06 | DONE | Durable scoped trigger/status and real worker; actual R2/BGE-M3/OpenSearch/PostgreSQL cloud acceptance passed, job COMPLETED and indexed vector verified |
 | BE-07 | DONE | Heritage-scoped scene CRUD, authorization, pagination and child-record cascades |
 | BE-08 | DONE after follow-up | Locked atomic reorder, pinned overview, stale-order guard and rollback; actual concurrent PostgreSQL test passed during RAG follow-up |
 | BE-09 | DONE | Persist/read/replace existing scene camera/sky fields, viewer-compatible model and sky responses |
@@ -41,7 +41,10 @@ Paths below are relative to `apps/backend/` unless prefixed otherwise.
 | `tests/test_rag_pipeline_schema.py`, `tests/test_rag_pipeline_api.py`, `tests/test_reindex_worker.py`, `tests/test_opensearch.py` | RAG validation, HTTP/queue concurrency, worker and source-pruning coverage |
 | `tests/test_admin_scenes.py`, `tests/test_scene_config_schema.py`, `tests/test_scene_config_api.py`, `tests/test_heritage_api.py` | Scene/config integrity and existing public viewer regression; missing nullable fixture field corrected |
 | `tests/test_sprint4_postgres.py` | Opt-in disposable-schema migration/JSONB/concurrent-order verification |
+| `core/document_text.py`, `requirements.txt`, `requirements.docker.txt` | Ship shared extraction and the existing parser pins inside the backend runtime |
+| `tests/test_document_text.py`, `tests/test_reindex_storage.py`, `tests/test_rag_postgres.py`, `tests/test_rag_live.py`, `tests/test_rag_local_runtime.py`, `tests/test_rag_verifier.py`, root `scripts/sprint4/verify_rag_postgres.py` | Packaging, storage protocol, actual database/model/search/cloud acceptance and isolated verification tooling |
 | root `docs/sprint4/backend-architecture-review.md`, `backend-task-plan.md`, `backend-progress.md`, `backend-api-contract.md`, `backend-test-matrix.md`, `backend-final-report.md` | Architecture, decomposition, evidence, handoff and remaining work |
+| root `docs/sprint4/rag-completion-plan.md`, `manage-rag-pipeline-report.md`, `rag-runtime-setup.md` | RAG follow-up scope, installed runtime, final real-cloud evidence and cleanup |
 
 No frontend files or pre-existing untracked QA artifacts were edited/staged. The small extraction export is required for worker reuse; it preserves existing ingestion behavior and does not change another module's business logic.
 
@@ -93,7 +96,7 @@ Test environment versions: FastAPI 0.141.1, Pydantic 2.13.5, SQLAlchemy 2.0.54, 
 ## G. Remaining dependencies and limits
 
 1. Actual PostgreSQL tests now pass on a disposable local PostgreSQL 18.4 database. Rollout against the deployment reference version/database remains through the approved process. No project/production database was modified.
-2. Verify a real test-source reindex with actual R2, existing BGE-M3 weights and OpenSearch; run the separate worker process explicitly. Retrieval settings are stored but do not automatically alter live search. Existing GraphRAG snapshots need their established export/index workflow.
+2. Real R2/BGE-M3/OpenSearch/PostgreSQL reindex acceptance has passed. Operator deployments still run the explicit worker process. Retrieval settings are stored but do not automatically alter live search. Existing GraphRAG snapshots use their established export/index workflow.
 3. One active reindex globally prevents overlapping source rewrites. Failed external bulk operations may leave successful items; stable IDs support deliberate new jobs. A killed worker leaves RUNNING and holds the slot until an operator confirms termination and reconciles it. No automatic retry/cancellation/recovery is claimed.
 4. PostgreSQL row-lock serialization is implemented and its actual concurrent integration test passed during the RAG follow-up. SQLite tests also verified unique-safe swapping, stale requests and transaction rollback of intermediate sequence writes.
 5. Shared sky presets are referenced and validated, not edited. Camera GLB references must be registered for the same scene. Asset existence means a current database record; file-content/download availability is not a live verified guarantee.
@@ -106,10 +109,22 @@ For drag-and-drop scenes, fetch all pages, exclude overview -1, and send the com
 
 ## I. Estimates and Git
 
-The decomposition still totals the original **84 reference hours**, every subtask <=8h. No actual engineering hours were inferred from execution time. After the Manage RAG Pipeline follow-up, nine tasks satisfy acceptance and BE-06 retains PARTIAL external verification status. Changes are local commits only; no remote push, PR, deployment, service left running or persistent Git configuration change. Local commits use per-command `commit.gpgsign=false`, matching the earlier branch workflow with unavailable signing key.
+The decomposition still totals the original **84 reference hours**, every subtask <=8h. No actual engineering hours were inferred from execution time. All ten tasks satisfy scoped acceptance after the final real-cloud RAG verification. Changes are local commits only; no remote push, PR, deployment, service left running or persistent Git configuration change. Local commits use per-command `commit.gpgsign=false`, matching the earlier branch workflow with unavailable signing key.
 
-## Manage RAG Pipeline follow-up
+## Earlier Manage RAG Pipeline checkpoints
 
-The command/results in section F describe the initial Sprint run. Current scoped results and changed paths are in `manage-rag-pipeline-report.md`: worker packaging fixed, parser dependencies declared, 38 RAG regression tests plus 3 safety-guard tests and 5 actual PostgreSQL integration tests passed. Disposable databases were created and removed; application data was untouched. BE-08's PostgreSQL concurrency check is now verified. BE-06 still needs real R2/BGE-M3/OpenSearch resources for the prepared full-stack smoke test. No model packages/weights were installed, Docker service started or production operation performed.
+The command/results in section F describe the initial Sprint run. Initial follow-up evidence in `manage-rag-pipeline-report.md` recorded worker packaging fixes, parser pins, 38 RAG regression tests plus 3 safety-guard tests and 5 actual PostgreSQL integration tests passing. Disposable databases were removed; application data was untouched. That checkpoint closed BE-08's PostgreSQL verification and still awaited RAG runtime resources; packages/weights had not yet been installed.
 
-Subsequently, the user authorized installation. Current scoped results supersede that checkpoint: OpenSearch 3.3.0, PyTorch CPU, sentence-transformers and the pinned model cache are installed; 49 RAG regression cases and 6 actual PostgreSQL/BGE-M3/OpenSearch local-runtime cases pass, with no skips. The separate local runtime uses an explicit S3 response fixture. Actual cloud `--live` execution was refused at approval, so BE-06 remains PARTIAL for that assertion. An owned R2 test document was created with approval, conditionally deleted and absence verified. Temporary database/search artifacts and the search process were cleaned up. Exact versions, commands, changed test paths and resolved Windows setup errors are in `rag-runtime-setup.md`. No remote push, application database migration or existing object modification occurred.
+The user then authorized installation. OpenSearch 3.3.0, PyTorch CPU, sentence-transformers and the pinned model cache were installed; 49 RAG regression cases and 6 actual PostgreSQL/BGE-M3/OpenSearch local-runtime cases passed without skips. That local runtime used an explicit S3 response fixture. Cloud execution was refused at that stage, so BE-06 temporarily remained PARTIAL. Its owned cloud source and local test artifacts were cleaned up.
+
+## Final Manage RAG Pipeline acceptance
+
+The user's subsequent authorization allowed the actual cloud verification command to execute:
+
+```powershell
+& 'C:\Capstone 1\.venv\Scripts\python.exe' -X utf8 scripts/sprint4/verify_rag_postgres.py --live
+```
+
+**6 passed, zero failed, zero skipped, one existing warning, 63.18s.** This includes five real PostgreSQL cases and one actual admin/API/worker/R2/BGE-M3/OpenSearch case. The job reached COMPLETED and the indexed vector had 1024 dimensions. Storage, embeddings and search were not mocked in the cloud case. Database cases overlap the earlier local command and are not counted twice.
+
+The fresh owned R2 source was owner/ETag checked, conditionally deleted and confirmed absent with HEAD 404. The disposable database was removed. A direct inspection found zero remaining owned search indices/pipelines. The test search process was stopped and port 19200 verified closed. Application data, existing cloud objects and untracked QA files were preserved. Runtime/cache remain installed. Exact setup and evidence are in `rag-runtime-setup.md` and `manage-rag-pipeline-report.md`. BE-05 and BE-06 are DONE; no critical task integration remains unresolved. Production/application migration and deployment remain separate operator actions.
