@@ -11,6 +11,10 @@ PyJWT==2.10.1
 argon2-cffi==25.1.0
 email-validator==2.3.0
 
+
+# Graph processing
+networkx==3.6.1
+
 # BGE-M3 document/query embeddings
 sentence-transformers==6.1.0
 

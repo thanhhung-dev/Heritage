@@ -13,7 +13,7 @@ def upgrade() -> None:
     op.add_column("chat_message", sa.Column(
         "response_metadata", postgresql.JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb"),
     ))
-    op.drop_constraint("chk_msg_citations", "chat_message", type_="check")
+    op.execute("ALTER TABLE chat_message DROP CONSTRAINT IF EXISTS chk_msg_citations")
     op.create_check_constraint(
         "chk_msg_citations", "chat_message",
         "role = 'user' OR abstained OR jsonb_array_length(citations) > 0 OR "

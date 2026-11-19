@@ -7,7 +7,7 @@ export interface TourArea {
 // Explicit route identities mirror the backend's server-owned area registry.
 // Never infer scope from a free-form tour title or the visitor's question.
 const AREAS: TourArea[] = [
-  { id: "khiem-lang", title: "Khiêm Lăng (Lăng Tự Đức)", slugs: ["khiem-lang", "lang-tu-duc", "tu-duc-tomb"] },
+  { id: "lang-tu-duc", title: "Lăng Tự Đức", slugs: ["lang-tu-duc", "khiem-lang", "tu-duc-tomb"] },
   { id: "lang-minh-mang", title: "Lăng Minh Mạng", slugs: ["lang-minh-mang", "minh-mang-tomb"] },
   { id: "dai-noi-hue", title: "Đại Nội Huế", slugs: ["dai-noi-hue", "forbidden-city", "imperial-city"] },
   { id: "lang-khai-dinh", title: "Lăng Khải Định", slugs: ["lang-khai-dinh", "khai-dinh-tomb"] },
@@ -18,7 +18,7 @@ const AREAS: TourArea[] = [
 // remains the enforcement boundary; this guard avoids offering misleading chips
 // when a story's metadata explicitly describes a different destination.
 const PLACE_ALIASES: Record<string, string[]> = {
-  "khiem-lang": ["Khiêm Cung", "Vạn Niên Cơ"],
+  "lang-tu-duc": ["Khiêm Cung", "Vạn Niên Cơ"],
   "lang-minh-mang": ["Lăng Minh Mệnh", "Hiếu Lăng"],
   "dai-noi-hue": ["Đại Nội", "Hoàng thành Huế", "Hoàng thành Nhà Nguyễn", "Hue Imperial City"],
   "lang-khai-dinh": ["Ứng Lăng"],

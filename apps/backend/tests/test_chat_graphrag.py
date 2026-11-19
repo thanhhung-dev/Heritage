@@ -2,7 +2,7 @@
 import json
 import os
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from apps.backend.api import chat as chat_api
 from apps.backend.services.passages import PassageRepository
@@ -28,10 +28,13 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_original_chunk_not_generated_graph_answer_reaches_llm(self):
         with patch.object(chat_api, 'generate_response', side_effect=lambda **kw: json.dumps({
-            'answer': kw['context'], 'answer_type': 'answered', 'source_ids': ['42'],
+            'answer': kw['context'], 'source_ids': ['42'],
         })):
-            response = await chat_api.chat(chat_api.ChatRequest(message='Thiên Mụ liên quan gì?'),
-                                           repository=self.repo)
+            response = await chat_api.chat(
+                chat_api.ChatRequest(message='Thiên Mụ liên quan gì?'),
+                request=Mock(is_disconnected=AsyncMock(return_value=False)),
+                repository=self.repo,
+            )
         self.assertIn('1601', response.answer)
         self.assertIn('TEMPLE_CONTEXT', response.answer)
         self.assertNotIn('9999', response.answer)
@@ -57,6 +60,15 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
         result = await self.repo.search_evidence('Thiên Mụ liên quan gì?')
         self.assertEqual([e.text for e in result.evidence], [self.row['text']])
         self.assertEqual(result.graph_context, [])
+
+    async def test_graph_runs_on_ordinary_questions_not_only_sparse_or_relation(self):
+        rows = [{**self.row, 'id': str(index), 'text': f'Chùa Thiên Mụ đoạn {index}.'} for index in range(5)]
+        self.store.search.return_value = rows
+        self.query.return_value = {'sources': [], 'graph_context': [], 'answer': ''}
+        result = await self.repo.search_evidence('Chùa Thiên Mụ xây năm nào?')
+        self.query.assert_awaited_once()
+        self.assertEqual(len(result.evidence), 5)
+
 
     async def test_disabled_graph_does_not_run(self):
         self.query.side_effect = AssertionError('GraphRAG disabled')

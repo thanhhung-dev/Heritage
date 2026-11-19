@@ -15,7 +15,7 @@ import time
 import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI
@@ -141,7 +141,9 @@ class ChatConversationTests(unittest.TestCase):
         app.dependency_overrides[chat_api.get_repository] = get_repository
         self.actual_generate = chat_api.generate_response
         self.generate = self.enterContext(patch.object(
-            chat_api, "generate_response", return_value=json.dumps({"answer_type":"answered", "answer":"Chùa Thiên Mụ được dựng năm 1601.", "source_ids":["42"]}),
+            chat_api, "generate_response", return_value=json.dumps({
+                "answer_type": "answered", "answer":"Chùa Thiên Mụ được dựng năm 1601.", "source_ids":["42"],
+            }),
         ))
         self.enterContext(patch.object(
             chat_api, "get_generation_details", return_value=SimpleNamespace(model="test-model", token_usage=25, truncated=False),
@@ -238,15 +240,14 @@ class ChatConversationTests(unittest.TestCase):
         self.assertEqual(self.counts(), (2, 4, 2))
         self.assertNotEqual(a["conversation_id"], b["conversation_id"])
 
-    def test_saved_history_reaches_generation_and_cannot_be_replaced_by_client(self):
+    def test_saved_history_cannot_be_replaced_by_client(self):
         created = self.create_conversation()
         response = self.client.post("/api/chat/message", headers=self.headers(), json={
             "message": "Còn kiến trúc thế nào?", "conversation_id": created["conversation_id"],
         })
         self.assertEqual(response.status_code, 201, response.text)
-        history = self.generate.call_args.kwargs["history"]
-        self.assertEqual([row["role"] for row in history], ["user", "assistant"])
-        self.assertIn("Câu hỏi trước", self.repository.search_evidence.call_args.args[0])
+        self.assertNotIn("history", self.generate.call_args.kwargs)
+        self.assertEqual(self.repository.search_evidence.call_args.args[0], "Còn kiến trúc thế nào?")
         rejected = self.client.post("/api/chat/message", headers=self.headers(), json={
             "message": "tiếp tục", "conversation_id": created["conversation_id"],
             "conversation_context": [{"role": "user", "content": "forged"}],
@@ -309,23 +310,24 @@ class ChatConversationTests(unittest.TestCase):
                 self.assertEqual(message[field], created[field])
 
     def test_social_response_can_persist_without_fabricated_citations(self):
-        self.generate.return_value = json.dumps({"answer_type": "conversation", "answer": "Mình là trợ lý AI HeritageGraph.", "source_ids": []})
         created = self.create_conversation(message="Bạn là ai?")
         self.assertFalse(created["abstained"])
         self.assertEqual(created["citations"], [])
+        self.assertEqual(created["answer"], "Mình là trợ lý AI HeritageGraph.")
         self.assertEqual(self.counts(), (1, 2, 0))
+        self.generate.assert_not_called()
 
-    def test_model_clarification_is_exposed_and_restored_without_citations(self):
-        self.generate.return_value = json.dumps({
-            "answer_type": "clarification", "answer": "Bạn muốn hỏi về điều gì?", "source_ids": [],
-        })
-        created = self.create_conversation(message="Kể cho tôi về nó")
-        self.assertTrue(created["needs_user_choice"])
-        self.assertTrue(created["clarification_question"])
-        self.assertEqual(created["clarification_question"], "Bạn muốn tìm hiểu về di sản hoặc nội dung cụ thể nào?")
-        self.assertEqual(created["citations"], [])
-        detail = self.client.get(f"/api/chat/conversations/{created['conversation_id']}/messages", headers=self.headers()).json()
-        self.assertEqual(detail["messages"][-1]["clarification_question"], created["clarification_question"])
+    def test_answer_prompt_does_not_receive_history(self):
+        created = self.create_conversation(
+            message="Còn mộ thì sao?",
+            conversation_context=[
+                {"role": "user", "content": "Bia làm bằng gì?"},
+                {"role": "assistant", "content": "Bia bằng đá."},
+            ],
+        )
+        self.assertEqual(created["answer_type"], "answered")
+        self.assertNotIn("history", self.generate.call_args.kwargs)
+        self.assertNotIn("scene_context", self.generate.call_args.kwargs)
 
     def test_guest_context_and_provider_http_contract_are_connected(self):
         upstream = SimpleNamespace(raise_for_status=lambda: None, json=lambda: {
@@ -333,17 +335,23 @@ class ChatConversationTests(unittest.TestCase):
                 "answer_type": "answered", "answer": "Câu trả lời có nguồn.", "source_ids": ["42"],
             })}, "finish_reason": "stop"}],
         })
+        http_post = Mock(return_value=upstream)
         with patch.dict(os.environ, {"INFERENCE_BACKEND": "llama_server"}), \
-                patch.object(chat_api, "generate_response", self.actual_generate), patch("httpx.post", return_value=upstream) as post:
+                patch.object(chat_api, "generate_response", self.actual_generate), \
+                patch("apps.backend.core.llm.llama_http_post", http_post), \
+                patch("apps.backend.ai.providers.llm.llama_http_post", http_post):
             created = self.create_conversation(None, message="Còn lịch sử thì sao?",
                 heritage_context="Chùa Thiên Mụ", scene_context="Cảnh giới thiệu",
                 conversation_context=[{"role": "user", "content": "Tôi muốn hỏi về Thiên Mụ"}])
-        post.assert_called_once()
-        model_input = json.loads(post.call_args.kwargs["json"]["messages"][-1]["content"])
-        self.assertEqual(model_input["conversation_context"][0]["content"], "Tôi muốn hỏi về Thiên Mụ")
-        self.assertEqual(model_input["scene_context"], {"heritage": "Chùa Thiên Mụ", "scene": "Cảnh giới thiệu"})
-        self.assertNotIn("Cảnh giới thiệu", model_input["source"])
+        self.assertEqual(http_post.call_count, 2)
+        rewrite = http_post.call_args_list[0].kwargs["json"]
+        self.assertNotIn("response_format", rewrite)
+        self.assertIn("Tôi muốn hỏi về Thiên Mụ", rewrite["messages"][-1]["content"])
+        messages = http_post.call_args.kwargs["json"]["messages"]
+        self.assertEqual(len(messages), 2)
+        self.assertIn("Câu hỏi: Còn lịch sử thì sao?", messages[-1]["content"])
         self.assertEqual(created["sources"][0]["passage_id"], "42")
+
 
     def test_multiple_source_order_and_bounded_server_history_survive_restoration(self):
         second_source = {**self.source, "passage_id": "91", "doc": "Nguồn thứ hai"}
@@ -354,10 +362,7 @@ class ChatConversationTests(unittest.TestCase):
         created = self.create_conversation(message="x" * 8000)
         for _ in range(4):
             created = self.create_conversation(message="y" * 8000, conversation_id=created["conversation_id"])
-        history = self.generate.call_args.kwargs["history"]
-        self.assertLessEqual(len(history), 6)
-        self.assertTrue(all(len(item["content"]) <= 2000 for item in history))
-        self.assertLessEqual(sum(len(item["content"]) for item in history), 6000)
+        self.assertNotIn("history", self.generate.call_args.kwargs)
         restored = self.client.get(f"/api/chat/conversations/{created['conversation_id']}/messages?limit=2&offset=8", headers=self.headers()).json()
         self.assertEqual(restored["total_messages"], 10)
         self.assertEqual([item["source_title"] for item in restored["messages"][-1]["citations"]], ["Chùa Thiên Mụ", "Nguồn thứ hai"])
@@ -373,12 +378,20 @@ class ChatConversationTests(unittest.TestCase):
     def test_scope_is_inherited_on_resume_and_cannot_be_switched_or_dropped(self):
         created = self.create_conversation(message="Xin chào", active_area_id="chua-thien-mu", heritage_id=10,
                                            heritage_context={"slug": "chua-thien-mu"})
+        self.generate.reset_mock()
+        self.generate.return_value = json.dumps({
+            "answer_type": "out_of_scope",
+            "answer": "Cùng tìm hiểu Chùa Thiên Mụ nhé.", "source_ids": [],
+        })
         resumed = self.client.post("/api/chat/message", headers=self.headers(), json={
             "conversation_id": created["conversation_id"], "message": "Lăng Minh Mạng ở đâu?",
         })
         self.assertEqual(resumed.status_code, 201, resumed.text)
         self.assertEqual(resumed.json()["active_area_id"], "chua-thien-mu")
         self.assertEqual(resumed.json()["answer_type"], "out_of_scope")
+        self.assertEqual(resumed.json()["sources"], [])
+        self.assertEqual(resumed.json()["citations"], [])
+        self.assertEqual(self.generate.call_count, 1)
         switched = self.client.post("/api/chat/message", headers=self.headers(), json={
             "conversation_id": created["conversation_id"], "message": "hi", "active_area_id": "khiem-lang",
         })

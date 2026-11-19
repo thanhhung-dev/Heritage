@@ -13,21 +13,23 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from apps.backend.core.corpus import INDEX_FILE, load_docs  # noqa: E402
-from apps.backend.core.prompt import SYSTEM, user_msg  # noqa: E402
 from pipelines.training.bootstrap_deep_qa import (  # noqa: E402
     DEFAULT_TEACHER,
     NO_SOURCE_QUESTIONS,
     SEED,
     VALID_EVERY,
+    attach_passage_ids,
     count_refusals,
     dedupe,
     drop_leaked,
+    extra_sentence,
     faithful,
+    follow_up_questions,
     intents_for,
     make_ner_samples,
     make_no_source_samples,
     make_off_topic_samples,
-    make_quote,
+    make_qa_sample,
     make_wrong_doc_samples,
     ner_type_coverage,
     pick_chunk,
@@ -63,7 +65,13 @@ def words(text: str) -> list[str]:
 
 
 def body_of(answer: str) -> str:
-    """Bỏ phần [Nguồn: ...] trước khi đo: chỗ đó BẮT BUỘC verbatim, copy là đúng."""
+    """Lấy trường answer từ JSON hội thoại; fallback bản cũ có [Nguồn:]."""
+    try:
+        obj = json.loads(answer)
+    except json.JSONDecodeError:
+        obj = None
+    if isinstance(obj, dict) and isinstance(obj.get("answer"), str):
+        return obj["answer"]
     return answer.split("[Nguồn:")[0].strip()
 
 
@@ -193,7 +201,7 @@ def rewrite(model_path: str, name: str, question: str, sents: list[str],
 # --- Sinh mẫu ---------------------------------------------------------------
 
 def qa_for_doc(doc: dict, teacher: str, stats: Counter,
-               max_run: int) -> tuple[list[dict], list[str]]:
+               max_run: int, rng: random.Random) -> tuple[list[dict], list[str]]:
     samples: list[dict] = []
     dropped: list[str] = []
     used: set[int] = set()
@@ -210,20 +218,15 @@ def qa_for_doc(doc: dict, teacher: str, stats: Counter,
         if not sents:
             dropped.append(f"{intent['id']}: không chọn được câu")
             continue
-
-        body = rewrite(teacher, doc["name"], question, sents, chunk["text"], stats, max_run)
+        extra = extra_sentence(chunk, sents)
+        material = sents + ([extra] if extra else [])
+        body = rewrite(teacher, doc["name"], question, material, chunk["text"], stats, max_run)
         if body is None:
             dropped.append(f"{intent['id']}: không qua cổng")
             continue
-
-        # Trích dẫn vẫn do script ghép: định dạng luôn đúng và câu trích luôn là
-        # chuỗi CÓ THẬT trong chunk. Đây là phần duy nhất được phép verbatim.
-        quote = make_quote(chunk, sents, intent["kw"])
-        samples.append({"messages": [
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": user_msg(chunk["text"], question)},
-            {"role": "assistant", "content": f"{body} [Nguồn: {quote} — {doc['url']}]"},
-        ]})
+        samples.append(make_qa_sample(
+            chunk, question, body, follow_up_questions(doc, intent["id"], rng),
+        ))
     return samples, dropped
 
 
@@ -232,7 +235,7 @@ def build_split(docs: list[dict], no_source_qs: list[str], rng: random.Random,
     """-> (mẫu QA + refusal, mẫu NER). NER trả riêng để ghi ra file riêng."""
     qa: list[dict] = []
     for doc in docs:
-        got, dropped = qa_for_doc(doc, teacher, stats, max_run)
+        got, dropped = qa_for_doc(doc, teacher, stats, max_run, rng)
         qa.extend(got)
         note = f"   bỏ {len(dropped)}: {'; '.join(dropped)}" if dropped else ""
         print(f"  {doc['name']:<32} {len(got):>2} mẫu{note}", flush=True)
@@ -275,8 +278,18 @@ def audit(rows: list[dict], label: str, max_run: int = MAX_VERBATIM_RUN) -> None
     n_ner = n_refusal = 0
     for row in rows:
         answer = row["messages"][-1]["content"]
-        if answer.lstrip().startswith("{"):
+        try:
+            obj = json.loads(answer)
+        except json.JSONDecodeError:
+            obj = None
+        if isinstance(obj, dict) and "người" in obj:
             n_ner += 1
+            continue
+        if isinstance(obj, dict) and obj.get("source_ids") == []:
+            n_refusal += 1
+            continue
+        if isinstance(obj, dict) and isinstance(obj.get("answer"), str):
+            reps.append((copy_report(answer, source_text(row)), obj["answer"]))
             continue
         if "[Nguồn:" not in answer:
             n_refusal += 1
@@ -339,6 +352,7 @@ def main() -> None:
     if not docs:
         print("ERROR: không có tài liệu nào dùng được.")
         sys.exit(1)
+    attach_passage_ids(docs)
 
     print(f"=== Corpus: {len(docs)} tài liệu dùng được, {len(skipped_docs)} bị bỏ ===")
     for name, reason in skipped_docs:

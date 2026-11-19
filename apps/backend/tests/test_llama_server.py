@@ -1,6 +1,11 @@
+import asyncio
 import json
+import threading
+import time
 import unittest
 from unittest.mock import Mock, patch
+
+import httpx
 
 from apps.backend.core import llm
 
@@ -82,25 +87,54 @@ class LlamaServerTests(unittest.TestCase):
             "usage": {"total_tokens": 19},
         }
         with patch.object(llm, "get_model", return_value=(model, None, "llama_cpp")):
-            answer = llm.generate_response("Bạn là ai?", conversation=True, retrieval_status="not_found")
+            answer = llm.generate_response("Thiên Mụ ở đâu?", conversation=True, retrieval_status="not_found")
         self.assertEqual(answer, raw)
         model.create_chat_completion.assert_called_once()
         options = model.create_chat_completion.call_args.kwargs
         self.assertEqual(options["response_format"]["type"], "json_object")
-        self.assertEqual(json.loads(options["messages"][-1]["content"])["message"], "Bạn là ai?")
+        self.assertEqual(set(options["response_format"]["schema"]["required"]), {"answer_type", "answer", "source_ids"})
+        self.assertIn("Câu hỏi: Thiên Mụ ở đâu?", options["messages"][-1]["content"])
         self.assertEqual(llm.get_generation_details().token_usage, 19)
 
-    def test_chat_messages_include_recent_conversation_before_current_source(self) -> None:
-        history = [
-            {"role": "user", "content": "Lăng Tự Đức ở đâu?"},
-            {"role": "assistant", "content": "Lăng Tự Đức nằm ở Huế."},
-        ]
+    def test_conversation_messages_exclude_history(self) -> None:
+        from apps.backend.ai.answering.conversation import conversation_messages
 
-        messages = llm.chat_messages("Nguồn mới", "Còn kiến trúc?", history=history)
+        messages = conversation_messages("Nguồn mới", "Còn kiến trúc?")
 
-        self.assertEqual(messages[1:3], history)
+        self.assertEqual(len(messages), 2)
         self.assertEqual(messages[-1]["role"], "user")
         self.assertIn("Nguồn: Nguồn mới", messages[-1]["content"])
+        self.assertIn("Câu hỏi: Còn kiến trúc?", messages[-1]["content"])
+        self.assertNotIn("Lăng Tự Đức", messages[-1]["content"])
+
+    def test_abort_scope_closes_in_flight_llama_http_client(self) -> None:
+        started = threading.Event()
+
+        def blocking_post(self, url, **kwargs):
+            started.set()
+            deadline = time.monotonic() + 2
+            while not self.is_closed and time.monotonic() < deadline:
+                time.sleep(0.01)
+            if not self.is_closed:
+                raise AssertionError("llama client was not closed")
+            raise httpx.TransportError("closed")
+
+        async def run() -> None:
+            async with llm.llama_abort_scope() as abort:
+                worker = asyncio.create_task(asyncio.to_thread(
+                    llm._llama_server_generate,
+                    [{"role": "user", "content": "Xin chào"}],
+                    8,
+                ))
+                await asyncio.to_thread(started.wait, 2)
+                abort.abort()
+                with self.assertRaises(httpx.RequestError):
+                    await worker
+
+        with patch.object(httpx.Client, "post", blocking_post):
+            asyncio.run(run())
+
+
 
 
 if __name__ == "__main__":

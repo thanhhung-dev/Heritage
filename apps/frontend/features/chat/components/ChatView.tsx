@@ -44,6 +44,15 @@ export function ChatView({
         msg.role === "assistant" ? (
           <div className={styles.assistantFooter}>
             <ChatActions content={msg.content} />
+            {!!msg.followUpQuestions?.length && (
+              <div className={styles.followUps} aria-label="Câu hỏi gợi ý">
+                {msg.followUpQuestions.map((question) => (
+                  <button key={question} type="button" disabled={loading} onClick={() => onSend(question)}>
+                    {question}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : undefined,
     })),

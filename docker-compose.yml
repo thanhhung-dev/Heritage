@@ -1,5 +1,4 @@
 name: heritagegraph
-
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -19,7 +18,19 @@ services:
       retries: 20
     networks:
       - heritage-network
-
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:latest
+    container_name: heritage-cloudbeaver
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8978:8978"
+    volumes:
+      - cloudbeaver_data:/opt/cloudbeaver/workspace
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - heritage-network
   opensearch:
     image: opensearchproject/opensearch:3.3.0
     restart: unless-stopped
@@ -64,10 +75,10 @@ services:
     ports:
       - "${LLAMA_PORT:-8080}:8080"
     volumes:
-      - ./models/qwen-fused-q4_k_m.gguf:/models/qwen-fused.gguf:ro
+      - ./models/Qwen3-4B-Q4_K_M.gguf:/models/qwen3-4b-q4_k_m.gguf:ro
     command:
     - --model
-    - /models/qwen-fused.gguf
+    - /models/qwen3-4b-q4_k_m.gguf
     - --host
     - 0.0.0.0
     - --port
@@ -88,6 +99,12 @@ services:
     - "0.5"
     networks:
       - heritage-network
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \" 200\" <&3'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
 
   backend:
     build:
@@ -99,7 +116,7 @@ services:
     env_file:
       - .env
     environment:
-      LLAMA_SERVER_URL: ${LLAMA_SERVER_URL_DOCKER:-http://host.docker.internal:8080}
+      LLAMA_SERVER_URL: ${LLAMA_SERVER_URL_DOCKER:-http://llm:8080}
       OPENSEARCH_URL: ${OPENSEARCH_URL_DOCKER:-http://opensearch:9200}
       HEALTHCHECK_SKIP_MODEL: ${HEALTHCHECK_SKIP_MODEL:-0}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}
@@ -108,6 +125,9 @@ services:
       LANGFUSE_HOST: ${LANGFUSE_HOST_DOCKER:-http://langfuse-web:3000}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      llm:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     networks:
@@ -118,11 +138,11 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=3)"
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 240s
 
   langfuse-worker:
     image: docker.langfuse.com/langfuse/langfuse-worker:4
@@ -311,6 +331,7 @@ networks:
     driver: bridge
 
 volumes:
+  cloudbeaver_data:
   postgres_data:
   opensearch_data:
   langfuse_postgres_data:

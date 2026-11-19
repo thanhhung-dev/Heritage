@@ -40,4 +40,5 @@ export interface Message {
   needsUserChoice?: boolean;
   abstained?: boolean;
   replyContext?: TourReplyContext;
+  followUpQuestions?: string[];
 }

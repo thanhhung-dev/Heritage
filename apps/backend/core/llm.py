@@ -3,17 +3,15 @@ from __future__ import annotations
 import contextvars
 import hashlib
 import os
+import threading
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from functools import lru_cache
 
 import httpx
 from opentelemetry import trace
 
-from apps.backend.ai.answering.conversation import (
-    ConversationAnswer,
-    conversation_json_schema,
-    conversation_messages,
-)
+from apps.backend.ai.answering.conversation import conversation_json_schema, conversation_messages, rewrite_messages
 from apps.backend.core.observability import DEPENDENCY_HEALTH, rag_observation
 from apps.backend.core.prompt import chat_messages
 
@@ -43,6 +41,61 @@ generation_details: contextvars.ContextVar[GenerationDetails | None] = contextva
 def get_generation_details() -> GenerationDetails:
     return generation_details.get() or GenerationDetails()
 
+_llama_abort: contextvars.ContextVar[_LlamaAbort | None] = contextvars.ContextVar(
+    "llama_abort", default=None,
+)
+
+
+class _LlamaAbort:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._clients: list[httpx.Client] = []
+        self._closed = False
+
+    def track(self, client: httpx.Client) -> None:
+        with self._lock:
+            if self._closed:
+                client.close()
+                raise httpx.RequestError("llama request aborted")
+            self._clients.append(client)
+
+    def untrack(self, client: httpx.Client) -> None:
+        with self._lock:
+            if client in self._clients:
+                self._clients.remove(client)
+
+    def abort(self) -> None:
+        with self._lock:
+            self._closed = True
+            clients = list(self._clients)
+            self._clients.clear()
+        for client in clients:
+            client.close()
+
+
+@asynccontextmanager
+async def llama_abort_scope():
+    abort = _LlamaAbort()
+    token = _llama_abort.set(abort)
+    try:
+        yield abort
+    finally:
+        abort.abort()
+        _llama_abort.reset(token)
+
+
+def llama_http_post(url: str, *, json: dict, timeout: float) -> httpx.Response:
+    abort = _llama_abort.get()
+    if abort is None:
+        return httpx.post(url, json=json, timeout=timeout)
+    with httpx.Client(timeout=timeout) as client:
+        abort.track(client)
+        try:
+            return client.post(url, json=json)
+        finally:
+            abort.untrack(client)
+
+
 
 def _llama_server_generate(
     messages: list[dict], max_tokens: int, *, response_format: dict | None = None,
@@ -57,7 +110,7 @@ def _llama_server_generate(
         span.set_attribute("gen_ai.system", "llama.cpp")
         span.set_attribute("gen_ai.request.max_tokens", max_tokens)
         try:
-            response = httpx.post(
+            response = llama_http_post(
                 f"{base_url}/v1/chat/completions",
                 json={
                     "messages": messages,
@@ -149,18 +202,27 @@ def get_model():
 def generate_response_with_details(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
-    active_area_id: str | None = None, history: list[dict] | None = None,
-    scene_context: dict | None = None,
+    active_area_id: str | None = None, rewrite: bool = False,
+    user_history: list[str] | None = None, artifact_title: str | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    messages = (conversation_messages(context, question, retrieval_status, active_area_id=active_area_id, history=history, scene_context=scene_context)
-                if conversation else chat_messages(context, question))
-    options = {"response_format": {
-        "type": "json_object", "schema": conversation_json_schema(context),
-    }} if conversation else {}
+    if rewrite:
+        messages = rewrite_messages(question, user_history or [])
+        schema = None
+        max_tokens = min(max_tokens, 256)
+    elif conversation:
+        messages = conversation_messages(
+            context, question, retrieval_status, active_area_id=active_area_id,
+            user_history=user_history, artifact_title=artifact_title,
+        )
+        schema = conversation_json_schema(context)
+    else:
+        messages = chat_messages(context, question)
+        schema = None
+    options = {"response_format": {"type": "json_object", "schema": schema}} if schema else {}
 
-    with rag_observation('generation', as_type='generation', input=messages) as observation:
+    with rag_observation('question.rewrite' if rewrite else 'generation', as_type='generation', input=messages) as observation:
         observation.update(
             version=hashlib.sha256(messages[0]['content'].encode()).hexdigest(),
             model_parameters={'temperature': 0.0, 'max_tokens': max_tokens},
@@ -190,10 +252,11 @@ def generate_response_with_details(
 def generate_response(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
-    active_area_id: str | None = None, history: list[dict] | None = None,
-    scene_context: dict | None = None,
+    active_area_id: str | None = None, rewrite: bool = False,
+    user_history: list[str] | None = None, artifact_title: str | None = None,
 ) -> str:
     return generate_response_with_details(
         question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
-        active_area_id=active_area_id, history=history, scene_context=scene_context,
+        active_area_id=active_area_id, rewrite=rewrite, user_history=user_history,
+        artifact_title=artifact_title,
     ).answer

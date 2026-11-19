@@ -10,7 +10,7 @@ depends_on = None
 
 def upgrade():
     op.add_column("conversation", sa.Column("active_area_id", sa.String(80), nullable=True))
-    op.drop_constraint("chk_msg_citations", "chat_message", type_="check")
+    op.execute("ALTER TABLE chat_message DROP CONSTRAINT IF EXISTS chk_msg_citations")
     op.create_check_constraint(
         "chk_msg_citations", "chat_message",
         "role = 'user' OR abstained OR jsonb_array_length(citations) > 0 OR "

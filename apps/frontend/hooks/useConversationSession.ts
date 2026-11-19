@@ -9,6 +9,9 @@ import {
 } from "@/services/chatService";
 import type { Message } from "@/features/chat/types";
 
+/** ≥ backend CHAT_TIMEOUT_SECONDS (120s) so a 504 can reach the client first. */
+const CHAT_ABORT_MS = 130_000;
+
 export function getConversationAccountId(): string | null {
   return getAccessToken() ? getUser()?.account_id ?? null : null;
 }
@@ -54,7 +57,7 @@ export function useConversationSession({
       const controller = new AbortController();
       pending.current = controller;
       let timedOut = false;
-      const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 35_000);
+      const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, CHAT_ABORT_MS);
       setMessages((current) => [
         ...current,
         {
@@ -103,6 +106,7 @@ export function useConversationSession({
             needsUserChoice: response.needsUserChoice,
             abstained: response.abstained,
             replyContext: response.replyContext,
+            followUpQuestions: response.followUpQuestions,
           },
         ]);
       } catch (failure) {

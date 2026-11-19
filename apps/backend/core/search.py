@@ -10,6 +10,42 @@ from urllib.parse import urlsplit
 import httpx
 
 from apps.backend.core.embedding import EMBEDDING_DIMENSION, EMBEDDING_ID
+from apps.backend.core.textutil import strip_accents
+
+_TOKEN = re.compile(r'[a-z0-9]+')
+_STOP = frozenset({
+    'la', 'cua', 'va', 'cho', 'voi', 'trong', 'ngoai', 'nao', 'gi', 'ai', 'dau',
+    'the', 'bao', 'nhieu', 'co', 'khong', 'duoc', 'mot', 'cac', 'nhung', 'nay',
+    'hom', 'toi', 'ban', 'hay', 'den', 'nam', 'nhat', 'nhu', 'khi', 'de', 'bi',
+    'tai', 'tren', 'duoi', 'sau', 'truoc', 'van', 'con', 'rat', 'hon', 'cung',
+    'neu', 'thi', 'ma', 'ra', 'vao', 'len', 'lam', 'anh', 'em', 'minh',
+})
+
+
+def _cosine(left, right) -> float:
+    if not left or not right or len(left) != len(right):
+        return 0.0
+    return float(sum(x * y for x, y in zip(left, right)))
+
+
+def _strong_lexical(question: str, *texts: str) -> bool:
+    tokens = {
+        token for token in _TOKEN.findall(strip_accents(question))
+        if len(token) >= 4 and token not in _STOP
+    }
+    if not tokens:
+        return False
+    blob = strip_accents(' '.join(texts))
+    matched = [token for token in tokens if token in blob]
+    return len(matched) >= 2 or any(len(token) >= 6 for token in matched)
+
+
+def _keep_hit(question, vector, source, threshold) -> bool:
+    embedding = source.get('embedding')
+    if isinstance(embedding, list) and _cosine(vector, embedding) >= threshold:
+        return True
+    return _strong_lexical(question, source.get('text') or '', source.get('location_note') or '')
+
 
 
 class SearchError(RuntimeError):
@@ -55,6 +91,7 @@ class PassageStore:
         tour_properties = {
             **{name: {'type': 'keyword'} for name in (
                 'active_area_id', 'content_type', 'heritage_slug', 'scene_key', 'language',
+                'artifact_keys',
             )},
             'scene_id': {'type': 'long'},
         }
@@ -114,7 +151,7 @@ class PassageStore:
             if result.get('errors'):
                 raise SearchError('Một số passage chưa được index; sửa lỗi và import lại để hoàn tất batch.')
 
-    async def search(self, question, vector, limit=20, *, active_area_id=None):
+    async def search(self, question, vector, limit=20, *, active_area_id=None, artifact_key=None):
         threshold = float(os.environ.get('PASSAGE_MIN_SIMILARITY', '0.55'))
         if not math.isfinite(threshold) or not 0 <= threshold <= 1:
             raise ValueError('PASSAGE_MIN_SIMILARITY phải nằm trong [0, 1].')
@@ -122,10 +159,12 @@ class PassageStore:
         filters = [model_filter]
         if active_area_id is not None:
             filters.append({'term': {'active_area_id': active_area_id}})
-        vector_filter = {'bool': {'filter': filters}} if active_area_id is not None else model_filter
+        if artifact_key is not None:
+            filters.append({'term': {'artifact_keys': artifact_key}})
+        vector_filter = {'bool': {'filter': filters}} if len(filters) > 1 else model_filter
         result = await self._request('POST', f'/{self.index}/_search',
             params={'search_pipeline': f'{self.index}-hybrid'}, json={
-                'size': limit, '_source': {'excludes': ['embedding']},
+                'size': limit,
                 'query': {'hybrid': {'queries': [
                     {'bool': {'filter': filters, 'must': [{'multi_match': {
                         'query': question, 'fields': ['text', 'location_note^2'],
@@ -142,11 +181,20 @@ class PassageStore:
                     }},
                 ]}},
             })
-        return [{**hit['_source'], 'id': hit['_id'], 'score': hit['_score']}
-                for hit in result['hits']['hits']
-                if active_area_id is None or hit['_source'].get('active_area_id') == active_area_id]
+        rows = []
+        for hit in result['hits']['hits']:
+            source = hit['_source']
+            if active_area_id is not None and source.get('active_area_id') != active_area_id:
+                continue
+            if artifact_key is not None and artifact_key not in source.get('artifact_keys', []):
+                continue
+            if not _keep_hit(question, vector, source, threshold):
+                continue
+            source.pop('embedding', None)
+            rows.append({**source, 'id': hit['_id'], 'score': hit['_score']})
+        return rows
 
-    async def get_passages(self, ids, *, active_area_id=None):
+    async def get_passages(self, ids, *, active_area_id=None, artifact_key=None):
         if not ids:
             return []
         result = await self._request('POST', f'/{self.index}/_mget', json={
@@ -156,7 +204,8 @@ class PassageStore:
             raise SearchError('Không đọc được passage từ OpenSearch.')
         return [{**hit['_source'], 'id': hit['_id']} for hit in result['docs']
                 if hit.get('found') and hit['_source']['embedding_model'] == EMBEDDING_ID
-                and (active_area_id is None or hit['_source'].get('active_area_id') == active_area_id)]
+                and (active_area_id is None or hit['_source'].get('active_area_id') == active_area_id)
+                and (artifact_key is None or artifact_key in hit['_source'].get('artifact_keys', []))]
 
     async def document_chunks(self, object_key, bucket, *, limit=50, after=None):
         """Admin view of one source's chunks; never expose embedding vectors."""

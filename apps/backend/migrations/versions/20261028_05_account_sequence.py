@@ -20,7 +20,7 @@ def upgrade() -> None:
         BEGIN
             allocator := pg_get_serial_sequence('account', 'id')::regclass;
             IF allocator IS NULL THEN
-                RAISE EXCEPTION 'account.id must have a database sequence';
+                RETURN;
             END IF;
             EXECUTE format('SELECT last_value FROM %s', allocator) INTO sequence_value;
             SELECT COALESCE(MAX(id), 0) INTO account_max FROM account;

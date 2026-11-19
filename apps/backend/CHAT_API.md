@@ -23,7 +23,7 @@ save history. New clients use `/api/chat/message`.
 {
   "message": "Giới thiệu câu chuyện đang xem tại Khiêm Lăng.",
   "conversation_id": null,
-  "active_area_id": "khiem-lang",
+  "active_area_id": "lang-tu-duc",
   "heritage_context": {"slug": "lang-tu-duc"},
   "scene_context": {"key": "s0", "title": "Hòa Khiêm Điện"},
   "conversation_context": []
@@ -48,7 +48,7 @@ The tour client additionally sends `heritage_id` and a bounded `tour_context`:
 ```json
 {
   "message": "Kể thêm về điểm đang chọn.",
-  "active_area_id": "khiem-lang",
+  "active_area_id": "lang-tu-duc",
   "heritage_id": 1,
   "tour_context": {
     "scene_id": 3,
@@ -78,9 +78,9 @@ return 422; unavailable identity storage returns 503. Requests without
 Responses and saved assistant history include optional `reply_context`:
 `scene_id`, canonical `scene_key`/`scene_title`, `mode`, `highlight_id`/
 `highlight_title`, and `story_id`. Non-answered replies clear `story_id`; local
-scoped service-unavailable replies retain validated scene/point identity. New
-tour-context replies do not include generated follow-up questions. Old messages
-without metadata remain unlabeled, never assigned the current scene.
+scoped service-unavailable replies retain validated scene/point identity. Tour
+replies return up to three server-filtered follow-up questions for the active
+area or verified artifact. Old messages without metadata remain unlabeled.
 
 The single-load heritage/tour payload adds optional-default-empty `guide_stories`
 to scenes and interactive highlights. The registry is currently empty: no
@@ -137,11 +137,45 @@ retrieval filters, area-only graph snapshots, source validation and safe follow-
 questions. Scene changes supply current story labels while retaining the same
 area-owned conversation. Assistant history is never accepted as source evidence.
 
+Area scope is enforced by `active_area_id` metadata, not a blacklist of place
+names. A passage about the active site may mention another place; related
+questions may use it when it actually supports the answer. Explicit requests
+for another registered tour are generated as normal `out_of_scope` chat
+responses with no sources. The server permits the destination name only for
+navigation and falls back to safe wording if the model cites evidence, emits
+links/source labels, dates, or historical claims in that response.
+
+Every valid area-locked tour turn makes exactly one structured generation call,
+including greetings, missing evidence and explicit out-of-scope questions.
+The internal JSON contains `answer_type`, `answer`, `source_ids` and optional
+`follow_up_questions`. `answered` still requires citations belonging to the
+bounded active-area Passages. A partially supported answer remains `answered`:
+it states that the requested detail is unverified, then may present only the
+related fact supported by its citation. Other outcomes cannot attach citations.
+Invalid JSON, invalid citations and unsafe scope output are discarded in favor
+of a safe scoped response. Retrieval/context service failures retain their HTTP
+errors; the total request deadline remains unchanged.
+
+Bounded prior user questions are included in the same generation prompt only
+to resolve pronouns and omitted subjects; they are explicitly not evidence.
+For referential turns the retrieval query includes bounded prior user topics.
+There is no separate rewrite generation in a locked tour. Standalone chat keeps
+its existing rewrite behavior and may still use two model calls.
+
+P2 applies when the server-validated `(active_area_id, scene_id, highlight_id)`
+has an editorial artifact registry entry. Its allow-list filters evidence again
+after area retrieval. A selected marker without artifact mapping stays locked:
+the server supplies no area evidence and returns `insufficient_evidence`.
+Only markers explicitly classified in `TOUR_NON_ARTIFACT_MARKERS` may use P1
+while selected. Deselection always returns to P1. Duplicate artifact labels are
+not resolved to a scene. Both production registries remain empty until marker
+classification and reviewed Khiêm Lăng passage IDs exist.
+
 Chat inference is bounded by `CHAT_TIMEOUT_SECONDS` (default **120 seconds**),
 shared by `/api/chat`, `/api/chat/message` and area-locked tour generation in both
 router paths. Set it in the backend environment to a finite positive number of
-seconds; invalid values fail startup. This is the total retrieval-plus-generation
-budget at the chat boundary, not an additional budget for each phase.
+seconds; invalid values fail startup. This is the total retrieval and
+answer-generation budget, not an additional budget for each phase.
 `LLAMA_SERVER_TIMEOUT` remains the separate upstream HTTP timeout; increasing it
 alone does not extend the chat deadline. A 504 detail reports the configured
 chat limit rather than a hard-coded 30 seconds.

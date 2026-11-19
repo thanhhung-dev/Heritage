@@ -26,7 +26,7 @@ def upgrade() -> None:
     )
     op.create_index("idx_conversation_account_updated", "conversation", ["account_id", "updated_at", "id"])
     op.add_column("chat_message", sa.Column("conversation_id", postgresql.UUID(as_uuid=True), nullable=True))
-    op.alter_column("chat_message", "session_id", existing_type=postgresql.UUID(as_uuid=True), nullable=True)
+    op.alter_column("chat_message", "session_id", existing_type=sa.BigInteger(), nullable=True)
     op.create_foreign_key(
         "fk_chat_message_conversation", "chat_message", "conversation",
         ["conversation_id"], ["id"], ondelete="CASCADE",
@@ -40,7 +40,7 @@ def upgrade() -> None:
     op.create_table(
         "message_citation",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("message_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("chat_message.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("message_id", sa.BigInteger(), sa.ForeignKey("chat_message.id", ondelete="CASCADE"), nullable=False),
         sa.Column("source_title", sa.Text(), nullable=False),
         sa.Column("source_url", sa.Text(), nullable=True),
         sa.Column("relevance_score", sa.Float(), nullable=True),
@@ -64,6 +64,6 @@ def downgrade() -> None:
     op.drop_constraint("chk_msg_one_parent", "chat_message", type_="check")
     op.drop_constraint("fk_chat_message_conversation", "chat_message", type_="foreignkey")
     op.drop_column("chat_message", "conversation_id")
-    op.alter_column("chat_message", "session_id", existing_type=postgresql.UUID(as_uuid=True), nullable=False)
+    op.alter_column("chat_message", "session_id", existing_type=sa.BigInteger(), nullable=False)
     op.drop_index("idx_conversation_account_updated", table_name="conversation")
     op.drop_table("conversation")

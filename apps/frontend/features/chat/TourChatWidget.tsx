@@ -85,6 +85,7 @@ function AreaTourChat() {
     createdAt: message.createdAt ?? new Date(0).toISOString(),
     replyContext: message.replyContext, answerType: message.answerType,
     needsUserChoice: message.needsUserChoice, abstained: message.abstained, sources: message.sources,
+    suggestions: message.followUpQuestions?.map((question) => ({ label: question, value: question })),
   })), [chat.messages]);
 
   return <ChatOverlayWidget

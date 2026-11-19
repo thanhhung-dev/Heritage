@@ -51,6 +51,7 @@ class TourReplyContext(BaseModel):
     mode: Literal["scene", "standard", "free", "walk"]
     highlight_id: int | None = Field(default=None, gt=0)
     highlight_title: str | None = Field(default=None, max_length=200)
+    artifact_key: str | None = Field(default=None, exclude=True, max_length=120)
     story_id: StoryId | None = None
 
 
@@ -59,7 +60,7 @@ class ChatRequest(BaseModel):
     use_rag: bool = True
     session_id: str | None = None
     active_area_id: str | None = Field(default=None, min_length=1, max_length=80, description=(
-        "Khóa hướng dẫn viên theo khu vực đã đăng ký, ví dụ khiem-lang. "
+        "Khóa hướng dẫn viên theo khu vực đã đăng ký. "
         "Bắt buộc khi gửi ngữ cảnh tour; alias được chuẩn hóa, không fallback sang dữ liệu toàn cục."
     ))
     heritage_id: int | None = Field(default=None, gt=0)

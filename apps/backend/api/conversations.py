@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import asyncio
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager, suppress
 from uuid import UUID
 from types import SimpleNamespace
 
@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from apps.backend.common.config import chat_timeout_seconds
+from apps.backend.core.llm import llama_abort_scope
 from apps.backend.core.security import get_current_user
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.schemas.chat import (
@@ -83,6 +84,31 @@ def conversation_errors():
         raise HTTPException(500, "Không thể lưu hoặc đọc cuộc trò chuyện. Vui lòng thử lại.") from None
 
 
+async def _watch_llama_disconnect(http_request: Request, abort) -> None:
+    try:
+        while True:
+            if await http_request.is_disconnected():
+                abort.abort()
+                return
+            await asyncio.sleep(0.05)
+    except asyncio.CancelledError:
+        return
+
+
+@asynccontextmanager
+async def abort_llama_on_disconnect(http_request: Request):
+    """Close in-flight llama.cpp HTTP so client abort frees the single GPU slot."""
+    async with llama_abort_scope() as abort:
+        watcher = asyncio.create_task(_watch_llama_disconnect(http_request, abort))
+        try:
+            yield
+        finally:
+            watcher.cancel()
+            with suppress(asyncio.CancelledError):
+                await watcher
+
+
+
 def mount_conversation_routes(router, get_repository, pipeline):
     """Use identical persistence/auth semantics for both existing router paths."""
     @router.post("/chat/message", response_model=ChatResponse, status_code=201, responses={
@@ -92,6 +118,7 @@ def mount_conversation_routes(router, get_repository, pipeline):
     })
     async def create_chat_message(
         request: ChatMessageCreate,
+        http_request: Request,
         account_id: int | None = Depends(get_optional_account_id),
         service: ConversationService = Depends(get_conversation_service),
         repository=Depends(get_repository),
@@ -137,8 +164,9 @@ def mount_conversation_routes(router, get_repository, pipeline):
                 if error.status_code == 504:
                     raise ChatServiceError("timeout", error.detail) from None
                 raise ChatServiceError("inference", "Hệ thống AI hiện không thể trả lời. Vui lòng thử lại.") from None
-        with conversation_errors():
-            return await service.send(request, account_id, answerer)
+        async with abort_llama_on_disconnect(http_request):
+            with conversation_errors():
+                return await service.send(request, account_id, answerer)
 
     @router.get("/chat/conversations", response_model=list[ConversationResponse])
     async def list_conversations(

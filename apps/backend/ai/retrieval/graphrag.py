@@ -17,7 +17,7 @@ _query_lock = asyncio.Lock()
 
 
 def graphrag_enabled() -> bool:
-    return os.environ.get('GRAPHRAG_ENABLED', 'false').lower() in {'true', '1', 'yes', 'on'}
+    return os.environ.get('GRAPHRAG_ENABLED', 'true').strip().lower() in {'true', '1', 'yes', 'on'}
 
 
 async def run_global_query(message: str, community_level: int = 0, *,

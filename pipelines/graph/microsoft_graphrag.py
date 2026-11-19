@@ -14,7 +14,7 @@ from contextlib import redirect_stdout
 from importlib.metadata import version
 from pathlib import Path
 
-from apps.backend.services.tour_scope import mentions_foreign_site, resolve_area
+from apps.backend.services.tour_scope import resolve_area
 
 PROJECT = Path(__file__).resolve().parents[2]
 VERSION = '3.3.0'
@@ -29,8 +29,7 @@ def export_snapshot(rows, root: Path, *, active_area_id: str | None = None) -> N
     if not rows:
         raise ValueError('No passages selected.')
     area = resolve_area(active_area_id) if active_area_id else None
-    if area and any(row.get('active_area_id') != area.id or mentions_foreign_site(
-            row['text'] + ' ' + row.get('location_note', ''), area) for row in rows):
+    if area and any(row.get('active_area_id') != area.id for row in rows):
         raise ValueError('Area snapshots require exclusively tagged, in-area passages.')
     root.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.export-', dir=root.parent) as temporary:
@@ -71,8 +70,6 @@ def validate_area_snapshot(root: Path, active_area_id: str) -> dict:
         content = (root / 'input' / name).read_bytes()
         if hashlib.sha256(content).hexdigest() != source['text_sha256']:
             raise ValueError('Snapshot source text changed.')
-        if mentions_foreign_site(content.decode('utf-8') + ' ' + source.get('doc', ''), area):
-            raise ValueError('Mixed-area source in snapshot.')
     return manifest
 
 

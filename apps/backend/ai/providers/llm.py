@@ -9,13 +9,11 @@ from functools import lru_cache
 import httpx
 from opentelemetry import trace
 
-from apps.backend.ai.answering.conversation import (
-    ConversationAnswer,
-    conversation_json_schema,
-    conversation_messages,
-)
+from apps.backend.ai.answering.conversation import conversation_json_schema, conversation_messages, rewrite_messages
 from apps.backend.common.observability import DEPENDENCY_HEALTH, rag_observation
 from apps.backend.ai.answering.prompt import chat_messages
+from apps.backend.core.llm import llama_http_post
+
 
 MAX_TOKENS = 768
 @dataclass(frozen=True)
@@ -57,7 +55,7 @@ def _llama_server_generate(
         span.set_attribute("gen_ai.system", "llama.cpp")
         span.set_attribute("gen_ai.request.max_tokens", max_tokens)
         try:
-            response = httpx.post(
+            response = llama_http_post(
                 f"{base_url}/v1/chat/completions",
                 json={
                     "messages": messages,
@@ -149,18 +147,27 @@ def get_model():
 def generate_response_with_details(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
-    active_area_id: str | None = None, history: list[dict] | None = None,
-    scene_context: dict | None = None,
+    active_area_id: str | None = None, rewrite: bool = False,
+    user_history: list[str] | None = None, artifact_title: str | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    messages = (conversation_messages(context, question, retrieval_status, active_area_id=active_area_id, history=history, scene_context=scene_context)
-                if conversation else chat_messages(context, question))
-    options = {"response_format": {
-        "type": "json_object", "schema": conversation_json_schema(context),
-    }} if conversation else {}
+    if rewrite:
+        messages = rewrite_messages(question, user_history or [])
+        schema = None
+        max_tokens = min(max_tokens, 256)
+    elif conversation:
+        messages = conversation_messages(
+            context, question, retrieval_status, active_area_id=active_area_id,
+            user_history=user_history, artifact_title=artifact_title,
+        )
+        schema = conversation_json_schema(context)
+    else:
+        messages = chat_messages(context, question)
+        schema = None
+    options = {"response_format": {"type": "json_object", "schema": schema}} if schema else {}
 
-    with rag_observation('generation', as_type='generation', input=messages) as observation:
+    with rag_observation('question.rewrite' if rewrite else 'generation', as_type='generation', input=messages) as observation:
         observation.update(
             version=hashlib.sha256(messages[0]['content'].encode()).hexdigest(),
             model_parameters={'temperature': 0.0, 'max_tokens': max_tokens},
@@ -190,10 +197,11 @@ def generate_response_with_details(
 def generate_response(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
-    active_area_id: str | None = None, history: list[dict] | None = None,
-    scene_context: dict | None = None,
+    active_area_id: str | None = None, rewrite: bool = False,
+    user_history: list[str] | None = None, artifact_title: str | None = None,
 ) -> str:
     return generate_response_with_details(
         question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
-        active_area_id=active_area_id, history=history, scene_context=scene_context,
+        active_area_id=active_area_id, rewrite=rewrite, user_history=user_history,
+        artifact_title=artifact_title,
     ).answer

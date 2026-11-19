@@ -6,9 +6,11 @@ import re
 from apps.backend.services.tour_scope import resolve_area
 
 METADATA_FIELDS = (
-    'content_type', 'heritage_slug', 'active_area_id', 'scene_id', 'scene_key', 'language',
+    'content_type', 'heritage_slug', 'active_area_id', 'scene_id', 'scene_key',
+    'language', 'artifact_keys',
 )
 _CONTENT_TYPES = {'tour_script', 'historical_source', 'editorial_note'}
+_SLUG_PATTERN = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*\Z')
 
 
 def resolve_metadata(document: dict, passage: dict | None = None, *, text: str = '') -> dict:
@@ -22,6 +24,16 @@ def resolve_metadata(document: dict, passage: dict | None = None, *, text: str =
             if field == 'scene_id':
                 if type(value) is not int or not 0 < value < 2 ** 63:
                     raise ValueError('scene_id phải là số nguyên dương trong phạm vi int64.')
+            elif field == 'artifact_keys':
+                if not isinstance(value, list) or not value or len(value) > 16:
+                    raise ValueError('artifact_keys phải là danh sách 1-16 slug.')
+                if any(
+                    not isinstance(key, str) or not 1 <= len(key) <= 120
+                    or not _SLUG_PATTERN.fullmatch(key)
+                    for key in value
+                ):
+                    raise ValueError('artifact_keys chứa slug không hợp lệ.')
+                value = list(dict.fromkeys(value))
             elif not isinstance(value, str) or not value or len(value) > 80:
                 raise ValueError(f'{field} phải là text không rỗng, tối đa 80 ký tự.')
             elif field == 'active_area_id':
@@ -46,7 +58,7 @@ def resolve_metadata(document: dict, passage: dict | None = None, *, text: str =
         if metadata.get('content_type') != 'tour_script':
             raise ValueError('content_type: tour_script trong header cần metadata JSON tour_script đầy đủ.')
     if metadata.get('content_type') == 'tour_script':
-        missing = [field for field in METADATA_FIELDS if field not in metadata]
+        missing = [field for field in METADATA_FIELDS if field != 'artifact_keys' and field not in metadata]
         if missing:
             raise ValueError('tour_script thiếu metadata JSON: ' + ', '.join(missing))
     if 'heritage_slug' in metadata and 'active_area_id' in metadata:

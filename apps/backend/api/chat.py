@@ -7,9 +7,12 @@ import logging
 import os
 import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from apps.backend.ai.answering.conversation import ConversationAnswer, resolve_cited_source_ids
+from apps.backend.ai.answering.conversation import (
+    ConversationAnswer, append_graph_follow_up_hint, evidence_cite_id, grounded_source_ids,
+    is_social_turn, prior_user_questions, related_follow_ups, rewrite_followup,
+)
 from apps.backend.api.public.chat.schemas import ChatRequest, ChatResponse
 from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.core.llm import generate_response, get_generation_details
@@ -19,8 +22,8 @@ from apps.backend.services.passages import EmbeddingError, PassageRepository, Pa
 
 from apps.backend.services.tour_chat import TourChatError, answer_in_area
 
-from apps.backend.api.conversations import get_chat_db, get_conversation_service, mount_conversation_routes, validated_tour_context
-from apps.backend.services.chat_context import question_with_context, retrieval_question
+from apps.backend.api.conversations import abort_llama_on_disconnect, get_chat_db, get_conversation_service, mount_conversation_routes, validated_tour_context
+from apps.backend.services.chat_context import question_with_context
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -37,8 +40,8 @@ async def get_repository():
     503: {"description": "Lỗi embedding/OpenSearch; detail chứa code=EMBEDDING_FAILED hoặc "
                          "OPENSEARCH_FAILED và message. Lỗi LLM giữ detail dạng chuỗi."},
 })
-async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_repository)):
-    """Hội thoại và hỏi đáp di sản trong tối đa một lượt sinh LLM, không dò lời chào.
+async def chat(req: ChatRequest, request: Request, repository: PassageRepository = Depends(get_repository)):
+    """Hỏi đáp di sản; chat có area và lịch sử thêm một lượt phân giải câu hỏi.
 
     `conversation` và `out_of_scope` không có sources. `answered` chỉ trả sources
     được model trích và backend kiểm tra ID thuộc các Passage đã cung cấp.
@@ -54,7 +57,8 @@ async def chat(req: ChatRequest, repository: PassageRepository = Depends(get_rep
     }) as observation:
         timeout = chat_timeout_seconds()
         try:
-            response = await asyncio.wait_for(_chat(req, repository), timeout=timeout)
+            async with abort_llama_on_disconnect(request):
+                response = await asyncio.wait_for(_chat(req, repository), timeout=timeout)
         except TimeoutError:
             raise HTTPException(504, f"AI phản hồi quá thời gian chờ {timeout:g} giây.") from None
         observation.update(output=response.model_dump(), metadata={
@@ -78,32 +82,38 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
     question = req.message.strip()
     if not question:
         raise HTTPException(status_code=400, detail="message trống")
+    if is_social_turn(question):
+        return ChatResponse(
+            answer="Mình là trợ lý AI HeritageGraph.",
+            answer_type="conversation", sources=[], resolution_status="resolved",
+        )
+
+    history = [item.model_dump() for item in req.conversation_context]
+    asked = question
+    if prior_user_questions(history):
+        asked = await asyncio.to_thread(rewrite_followup, question, history, generate_response)
+    search_text = asked if asked != question else question_with_context(req)
 
     # Retrieval remains unchanged; only factual answers require its evidence.
-    result = PassageSearch(RetrievalQuery(question), [])
-    retrieval_error = None
+    result = PassageSearch(RetrievalQuery(asked), [])
     try:
-        result = await repository.search_evidence(retrieval_question(
-            question_with_context(req), req.conversation_context,
-        ))
+        result = await repository.search_evidence(search_text)
     except EmbeddingError:
         log.exception("Query embedding lỗi")
-        retrieval_error = HTTPException(status_code=503, detail={
+        raise HTTPException(status_code=503, detail={
             "code": "EMBEDDING_FAILED", "message": "Không thể tạo embedding cho câu hỏi.",
-        })
+        }) from None
     except SearchError:
         log.exception("OpenSearch passage retrieval lỗi")
-        retrieval_error = HTTPException(status_code=503, detail={
+        raise HTTPException(status_code=503, detail={
             "code": "OPENSEARCH_FAILED", "message": "Không thể truy vấn dữ liệu từ OpenSearch.",
-        })
+        }) from None
     except Exception:
         log.exception("Passage retrieval lỗi nội bộ")
-        retrieval_error = HTTPException(status_code=500, detail={
+        raise HTTPException(status_code=500, detail={
             "code": "RETRIEVAL_INTERNAL_ERROR", "message": "Đã xảy ra lỗi nội bộ khi truy xuất bằng chứng.",
-        })
+        }) from None
 
-    retrieval_status = ("unavailable" if retrieval_error else
-                        "available" if result.evidence else "not_found")
     query = result.query
     if query.ambiguous:
         return ChatResponse(
@@ -111,8 +121,14 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
             suggestions=query.corrections, resolution_status="ambiguous",
             answer_type="suggestion",
         )
+    missing = "Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có."
+    if not result.evidence:
+        return ChatResponse(
+            answer=missing, sources=[], resolution_status="not_found",
+            answer_type="insufficient_evidence",
+        )
     with rag_observation('context.assembly') as observation:
-        context = '\n\n'.join(f'[Passage {item.id}]\n{item.text}' for item in result.evidence)
+        context = '\n\n'.join(f'[Passage {evidence_cite_id(item)}]\n{item.text}' for item in result.evidence)
         graph_items = []
         if result.graph_context:
             header = ('\n\nBỐI CẢNH GRAPHRAG — máy trích xuất, chưa xác minh nội dung. '
@@ -126,6 +142,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
                     graph_items.append(item)
             if lines:
                 context += header + '\n'.join(lines)
+        context = append_graph_follow_up_hint(context, result.graph_context)
         observation.update(output={'context': context, 'graph_context': graph_items}, metadata={
             'context_chars': len(context),
             'selected_passage_ids': [item.id for item in result.evidence],
@@ -133,33 +150,16 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         })
 
     def generate():
-        answer = generate_response(
-            question=question, context=context, conversation=True, retrieval_status=retrieval_status,
-            **({"history": [item.model_dump() for item in req.conversation_context]} if req.conversation_context else {}),
-            **({"scene_context": {"heritage": req.heritage_context, "scene": req.scene_context}}
-               if req.heritage_context or req.scene_context else {}),
+        raw = generate_response(
+            question=asked, context=context, conversation=True, retrieval_status="available",
         )
-        return answer, get_generation_details()
+        return raw, get_generation_details()
 
     try:
         raw, details = await asyncio.to_thread(generate)
         if details.truncated is True:
             raise ValueError("Incomplete model answer")
-        answer = ConversationAnswer.model_validate_json(raw)
-        if answer.answer_type == "clarification":
-            answer.answer = "Bạn muốn tìm hiểu về di sản hoặc nội dung cụ thể nào?"
-        if answer.answer_type == "answered":
-            if not result.evidence:
-                # Even schema-valid output cannot turn missing evidence into facts.
-                answer = ConversationAnswer(
-                    answer="Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có.",
-                    answer_type="insufficient_evidence", source_ids=[],
-                )
-            else:
-                valid_ids = {str(e.id) for e in result.evidence}
-                answer.source_ids = resolve_cited_source_ids(answer.source_ids, valid_ids)
-                if not answer.source_ids or not set(answer.source_ids) <= valid_ids:
-                    raise ValueError("Answer must cite supplied passages")
+        parsed = ConversationAnswer.model_validate_json(raw)
     except ValueError:
         # Validation errors can contain generated content; do not log that text.
         log.warning("LLM output không hợp lệ hoặc bị cắt")
@@ -168,26 +168,34 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         log.exception("LLM generation lỗi")
         raise HTTPException(status_code=503, detail="Model trả lời hiện không khả dụng.") from None
 
-    if retrieval_error and answer.answer_type == "insufficient_evidence":
-        raise retrieval_error from None
-    selected = [item for item in result.evidence if str(item.id) in answer.source_ids]
+    cited = grounded_source_ids(parsed.source_ids, {evidence_cite_id(item) for item in result.evidence})
+    if not cited:
+        return ChatResponse(
+            answer=missing, sources=[], resolution_status="not_found",
+            answer_type="insufficient_evidence",
+        )
+    selected = [item for item in result.evidence if evidence_cite_id(item) in cited]
     observe_grounded_qa(
         os.environ.get("OBSERVABILITY_CONTENT_CAPTURE", "metadata"),
         model=details.model, corpus_version="opensearch",
         evidence_ids=[str(item.id) for item in selected],
-        token_usage=details.token_usage, grounded=answer.answer_type == "answered",
+        token_usage=details.token_usage, grounded=True,
         latency_ms=(time.perf_counter() - started) * 1000,
         correlation_id=correlation_id.get(), prompt=question,
         evidence=' '.join(item.text for item in selected),
     )
     correction = query.corrections[0] if query.corrections and selected else {}
     return ChatResponse(
-        answer=answer.answer, sources=[item.to_source() for item in selected],
+        answer=parsed.answer, sources=[item.to_source() for item in selected],
         corrected_from=correction.get("original", ""),
         corrected_to=correction.get("suggested", ""),
-        intent=",".join(sorted(query.intent)) if selected else answer.answer_type,
-        resolution_status="not_found" if answer.answer_type == "insufficient_evidence" else "resolved",
-        answer_type=answer.answer_type,
+        intent=",".join(sorted(query.intent)) if selected else "",
+        resolution_status="resolved",
+        answer_type="answered",
+        follow_up_questions=related_follow_ups(
+            parsed.follow_up_questions, asked,
+            graph_context=result.graph_context, evidence=selected,
+        ),
     )
 
 

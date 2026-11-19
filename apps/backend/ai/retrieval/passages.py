@@ -9,7 +9,7 @@ from apps.backend.ai.providers.embedding import embed_texts
 from apps.backend.common.observability import rag_observation
 from apps.backend.common.utils.text import strip_accents
 from apps.backend.ai.retrieval.graphrag import graphrag_enabled, run_global_query
-from apps.backend.services.tour_scope import mentions_foreign_site, question_outside_area, resolve_area
+from apps.backend.services.tour_scope import resolve_area
 
 
 class EmbeddingError(RuntimeError):
@@ -55,20 +55,24 @@ class PassageRepository:
         self.store = store
         self.embedder = embedder
 
-    async def search_evidence(self, question: str, limit: int = 2, *, active_area_id: str | None = None) -> PassageSearch:
+    async def search_evidence(
+        self, question: str, limit: int = 6, *, active_area_id: str | None = None,
+        artifact_key: str | None = None,
+    ) -> PassageSearch:
         question = question.strip()
         intent = frozenset({'relation'} if re.search(r'\b(lien quan|quan he|so sanh|khac nhau)\b',
                                                     strip_accents(question)) else {'general'})
         query = RetrievalQuery(question, intent=intent)
         area = resolve_area(active_area_id) if active_area_id is not None else None
-        if not question or limit <= 0 or (area and question_outside_area(question, area)):
+        if not question or limit <= 0:
             return PassageSearch(query, [])
         retrieval_text = f'{area.title}: {question}' if area else question
 
         def in_scope(row):
-            return area is None or (row.get('active_area_id') == area.id
-                and not mentions_foreign_site(row.get('text', '') + ' ' + row.get('location_note', '')
-                    + ' ' + row.get('source_url', ''), area))
+            return (
+                (area is None or row.get('active_area_id') == area.id)
+                and (artifact_key is None or artifact_key in row.get('artifact_keys', []))
+            )
 
         with rag_observation('retrieval', as_type='retriever', input={'query': question}) as observation:
             with rag_observation('query.embedding', as_type='embedding'):
@@ -77,14 +81,20 @@ class PassageRepository:
                 except Exception as error:
                     raise EmbeddingError('Không thể tạo embedding cho câu hỏi.') from error
             with rag_observation('retrieval.opensearch'):
-                options = {'active_area_id': area.id} if area else {}
-                rows = [row for row in await self.store.search(retrieval_text, vectors[0], **options) if in_scope(row)]
+                options = {}
+                if area:
+                    options['active_area_id'] = area.id
+                if artifact_key:
+                    options['artifact_key'] = artifact_key
+                rows = [row for row in await self.store.search(retrieval_text, vectors[0], **options)
+                        if in_scope(row)]
             graph_context = []
             methods = {row['id']: ('opensearch_hybrid',) for row in rows}
-            if graphrag_enabled() and ('relation' in intent or len(rows) < 3):
+            if graphrag_enabled():
                 with rag_observation('retrieval.microsoft_graphrag') as graph_observation:
                     try:
-                        graph = await run_global_query(retrieval_text, **options)
+                        graph_options = {'active_area_id': area.id} if area else {}
+                        graph = await run_global_query(retrieval_text, **graph_options)
                         if area and graph.get('active_area_id') != area.id:
                             raise ValueError('Graph snapshot is outside the active area')
                         sources = {str(s['passage_id']): s for s in graph['sources']}
@@ -104,7 +114,7 @@ class PassageRepository:
                                 methods[row['id']] += ('microsoft_graphrag',)
                         for item in graph.get('graph_context', []):
                             ids = [str(i) for i in item['source_passage_ids']]
-                            if ids and set(ids) <= current_ids and (not area or not mentions_foreign_site(str(item), area)):
+                            if ids and set(ids) <= current_ids:
                                 graph_context.append({**item, 'source_passage_ids': ids})
                     except Exception as error:
                         graph_observation.update(level='WARNING', status_message=type(error).__name__,
@@ -123,7 +133,7 @@ class PassageRepository:
                     active_area_id=row.get('active_area_id'),
                 ))
                 size += cost
-                if len(picked) >= min(limit, 2):
+                if len(picked) >= limit:
                     break
             selected = {p.id for p in picked}
             graph_context = [g for g in graph_context if set(g['source_passage_ids']) <= selected]

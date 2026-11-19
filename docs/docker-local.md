@@ -45,11 +45,11 @@ docker compose ps
 docker compose logs -f backend
 ```
 
-Trong container, `localhost` là chính container. Gọi service chạy native trên host
-phải dùng `host.docker.internal` (đã khai báo `extra_hosts: host-gateway` nên chạy
-được cả trên Linux). Compose tự đặt `LLAMA_SERVER_URL=http://host.docker.internal:8080`;
-muốn trỏ Postgres/OpenSearch về host thì bỏ comment hai biến tương ứng trong
-`environment` của service `backend`.
+Trong container, `localhost` là chính container. Compose đặt
+`LLAMA_SERVER_URL=http://llm:8080` trên Docker network. LLM native trên host:
+`LLAMA_SERVER_URL_DOCKER=http://host.docker.internal:8080` (`extra_hosts: host-gateway`).
+Muốn trỏ Postgres/OpenSearch về host thì ghi đè `DATABASE_URL` / `OPENSEARCH_URL`
+trong block `environment` của service `backend`.
 
 Cổng chỉ bind `127.0.0.1:${BACKEND_PORT:-8000}`. Healthcheck dùng `/` chứ không
 dùng `/api/health`, vì endpoint sau trả 503 khi llama.cpp chưa chạy.

@@ -4,7 +4,8 @@ import json
 import os
 import unittest
 import uuid
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import httpx
 
@@ -73,6 +74,51 @@ class SearchTransportTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(SearchError) as error:
                     await PassageRepository(store, embedder=vectors).search_evidence('Thiên Mụ')
         self.assertNotIn('private', str(error.exception))
+
+    async def test_post_mix_drops_weak_hits_unless_cosine_or_lexical_supports_them(self):
+        aligned = [1.0, 0.0]
+        orthogonal = [0.0, 1.0]
+        for name in ('apps.backend.core.search', 'apps.backend.common.search.opensearch'):
+            with self.subTest(module=name):
+                def respond(request):
+                    question = json.loads(request.content)['query']['hybrid']['queries'][0]['bool']['must'][0]['multi_match']['query']
+                    if 'bitcoin' in question.casefold():
+                        hits = [{'_id': 'leak', '_score': 1.0, '_source': {
+                            'text': 'Lăng Tự Đức tại Huế.', 'embedding': orthogonal,
+                        }}]
+                    elif 'thien mu' in question.casefold():
+                        hits = [{'_id': 'lexical', '_score': 0.4, '_source': {
+                            'text': 'Chùa Thiên Mụ dựng năm 1601.', 'embedding': orthogonal,
+                        }}]
+                    else:
+                        hits = [{'_id': 'semantic', '_score': 0.4, '_source': {
+                            'text': 'Văn hóa miền Trung.', 'embedding': aligned,
+                        }}]
+                    return httpx.Response(200, json={'hits': {'hits': hits}})
+                module = importlib.import_module(name)
+                async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                    store = module.PassageStore(client=client)
+                    with patch.dict(os.environ, {'PASSAGE_MIN_SIMILARITY': '0.55'}):
+                        bitcoin = await store.search('Giá bitcoin hôm nay bao nhiêu?', aligned)
+                        temple = await store.search('chua thien mu xay nam nao', orthogonal)
+                        semantic = await store.search('zzqxv ancient', aligned)
+                self.assertEqual([row['id'] for row in bitcoin], [])
+                self.assertEqual([row['id'] for row in temple], ['lexical'])
+                self.assertEqual([row['id'] for row in semantic], ['semantic'])
+                self.assertNotIn('embedding', temple[0])
+
+    async def test_default_evidence_keeps_up_to_six_in_scope_chunks(self):
+        rows = [{'id': str(i), 'text': f'Chùa Thiên Mụ đoạn {i}.'} for i in range(8)]
+        store = SimpleNamespace(search=AsyncMock(return_value=rows), get_passages=AsyncMock())
+        with patch.dict(os.environ, {'GRAPHRAG_ENABLED': 'false'}):
+            result = await PassageRepository(
+                store, embedder=lambda texts: [[0.0] * 1024],
+            ).search_evidence('Chùa Thiên Mụ')
+        self.assertEqual([item.id for item in result.evidence], [str(i) for i in range(6)])
+
+
+
+
 
 
 @unittest.skipUnless(os.environ.get('OPENSEARCH_TEST_URL'), 'local OpenSearch required')
