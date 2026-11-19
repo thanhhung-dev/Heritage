@@ -1,12 +1,20 @@
 """Versioned pipeline settings matching the existing chunker and embedding model."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 from apps.backend.ai.providers.embedding import EMBEDDING_ID
 
+
+def utc_timestamp(value):
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+UtcTimestamp = Annotated[datetime, BeforeValidator(utc_timestamp)]
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", from_attributes=True)
@@ -65,8 +73,8 @@ class PipelineUpdate(StrictModel):
 class PipelineOut(PipelineCreate):
     id: str
     revision: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcTimestamp
+    updated_at: UtcTimestamp
 
 
 class PipelineList(StrictModel):
@@ -93,6 +101,6 @@ class JobOut(StrictModel):
     processed_documents: int
     indexed_passages: int
     error: str | None
-    created_at: datetime
-    started_at: datetime | None
-    finished_at: datetime | None
+    created_at: UtcTimestamp
+    started_at: UtcTimestamp | None
+    finished_at: UtcTimestamp | None
