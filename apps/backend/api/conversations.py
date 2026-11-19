@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 from fastapi import Depends, HTTPException, Query, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.exc import SQLAlchemyError
 
 from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.core.llm import llama_abort_scope
@@ -68,6 +69,8 @@ async def validated_tour_context(request):
             return await resolve_tour_context(request, db)
         except ValueError as error:
             raise HTTPException(422, str(error)) from None
+        except SQLAlchemyError:
+            raise HTTPException(503, "Không thể xác minh tư liệu của điểm tham quan lúc này.") from None
 
 
 @contextmanager

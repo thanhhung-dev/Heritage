@@ -10,6 +10,7 @@ from apps.backend.common.observability import rag_observation
 from apps.backend.common.utils.text import strip_accents
 from apps.backend.ai.retrieval.graphrag import graphrag_enabled, run_global_query
 from apps.backend.services.tour_scope import resolve_area
+from apps.backend.services.tour_passages import matches_reviewed_passage
 
 
 class EmbeddingError(RuntimeError):
@@ -57,14 +58,14 @@ class PassageRepository:
 
     async def search_evidence(
         self, question: str, limit: int = 6, *, active_area_id: str | None = None,
-        artifact_key: str | None = None,
+        artifact_key: str | None = None, passage_links: dict[str, dict[str, str]] | None = None,
     ) -> PassageSearch:
         question = question.strip()
         intent = frozenset({'relation'} if re.search(r'\b(lien quan|quan he|so sanh|khac nhau)\b',
                                                     strip_accents(question)) else {'general'})
         query = RetrievalQuery(question, intent=intent)
         area = resolve_area(active_area_id) if active_area_id is not None else None
-        if not question or limit <= 0:
+        if not question or limit <= 0 or passage_links is not None and not passage_links:
             return PassageSearch(query, [])
         retrieval_text = f'{area.title}: {question}' if area else question
 
@@ -72,6 +73,8 @@ class PassageRepository:
             return (
                 (area is None or row.get('active_area_id') == area.id)
                 and (artifact_key is None or artifact_key in row.get('artifact_keys', []))
+                and (passage_links is None or row.get('id') in passage_links
+                     and matches_reviewed_passage(row, passage_links[row['id']]))
             )
 
         with rag_observation('retrieval', as_type='retriever', input={'query': question}) as observation:
@@ -86,6 +89,8 @@ class PassageRepository:
                     options['active_area_id'] = area.id
                 if artifact_key:
                     options['artifact_key'] = artifact_key
+                if passage_links is not None:
+                    options['passage_ids'] = list(passage_links)
                 rows = [row for row in await self.store.search(retrieval_text, vectors[0], **options)
                         if in_scope(row)]
             graph_context = []
@@ -97,12 +102,15 @@ class PassageRepository:
                         graph = await run_global_query(retrieval_text, **graph_options)
                         if area and graph.get('active_area_id') != area.id:
                             raise ValueError('Graph snapshot is outside the active area')
-                        sources = {str(s['passage_id']): s for s in graph['sources']}
-                        graph_rows = await self.store.get_passages(list(sources), **options)
+                        sources = {str(s['passage_id']): s for s in graph['sources']
+                                   if passage_links is None or str(s['passage_id']) in passage_links}
+                        graph_rows = await self.store.get_passages(
+                            list(sources), **{key: value for key, value in options.items() if key != 'passage_ids'},
+                        )
                         current = []
                         for row in graph_rows:
-                            source = sources[row['id']]
-                            if in_scope(row) and all(row.get(k, '') == source.get(k, '')
+                            source = sources.get(row['id'])
+                            if source and in_scope(row) and all(row.get(k, '') == source.get(k, '')
                                    for k in ('content_hash', 'object_key', 'bucket')):
                                 current.append(row)
                         current_ids = {row['id'] for row in current}

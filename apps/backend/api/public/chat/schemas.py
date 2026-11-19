@@ -51,7 +51,7 @@ class TourReplyContext(BaseModel):
     mode: Literal["scene", "standard", "free", "walk"]
     highlight_id: int | None = Field(default=None, gt=0)
     highlight_title: str | None = Field(default=None, max_length=200)
-    artifact_key: str | None = Field(default=None, exclude=True, max_length=120)
+    passage_links: dict[str, dict[str, str]] = Field(default_factory=dict, exclude=True)
     story_id: StoryId | None = None
 
 

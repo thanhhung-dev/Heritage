@@ -10,10 +10,7 @@ from apps.backend.ai.answering.conversation import (
     is_social_turn, prior_user_questions,
 )
 from apps.backend.common.config import chat_timeout_seconds
-from apps.backend.services.tour_guide import (
-    GUIDE_STORIES, TourArtifact, guide_stories, marker_is_verified_non_artifact,
-    referenced_tour_artifacts, tour_artifact,
-)
+from apps.backend.services.tour_guide import GUIDE_STORIES, TourFocus, guide_stories
 from apps.backend.services.tour_scope import (
     allowed_output, allowed_tour_output, follow_up_questions, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
@@ -46,39 +43,11 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
 
     history = [item.model_dump() for item in request.conversation_context]
     user_history = prior_user_questions(history)
-    artifact = None
-    if reply_context and reply_context.artifact_key:
-        artifact = TourArtifact(
-            id=reply_context.artifact_key,
-            title=reply_context.highlight_title or reply_context.artifact_key,
-            aliases=(),
-            source_ids=frozenset(),
-            artifact_key=reply_context.artifact_key,
-        )
-    elif reply_context:
-        # Legacy in-code entries remain only for compatibility with old fixtures.
-        artifact = tour_artifact(area.id, reply_context.scene_id, reply_context.highlight_id)
     selected_marker = bool(reply_context and reply_context.highlight_id is not None)
-    verified_non_artifact = bool(
-        selected_marker and marker_is_verified_non_artifact(
-            area.id, reply_context.scene_id, reply_context.highlight_id,
-        )
-    )
-    marker_reference = bool(re.search(
-        r"\b(?:(?:bia|vat|co vat) (?:nay|day|do|gi)|o day|"
-        r"(?:noi|cho|canh|diem|cong trinh|cai) (?:nay|day|do)|"
-        r"(?:dang xem|dang an vao) (?:gi|co vat)?|day la (?:bia|vat|co vat))\b",
-        normalized(question),
-    ))
-    unmapped_marker = (
-        selected_marker and artifact is None and not verified_non_artifact and marker_reference
-    )
+    links = reply_context.passage_links if selected_marker else None
+    focus = TourFocus(title=reply_context.highlight_title or "Điểm đang chọn") if links else None
+    unmapped_marker = selected_marker and not links
     destination = question_outside_area(question, area)
-    artifact_destinations = (
-        referenced_tour_artifacts(area.id, question, exclude_id=artifact.id)
-        if artifact else []
-    )
-    artifact_destination = artifact_destinations[0] if len(artifact_destinations) == 1 else None
     social = is_social_turn(question)
 
     def response(text, kind, sources=(), questions=(), graph_context=None, evidence=()):
@@ -89,25 +58,27 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             list(questions), question, graph_context=graph_context,
             evidence=evidence, area_title=area.title,
         )
-        focus_names = (artifact.title, *artifact.aliases) if artifact else ()
+        focus_names = (focus.title,) if focus else ()
         return {
             "answer": text, "answer_type": kind, "sources": list(sources),
             "active_area_id": area.id,
             "reply_context": snapshot,
             "follow_up_questions": follow_up_questions(
-                related, area, fallback=not unmapped_marker, focus_names=focus_names,
-                fallback_questions=artifact.questions() if artifact else None,
+                related, area, fallback=not selected_marker or kind == "answered",
+                focus_names=focus_names, fallback_questions=focus.questions() if focus else None,
             ),
             "resolution_status": "not_found" if kind == "insufficient_evidence" else "resolved",
         }
+
+    if unmapped_marker:
+        return response(scoped_missing(area), "insufficient_evidence")
 
     scene_hint = request.scene_context
     if reply_context:
         scene_hint = {"title": reply_context.scene_title, "key": reply_context.scene_key,
                       "mode": reply_context.mode, "highlight_title": reply_context.highlight_title or "",
                       "narration": request.tour_context.narration}
-        # IDs are filtered through the editorial registry; client memory cannot
-        # introduce facts or instructions into the prompt.
+        # Only server-owned story labels enter this hint; client history is not evidence.
         scene_hint["completed_stories"] = "; ".join(
             story.label for (area_id, _, _), stories in GUIDE_STORIES.items() if area_id == area.id
             for story in stories if story.id in request.tour_context.completed_story_ids
@@ -115,7 +86,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
 
     evidence = []
     graph_context = []
-    if not social and destination is None and not artifact_destinations and not unmapped_marker:
+    if not social and destination is None and not unmapped_marker:
         search_question = question
         reference = re.match(
             r"^(?:(?:the|con) )?(ong ay|ba ay|nguoi ay|ho|no|lang kia)\b",
@@ -133,8 +104,8 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             r"(?:dang xem|dang an vao) (?:gi|co vat)?|day la (?:bia|vat|co vat))\b",
             normalized(question),
         )
-        if artifact:
-            search_question += f"\nCổ vật đang chọn: {artifact.title}"
+        if focus:
+            search_question += f"\nĐiểm đang chọn: {focus.title}"
         elif ((scene_reference or (reply_context and reply_context.story_id))
               and isinstance(scene_title, str) and scene_title.strip() and allowed_output(scene_title)):
             search_question += f"\nCảnh đang xem: {scene_title[:200]}"
@@ -142,8 +113,8 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
                 search_question += f"\nĐiểm được chọn: {reply_context.highlight_title}"
         try:
             search_options = {"active_area_id": area.id}
-            if artifact and artifact.artifact_key:
-                search_options["artifact_key"] = artifact.artifact_key
+            if links is not None:
+                search_options["passage_links"] = links
             result = await repository.search_evidence(search_question, **search_options)
         except Exception as error:
             # Never replace unavailable area evidence with unscoped/model-memory facts.
@@ -151,9 +122,12 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         evidence = [
             item for item in result.evidence
             if getattr(item, "active_area_id", None) == area.id
-            and (not artifact or not artifact.source_ids or str(item.id) in artifact.source_ids)
+            and (links is None or str(item.id) in links)
         ]
         graph_context = result.graph_context
+
+    if selected_marker and not evidence and not social and destination is None:
+        return response(scoped_missing(area), "insufficient_evidence")
 
     # Bound whole evidence chunks; never accidentally send unbounded adapter output.
     selected = []
@@ -164,6 +138,8 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             selected.append(item)
             context += ("\n\n" if context else "") + block
     evidence = selected
+    if selected_marker and not evidence and not social and destination is None:
+        return response(scoped_missing(area), "insufficient_evidence")
     ids = {str(item.id) for item in evidence}
     story = next((story for story in guide_stories(area.id, reply_context.scene_title, reply_context.highlight_title)
                   if story.id == reply_context.story_id), None) if reply_context else None
@@ -183,7 +159,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             question=question, context=context, conversation=True,
             retrieval_status="available" if evidence else "not_found",
             active_area_id=area.id, user_history=user_history,
-            artifact_title=artifact.title if artifact else None,
+            artifact_title=focus.title if focus else None,
         )
         return raw, generation_details()
 
@@ -209,25 +185,6 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
                 and allowed_tour_output(answer.answer, "out_of_scope", area, destination=destination)):
             return response(answer.answer, "out_of_scope", questions=answer.follow_up_questions)
         return response(scoped_refusal(area, destination), "out_of_scope")
-    if artifact_destinations:
-        route = (
-            f"Bạn có thể chọn điểm {artifact_destination.title} để tìm hiểu riêng."
-            if artifact_destination else
-            "Có nhiều điểm trùng tên; bạn hãy chọn đúng marker để mình xác định cổ vật."
-        )
-        return response(
-            f"Mình đang tập trung vào {artifact.title}. {route} "
-            "Mình sẽ không đoán dữ kiện về điểm khác.",
-            "out_of_scope",
-        )
-
-    if unmapped_marker:
-        return response(
-            f"Điểm đang chọn tại {area.title} chưa có ánh xạ tư liệu được xác minh, "
-            "nên mình chưa thể trả lời chi tiết về điểm này.",
-            "insufficient_evidence",
-        )
-
     if story_evidence_missing:
         return response(scoped_missing(area), "insufficient_evidence")
 

@@ -26,6 +26,7 @@ from apps.backend.models.heritage_voice import HeritageVoice  # noqa: F401
 from apps.backend.models.media_item import MediaItem  # noqa: F401
 from apps.backend.models.interactive import Interactive  # noqa: F401
 from apps.backend.models.interactive_highlight import InteractiveHighlight  # noqa: F401
+from apps.backend.models.interactive_highlight_passage import InteractiveHighlightPassage  # noqa: F401
 from apps.backend.models.scene_highlight import SceneHighlight  # noqa: F401
 from apps.backend.models.chat import ChatSession, ChatMessage, ChatFeedback, Conversation, MessageCitation  # noqa: F401
 
@@ -47,8 +48,7 @@ __all__ = [
     "SkyPreset", "Scene", "ModelAsset",
     "Voice", "VoiceClip", "HeritageVoice",
     "MediaItem",
-    "Interactive", "InteractiveHighlight", "SceneHighlight",
+    "Interactive", "InteractiveHighlight", "InteractiveHighlightPassage", "SceneHighlight",
     # chat
     "ChatSession", "ChatMessage", "ChatFeedback", "Conversation", "MessageCitation",
 ]
-

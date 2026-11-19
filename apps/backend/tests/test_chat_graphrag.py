@@ -28,7 +28,7 @@ class ChatGraphRagTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_original_chunk_not_generated_graph_answer_reaches_llm(self):
         with patch.object(chat_api, 'generate_response', side_effect=lambda **kw: json.dumps({
-            'answer': kw['context'], 'source_ids': ['42'],
+            'answer_type': 'answered', 'answer': kw['context'], 'source_ids': ['42'],
         })):
             response = await chat_api.chat(
                 chat_api.ChatRequest(message='Thiên Mụ liên quan gì?'),
