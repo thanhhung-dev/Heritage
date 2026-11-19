@@ -31,3 +31,19 @@ class RagVerifierGuardsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn('OPENSEARCH_TEST_URL', result.stderr)
         self.assertNotIn('could not connect', result.stderr.lower())
+
+    def test_local_runtime_requires_explicit_local_search_service(self):
+        result = self.run_verifier('postgresql+psycopg://user:unused@127.0.0.1:1/application', '--local-runtime')
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('OPENSEARCH_TEST_URL', result.stderr)
+        self.assertNotIn('could not connect', result.stderr.lower())
+
+    def test_local_runtime_does_not_inherit_the_disabled_cloud_gate(self):
+        environment = {**os.environ, 'RAG_LIVE_TEST': '0', 'RAG_LOCAL_RUNTIME_TEST': '1'}
+        script = ('from apps.backend.tests.test_rag_local_runtime import RagLocalRuntimeTests; '
+                  'from apps.backend.tests.test_rag_live import RagLiveTests; '
+                  'assert RagLocalRuntimeTests.__unittest_skip__ is False; '
+                  'assert RagLiveTests.__unittest_skip__ is True')
+        result = subprocess.run([sys.executable, '-X', 'utf8', '-c', script], cwd=ROOT,
+                                env=environment, capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr)

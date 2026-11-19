@@ -23,7 +23,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--live', action='store_true', help='Also run the explicit full-stack smoke test')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--live', action='store_true', help='Also run the explicit cloud full-stack smoke test')
+    mode.add_argument('--local-runtime', action='store_true',
+                      help='Run real local model/search with a protocol fixture instead of cloud R2')
     args = parser.parse_args()
     values = {**dotenv_values(ROOT / '.env'), **os.environ}
     try:
@@ -34,6 +37,8 @@ def main():
         parser.error('Only an explicit loopback postgresql+psycopg connection is permitted')
     if args.live and any(not values.get(key) for key in ('OPENSEARCH_TEST_URL', 'RAG_TEST_R2_OBJECT_KEY', 'R2_BUCKET')):
         parser.error('--live requires OPENSEARCH_TEST_URL, RAG_TEST_R2_OBJECT_KEY and R2_BUCKET')
+    if args.local_runtime and not values.get('OPENSEARCH_TEST_URL'):
+        parser.error('--local-runtime requires OPENSEARCH_TEST_URL')
     database = 'test_sprint4_' + uuid4().hex
     if not re.fullmatch(r'test_sprint4_[0-9a-f]{32}', database):
         raise RuntimeError('Invalid generated test database name')
@@ -44,6 +49,10 @@ def main():
     if args.live:
         environment['RAG_LIVE_TEST'] = '1'
         tests.append('apps/backend/tests/test_rag_live.py')
+    if args.local_runtime:
+        environment['RAG_LOCAL_RUNTIME_TEST'] = '1'
+        environment['RAG_LIVE_TEST'] = '0'
+        tests.append('apps/backend/tests/test_rag_local_runtime.py')
     created = False
     try:
         with psycopg.connect(admin_url, autocommit=True, connect_timeout=5) as connection:
