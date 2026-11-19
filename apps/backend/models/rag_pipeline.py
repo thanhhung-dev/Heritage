@@ -31,7 +31,7 @@ class ReindexJob(Base):
     __tablename__ = "rag_reindex_job"
     __table_args__ = (
         CheckConstraint("status IN ('PENDING','RUNNING','COMPLETED','FAILED')"),
-        CheckConstraint("(status IN ('PENDING','RUNNING') AND active_slot = 1) OR "
+        CheckConstraint("(status IN ('PENDING','RUNNING') AND active_slot IS NOT NULL AND active_slot = 1) OR "
                         "(status IN ('COMPLETED','FAILED') AND active_slot IS NULL)"),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))

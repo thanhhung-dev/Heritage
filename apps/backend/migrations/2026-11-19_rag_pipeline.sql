@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS rag_reindex_job (
     active_slot INTEGER UNIQUE,
     processed_documents INTEGER NOT NULL DEFAULT 0, indexed_passages INTEGER NOT NULL DEFAULT 0,
     error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), started_at TIMESTAMPTZ, finished_at TIMESTAMPTZ,
-    CHECK ((status IN ('PENDING','RUNNING') AND active_slot = 1) OR
+    CHECK ((status IN ('PENDING','RUNNING') AND active_slot IS NOT NULL AND active_slot = 1) OR
            (status IN ('COMPLETED','FAILED') AND active_slot IS NULL))
 );
 CREATE INDEX IF NOT EXISTS ix_rag_reindex_job_pipeline_id ON rag_reindex_job(pipeline_id);
