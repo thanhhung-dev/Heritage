@@ -117,6 +117,20 @@ class SceneApiTests(unittest.TestCase):
         self.assertEqual(len(second["items"]), 1)
         self.assertIsNone(second["next_after_sequence"])
 
+    def test_failed_final_order_write_rolls_back_temporary_sequences(self):
+        first, second = self.create_scene("First"), self.create_scene("Second")
+        self.sql("CREATE TRIGGER reject_final_order BEFORE UPDATE OF sequence ON scene "
+                 "WHEN OLD.id=" + str(first["id"]) + " AND NEW.sequence=1 "
+                 "BEGIN SELECT RAISE(ABORT, 'test relationship conflict'); END")
+        original = [first["id"], second["id"]]
+        result = self.client.patch(self.url() + "/order", json={
+            "scene_ids": original[::-1], "expected_scene_ids": original,
+        })
+        self.assertEqual(result.status_code, 409, result.text)
+        unchanged = self.client.get(self.url()).json()["items"]
+        self.assertEqual([row["id"] for row in unchanged], original)
+        self.assertEqual([row["sequence"] for row in unchanged], [0, 1])
+
     def test_all_scene_operations_require_admin(self):
         operations = [("get", ""), ("post", ""), ("get", "/1"), ("patch", "/1"),
                       ("delete", "/1"), ("patch", "/order")]

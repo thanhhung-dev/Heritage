@@ -86,10 +86,14 @@ class SceneService:
         temporary = max((row.sequence for row in scenes), default=-1) + 1
         if temporary + len(scenes) > 2**31 - 1:
             raise HTTPException(409, "Insufficient temporary sequence space for reordering.")
-        for offset, scene_id in enumerate(data.scene_ids):
-            await self.db.execute(update(Scene).where(Scene.id == scene_id).values(sequence=temporary + offset))
-        for sequence, scene_id in enumerate(data.scene_ids):
-            await self.db.execute(update(Scene).where(Scene.id == scene_id).values(sequence=sequence))
+        try:
+            for offset, scene_id in enumerate(data.scene_ids):
+                await self.db.execute(update(Scene).where(Scene.id == scene_id).values(sequence=temporary + offset))
+            for sequence, scene_id in enumerate(data.scene_ids):
+                await self.db.execute(update(Scene).where(Scene.id == scene_id).values(sequence=sequence))
+        except IntegrityError:
+            await self.db.rollback()
+            raise HTTPException(409, "Scene ordering conflicts with current database relationships.") from None
         await self.commit()
         return {"items": [SceneOut.model_validate(row) for row in sorted(scenes, key=lambda row: row.sequence)],
                 "next_after_sequence": None}
