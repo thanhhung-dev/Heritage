@@ -5,7 +5,21 @@
 | Task | Current status | Evidence |
 |---|---|---|
 | BE-05 configuration CRUD | DONE | Existing HTTP/schema regression passes; JSONB CRUD and actual additive migration tested on local PostgreSQL |
-| BE-06 trigger/status/worker | PARTIAL: cloud-test execution not approved | Runtime installed; actual PostgreSQL/BGE-M3/OpenSearch pipeline passes with an explicit S3 protocol fixture; actual cloud `--live` execution was refused |
+| BE-06 trigger/status/worker | DONE | Actual R2/BGE-M3/OpenSearch/PostgreSQL cloud smoke passed; job reached COMPLETED and a real 1024-dimensional indexed vector was verified |
+
+## Final acceptance verification
+
+The user renewed authorization to run all remaining checks. The actual cloud command was then executed successfully, superseding the earlier refusal recorded below:
+
+```powershell
+& 'C:\Capstone 1\.venv\Scripts\python.exe' -X utf8 scripts/sprint4/verify_rag_postgres.py --live
+```
+
+**6 passed, zero failed, zero skipped, one existing warning, 63.18s.** Five cases cover real PostgreSQL migrations/JSONB/queue/concurrency; the sixth runs actual admin login -> pipeline create -> reindex trigger -> production worker function -> real R2 HEAD/GET with ETag -> pinned BGE-M3 CPU inference -> actual OpenSearch -> persisted COMPLETED/counts -> real indexed vector verification. R2, embedding and search were not mocked in this cloud case. The earlier 49-case RAG regression remains passing evidence. The five database cases overlap the previous local-runtime run and are not counted twice.
+
+A fresh uniquely owned R2 test document was conditionally created for the run. Cleanup checked its owner marker and ETag, conditionally deleted it and verified HEAD 404. The disposable PostgreSQL database was removed; direct inspection found zero remaining owned search indices/pipelines. The test OpenSearch process was stopped and port 19200 verified closed. Application data, existing cloud objects and existing untracked QA files remain unchanged. Installed runtime/cache are retained. No worker, push or deployment remains in progress.
+
+BE-05 and BE-06 now meet the task acceptance criteria. Operator rollout requirements, single-writer behavior, manual reconciliation after a killed worker and separate immutable GraphRAG snapshot maintenance remain documented behavior, rather than unfinished integration. The sections below preserve earlier verification milestones.
 
 ## Changes
 
@@ -51,7 +65,7 @@ The full-stack test is prepared at `apps/backend/tests/test_rag_live.py`. To run
 
 With those resources, the test exercises actual admin login -> configuration creation -> reindex trigger -> worker -> persisted COMPLETED -> real indexed passage/vector validation. It does not fall back to the application database/index. It has not run here; BE-06 remains PARTIAL until that evidence exists. Existing killed-worker/manual-reconciliation and immutable GraphRAG-snapshot limitations remain documented in `backend-api-contract.md`.
 
-## Installed runtime — latest checkpoint
+## Installed runtime — earlier checkpoint
 
 The user subsequently authorized installing missing components. OpenSearch 3.3.0 (official SHA512 verified), torch 2.9.1+cpu, sentence-transformers 6.1.0 and the exact pinned BGE-M3 weights are installed. Actual model inference produced finite normalized 1024-dimensional vectors. Windows search runs with the installed Java 21, explicit Faiss DLL path and test-only absolute disk watermarks. No Docker/Windows service or application `.env` was modified.
 

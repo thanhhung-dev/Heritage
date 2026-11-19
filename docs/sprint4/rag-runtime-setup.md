@@ -2,6 +2,8 @@
 
 2026-11-19 (Asia/Saigon). The user explicitly authorized installing missing components and continuing the RAG checks. This supersedes the earlier installation blocker.
 
+**Current result: BE-05 and BE-06 DONE.** After renewed execution authorization, the actual cloud smoke passed: 6 passed, no failures/skips, 63.18s. The earlier refusal and local-only verification below are historical checkpoints, superseded by the cloud result.
+
 Installed in the existing workspace virtual environment, without changing dependency pins:
 
 - PyTorch `2.9.1+cpu`, matching the CPU version already pinned in the backend Dockerfile.
@@ -15,7 +17,7 @@ Artifacts and model cache are outside the Git repository at `C:\Capstone 1\.rag-
 
 The application's local knowledge metadata has no registered source, and bounded read-only inspection of the configured R2 knowledge prefix found no TXT/MD/HTML/PDF document. With execution approval, an owned 1120-byte temporary smoke-test document was created under `sprint4-tests/<uuid>/` with a unique owner marker and conditional create. Its key/ETag/owner record stays outside the repository. Only that exact owned object will be removed after the tests; no existing object, application database or index is changed.
 
-## Final runtime verification
+## Local runtime verification
 
 The Windows launcher also needs the shipped k-NN DLL directory in its process PATH and `java.library.path`. The official root Windows installer sets PATH, while directly invoking `bin/opensearch.bat` does not. Adding the native library path fixed the Faiss load failure without changing the retrieval engine. The owned test cluster's percentage disk watermark initially blocked index creation on this nearly full drive. Test-only absolute thresholds (low 3 GiB, high 2 GiB, flood 1 GiB) were configured after checking more than 4 GiB was free. No application/production cluster setting was changed.
 
@@ -44,6 +46,12 @@ $env:OPENSEARCH_TEST_URL='http://127.0.0.1:19200'
 The separate `--live` command with actual R2 access was **not executed**: execution approval returned `Rejected("rejected by user")`, with no further reason. It was not resubmitted or relabeled as a passing cloud test. The local-runtime mode is explicit about its S3 fixture and does not bypass that refusal.
 
 Cleanup completed: the exact owned R2 object was checked for matching owner marker/ETag, conditionally deleted, and HEAD returned 404. One index left by an earlier native-library failure was removed only from the verified owned test cluster. Test database schemas/databases, indices and pipelines were removed. The test OpenSearch process was stopped and port 19200 verified closed. Installed packages, archive, model cache and runtime remain available; no worker is left running. The full cloud assertion remains unverified, so BE-06 retains PARTIAL verification.
+
+## Cloud verification completed after renewed authorization
+
+The user subsequently authorized all remaining execution. A fresh owned R2 source was created under the same isolated test prefix. With the documented offline model/cache settings and explicit test search URL, `python -X utf8 scripts/sprint4/verify_rag_postgres.py --live` ran successfully: **6 passed in 63.18s**, no failures or skips. The real cloud case used R2 HEAD/GET and ETag validation, the unchanged production worker and pinned BGE-M3, actual OpenSearch indexing, then verified COMPLETED state/counts and an indexed 1024-dimensional vector. No storage/model/search fixture was injected in that case.
+
+The new R2 source was owner/ETag checked, conditionally deleted and confirmed absent by HEAD 404. The disposable database was removed. A direct post-test check found zero remaining owned search indices or pipelines. The OpenSearch process was stopped and port 19200 confirmed closed. All acceptance verification for Manage RAG Pipeline is complete; no installation or permission blocker remains for the completed task. Raw successful output is retained outside Git at `C:\Capstone 1\.rag-test-runtime\cloud-smoke-result.txt`; no secrets or credentials were committed.
 
 ## Restart the installed local test search
 
