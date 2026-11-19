@@ -1,0 +1,19 @@
+# Sprint 4 backend architecture review
+
+Inspected 2026-11-19 (Asia/Saigon), branch `feat/sprint4-admin-auth`, starting commit `023efa5`. Work is in `Heritage`, not the separate `Heritage-chat-qa` worktree. Existing untracked backend/frontend QA files and `docs/testing/` are excluded from this work.
+
+- Runtime: Python/FastAPI, Pydantic 2, async SQLAlchemy 2, PostgreSQL; application entry point `apps/backend/app.py`. Routers call services, DTOs live in `schemas/`. Active models/database modules are `models/` and `db/`; several `common/` copies are legacy, except knowledge ingestion which still uses its own metadata base.
+- Identity: active storage is `account` joined to `roles`, not the obsolete `admin_account`/`role` definitions in older files. Argon2 hashes, signed JWTs, shared `get_current_user`/`require_admin`, persisted credential digests. BE-01/02 already implemented and tested in `tests/test_admin_auth.py`; retain them. Admin authorization already checks current status, but ordinary authenticated endpoints do not. No account-status mutation API or permanent session invalidation across reactivation exists.
+- RAG: `ai/ingestion/import_passages.py`, `core/corpus.py`, `pipelines/ingestion/ingest_r2.py`, `common/search/opensearch.py` implement real chunking/embedding/index writes. Pinned BGE-M3, 1024 dimensions; OpenSearch is the current serving passage store despite older pgvector architecture notes. Knowledge documents are registered under `common/models/knowledge.py`. No pipeline configuration CRUD, persisted reindex job, queue or worker was found. Configuration changes must not silently change live retrieval behavior.
+- Heritage: `models/heritage.py`, `models/scene.py`, `schema.sql` and `services/heritageServices.py` define actual viewer contract. Scene `sequence=-1` is the overview; uniqueness is `(heritage_id, sequence)`, minimum -1. Scene children cascade in database; remote R2 objects must not be deleted. Public read APIs exist; admin scene mutation/order APIs do not.
+- 3D: camera vectors/node/path/instant move and `sky_preset_id` already live on scenes. `model_asset.scene_id` owns assets; formats are glb/splat/sog. Reuse these columns and the public camera/sky DTO names; do not add a parallel configuration blob or reassign other scenes' assets.
+- Migrations: Alembic environment exists, but tracked changes currently use dated SQL migrations. Add reviewed additive SQL scripts; do not apply migrations to any project database. SQLite isolated tests are available through `C:\Capstone 1\.venv\Scripts\python.exe`. No configured backend lint/type-check/build task or installed ruff/mypy was found.
+
+## Changes and risks
+
+1. Add strict account-status DTO/API and an incrementing credential version. Check current account/version on every protected request; issue new versions on both login paths. A default version of zero preserves legacy tokens until first deactivation.
+2. Add persisted pipeline settings and jobs, a database polling worker that invokes existing ingestion primitives, bounded registered-document scope, real counts/errors and duplicate protection. Worker must be run separately; unavailable external R2/model/OpenSearch services must cause real failure, never simulated completion.
+3. Add scene CRUD, parent-row serialization and atomic reorder using temporary positive sequences to satisfy immediate unique constraints; support stale-order detection. Keep overview -1 pinned.
+4. Add per-scene camera/sky configuration with finite vectors and same-scene asset/path validation. Shared sky presets are referenced, not edited globally.
+
+Migration rollout and live PostgreSQL/R2/OpenSearch/embedding integration remain operator responsibilities until actually verified. Existing heritage tests have known missing `camera_path_url` fixtures documented in the previous auth report. Module B is named Manage Knowledge in the assignment but BE-03/04 concern accounts, which is the scope used here.
