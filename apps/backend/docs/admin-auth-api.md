@@ -2,6 +2,8 @@
 
 The active backend is `apps.backend.app:app`. Interactive OpenAPI documentation is available at `/docs`; the schema is at `/openapi.json`.
 
+For local startup, use `python -X utf8 -m apps.backend` (optional `--host`, `--port`, `--reload`). On Windows this supplies Uvicorn with an explicit Selector event-loop factory required by async psycopg; Uvicorn's default Proactor loop without reload otherwise makes database-backed login fail with 503. The Linux Docker entry point remains compatible. For disposable seeded data and the complete Swagger walkthrough, see [the Vietnamese manual test guide](../../../docs/sprint4/backend-manual-test-vi.md).
+
 ## Configuration and database preparation
 
 Use the existing PostgreSQL `DATABASE_URL` and active `account` / `roles` schema. Accounts are administrators only when their current `account.role_id` resolves to `roles.name = ADMIN` (case insensitive). Public registration continues to create regular users; these endpoints never promote accounts.
@@ -15,7 +17,7 @@ Copy variables from [admin-auth.env.example](admin-auth.env.example) into the re
 | `JWT_AUDIENCE` | No | When set, issuance adds `aud` and verification requires that audience. |
 | `DATABASE_URL` | Yes for authentication | Existing asynchronous PostgreSQL connection. |
 
-Before enabling this version, an operator must apply [2026-11-17_revoked_access_token.sql](../migrations/2026-11-17_revoked_access_token.sql) using the project's dated SQL migration process. The migration adds only `revoked_access_token` and its expiry index. It does not modify accounts or existing rows. It has been prepared, **not executed against the project database**. Do not use `create_all()` in production.
+Before enabling this version, an operator must apply [2026-11-17_revoked_access_token.sql](../migrations/2026-11-17_revoked_access_token.sql) and [2026-11-19_account_token_version.sql](../migrations/2026-11-19_account_token_version.sql) using the project's dated SQL migration process. The first adds `revoked_access_token` and its expiry index; the second adds the credential generation required by current login/session checks. Both have been verified in disposable PostgreSQL storage, **not executed against the project database**. Do not use `create_all()` in production.
 
 All authenticated endpoints now check the database denylist. Missing database configuration or missing revocation schema returns 503; credentials are never accepted when the revocation check fails. Public routes remain public. Enabling issuer/audience validation invalidates earlier tokens missing those claims. Removing the previous fallback key also rejects tokens signed using that fallback.
 

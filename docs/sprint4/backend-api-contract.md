@@ -1,5 +1,7 @@
 # Sprint 4 backend API contract
 
+Manual acceptance with seeded disposable data: [backend-manual-test-vi.md](backend-manual-test-vi.md). Local API startup: `python -X utf8 -m apps.backend`, including the required psycopg-compatible event-loop selection on Windows. The disposable launcher serves the same mounted application, not a replacement test API.
+
 FastAPI `/docs` and `/openapi.json` are the generated schema source. All admin APIs require `Authorization: Bearer <access_token>` from `POST /api/admin/login`; current database ADMIN role and active/unlocked account are checked. Missing/expired/revoked/invalidated credentials: 401; regular role: 403; missing record: 404; conflict: 409; invalid input: 422; database/configuration failure: 503. Errors follow `{"detail":"message"}` or FastAPI's `detail` validation array. No cookies are issued. Existing auth contract: `apps/backend/docs/admin-auth-api.md`.
 
 ## Account status (BE-03/04)
