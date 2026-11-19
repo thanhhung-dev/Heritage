@@ -65,6 +65,7 @@ class AdminAuthTests(unittest.TestCase):
             await conn.execute(text("""CREATE TABLE account (
                 id INTEGER PRIMARY KEY, email TEXT UNIQUE, username TEXT UNIQUE,
                 password_hash TEXT, is_active BOOLEAN, locked_until TIMESTAMP, role_id INTEGER,
+                token_version INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 created_by TEXT, updated_by TEXT
             )"""))

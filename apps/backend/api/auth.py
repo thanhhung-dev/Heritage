@@ -168,6 +168,7 @@ async def login(
             "email": account.email,
             "username": account.username,
             "role": role,
+            "ver": account.token_version,
         }
     )
     
@@ -317,6 +318,7 @@ async def google_auth(
             "username": account.username,
             "role": role,
             "auth_method": "google",
+            "ver": account.token_version,
         }
     )
     

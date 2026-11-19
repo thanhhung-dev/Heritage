@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.backend.db.base import AsyncSessionLocal
-from apps.backend.services.account_access import authorize_admin
+from apps.backend.services.account_access import authorize_account, authorize_admin
 from apps.backend.services.token_revocation import is_revoked
 
 ALGORITHM = "HS256"
@@ -114,7 +114,9 @@ async def get_current_user(
 ) -> dict[str, Any]:
     if await is_revoked(db, token):
         raise unauthorized("Token has been revoked.")
-    return payload
+    account = await authorize_account(db, payload)
+    return {**payload, "email": account["email"], "username": account["username"],
+            "role": str(account["role"] or "user").lower()}
 
 
 async def require_admin(

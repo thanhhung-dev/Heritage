@@ -27,7 +27,8 @@ async def login_admin(db: AsyncSession, request: LoginRequest) -> LoginResponse:
         username=account["username"], role="admin",
     )
     token = create_access_token(
-        {"sub": user.account_id, "email": user.email, "username": user.username, "role": user.role},
+        {"sub": user.account_id, "email": user.email, "username": user.username,
+         "role": user.role, "ver": account["token_version"]},
         expires_delta=timedelta(minutes=ADMIN_ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return LoginResponse(access_token=token, token_type="bearer", user=user)

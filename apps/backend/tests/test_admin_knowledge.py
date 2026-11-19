@@ -107,9 +107,10 @@ class AdminKnowledgeTests(unittest.TestCase):
                 await conn.run_sync(lambda c: RevokedToken.__table__.create(c))
                 await conn.execute(text('CREATE TABLE roles (id INTEGER PRIMARY KEY, name TEXT)'))
                 await conn.execute(text('CREATE TABLE account (id INTEGER PRIMARY KEY, email TEXT, '
-                    'username TEXT, password_hash TEXT, is_active BOOLEAN, locked_until TIMESTAMP, role_id INTEGER)'))
+                    'username TEXT, password_hash TEXT, is_active BOOLEAN, locked_until TIMESTAMP, role_id INTEGER, '
+                    'token_version INTEGER NOT NULL DEFAULT 0)'))
                 await conn.execute(text("INSERT INTO roles VALUES (2, 'ADMIN')"))
-                await conn.execute(text("INSERT INTO account VALUES (1, 'admin@example.com', 'admin', '', 1, NULL, 2)"))
+                await conn.execute(text("INSERT INTO account VALUES (1, 'admin@example.com', 'admin', '', 1, NULL, 2, 0)"))
         asyncio.run(create())
         factory = async_sessionmaker(self.engine, expire_on_commit=False)
         self.factory = factory

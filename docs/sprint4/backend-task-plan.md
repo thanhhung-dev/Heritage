@@ -8,9 +8,9 @@ User authorized autonomous implementation and frequent local commits; completed 
 | BE-01.2 | Auth | Existing logout and response contract tests | 3h | BE-01.1 | DONE |
 | BE-02.1 | Auth | Existing DB admin enforcement across admin routes | 3h | BE-01.1 | DONE |
 | BE-02.2 | Auth | Existing persistent logout revocation and reuse tests | 3h | BE-01.2 | DONE |
-| BE-03.1 | Accounts | Strict status update, persisted state, admin scope and HTTP tests | 4h | BE-02.1 | TODO |
-| BE-04.1 | Accounts | Credential version migration and current-account guard | 4h | BE-03.1 | TODO |
-| BE-04.2 | Accounts | Login/reactivation/session regression tests | 4h | BE-04.1 | TODO |
+| BE-03.1 | Accounts | Strict status update, persisted state, admin scope and HTTP tests | 4h | BE-02.1 | DONE |
+| BE-04.1 | Accounts | Credential version migration and current-account guard | 4h | BE-03.1 | DONE |
+| BE-04.2 | Accounts | Login/reactivation/session regression tests | 4h | BE-04.1 | DONE |
 | BE-05.1 | RAG | Validated persisted chunking/embedding/retrieval DTO/model/migration | 5h | BE-02.1 | TODO |
 | BE-05.2 | RAG | Admin CRUD, conflicts, docs and HTTP tests | 5h | BE-05.1 | TODO |
 | BE-06.1 | RAG | Scoped durable job trigger/status and duplicate protection | 6h | BE-05.2 | TODO |

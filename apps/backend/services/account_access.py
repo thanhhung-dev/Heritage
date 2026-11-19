@@ -11,7 +11,7 @@ async def account_by(db: AsyncSession, *, email: str | None = None, account_id: 
     condition = "a.email = :email" if email is not None else "a.id = :account_id"
     result = await db.execute(text(
         "SELECT a.id, a.email, a.username, a.password_hash, a.is_active, "
-        "a.locked_until, r.name AS role FROM account a "
+        "a.locked_until, a.token_version, r.name AS role FROM account a "
         "LEFT JOIN roles r ON r.id = a.role_id WHERE " + condition
     ), {"email": email, "account_id": account_id})
     return result.mappings().one_or_none()
@@ -36,7 +36,7 @@ def require_admin_role(account) -> None:
         raise HTTPException(403, "Administrator permission required.")
 
 
-async def authorize_admin(db: AsyncSession, payload: dict[str, Any]) -> dict[str, Any]:
+async def authorize_account(db: AsyncSession, payload: dict[str, Any]):
     try:
         account_id = int(payload["sub"])
         if not 0 < account_id < 2**63:
@@ -46,5 +46,13 @@ async def authorize_admin(db: AsyncSession, payload: dict[str, Any]) -> dict[str
     account = await account_by(db, account_id=account_id)
     if not is_available(account):
         raise HTTPException(401, "Account unavailable.", headers={"WWW-Authenticate": "Bearer"})
+    version = payload.get("ver", 0)
+    if type(version) is not int or version != account["token_version"]:
+        raise HTTPException(401, "Session invalidated.", headers={"WWW-Authenticate": "Bearer"})
+    return account
+
+
+async def authorize_admin(db: AsyncSession, payload: dict[str, Any]) -> dict[str, Any]:
+    account = await authorize_account(db, payload)
     require_admin_role(account)
     return {**payload, "email": account["email"], "username": account["username"], "role": "admin"}
