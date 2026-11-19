@@ -1,5 +1,15 @@
 # Sprint 4 backend test matrix
 
+Latest verification, **2026-11-20**: **179 selected regression cases passed with zero skips, 144 subtests**; **7 actual PostgreSQL cases passed with zero skips**. Separate TCP HTTP/API and production worker verification passed with real R2, the pinned BGE-M3 and OpenSearch, including a read-back of an actual 1024-dimensional indexed vector. Commands, corrected defects and cleanup: [re-audit evidence](backend-reaudit-2026-11-20.md). Earlier counts below are historical checkpoints.
+
+| Added re-audit coverage | Evidence |
+|---|---|
+| Concurrent account deactivation advances the credential generation only once; reactivation requires fresh login | `test_sprint4_application_postgres.py`, actual PostgreSQL |
+| Production scene DDL, JSONB camera/sky, public viewer, association/order and multilevel child cascades | `test_sprint4_application_postgres.py`, actual PostgreSQL |
+| Owned R2 clients close on success/failure; injected clients remain caller-owned | `test_reindex_worker.py` |
+| Manual launcher rejects remote DB, missing search and invalid setup before creating resources | `test_sprint4_manual_launcher.py`, 3 cases plus 2 subtests |
+| Windows Uvicorn/psycopg event loop and actual mounted server/worker flow | `manual_backend.py --check` and `--rag --check`, actual TCP and child processes |
+
 Tests exercise actual FastAPI handlers, JWTs, Argon2 and isolated SQLite transactions unless identified otherwise. Worker tests run real extraction, chunking, import validation and queue transitions with injected R2/OpenSearch/embedding adapters; they do not download model weights or contact live services.
 
 | Task | Cases | Evidence |

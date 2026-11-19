@@ -1,5 +1,7 @@
 # Sprint 4 backend architecture review
 
+Follow-up review on 2026-11-20 confirmed the implementation below against all ten Khoa tasks. Added local `python -m apps.backend` startup with an explicit Windows Selector loop factory because installed Uvicorn 0.53's default Proactor loop is incompatible with async psycopg. The original Linux/container entry remains compatible. Worker-created R2 clients now close per job. Production DDL, current mounted API and a separate real worker were exercised; see [current audit evidence](backend-reaudit-2026-11-20.md). The inspection notes below retain their original pre-implementation context.
+
 Inspected 2026-11-19 (Asia/Saigon), branch `feat/sprint4-admin-auth`, starting commit `023efa5`. Work is in `Heritage`, not the separate `Heritage-chat-qa` worktree. Existing untracked backend/frontend QA files and `docs/testing/` are excluded from this work.
 
 - Runtime: Python/FastAPI, Pydantic 2, async SQLAlchemy 2, PostgreSQL; application entry point `apps/backend/app.py`. Routers call services, DTOs live in `schemas/`. Active models/database modules are `models/` and `db/`. Parallel `common/` and `ai/` copies exist; new integrations use the active `core/`, `db/`, `services/` and `models/` paths imported by the mounted application.

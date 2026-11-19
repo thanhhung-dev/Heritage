@@ -1,5 +1,7 @@
 # Sprint 4 backend final report
 
+**Latest re-audit: 2026-11-20. All ten Khoa backend tasks remain DONE after two runtime corrections.** Fresh results: **179 regression tests passed, zero skips, 144 subtests**; **7 actual PostgreSQL tests passed, zero skips**; real TCP API and separate worker cloud smoke passed, with actual R2/BGE-M3/OpenSearch and a verified indexed 1024-dimensional vector. Exact commands and correction details: [backend-reaudit-2026-11-20.md](backend-reaudit-2026-11-20.md). Ready-to-run seeded manual acceptance: [backend-manual-test-vi.md](backend-manual-test-vi.md). Counts later in this document describe earlier checkpoints.
+
 2026-11-19 (Asia/Saigon). Repository `C:\Capstone 1\Heritage`; branch `feat/sprint4-admin-auth`; starting point `023efa5`. Existing completed tasks were retained. Local commits were made frequently and separated further after the user requested twice the commit cadence. No empty commits were created.
 
 ## A. Actual architecture
@@ -10,7 +12,7 @@ FastAPI/Python, Pydantic 2 DTOs, async SQLAlchemy 2 services, PostgreSQL, Argon2
 
 | Task | Status | Result |
 |---|---|---|
-| BE-01 | DONE, existing | Admin login/logout retained, version claim integrated into existing issuance |
+| BE-01 | DONE | Admin login/logout retained, versioned issuance; re-audit fixed Windows server startup and verified actual HTTP login/logout |
 | BE-02 | DONE, existing | Current database role and persistent logout revocation retained; regression passed |
 | BE-03 | DONE | Strict administrator-only activation/deactivation API |
 | BE-04 | DONE | Every protected session checks current availability and credential generation; old tokens stay invalid after reactivation |
@@ -45,6 +47,9 @@ Paths below are relative to `apps/backend/` unless prefixed otherwise.
 | `tests/test_document_text.py`, `tests/test_reindex_storage.py`, `tests/test_rag_postgres.py`, `tests/test_rag_live.py`, `tests/test_rag_local_runtime.py`, `tests/test_rag_verifier.py`, root `scripts/sprint4/verify_rag_postgres.py` | Packaging, storage protocol, actual database/model/search/cloud acceptance and isolated verification tooling |
 | root `docs/sprint4/backend-architecture-review.md`, `backend-task-plan.md`, `backend-progress.md`, `backend-api-contract.md`, `backend-test-matrix.md`, `backend-final-report.md` | Architecture, decomposition, evidence, handoff and remaining work |
 | root `docs/sprint4/rag-completion-plan.md`, `manage-rag-pipeline-report.md`, `rag-runtime-setup.md` | RAG follow-up scope, installed runtime, final real-cloud evidence and cleanup |
+| `__main__.py`, `services/reindex_worker.py` | Re-audit corrections: explicit Windows Selector event-loop factory for async psycopg, owned SDK client closure after each worker job |
+| `tests/test_sprint4_application_postgres.py`, `tests/test_sprint4_manual_launcher.py`, root `scripts/sprint4/manual_backend.py` | Production-DDL account/3D/concurrency/cascade checks, configuration guards and a disposable actual-application/manual RAG test environment |
+| root `docs/sprint4/backend-reaudit-2026-11-20.md`, `backend-manual-test-vi.md` | Current verification evidence and complete Vietnamese manual walkthrough for BE-01 through BE-10 |
 
 No frontend files or pre-existing untracked QA artifacts were edited/staged. The small extraction export is required for worker reuse; it preserves existing ingestion behavior and does not change another module's business logic.
 

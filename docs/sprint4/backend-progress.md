@@ -2,17 +2,19 @@
 
 Starting checkpoint: 2026-11-19, `023efa5`, `feat/sprint4-admin-auth`. Existing untracked QA files preserved. Estimates are planning references.
 
+**Re-audited 2026-11-20:** all ten tasks passed a fresh source review and verification. Fixed owned R2 client cleanup and Windows API startup with async psycopg. Final selected regression: **179 passed, zero skips, 144 subtests**; actual PostgreSQL: **7 passed, zero skips**; separate real HTTP API/worker R2/BGE-M3/OpenSearch smoke passed, including an actual indexed 1024-dimensional vector. Full commands: [re-audit](backend-reaudit-2026-11-20.md). Seeded Swagger walkthrough: [Vietnamese manual test guide](backend-manual-test-vi.md).
+
 | Task | Estimate | Status | Implementation | Testing |
 |---|---:|---|---|---|
-| BE-01 | 8h | DONE | Existing admin login/logout retained; only token generation integrated | Existing tests passed again in final regression |
+| BE-01 | 8h | DONE | Existing admin login/logout retained; versioned tokens and Windows-compatible server entry point | Auth regression, actual PostgreSQL and real TCP API login/logout passed |
 | BE-02 | 6h | DONE | Existing role guard/revocation retained | Existing tests passed again in final regression |
 | BE-03 | 4h | DONE | Strict PATCH account status, admin guard, persisted atomic updates | Account/auth/knowledge targeted suite: 41 passed, 49 subtests |
-| BE-04 | 8h | DONE | Shared current-account/version guard, versioned public/admin/Google tokens, additive SQL | Disabled login, old sessions, idempotence and reactivation verified; SQLite only |
+| BE-04 | 8h | DONE | Shared current-account/version guard, versioned public/admin/Google tokens, additive SQL | Disabled login, old sessions, idempotence/reactivation and concurrent PostgreSQL deactivation passed |
 | BE-05 | 10h | DONE | Versioned validated CRUD, history-preserving deletion, additive SQL | HTTP/schema regression and actual PostgreSQL JSONB CRUD/migrations passed |
 | BE-06 | 14h | DONE | Durable API/worker integrated with actual R2, pinned BGE-M3 and OpenSearch | Cloud verification: 6 passed, no skips, 63.18s; real job COMPLETED and indexed vector verified; owned artifacts cleaned up |
 | BE-07 | 10h | DONE | Scoped metadata CRUD, parent locking and database cascades | Scene suite: 7 passed; includes rollback and ordering cases |
 | BE-08 | 8h | DONE | Atomic two-phase ordering, pinned overview, stale-order conflict | SQLite swap/rollback and actual concurrent PostgreSQL test now passed during RAG follow-up |
-| BE-09 | 8h | DONE | Camera/sky persisted in existing scene columns; existing viewer DTOs | 3D schema/API: 8 passed, 20 subtests; public viewer regression passed |
+| BE-09 | 8h | DONE | Camera/sky persisted in existing scene columns; existing viewer DTOs | Schema/API, actual PostgreSQL JSONB, real HTTP and public viewer round-trip passed |
 | BE-10 | 8h | DONE | Finite bounded vectors, safe paths, same-scene assets, valid sky references | Invalid schemas/assets/host errors and access boundaries passed |
 
 ## Initial Sprint checkpoint — 2026-11-19 (superseded by follow-up below)
@@ -38,3 +40,5 @@ Fixed a real packaged-worker dependency problem: extraction previously imported 
 The installation blocker and earlier execution refusal were superseded by the user's subsequent authorization. OpenSearch 3.3.0, torch 2.9.1+cpu, sentence-transformers 6.1.0 and the pinned BGE-M3 weights are installed. The 49-case RAG regression and local-runtime checks passed. The actual cloud `--live` command then passed: **6 passed, zero failed/skipped, 63.18s**. The real R2/BGE-M3/OpenSearch/PostgreSQL worker reached COMPLETED and an indexed 1024-dimensional vector was verified. BE-05 and BE-06 are DONE.
 
 Current checkpoint: all ten Sprint 4 backend tasks meet their scoped acceptance criteria; no task work remains in progress. Evidence and commands are in `manage-rag-pipeline-report.md`, `rag-runtime-setup.md` and `backend-final-report.md`. The owned R2 source was conditionally deleted and HEAD 404 verified; the disposable PostgreSQL database was removed; direct inspection found zero remaining owned search indices/pipelines. The owned search process is stopped and port 19200 closed. Packages/cache remain available. Application data, production configuration and existing untracked QA files were preserved. No worker continues in the background. Rollout/migration to an application or production database remains a separate operator action.
+
+The 2026-11-20 re-audit supersedes earlier verification counts. Its final cleanup also confirmed zero owned R2 test objects/databases/search resources and ports 18004/19200 closed. No API or worker remains active from the audit. Application data, `.env`, frontend and existing QA artifacts were preserved; no push/deployment occurred.
