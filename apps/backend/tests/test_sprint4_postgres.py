@@ -6,6 +6,7 @@ is created/dropped. Never falls back to the application's DATABASE_URL.
 """
 import asyncio
 import os
+import sys
 from pathlib import Path
 import unittest
 from uuid import uuid4
@@ -24,6 +25,11 @@ from apps.backend.services.rag_pipeline import PipelineService
 
 @unittest.skipUnless(os.environ.get("SPRINT4_POSTGRES_TEST_URL"), "explicit disposable PostgreSQL test database required")
 class Sprint4PostgresTests(unittest.IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls):
+        if sys.platform == "win32":
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     async def asyncSetUp(self):
         url = make_url(os.environ["SPRINT4_POSTGRES_TEST_URL"])
         if (url.drivername != "postgresql+psycopg" or not url.database
