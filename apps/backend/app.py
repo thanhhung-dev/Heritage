@@ -12,6 +12,7 @@ from apps.backend.api.admin.auth import router as admin_auth_router
 from apps.backend.api.admin.accounts import router as admin_accounts_router
 from apps.backend.api.admin.rag import router as admin_rag_router
 from apps.backend.api.admin.scenes import router as admin_scenes_router
+from apps.backend.api.admin.scene_config import router as admin_scene_config_router
 from apps.backend.core.assets import configure_asset_policy
 from apps.backend.core.config import cors_origins, validate_startup_config
 from apps.backend.core.email import EmailConfig, init_email_service
@@ -83,6 +84,7 @@ app.include_router(admin_auth_router)
 app.include_router(admin_accounts_router)
 app.include_router(admin_rag_router)
 app.include_router(admin_scenes_router)
+app.include_router(admin_scene_config_router)
 app.include_router(admin_knowledge.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
