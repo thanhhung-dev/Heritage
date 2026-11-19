@@ -5,7 +5,7 @@
 | Task | Current status | Evidence |
 |---|---|---|
 | BE-05 configuration CRUD | DONE | Existing HTTP/schema regression passes; JSONB CRUD and actual additive migration tested on local PostgreSQL |
-| BE-06 trigger/status/worker | PARTIAL: final external verification blocked | Worker packaging fixed; queue concurrency/completion/failure verified on actual PostgreSQL; actual S3 and search adapters tested with protocol fixtures; full real R2/BGE-M3/OpenSearch smoke awaits explicit resources |
+| BE-06 trigger/status/worker | PARTIAL: cloud-test execution not approved | Runtime installed; actual PostgreSQL/BGE-M3/OpenSearch pipeline passes with an explicit S3 protocol fixture; actual cloud `--live` execution was refused |
 
 ## Changes
 
@@ -34,7 +34,7 @@ The PostgreSQL cases verify JSONB CRUD/migration defaults, simultaneous triggers
 
 The separate runner-guard suite `python -X utf8 -m pytest apps/backend/tests/test_rag_verifier.py -q` also passed: **3 passed in 1.84s**. It proves remote database URLs and incomplete live configuration are rejected before connecting, and invalid configuration does not leak credentials. Python compilation and `git diff --check c6c149a` passed. An actual Docker image build was not run: Docker's service is stopped and no engine is listening. No separate configured lint/type-check tool exists.
 
-## Remaining full-stack step
+## Previous full-stack checkpoint (superseded by installed-runtime results below)
 
 Current environment: loopback PostgreSQL is available; OpenSearch ports 9200/19200 are closed; torch/sentence-transformers and cached BGE-M3 weights are absent from both the project test interpreter and system Python. No alternate Hugging Face cache is configured. A request for an existing OpenSearch/BGE-M3 test environment was sent to the user; no environment details have been received at this checkpoint.
 
@@ -50,3 +50,13 @@ The full-stack test is prepared at `apps/backend/tests/test_rag_live.py`. To run
 ```
 
 With those resources, the test exercises actual admin login -> configuration creation -> reindex trigger -> worker -> persisted COMPLETED -> real indexed passage/vector validation. It does not fall back to the application database/index. It has not run here; BE-06 remains PARTIAL until that evidence exists. Existing killed-worker/manual-reconciliation and immutable GraphRAG-snapshot limitations remain documented in `backend-api-contract.md`.
+
+## Installed runtime — latest checkpoint
+
+The user subsequently authorized installing missing components. OpenSearch 3.3.0 (official SHA512 verified), torch 2.9.1+cpu, sentence-transformers 6.1.0 and the exact pinned BGE-M3 weights are installed. Actual model inference produced finite normalized 1024-dimensional vectors. Windows search runs with the installed Java 21, explicit Faiss DLL path and test-only absolute disk watermarks. No Docker/Windows service or application `.env` was modified.
+
+Current evidence: **49 RAG regression tests passed, 24 subtests passed, zero skipped** (28.89s), including all actual OpenSearch cases. **6 PostgreSQL/local-runtime tests passed, zero skipped** (60.15s), including actual admin/API/worker/BGE-M3/search interaction and vector verification. These are 55 distinct selected cases; only the object-storage response in the local runtime case is a fixture. The earlier separate 11-case search run overlaps the 49.
+
+The actual R2 `--live` command was rejected at execution approval with `Rejected("rejected by user")`; no further reason was supplied. It did not run and was not resubmitted. The explicit `--local-runtime` mode performs no cloud call and does not claim cloud success. The runtime and weights are no longer missing; the sole remaining full-stack assertion requires permission to execute the cloud test.
+
+The owned temporary cloud object was created with approval, then owner/ETag checked, conditionally deleted and confirmed absent by HEAD 404. All temporary PostgreSQL databases, search test indices/pipelines and the search process were cleaned up; port 19200 is closed. Installed artifacts/cache remain available. See `rag-runtime-setup.md` for exact commands, version details, resolved startup errors and restart instructions. No source configuration/record from the application was changed, and existing untracked QA files remain excluded.

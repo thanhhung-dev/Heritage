@@ -22,6 +22,7 @@ Tests exercise actual FastAPI handlers, JWTs, Argon2 and isolated SQLite transac
 | BE-06 storage | Real S3 SDK Bucket/Key/IfMatch, 412 sanitization, bounded reads and closed streams | `test_reindex_storage.py`: passed with botocore protocol fixtures |
 | BE-06 persistence | Actual PostgreSQL simultaneous triggers/worker claims, completion/counts and sanitized dependency failure | `test_rag_postgres.py`: passed; external adapters are explicit test fixtures |
 | BE-06 live | Admin login -> trigger -> real R2/BGE-M3/OpenSearch -> indexed vector | `test_rag_live.py`: prepared, skipped until explicit resources exist |
+| BE-06 local runtime | Admin login -> trigger -> real PostgreSQL/BGE-M3/OpenSearch; S3 response fixture only | `test_rag_local_runtime.py`: passed with `--local-runtime`; actual cloud command separately refused |
 | Test isolation | Refuse remote database URLs or missing live resources before connection; sanitize invalid configuration | `test_rag_verifier.py`: 3 passed |
 
 Live integrations deliberately require explicit test configuration:
@@ -29,5 +30,7 @@ Live integrations deliberately require explicit test configuration:
 - `SPRINT4_POSTGRES_TEST_URL`: `postgresql+psycopg://.../<test_... or ..._test>`. Tests only create/drop a random schema they own; never fall back to application `DATABASE_URL`.
 - `OPENSEARCH_TEST_URL`: existing tests create/delete their own random index and search pipeline.
 - R2/real BGE-M3 end-to-end worker smoke test still needs operator-provided test resources and weights. No live test credentials have been created or committed.
+
+Latest installed-runtime checkpoint: the model weights/runtime now exist. All 11 search-file cases and 6 PostgreSQL/local-runtime cases passed; the selected RAG regression has 49 passing cases. The cloud `--live` command was refused at execution approval and never ran. Temporary cloud source cleanup was separately approved and verified. No credentials were committed.
 
 Existing `test_profile_consent.py` is not run: it uses application `DATABASE_URL`, creates tables and registers accounts rather than requiring a disposable test target. Full backend collection also includes live model/database scripts. The selected regression suite covers all changed modules without touching the project database. UTF-8 mode is required on this Windows host for existing ingestion tests reading Vietnamese artifact text with default encoding.
