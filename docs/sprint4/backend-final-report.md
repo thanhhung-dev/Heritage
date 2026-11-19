@@ -17,7 +17,7 @@ FastAPI/Python, Pydantic 2 DTOs, async SQLAlchemy 2 services, PostgreSQL, Argon2
 | BE-05 | DONE | Validated persisted pipeline CRUD, optimistic revisions, cursor pagination and history-safe deletion |
 | BE-06 | PARTIAL verification | Durable scoped trigger/status, concurrent duplicate protection and real worker implemented; live external smoke test outstanding |
 | BE-07 | DONE | Heritage-scoped scene CRUD, authorization, pagination and child-record cascades |
-| BE-08 | PARTIAL verification | Locked atomic reorder, pinned overview, stale-order guard and rollback tested in SQLite; concurrent PostgreSQL test awaits disposable target |
+| BE-08 | DONE after follow-up | Locked atomic reorder, pinned overview, stale-order guard and rollback; actual concurrent PostgreSQL test passed during RAG follow-up |
 | BE-09 | DONE | Persist/read/replace existing scene camera/sky fields, viewer-compatible model and sky responses |
 | BE-10 | DONE | Finite bounded vectors, valid poses, safe paths, same-scene asset/GLB references and sky validation |
 
@@ -106,4 +106,8 @@ For drag-and-drop scenes, fetch all pages, exclude overview -1, and send the com
 
 ## I. Estimates and Git
 
-The decomposition still totals the original **84 reference hours**, every subtask <=8h. No actual engineering hours were inferred from execution time. Eight tasks satisfy isolated acceptance; two retain PARTIAL verification status. Changes are local commits only; no remote push, PR, deployment, service left running or persistent Git configuration change. Local commits use per-command `commit.gpgsign=false`, matching the earlier branch workflow with unavailable signing key.
+The decomposition still totals the original **84 reference hours**, every subtask <=8h. No actual engineering hours were inferred from execution time. After the Manage RAG Pipeline follow-up, nine tasks satisfy acceptance and BE-06 retains PARTIAL external verification status. Changes are local commits only; no remote push, PR, deployment, service left running or persistent Git configuration change. Local commits use per-command `commit.gpgsign=false`, matching the earlier branch workflow with unavailable signing key.
+
+## Manage RAG Pipeline follow-up
+
+The command/results in section F describe the initial Sprint run. Current scoped results and changed paths are in `manage-rag-pipeline-report.md`: worker packaging fixed, parser dependencies declared, 38 RAG regression tests plus 3 safety-guard tests and 5 actual PostgreSQL integration tests passed. Disposable databases were created and removed; application data was untouched. BE-08's PostgreSQL concurrency check is now verified. BE-06 still needs real R2/BGE-M3/OpenSearch resources for the prepared full-stack smoke test. No model packages/weights were installed, Docker service started or production operation performed.

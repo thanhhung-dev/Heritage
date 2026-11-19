@@ -14,10 +14,15 @@ Tests exercise actual FastAPI handlers, JWTs, Argon2 and isolated SQLite transac
 | BE-06 | Prune source/bucket filter, preserve replacement IDs, delete conflicts, partial bulk failure, dependency errors | `test_opensearch.py` transport tests |
 | BE-07 | Heritage-scoped CRUD, missing/cross-heritage association, metadata validation, cascade deletion, pagination, all operations protected | `test_admin_scenes.py` |
 | BE-08 | Immediate UNIQUE-safe swap, pinned overview, duplicate/missing/foreign IDs, stale order, rollback of temporary slots after actual SQL trigger failure | `test_admin_scenes.py` |
-| BE-08 | Concurrent PostgreSQL reorder: one successful writer and one stale 409 | `test_sprint4_postgres.py`: requires explicit disposable test URL; skipped here |
+| BE-08 | Concurrent PostgreSQL reorder: one successful writer and one stale 409 | `test_sprint4_postgres.py`: passed on actual PostgreSQL 18.4 during RAG follow-up |
 | BE-09 | Save/read/replace configuration, camera vectors persisted, sky/model response, raw/R2 public URL round-trip, public camera path | `test_scene_config_api.py`, `test_heritage_api.py` |
 | BE-10 | Numeric strings/bools/infinity/range, invalid pose pairs, unknown fields, traversal/encoded paths/schemes/secrets, missing/foreign assets, missing/invalid sky, restricted hosts/rollback, admin permission | `test_scene_config_schema.py`, `test_scene_config_api.py` |
-| Database rollout | Apply both additive SQL scripts, default credential version, JSONB pipeline CRUD | `test_sprint4_postgres.py`: skipped here |
+| Database rollout | Apply both additive SQL scripts, default credential version, JSONB pipeline CRUD | `test_sprint4_postgres.py`: passed in disposable PostgreSQL schemas; application database unchanged |
+| BE-06 runtime | Extract documents without offline pipeline files; UTF-8/HTML/PDF errors | `test_document_text.py`: passed |
+| BE-06 storage | Real S3 SDK Bucket/Key/IfMatch, 412 sanitization, bounded reads and closed streams | `test_reindex_storage.py`: passed with botocore protocol fixtures |
+| BE-06 persistence | Actual PostgreSQL simultaneous triggers/worker claims, completion/counts and sanitized dependency failure | `test_rag_postgres.py`: passed; external adapters are explicit test fixtures |
+| BE-06 live | Admin login -> trigger -> real R2/BGE-M3/OpenSearch -> indexed vector | `test_rag_live.py`: prepared, skipped until explicit resources exist |
+| Test isolation | Refuse remote database URLs or missing live resources before connection; sanitize invalid configuration | `test_rag_verifier.py`: 3 passed |
 
 Live integrations deliberately require explicit test configuration:
 

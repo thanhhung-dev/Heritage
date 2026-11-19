@@ -18,7 +18,7 @@ User authorized autonomous implementation and frequent local commits; completed 
 | BE-07.1 | Scenes | Heritage-scoped CRUD DTO/service/router | 6h | BE-02.1 | DONE |
 | BE-07.2 | Scenes | Association, deletion and authorization tests/docs | 4h | BE-07.1 | DONE |
 | BE-08.1 | Scenes | Parent lock, temporary sequences, optimistic stale-order check | 5h | BE-07.1 | DONE |
-| BE-08.2 | Scenes | Duplicate/missing/cross-heritage/order consistency tests | 3h | BE-08.1 | BLOCKED |
+| BE-08.2 | Scenes | Duplicate/missing/cross-heritage/order consistency tests | 3h | BE-08.1 | DONE |
 | BE-09.1 | 3D | Store/read camera and existing sky/asset DTOs | 5h | BE-07.1 | DONE |
 | BE-09.2 | 3D | Viewer compatibility and persistence tests/docs | 3h | BE-09.1 | DONE |
 | BE-10.1 | 3D | Strict vectors, bounded values, trusted asset paths and associations | 5h | BE-09.1 | DONE |
@@ -26,4 +26,4 @@ User authorized autonomous implementation and frequent local commits; completed 
 
 Acceptance: each subtask's described behavior must be implemented, have meaningful passing tests, and appear in the API contract/progress report. Schema additions are prepared as SQL migrations only. Unit/SQLite tests are distinguished from live integration tests; infrastructure-dependent verification cannot be marked complete without evidence.
 
-Final dependency note: BE-06.2 code/unit tests are complete; the remaining blocker is real R2/BGE-M3/OpenSearch/PostgreSQL smoke verification and operator handling of a killed worker. BE-08.2 isolated validation and rollback tests pass; its real concurrent PostgreSQL check is present but requires an explicit disposable test database. Docker daemon inspection failed because its named pipe was unavailable. No services were started or migrations applied. These subtask blockers produce parent PARTIAL statuses, not a claim of missing source implementation. Estimates remain 84h with no invented actual effort.
+Current dependency note after the Manage RAG Pipeline follow-up: BE-06.2 packaged-worker code, unit tests and actual PostgreSQL queue integration pass. The remaining blocker is real R2/BGE-M3/OpenSearch smoke verification; killed-worker manual reconciliation remains an explicit limitation. BE-08.2 actual concurrent PostgreSQL verification now passes in a disposable database, so that subtask is DONE. Prepared SQL was applied only inside owned temporary test schemas, never the application database. No service was started or dependency installed. BE-06 alone retains PARTIAL verification. Estimates remain 84h with no invented actual effort.

@@ -32,7 +32,7 @@ From repository root with `C:\Capstone 1\.venv\Scripts\python.exe`:
 
 The PostgreSQL cases verify JSONB CRUD/migration defaults, simultaneous triggers across different pipelines sharing one writer slot, exactly one worker claim, persisted status/count/timestamps, search failure releasing the slot without marking the source indexed, and the pre-existing concurrent scene-order test. External S3/search/model boundaries in the queue tests are explicit fixtures, not live services. S3 SDK tests validate actual botocore parameter validation, Bucket/Key/IfMatch, sanitized 412 conflicts and closed bounded streams. No inference result from these fixtures is presented as a real BGE-M3 output.
 
-Python compilation and `git diff --check c6c149a` passed. An actual Docker image build was not run: Docker's service is stopped and no engine is listening. No separate configured lint/type-check tool exists.
+The separate runner-guard suite `python -X utf8 -m pytest apps/backend/tests/test_rag_verifier.py -q` also passed: **3 passed in 1.84s**. It proves remote database URLs and incomplete live configuration are rejected before connecting, and invalid configuration does not leak credentials. Python compilation and `git diff --check c6c149a` passed. An actual Docker image build was not run: Docker's service is stopped and no engine is listening. No separate configured lint/type-check tool exists.
 
 ## Remaining full-stack step
 
