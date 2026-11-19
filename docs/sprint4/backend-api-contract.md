@@ -48,3 +48,53 @@ python -m apps.backend.services.reindex_worker --once
 Apply `2026-11-19_rag_pipeline.sql` first. Worker needs existing PostgreSQL/R2/OpenSearch configuration, BGE-M3 weights and ingestion dependencies (`pipelines/ingestion/requirements.txt`). It uses R2 `IfMatch`, limits sources to 16 MiB, reuses extraction/chunking/import code, then removes only stale chunks of that bucket/source. Existing GraphRAG snapshots are immutable; rebuild them through the established snapshot workflow separately.
 
 External writes are not transactional: a failed bulk operation can leave successful items; stable IDs support a deliberate new trigger. A killed worker leaves RUNNING and retains the slot. An operator must confirm worker termination before reconciling that job; no automatic retry/cancellation/lease takeover is claimed. Live R2/OpenSearch/model/PostgreSQL verification has not run here.
+
+## Scenes (BE-07/08)
+
+Base path: `/api/admin/heritages/{heritage_id}/scenes`. Resource IDs are positive signed-64-bit integers. Administrators have global scope in the current role model; the nested route additionally requires the scene to belong to the requested heritage. Missing/mismatched association: 404. No new tenant/ownership scheme is invented.
+
+| Method/path | Request | Success |
+|---|---|---|
+| POST base | `{"title":"Gate","description":"History"}`; optional `sequence` | 201 scene |
+| GET base | Optional `limit=1..1000` (default 100), `after_sequence>=-1` | 200 `{"items":[...],"next_after_sequence":null}` |
+| GET `/{scene_id}` | IDs in path | 200 scene |
+| PATCH `/{scene_id}` | Nonempty title/description patch; description may be null | 200 scene |
+| DELETE `/{scene_id}` | IDs in path | 204 empty |
+| PATCH `/order` | `{"scene_ids":[12,11],"expected_scene_ids":[11,12]}` | 200 ordered non-overview scene list |
+
+Scene: `{"id":11,"heritage_id":1,"sequence":0,"title":"Gate","description":"History"}`. Titles 1..250 characters, no surrounding whitespace; descriptions <=20000. Unknown fields are rejected (422). Sequence defaults to append, accepts -1 for the unique overview, and must be within [-1,2147483647]. Duplicate sequences return 409. Metadata PATCH cannot move a scene between heritages or edit sequence; use `/order`.
+
+Reorder requires every regular scene ID exactly once; exclude the overview. `expected_scene_ids` is the last fetched order (fetch every page first). Stale order/membership: 409; duplicate/missing/foreign IDs: 422. Empty arrays are valid for a heritage without regular scenes. The overview remains -1. Database parent-row locks serialize create/update/delete/order/config writes; two-phase temporary positive sequences preserve immediate UNIQUE constraints and roll back together on error. Reordering renumbers regular scenes from zero, which also changes derived public slugs s1/s2; stable client identity should use scene IDs. A successful reorder response includes all regular scenes without pagination. Exhausted temporary integer space: 409. Scene deletion cascades child records according to existing FKs; no stored R2 file is deleted. No new scene schema migration is required.
+
+## Scene 3D configuration (BE-09/10)
+
+GET `/api/admin/scenes/{scene_id}/3d-config`: 200 configuration, 404 missing scene. PUT same URL replaces camera/sky configuration, 200 saved configuration; admin bearer token required. Example:
+
+```json
+{
+  "camera": {
+    "node_name": "Camera_Main",
+    "start_position": [1, 2, 3],
+    "start_target": {"x": 0, "y": 0, "z": 0},
+    "zoom_position": null,
+    "zoom_target": null,
+    "path_url": "models/camera.glb",
+    "instant_move": false
+  },
+  "sky_preset_id": 1,
+  "model_asset_ids": [31]
+}
+```
+
+Only `camera` is required. Omitted/null `sky_preset_id` clears the selected sky. Omitted camera fields reset to null/default false; this is PUT replacement, not a patch. Position/target pairs must appear together and differ. Vectors accept exactly three finite numeric values, as arrays or exact `{x,y,z}` objects, each within ±1000000. Booleans/numeric strings are rejected as coordinates. `instant_move` is a strict boolean. Camera node names are 1..255 characters. Unknown fields: 422.
+
+`model_asset_ids` is an optional validation assertion that every supplied ID already belongs to the scene. It does not select LODs, remove other assets or reassign ownership. Duplicates/missing/foreign assets: 422. `path_url` must match a registered GLB asset of this scene, either raw stored reference or its R2 public URL. Unsafe schemes, absolute local paths, traversal (including encoded forms), credentials, query strings and fragments are rejected. Model formats must match existing glb/splat/sog options; LOD is nonnegative. Stored values remain raw references; API responses use the existing R2 URL policy and host restrictions.
+
+Environment configuration references existing shared sky presets rather than editing them globally. Missing preset: 422. Referenced preset numeric values must be finite: turbidity/rayleigh/exposure [0,100], mie coefficient/cloud coverage/cloud density/stars [0,1], mie directional G [-1,1], elevation [-90,90], azimuth [-360,360]. Preset lighting fields are returned using the existing viewer schema. No new viewer fields, storage blob or asset-selection schema is introduced.
+
+Response: `scene_id`, `heritage_id`, `camera` (same viewer fields above), nullable `sky_preset_id`/`sky`, and all scene `models`. Sky uses existing aliases such as `mieCoefficient` and `cloudCoverage`; models use `id`, `file_url`, `format`, `lod_level`, nullable `compression`/`file_size_bytes`. No pagination/filtering applies. Saved camera/sky values are the same scene columns consumed by public heritage/tour endpoints, which retain their contracts.
+
+```sh
+curl http://localhost:8000/api/admin/heritages/1/scenes -H "Authorization: Bearer $TOKEN"
+curl -X PUT http://localhost:8000/api/admin/scenes/11/3d-config -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"camera":{"start_position":[1,2,3],"start_target":[0,0,0]},"sky_preset_id":1}'
+```
