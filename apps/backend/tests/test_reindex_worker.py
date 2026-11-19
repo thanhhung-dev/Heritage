@@ -79,12 +79,20 @@ class ReindexWorkerTests(unittest.TestCase):
         self.assertNotIn("secret-password", result["error"])
         self.assertIsNone(self.sql("SELECT active_slot FROM rag_reindex_job")[0][0])
 
-    def test_changed_document_or_disabled_requester_is_rejected(self):
+    def test_changed_document_is_rejected(self):
         job = self.schedule()
         self.sql("UPDATE knowledge_document SET revision=2")
         search = Search()
         asyncio.run(run_next(self.factory, storage=Storage(), store=search, embedder=self.vectors))
         self.assertEqual(self.job(job["id"])["status"], "FAILED")
+        self.assertEqual(search.rows, [])
+
+    def test_disabled_requester_cannot_start_queued_writes(self):
+        job, search = self.schedule(), Search()
+        self.sql("UPDATE account SET is_active=0 WHERE id=1")
+        asyncio.run(run_next(self.factory, storage=Storage(), store=search, embedder=self.vectors))
+        self.assertEqual(self.sql("SELECT status FROM rag_reindex_job WHERE id=:id", {"id": job["id"]})[0][0],
+                         "FAILED")
         self.assertEqual(search.rows, [])
 
     def test_two_workers_claim_a_job_only_once(self):
