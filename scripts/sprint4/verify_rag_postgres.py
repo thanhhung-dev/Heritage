@@ -43,7 +43,8 @@ def main():
     if not re.fullmatch(r'test_sprint4_[0-9a-f]{32}', database):
         raise RuntimeError('Invalid generated test database name')
     admin_url = url.set(drivername='postgresql').render_as_string(hide_password=False)
-    tests = ['apps/backend/tests/test_rag_postgres.py', 'apps/backend/tests/test_sprint4_postgres.py']
+    tests = ['apps/backend/tests/test_rag_postgres.py', 'apps/backend/tests/test_sprint4_postgres.py',
+             'apps/backend/tests/test_sprint4_application_postgres.py']
     environment = {key: str(value) for key, value in values.items() if value is not None}
     environment['SPRINT4_POSTGRES_TEST_URL'] = url.set(database=database).render_as_string(hide_password=False)
     if args.live:
