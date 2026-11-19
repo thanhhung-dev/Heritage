@@ -7,6 +7,7 @@ from apps.backend.db.base import Base, TimestampMixin, AsyncSessionLocal, engine
 
 from apps.backend.models.admin import AdminAccount  # noqa: F401
 from apps.backend.models.revoked_token import RevokedToken  # noqa: F401
+from apps.backend.models.rag_pipeline import RagPipeline, ReindexJob  # noqa: F401
 from apps.backend.models.user import (  # noqa: F401
     UserProfile, UserConsent,
     BadgeDefinition, UserBadge,
@@ -34,7 +35,7 @@ __all__ = [
     # base
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
     # admin / identity
-    "AdminAccount", "RevokedToken",
+    "AdminAccount", "RevokedToken", "RagPipeline", "ReindexJob",
     # profile & gamification
     "UserProfile", "UserConsent",
     "BadgeDefinition", "UserBadge",
