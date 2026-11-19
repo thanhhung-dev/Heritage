@@ -1,5 +1,6 @@
 """Admin auth HTTP contracts with real Argon2, JWTs and isolated SQLite storage."""
 import asyncio
+import gc
 import os
 import secrets
 import tempfile
@@ -11,6 +12,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import jwt
+from anyio import CancelScope
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import text
@@ -37,14 +39,21 @@ class AdminAuthTests(unittest.TestCase):
             "APP_ENVIRONMENT": "test", "CORS_ORIGINS": "",
         }))
         temp = self.enterContext(tempfile.TemporaryDirectory())
+        # SQLite keeps failed-statement cursors alive through exception cycles.
+        # Collect them after client/engine shutdown, before removing the file.
+        self.addCleanup(gc.collect)
         self.engine = create_async_engine(f"sqlite+aiosqlite:///{Path(temp) / 'auth.db'}", poolclass=NullPool)
         self.factory = async_sessionmaker(self.engine, expire_on_commit=False)
         asyncio.run(self.create_database())
         self.addCleanup(lambda: asyncio.run(self.engine.dispose()))
 
         async def database():
-            async with self.factory() as session:
+            session = self.factory()
+            try:
                 yield session
+            finally:
+                with CancelScope(shield=True):
+                    await session.close()
 
         self.app = FastAPI()
         self.app.include_router(admin_auth.router)
