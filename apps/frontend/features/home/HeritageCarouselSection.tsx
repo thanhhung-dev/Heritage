@@ -19,7 +19,7 @@ export interface HeritageCarouselSectionProps {
   title: string;
   description?: string;
   items: HeritageItem[];
-  sharedBackdrop?: boolean;
+  useFirstCardBackdrop?: boolean;
   loading?: boolean;
   error?: string;
   emptyMessage?: string;
@@ -54,7 +54,7 @@ export function HeritageCarouselSection({
   title,
   description,
   items,
-  sharedBackdrop = false,
+  useFirstCardBackdrop = false,
   loading = false,
   error,
   emptyMessage = "Chưa có nội dung.",
@@ -68,7 +68,9 @@ export function HeritageCarouselSection({
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [scrollable, setScrollable] = useState({ left: false, right: false });
 
-  useEffect(() => { setActiveImage(null); }, [items]);
+  useEffect(() => {
+    if (!useFirstCardBackdrop) setActiveImage(null);
+  }, [items, useFirstCardBackdrop]);
 
   useEffect(() => {
     const track = scrollRef.current;
@@ -106,8 +108,8 @@ export function HeritageCarouselSection({
     });
   };
 
-  const backgroundImage = sharedBackdrop
-    ? null
+  const backgroundImage = useFirstCardBackdrop
+    ? items[0]?.card_image_url
     : activeImage || getBackdropImage(items.find(getBackdropImage));
   const hasCards = items.length > 0;
   const showLoading = loading && !hasCards;
@@ -118,25 +120,21 @@ export function HeritageCarouselSection({
       token: { colorPrimary: "#ff9b2d", fontFamily: "Poppins, sans-serif" },
     }}>
       <section
-        className={[
-          styles.carouselSection,
-          sharedBackdrop && styles.transparentSection,
-          className,
-        ].filter(Boolean).join(" ")}
+        className={[styles.carouselSection, className].filter(Boolean).join(" ")}
         aria-labelledby={titleId}
       >
-        {!sharedBackdrop && (
-          <div className={styles.sectionBackdrop} aria-hidden="true">
-            {backgroundImage && (
-              <div
-                key={backgroundImage}
-                className={styles.ambientImage}
-                style={{ backgroundImage: `url(${JSON.stringify(backgroundImage)})` }}
-              />
-            )}
-            <div className={styles.ambientFade} />
-          </div>
-        )}
+        <div className={styles.sectionBackdrop} aria-hidden="true">
+          {backgroundImage && (
+            <div
+              key={backgroundImage}
+              className={[styles.ambientImage, !useFirstCardBackdrop && styles.animatedBackdrop]
+                .filter(Boolean)
+                .join(" ")}
+              style={{ backgroundImage: `url(${JSON.stringify(backgroundImage)})` }}
+            />
+          )}
+          <div className={styles.ambientFade} />
+        </div>
 
         <div className={styles.sectionHeader}>
           <div className={styles.headerLeft}>
@@ -210,10 +208,10 @@ export function HeritageCarouselSection({
               className={styles.cardSlot}
               role="listitem"
               data-carousel-card
-              onMouseEnter={sharedBackdrop
+              onMouseEnter={useFirstCardBackdrop
                 ? undefined
                 : () => setActiveImage(getBackdropImage(item) || null)}
-              onFocus={sharedBackdrop
+              onFocus={useFirstCardBackdrop
                 ? undefined
                 : () => setActiveImage(getBackdropImage(item) || null)}
             >
