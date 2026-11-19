@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from sqlalchemy import select, update
 
 from apps.backend.core.corpus import chunk_text_spans
+from apps.backend.core.document_text import extract_text
 from apps.backend.core.embedding import embed_texts
 from apps.backend.core.r2 import R2Storage, knowledge_prefix, safe_name
 from apps.backend.core.search import PassageStore
@@ -30,8 +31,6 @@ from apps.backend.services.account_access import account_by, is_available, requi
 
 def read_document(storage, document):
     """Bound memory and use an ETag precondition; never fetch user-supplied URLs."""
-    from pipelines.ingestion.ingest_r2 import extract_text
-
     maximum = 16 * 1024 * 1024
     if not 0 < document.size_bytes <= maximum:
         raise ValueError("Document exceeds the reindex byte limit")

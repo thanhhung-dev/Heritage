@@ -6,31 +6,23 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import io
 import json
 import os
-import re
 import shutil
 import sys
 import tempfile
-import unicodedata
 from importlib.metadata import version as dependency_version
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
-from bs4 import BeautifulSoup
-from pypdf import PdfReader
 
 from apps.backend.core.corpus import chunk_text_spans
+from apps.backend.core.document_text import IngestionError, extract_text
 from pipelines.ingestion.package import PackageValidationError, validate_package
 
 MAX_BYTES = 16 * 1024 * 1024
 PROCESSOR_VERSION = "r2-text-v1"
-
-
-class IngestionError(ValueError):
-    """Safe-to-display ingestion failure (never includes a download URL)."""
 
 
 def _json_bytes(value: object) -> bytes:
@@ -67,28 +59,6 @@ def _download(client: httpx.Client, url: str, max_bytes: int) -> tuple[bytes, st
         raise IngestionError(f"Tải file thất bại: HTTP {exc.response.status_code}.") from None
     except httpx.HTTPError:
         raise IngestionError("Không tải được file; kiểm tra kết nối/link và hạn signed URL.") from None
-
-
-def extract_text(data: bytes, kind: str) -> str:
-    try:
-        if kind == "pdf":
-            reader = PdfReader(io.BytesIO(data))
-            text = "\n\n".join(page.extract_text() or "" for page in reader.pages)
-        else:
-            text = data.decode("utf-8-sig")
-            if kind == "html":
-                soup = BeautifulSoup(text, "html.parser")
-                for tag in soup(["script", "style", "nav", "header", "footer", "noscript"]):
-                    tag.decompose()
-                text = (soup.find("main") or soup.find("article") or soup).get_text("\n")
-    except Exception:
-        raise IngestionError("Không trích được text; kiểm tra định dạng/UTF-8/PDF mã hóa.") from None
-    text = unicodedata.normalize("NFC", text.replace("\r\n", "\n").replace("\r", "\n"))
-    text = "\n".join(re.sub(r"[^\S\n]+", " ", line).strip() for line in text.splitlines())
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    if not text or "\x00" in text:
-        raise IngestionError("Không có text hợp lệ; PDF scan/ảnh cần OCR trước ingestion.")
-    return text
 
 
 def run_ingestion(
