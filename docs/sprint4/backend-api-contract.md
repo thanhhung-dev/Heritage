@@ -45,9 +45,9 @@ python -m apps.backend.services.reindex_worker --once
 # Omit --once to poll; --poll-seconds defaults to 5.
 ```
 
-Apply `2026-11-19_rag_pipeline.sql` first. Worker needs existing PostgreSQL/R2/OpenSearch configuration, BGE-M3 weights and ingestion dependencies (`pipelines/ingestion/requirements.txt`). It uses R2 `IfMatch`, limits sources to 16 MiB, reuses extraction/chunking/import code, then removes only stale chunks of that bucket/source. Existing GraphRAG snapshots are immutable; rebuild them through the established snapshot workflow separately.
+Apply `2026-11-19_rag_pipeline.sql` first. Worker needs existing PostgreSQL/R2/OpenSearch configuration, BGE-M3 weights and backend runtime requirements (including the same document-parser versions as offline ingestion). Shared extraction ships in `apps/backend/core/document_text.py`; the image does not need the offline `pipelines/` directory. It uses R2 `IfMatch`, limits sources to 16 MiB, reuses extraction/chunking/import code, then removes only stale chunks of that bucket/source. Existing GraphRAG snapshots are immutable; rebuild them through the established snapshot workflow separately.
 
-External writes are not transactional: a failed bulk operation can leave successful items; stable IDs support a deliberate new trigger. A killed worker leaves RUNNING and retains the slot. An operator must confirm worker termination before reconciling that job; no automatic retry/cancellation/lease takeover is claimed. Live R2/OpenSearch/model/PostgreSQL verification has not run here.
+External writes are not transactional: a failed bulk operation can leave successful items; stable IDs support a deliberate new trigger. A killed worker leaves RUNNING and retains the slot. An operator must confirm worker termination before reconciling that job; no automatic retry/cancellation/lease takeover is claimed. Actual PostgreSQL verification now passes; live R2/OpenSearch/model verification remains pending. See `manage-rag-pipeline-report.md` for the exact evidence and isolated full-stack test command.
 
 ## Scenes (BE-07/08)
 
