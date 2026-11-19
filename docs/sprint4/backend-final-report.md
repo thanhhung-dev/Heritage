@@ -68,11 +68,11 @@ Existing auth/public/knowledge routes retain their URLs. Error/response bodies, 
 - `account.token_version INTEGER NOT NULL DEFAULT 0`: preserves legacy sessions until the first deactivation, then permanently invalidates older generations. Apply before application rollout.
 - New `rag_pipeline` and `rag_reindex_job`: JSONB settings/snapshots, revision/time/status/count metadata, RESTRICT history relationship, checked state and unique active writer slot. No new queue dependency.
 - Scene UNIQUE/CHECK definitions were aligned in ORM with the existing `schema.sql`; no new scene table or 3D blob is introduced. Existing camera-path/sky migrations remain prerequisites for the existing viewer schema.
-- Scripts were prepared, not applied to the application database. Live migration verification is gated by an explicit test URL and was skipped.
+- Scripts were not applied to the application database. Follow-up migration verification passed on PostgreSQL 18.4 inside owned disposable schemas; production/reference-version rollout remains separate.
 
 ## F. Test evidence
 
-Interpreter: `C:\Capstone 1\.venv\Scripts\python.exe`. Final command, run from repository root:
+Interpreter: `C:\Capstone 1\.venv\Scripts\python.exe`. Initial Sprint regression command, run from repository root; subsequent RAG follow-up results are recorded below and in `manage-rag-pipeline-report.md`:
 
 ```powershell
 & 'C:\Capstone 1\.venv\Scripts\python.exe' -X utf8 -m pytest apps/backend/tests/test_account_status.py apps/backend/tests/test_admin_auth.py apps/backend/tests/test_admin_knowledge.py apps/backend/tests/test_rag_pipeline_schema.py apps/backend/tests/test_rag_pipeline_api.py apps/backend/tests/test_reindex_worker.py apps/backend/tests/test_admin_scenes.py apps/backend/tests/test_scene_config_schema.py apps/backend/tests/test_scene_config_api.py apps/backend/tests/test_sprint4_postgres.py apps/backend/tests/test_heritage_api.py apps/backend/tests/test_startup_config.py apps/backend/tests/test_profile_schema_validation.py apps/backend/tests/test_health.py apps/backend/tests/test_opensearch.py apps/backend/tests/test_r2_ingestion.py apps/backend/tests/test_ingestion_package.py apps/backend/tests/test_passages.py apps/backend/tests/test_db_init.py apps/backend/tests/test_chat_api.py -q
@@ -92,10 +92,10 @@ Test environment versions: FastAPI 0.141.1, Pydantic 2.13.5, SQLAlchemy 2.0.54, 
 
 ## G. Remaining dependencies and limits
 
-1. Run opt-in PostgreSQL tests against a disposable named test database, then use the approved migration rollout process. No project/production database was modified.
+1. Actual PostgreSQL tests now pass on a disposable local PostgreSQL 18.4 database. Rollout against the deployment reference version/database remains through the approved process. No project/production database was modified.
 2. Verify a real test-source reindex with actual R2, existing BGE-M3 weights and OpenSearch; run the separate worker process explicitly. Retrieval settings are stored but do not automatically alter live search. Existing GraphRAG snapshots need their established export/index workflow.
 3. One active reindex globally prevents overlapping source rewrites. Failed external bulk operations may leave successful items; stable IDs support deliberate new jobs. A killed worker leaves RUNNING and holds the slot until an operator confirms termination and reconciles it. No automatic retry/cancellation/recovery is claimed.
-4. PostgreSQL row-lock serialization is implemented and an actual concurrent integration test is present; it has not run here. SQLite tests verified unique-safe swapping, stale requests and transaction rollback of intermediate sequence writes.
+4. PostgreSQL row-lock serialization is implemented and its actual concurrent integration test passed during the RAG follow-up. SQLite tests also verified unique-safe swapping, stale requests and transaction rollback of intermediate sequence writes.
 5. Shared sky presets are referenced and validated, not edited. Camera GLB references must be registered for the same scene. Asset existence means a current database record; file-content/download availability is not a live verified guarantee.
 
 ## H. Frontend handoff

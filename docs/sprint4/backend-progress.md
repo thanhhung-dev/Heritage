@@ -15,7 +15,7 @@ Starting checkpoint: 2026-11-19, `023efa5`, `feat/sprint4-admin-auth`. Existing 
 | BE-09 | 8h | DONE | Camera/sky persisted in existing scene columns; existing viewer DTOs | 3D schema/API: 8 passed, 20 subtests; public viewer regression passed |
 | BE-10 | 8h | DONE | Finite bounded vectors, safe paths, same-scene assets, valid sky references | Invalid schemas/assets/host errors and access boundaries passed |
 
-## Final checkpoint — 2026-11-19
+## Initial Sprint checkpoint — 2026-11-19 (superseded by follow-up below)
 
 Implementation and available isolated verification are finished. Final selected regression: **155 passed, 8 skipped, 133 subtests passed**, one existing Starlette/AnyIO deprecation warning. The exact command, changed-file inventory and remaining integration work are in `backend-final-report.md`. Python compilation, generated OpenAPI (35 paths, including 19 admin paths), and Git whitespace validation passed.
 
