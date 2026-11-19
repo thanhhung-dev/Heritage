@@ -91,6 +91,7 @@ def make_scene(**overrides: Any) -> SimpleNamespace:
         "title": "Tam Quan",
         "description": "Cổng tam quan",
         "camera_node_name": None,
+        "camera_path_url": None,
         "cam_start_pos": [0.0, 1.5, 6.0],
         "cam_start_target": [0.0, 1.0, 0.0],
         "cam_zoom_pos": None,
@@ -381,6 +382,14 @@ class ScenePayloadTests(HeritageApiTestBase):
         heritage = heritage if heritage is not None else make_heritage()
         scene = scene if scene is not None else make_scene()
         self._install_service([make_row(heritage, [scene])])
+
+    def test_camera_path_preserves_the_existing_viewer_contract(self) -> None:
+        configure_asset_policy("https://cdn.example.com")
+        self._install_scene_row(make_scene(camera_path_url="models/camera.glb"))
+        response = self.client.get("/api/heritages/chua-thien-mu")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["scenes"][0]["camera"]["path_url"],
+                         "https://cdn.example.com/models/camera.glb")
 
     def test_scene_carries_full_payload(self) -> None:
         scene = make_scene(

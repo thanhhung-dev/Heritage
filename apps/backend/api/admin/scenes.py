@@ -41,7 +41,7 @@ async def reorder(heritage_id: ResourceId, data: SceneOrder, svc: SceneService =
 
 @router.get("/{scene_id}", response_model=SceneOut)
 async def detail(heritage_id: ResourceId, scene_id: ResourceId, svc: SceneService = Depends(service)):
-    return await svc.scene(heritage_id, scene_id)
+    return SceneOut.model_validate(await svc.scene(heritage_id, scene_id))
 
 
 @router.patch("/{scene_id}", response_model=SceneOut)
