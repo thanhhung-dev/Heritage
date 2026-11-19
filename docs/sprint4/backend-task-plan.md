@@ -11,10 +11,10 @@ User authorized autonomous implementation and frequent local commits; completed 
 | BE-03.1 | Accounts | Strict status update, persisted state, admin scope and HTTP tests | 4h | BE-02.1 | DONE |
 | BE-04.1 | Accounts | Credential version migration and current-account guard | 4h | BE-03.1 | DONE |
 | BE-04.2 | Accounts | Login/reactivation/session regression tests | 4h | BE-04.1 | DONE |
-| BE-05.1 | RAG | Validated persisted chunking/embedding/retrieval DTO/model/migration | 5h | BE-02.1 | TODO |
-| BE-05.2 | RAG | Admin CRUD, conflicts, docs and HTTP tests | 5h | BE-05.1 | TODO |
-| BE-06.1 | RAG | Scoped durable job trigger/status and duplicate protection | 6h | BE-05.2 | TODO |
-| BE-06.2 | RAG | Worker, actual indexing integration, failure/recovery tests | 8h | BE-06.1 | TODO |
+| BE-05.1 | RAG | Validated persisted chunking/embedding/retrieval DTO/model/migration | 5h | BE-02.1 | DONE |
+| BE-05.2 | RAG | Admin CRUD, conflicts, docs and HTTP tests | 5h | BE-05.1 | DONE |
+| BE-06.1 | RAG | Scoped durable job trigger/status and duplicate protection | 6h | BE-05.2 | DONE |
+| BE-06.2 | RAG | Worker, actual indexing integration, failure/recovery tests | 8h | BE-06.1 | IN_PROGRESS |
 | BE-07.1 | Scenes | Heritage-scoped CRUD DTO/service/router | 6h | BE-02.1 | TODO |
 | BE-07.2 | Scenes | Association, deletion and authorization tests/docs | 4h | BE-07.1 | TODO |
 | BE-08.1 | Scenes | Parent lock, temporary sequences, optimistic stale-order check | 5h | BE-07.1 | TODO |
