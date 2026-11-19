@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
-from apps.backend.ai.providers.embedding import EMBEDDING_ID
+from apps.backend.core.embedding import EMBEDDING_ID
 
 
 def utc_timestamp(value):

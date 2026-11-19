@@ -69,7 +69,7 @@ def _download(client: httpx.Client, url: str, max_bytes: int) -> tuple[bytes, st
         raise IngestionError("Không tải được file; kiểm tra kết nối/link và hạn signed URL.") from None
 
 
-def _extract(data: bytes, kind: str) -> str:
+def extract_text(data: bytes, kind: str) -> str:
     try:
         if kind == "pdf":
             reader = PdfReader(io.BytesIO(data))
@@ -164,7 +164,7 @@ def run_ingestion(
             }.get(mime)
             if kind not in {"txt", "md", "html", "pdf"}:
                 raise IngestionError("Chỉ hỗ trợ txt, md, html, pdf; đặt format nếu link không có đuôi file.")
-            text = _extract(data, kind)
+            text = extract_text(data, kind)
             doc_key = "DOC-" + _hash(spec["source_url"].encode())
             content_hash = _hash(text.encode())
             doc = {field: spec.get(field) for field in (
