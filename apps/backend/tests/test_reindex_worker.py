@@ -2,6 +2,8 @@
 import asyncio
 import io
 import unittest
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from apps.backend.services.reindex_worker import run_next
 from apps.backend.tests import test_rag_pipeline_api as fixtures
@@ -104,3 +106,30 @@ class ReindexWorkerTests(unittest.TestCase):
         self.assertEqual(sum(claimed), 1)
         self.assertEqual(self.job(job["id"])["status"], "COMPLETED")
         self.assertEqual(len(search.pruned), 1)
+
+    def test_owned_r2_client_is_closed_after_success_and_failure(self):
+        for failed in (False, True):
+            with self.subTest(failed=failed):
+                job, search = self.schedule(), Search()
+                storage = Storage()
+                storage.client = SimpleNamespace(close=Mock())
+
+                def embed(texts):
+                    if failed:
+                        raise RuntimeError("test model failure")
+                    return self.vectors(texts)
+
+                with patch("apps.backend.services.reindex_worker.R2Storage", return_value=storage):
+                    asyncio.run(run_next(self.factory, store=search, embedder=embed))
+                storage.client.close.assert_called_once_with()
+                self.assertEqual(self.job(job["id"])["status"], "FAILED" if failed else "COMPLETED")
+                # Pipeline names are unique and history is deliberately kept.
+                self.sql("UPDATE rag_pipeline SET name=:name WHERE id=:id",
+                         {"name": "Finished-" + job["id"], "id": job["pipeline_id"]})
+
+    def test_injected_r2_client_is_left_open_for_its_caller(self):
+        self.schedule()
+        storage = Storage()
+        storage.client = SimpleNamespace(close=Mock())
+        asyncio.run(run_next(self.factory, storage=storage, store=Search(), embedder=self.vectors))
+        storage.client.close.assert_not_called()

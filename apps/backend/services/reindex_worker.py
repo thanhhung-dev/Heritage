@@ -72,7 +72,12 @@ async def run_next(factory=AsyncSessionLocal, *, storage=None, store=None, embed
             require_admin_role(actor)
             config = PipelineCreate.model_validate({key: job.config_snapshot[key]
                 for key in ("name", "chunking", "embedding", "retrieval")})
-            storage = storage if storage is not None else R2Storage()
+            if storage is None:
+                storage = R2Storage()
+                # A long-lived worker creates one SDK client per job. Close
+                # owned clients on success and on every failure path; injected
+                # clients remain the caller's responsibility.
+                resources.callback(storage.client.close)
             store = store if store is not None else await resources.enter_async_context(PassageStore())
             for document_id in job.document_ids:
                 # Existing knowledge mutations lock this same row. Keep it locked
