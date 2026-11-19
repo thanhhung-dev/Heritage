@@ -33,6 +33,9 @@ class RagLiveTests(unittest.IsolatedAsyncioTestCase):
     setUpClass = classmethod(fixtures.Sprint4PostgresTests.setUpClass.__func__)
     drop_schema = fixtures.Sprint4PostgresTests.drop_schema
 
+    def source_storage(self):
+        return R2Storage(), os.environ['RAG_TEST_R2_OBJECT_KEY']
+
     async def asyncSetUp(self):
         for key in ('SPRINT4_POSTGRES_TEST_URL', 'OPENSEARCH_TEST_URL', 'RAG_TEST_R2_OBJECT_KEY', 'R2_BUCKET'):
             if not os.environ.get(key):
@@ -42,9 +45,8 @@ class RagLiveTests(unittest.IsolatedAsyncioTestCase):
             'JWT_SECRET_KEY': secrets.token_urlsafe(48), 'JWT_ISSUER': '', 'JWT_AUDIENCE': '',
             'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1',
         }))
-        self.storage = R2Storage()
+        self.storage, self.source_key = self.source_storage()
         self.addCleanup(self.storage.client.close)
-        self.source_key = os.environ['RAG_TEST_R2_OBJECT_KEY']
         parent, _, filename = self.source_key.rpartition('/')
         knowledge_prefix(parent + '/')
         safe_name(filename)
