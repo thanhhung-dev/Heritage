@@ -2,6 +2,7 @@
 import asyncio
 import os
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 from unittest.mock import patch
 
@@ -63,6 +64,15 @@ class PipelineApiTests(unittest.TestCase):
         self.assertIsNone(second["next_cursor"])
         self.assertEqual(len({r["id"] for r in first["items"] + second["items"]}), 3)
 
+    def test_duplicate_rename_is_a_conflict_and_preserves_revision(self):
+        first, second = self.pipeline("First"), self.pipeline("Second")
+        url = f'/api/admin/rag/pipelines/{second["id"]}'
+        result = self.client.patch(url, json={"expected_revision": 1, "name": first["name"]})
+        self.assertEqual(result.status_code, 409, result.text)
+        unchanged = self.client.get(url).json()
+        self.assertEqual(unchanged["name"], "Second")
+        self.assertEqual(unchanged["revision"], 1)
+
     def test_job_is_durable_scoped_and_duplicate_safe(self):
         row = self.pipeline()
         url = f'/api/admin/rag/pipelines/{row["id"]}'
@@ -88,6 +98,16 @@ class PipelineApiTests(unittest.TestCase):
         self.assertEqual(self.client.post(url, json={"document_ids": [self.document_id]}).status_code, 422)
         self.assertEqual(self.client.get(f"/api/admin/rag/jobs/{uuid4()}").status_code, 404)
         self.assertEqual(self.client.post("/api/admin/rag/pipelines", json={"name": "Invalid", "retrieval": {"top_k": 101}}).status_code, 422)
+
+    def test_simultaneous_reindex_triggers_persist_only_one_active_job(self):
+        row = self.pipeline()
+        url = f'/api/admin/rag/pipelines/{row["id"]}/reindex'
+        def trigger(_):
+            return self.client.post(url, json={"document_ids": [self.document_id]}).status_code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(trigger, range(2)))
+        self.assertEqual(sorted(results), [202, 409])
+        self.assertEqual(self.sql("SELECT COUNT(*) FROM rag_reindex_job WHERE active_slot=1")[0][0], 1)
 
     def test_every_operation_requires_current_admin(self):
         pipeline_id, job_id = uuid4(), uuid4()

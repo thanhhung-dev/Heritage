@@ -56,10 +56,14 @@ class PipelineService:
         if active:
             raise HTTPException(409, "Pipeline has an active reindex job.")
         values = data.model_dump(exclude_unset=True, exclude={"expected_revision"})
-        row = (await self.db.scalars(update(RagPipeline).where(
-            RagPipeline.id == pipeline_id, RagPipeline.revision == data.expected_revision,
-        ).values(**values, revision=RagPipeline.revision + 1).returning(RagPipeline),
-                                    execution_options={"populate_existing": True})).one_or_none()
+        try:
+            row = (await self.db.scalars(update(RagPipeline).where(
+                RagPipeline.id == pipeline_id, RagPipeline.revision == data.expected_revision,
+            ).values(**values, revision=RagPipeline.revision + 1).returning(RagPipeline),
+                                        execution_options={"populate_existing": True})).one_or_none()
+        except IntegrityError:
+            await self.db.rollback()
+            raise HTTPException(409, "Pipeline name already exists.") from None
         if row is None:
             raise HTTPException(409, "Pipeline revision changed; reload before editing.")
         await self.commit()

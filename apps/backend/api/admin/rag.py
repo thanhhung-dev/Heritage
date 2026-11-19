@@ -35,7 +35,7 @@ async def list_pipelines(cursor: UUID | None = None,
 
 @router.get("/pipelines/{pipeline_id}", response_model=PipelineOut)
 async def get_pipeline(pipeline_id: UUID, svc: PipelineService = Depends(service)):
-    return await svc.pipeline(str(pipeline_id))
+    return PipelineOut.model_validate(await svc.pipeline(str(pipeline_id)))
 
 
 @router.patch("/pipelines/{pipeline_id}", response_model=PipelineOut)
