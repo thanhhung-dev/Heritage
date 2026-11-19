@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Text, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -10,6 +10,10 @@ from apps.backend.db.base import Base
 
 class Scene(Base):
     __tablename__ = "scene"
+    __table_args__ = (
+        UniqueConstraint("heritage_id", "sequence", name="uq_scene_heritage_sequence"),
+        CheckConstraint("sequence >= -1", name="chk_scene_sequence"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
