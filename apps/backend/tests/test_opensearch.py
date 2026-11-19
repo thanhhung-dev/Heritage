@@ -19,6 +19,29 @@ def vectors(texts):
 
 
 class SearchTransportTests(unittest.IsolatedAsyncioTestCase):
+    async def test_pruning_is_scoped_and_preserves_new_chunks(self):
+        requests = []
+        def respond(request):
+            requests.append(request)
+            return httpx.Response(200, json={'deleted': 2})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            async with PassageStore(client=client) as store:
+                await store.prune_source('knowledge/history.txt', 'bucket', ['new-id'])
+                with self.assertRaises(ValueError):
+                    await store.prune_source('knowledge/history.txt', 'bucket', [])
+        self.assertEqual(len(requests), 1)
+        query = json.loads(requests[0].content)['query']['bool']
+        self.assertEqual(query['filter'], [{'term': {'object_key': 'knowledge/history.txt'}},
+                                           {'term': {'bucket': 'bucket'}}])
+        self.assertEqual(query['must_not'], [{'ids': {'values': ['new-id']}}])
+
+    async def test_pruning_conflicts_are_failures(self):
+        async with httpx.AsyncClient(transport=httpx.MockTransport(
+                lambda request: httpx.Response(200, json={'version_conflicts': 1}))) as client:
+            async with PassageStore(client=client) as store:
+                with self.assertRaises(SearchError):
+                    await store.prune_source('knowledge/history.txt', 'bucket', ['new-id'])
+
     async def test_partial_bulk_failure_is_reported_not_a_successful_import(self):
         def respond(request):
             if request.url.path == '/_bulk':

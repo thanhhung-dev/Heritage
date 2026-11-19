@@ -103,6 +103,18 @@ class PassageStore:
             if result.get('errors'):
                 raise SearchError('Một số passage chưa được index; sửa lỗi và import lại để hoàn tất batch.')
 
+    async def prune_source(self, object_key, bucket, keep_ids):
+        """Remove stale source chunks only after replacement chunks are indexed."""
+        if not object_key or not bucket or not keep_ids:
+            raise ValueError('Source pruning requires a bucket, object key and replacement IDs.')
+        result = await self._request('POST', f'/{self.index}/_delete_by_query',
+            params={'refresh': 'true'}, json={'query': {'bool': {
+                'filter': [{'term': {'object_key': object_key}}, {'term': {'bucket': bucket}}],
+                'must_not': [{'ids': {'values': list(keep_ids)}}],
+            }}})
+        if result.get('failures') or result.get('version_conflicts'):
+            raise SearchError('Không xóa hết chunk cũ; cần kiểm tra và chạy lại reindex.')
+
     async def search(self, question, vector, limit=20):
         threshold = float(os.environ.get('PASSAGE_MIN_SIMILARITY', '0.55'))
         if not math.isfinite(threshold) or not 0 <= threshold <= 1:
