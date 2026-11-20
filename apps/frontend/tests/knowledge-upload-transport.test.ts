@@ -61,6 +61,7 @@ test("invalid signing headers fail closed and frontend MIME policy follows backe
   assert.equal(uploadFileType(new File(["x"], "Việt Nam.MD", { type: "" })), "text/markdown");
   assert.equal(uploadFileType(new File(["{}"], "x.json")), "application/json");
   for (const file of [new File(["x"], "x.pdf"), new File([], "x.txt"), new File(["x"], "../x.md"),
+      new File(["x"], "md"), new File(["x"], "txt"), new File(["x"], "json"), new File(["x"], ".md"),
       { name: "x.txt", size: 10485761 }, new File(["x"], "việt.md")]) {
     assert.throws(() => uploadFileType(file));
   }

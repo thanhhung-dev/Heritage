@@ -11,7 +11,10 @@ export function uploadFileType(file: Pick<File, "name" | "size">): string {
       || /[/\\%?#":*<>|\p{Cc}\p{Cf}\p{Cs}]/u.test(name)) {
     throw new Error("Use an NFC Unicode filename without path, control characters or surrounding spaces.");
   }
-  const type = UPLOAD_MIME_TYPES[name.split(".").pop()?.toLowerCase() ?? ""];
+  // Match pathlib's suffix rule used by the backend: a bare `md` or a
+  // dotfile `.md` is not a Markdown extension.
+  const dot = name.lastIndexOf(".");
+  const type = dot > 0 ? UPLOAD_MIME_TYPES[name.slice(dot + 1).toLowerCase()] : undefined;
   if (!type) throw new Error("Choose a Markdown (.md), text (.txt) or JSON (.json) file.");
   if (!Number.isSafeInteger(file.size) || file.size <= 0 || file.size > DEFAULT_UPLOAD_LIMIT) {
     throw new Error("Choose a non-empty file up to 10 MiB (the default server limit).");
