@@ -10,6 +10,7 @@
   font-family: Roboto, Arial, sans-serif;
 }
 .content { min-width: 0; padding: 28px 24px; background: var(--knowledge-bg); }
+.dialog { background: transparent; }
 .icon { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-width: 16px; vertical-align: middle; }
 .icon img { display: block; max-width: none; }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: #000; white-space: nowrap; }
@@ -510,6 +511,8 @@
   .workspace { grid-template-columns: minmax(0, 1fr); }
   .folderBrowser { min-height: 0; max-height: 260px; overflow-y: auto; padding: 0 0 16px; border-right: 0; border-bottom: 0.5px solid var(--knowledge-border); }
   .stateCards, .metaTwoCols, .checklistGrid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .destinationBox > div { min-width: 0; }
+  .modalFooterBar { flex-wrap: wrap; }
   .queueTableHeader { display: none; }
   .queueTableRow { flex-direction: column; align-items: flex-start; }
   .queueColStatus, .queueColAction { width: 100%; justify-content: flex-start; }
