@@ -1,4 +1,3 @@
-import asyncio
 import os
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -6,7 +5,7 @@ from unittest.mock import patch
 
 import httpx
 from fastapi import FastAPI
-from sqlalchemy import select, text, update
+from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from apps.backend.api.knowledge_dependencies import library_db, library_storage

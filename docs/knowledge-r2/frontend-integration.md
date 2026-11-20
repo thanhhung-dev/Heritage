@@ -61,7 +61,7 @@ For creation, POST `/folders` with `{parentPrefix, folderName}` and refresh. For
 From repository root, with the existing backend virtualenv and test dependencies:
 
 ```text
-python -X utf8 -m unittest apps.backend.tests.test_knowledge_library_storage apps.backend.tests.test_knowledge_library_api -v
+python -X utf8 -m unittest apps.backend.tests.test_knowledge_library_storage apps.backend.tests.test_knowledge_library_api apps.backend.tests.test_knowledge_library_contract -v
 python -X utf8 -m unittest apps.backend.tests.test_knowledge_library_postgres -v
 python -X utf8 scripts/verify-knowledge-r2.py
 ```

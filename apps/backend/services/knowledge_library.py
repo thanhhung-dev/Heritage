@@ -9,7 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from apps.backend.models.knowledge_library import LibraryUpload
 from apps.backend.services.knowledge_policy import (
-    BUCKET, SESSION_SECONDS, STAGING, root_prefix, upload_key,
+    BUCKET, SESSION_SECONDS, STAGING, library_path, root_prefix, upload_key,
 )
 
 
@@ -72,7 +72,6 @@ class KnowledgeLibrary:
         if upload.bucket != BUCKET:
             raise HTTPException(409, "Invalid knowledge upload bucket.")
         # Scope changes must not allow an older session to escape the new scope.
-        from apps.backend.services.knowledge_policy import library_path
         library_path(upload.final_key)
         final = await run_in_threadpool(self.storage.maybe_head, upload.final_key)
         if final is not None:

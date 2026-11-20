@@ -116,6 +116,7 @@ class KnowledgeR2(R2Storage):
         try:
             raw = stream.read(maximum + 1)
         except (BotoCoreError, OSError):
+            log.warning("knowledge_content_read_failure operation=preview")
             raise HTTPException(503, "Cannot read knowledge content.") from None
         finally:
             stream.close()
@@ -198,6 +199,7 @@ class KnowledgeR2(R2Storage):
             except UnicodeDecodeError:
                 raise HTTPException(422, "Uploaded text must use valid UTF-8.") from None
             except (BotoCoreError, OSError):
+                log.warning("knowledge_content_read_failure operation=verify_upload")
                 raise HTTPException(503, "Cannot verify knowledge upload content.") from None
             finally:
                 stream.close()

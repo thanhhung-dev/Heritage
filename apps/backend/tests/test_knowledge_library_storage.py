@@ -1,7 +1,6 @@
 import io
 import os
 import unittest
-from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
