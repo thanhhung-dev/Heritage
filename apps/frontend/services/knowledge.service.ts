@@ -1,5 +1,6 @@
 import { apiFetch, ApiError, parseApiResponse, type ApiDependencies } from "../lib/api";
 import { getAccessToken } from "../lib/auth";
+import { checkedCompletion, checkedDownload, checkedFolder, checkedObject, checkedPreview, checkedTicket } from "../features/knowledge/response-policy";
 import type { KnowledgeApi, KnowledgeCompletion, KnowledgeDownload, KnowledgeFolder,
   KnowledgeObject, KnowledgePage, KnowledgePreview, KnowledgeUploadTicket } from "../features/knowledge/types";
 
@@ -29,12 +30,12 @@ export function createKnowledgeApi(deps: KnowledgeDependencies = {}): KnowledgeA
       if (continuationToken !== undefined) params.set("continuationToken", continuationToken);
       return request<KnowledgePage>(`/objects?${params}`, { signal });
     },
-    object: (key, signal) => request<KnowledgeObject>(`/object?${query(key)}`, { signal }),
-    preview: (key, signal) => request<KnowledgePreview>(`/preview?${query(key)}`, { signal }),
-    beginUpload: (data, signal) => post<KnowledgeUploadTicket>("/upload-url", data, signal),
-    complete: (uploadId, signal) => post<KnowledgeCompletion>(`/uploads/${encodeURIComponent(uploadId)}/complete`, undefined, signal),
-    download: (key, signal) => post<KnowledgeDownload>("/download-url", { key }, signal),
-    createFolder: (parentPrefix, folderName, signal) => post<KnowledgeFolder>("/folders", { parentPrefix, folderName }, signal),
+    object: async (key, signal) => checkedObject(await request<KnowledgeObject>(`/object?${query(key)}`, { signal }), key),
+    preview: async (key, signal) => checkedPreview(await request<KnowledgePreview>(`/preview?${query(key)}`, { signal }), key),
+    beginUpload: async (data, signal) => checkedTicket(await post<KnowledgeUploadTicket>("/upload-url", data, signal), data),
+    complete: async (uploadId, signal) => checkedCompletion(await post<KnowledgeCompletion>(`/uploads/${encodeURIComponent(uploadId)}/complete`, undefined, signal), uploadId),
+    download: async (key, signal) => checkedDownload(await post<KnowledgeDownload>("/download-url", { key }, signal), key),
+    createFolder: async (parentPrefix, folderName, signal) => checkedFolder(await post<KnowledgeFolder>("/folders", { parentPrefix, folderName }, signal), parentPrefix, folderName),
     async deleteObject(key, signal) {
       await request<void>("/objects", { method: "DELETE", body: JSON.stringify({ key }), signal });
     },

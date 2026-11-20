@@ -35,3 +35,13 @@ test("breadcrumbs, browser URLs and details retain exact scope and Unicode keys"
   const key = "scope/read & notes.md";
   assert.equal(new URL(documentHref("details", key), "https://frontend.test").searchParams.get("key"), key);
 });
+
+test("wrong folder responses and malformed listing rows fail instead of leaving navigation loading forever", async () => {
+  const api = createKnowledgeApi({ getToken: () => "synthetic", randomUUID: () => "test", fetchImpl: async () => Response.json(empty) });
+  await assert.rejects(readKnowledgePage(api, "other/"), /different folder/);
+  for (const page of [{ ...empty, files: [null] }, { ...empty, folders: [{ name: "nested", prefix: "other/nested/" }] },
+      { ...empty, files: [{ name: "x.md", key: "scope/x.md", size: -1, lastModified: "bad timestamp" }] }]) {
+    const invalid = createKnowledgeApi({ getToken: () => "synthetic", randomUUID: () => "test", fetchImpl: async () => Response.json(page) });
+    await assert.rejects(readKnowledgePage(invalid), /unexpected knowledge listing/);
+  }
+});

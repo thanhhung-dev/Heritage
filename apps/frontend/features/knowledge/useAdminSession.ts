@@ -10,9 +10,15 @@ export function useAdminSession(): AdminSession {
   const [session, setSession] = useState<AdminSession>({ status: "checking", user: null });
   useEffect(() => {
     const read = () => {
-      const token = getAccessToken(), user = getUser();
-      setSession({ user, status: !token ? "anonymous"
-        : typeof user?.role !== "string" || user.role.toLowerCase() !== "admin" ? "forbidden" : "ready" });
+      try {
+        const token = getAccessToken(), user = getUser();
+        setSession({ user, status: !token ? "anonymous"
+          : typeof user?.role !== "string" || user.role.toLowerCase() !== "admin" ? "forbidden" : "ready" });
+      } catch {
+        // Browsers can deny storage access. Render the sign-in state instead
+        // of crashing the entire Admin subtree from an effect.
+        setSession({ user: null, status: "anonymous" });
+      }
     };
     read();
     window.addEventListener(AUTH_CHANGE_EVENT, read);

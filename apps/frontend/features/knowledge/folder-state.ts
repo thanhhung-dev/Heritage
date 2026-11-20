@@ -1,9 +1,14 @@
 import { ApiError } from "../../lib/api";
 import type { KnowledgeApi, KnowledgePage } from "./types";
+import { isKnowledgeFile } from "./response-policy";
 
 export function checkedPage(page: KnowledgePage): KnowledgePage {
   if (page?.bucket !== "knowledge-heritage" || typeof page.prefix !== "string"
-      || !Array.isArray(page.folders) || !Array.isArray(page.files)
+      || (page.prefix !== "" && !page.prefix.endsWith("/"))
+      || !Array.isArray(page.folders) || !page.folders.every(folder => folder && typeof folder.name === "string"
+        && folder.name.length > 0 && folder.prefix === page.prefix + folder.name + "/" && !folder.name.includes("/"))
+      || !Array.isArray(page.files) || !page.files.every(file => isKnowledgeFile(file)
+        && file.key === page.prefix + file.name && !file.name.includes("/"))
       || !(page.nextContinuationToken === null || typeof page.nextContinuationToken === "string")) {
     throw new ApiError("The backend returned an unexpected knowledge listing.", 503);
   }
@@ -26,6 +31,9 @@ export async function readKnowledgePage(api: KnowledgeApi, prefix?: string, curs
   let page: KnowledgePage | null = null;
   while (true) {
     const next = checkedPage(await api.list({ prefix, continuationToken: cursor, signal }));
+    if (prefix !== undefined && next.prefix !== prefix) {
+      throw new ApiError("The backend returned a different folder. Refresh the listing.", 409);
+    }
     page = page ? appendKnowledgePage(page, next) : next;
     if (next.nextContinuationToken !== null && seen.has(next.nextContinuationToken)) {
       throw new ApiError("Pagination did not advance. Refresh the listing.", 503);

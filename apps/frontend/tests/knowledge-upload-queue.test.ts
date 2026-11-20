@@ -26,9 +26,10 @@ function fixture(overrides: { complete?: (id: string) => Response | Promise<Resp
     if (path.endsWith("/upload-url")) {
       calls.push("begin");
       if (overrides.begin) return overrides.begin(init?.signal);
-      const data = JSON.parse(String(init?.body)) as { folder: string; filename: string };
+      const data = JSON.parse(String(init?.body)) as { folder: string; filename: string; contentType: string };
       const ticket: KnowledgeUploadTicket = { uploadId: "id-" + ++count, objectKey: data.folder + data.filename,
-        uploadUrl: "https://r2.example.invalid/temporary", method: "PUT", requiredHeaders: { "If-None-Match": "*" },
+        uploadUrl: "https://r2.example.invalid/temporary", method: "PUT", requiredHeaders: {
+          "Content-Type": data.contentType, "If-None-Match": "*", "x-amz-meta-upload-id": "id-" + count },
         expiresIn: 300, sessionExpiresAt: "2099-01-01T00:00:00Z" };
       tickets.set(ticket.uploadId, ticket); return Response.json(ticket);
     }
@@ -138,7 +139,7 @@ test("expired URL with missing staging explains the reservation instead of creat
 test("cancelling session preparation learns its durable ID without sending bytes and retry reuses that ID", async () => {
   const begin = deferred<Response>(); let requestSignal: AbortSignal | null | undefined;
   const ticket: KnowledgeUploadTicket = { uploadId: "reserved-session", objectKey: "area/note.md", method: "PUT",
-    uploadUrl: "https://r2.example.invalid/temporary", requiredHeaders: { "If-None-Match": "*" }, expiresIn: 300,
+    uploadUrl: "https://r2.example.invalid/temporary", requiredHeaders: { "Content-Type": "text/markdown", "If-None-Match": "*", "x-amz-meta-upload-id": "reserved-session" }, expiresIn: 300,
     sessionExpiresAt: "2099-01-01T00:00:00Z" };
   let completionAttempts = 0; let puts = 0;
   const f = fixture({ begin: signal => { requestSignal = signal; return begin.promise; }, complete: id => {
