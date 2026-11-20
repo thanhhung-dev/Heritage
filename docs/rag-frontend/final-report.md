@@ -2,7 +2,7 @@
 
 ## A. Implemented screens
 
-Toàn bộ các màn hình theo Figma (`hyZGcP7zvicYLg3O7X2E2F`) đã được triển khai vào ứng dụng Next.js hiện có tại `apps/frontend/`:
+Các màn hình dưới đây đã được triển khai trong Next.js tại `apps/frontend/`, tham chiếu Figma `hyZGcP7zvicYLg3O7X2E2F`. Các phần thiếu API vẫn ở trạng thái chưa khả dụng; đây không phải xác nhận hoàn tất workflow review/ingestion.
 
 | Màn hình Figma | Node ID | Route ứng dụng | Component chính |
 |---|---|---|---|
@@ -45,7 +45,7 @@ Ba trạng thái **Storage State**, **Review State** và **Ingestion State** đ�
 1. **Working R2 storage features**:
    - Duyệt thư mục theo cấp thực tế từ bucket `knowledge-heritage` (không hardcode dữ liệu mẫu `heritage-documents-demo` hay thư mục giả).
    - Phân trang với `nextContinuationToken`, tự động bỏ qua trang rỗng do lọc marker/staging cho tới khi có dữ liệu hoặc `nextContinuationToken === null`, chống lặp token.
-   - Upload trực tiếp lên Cloudflare R2 qua `XMLHttpRequest` (`upload.onprogress`), gửi nguyên bản `File` và toàn bộ `requiredHeaders`, không dùng `FormData`, không gửi JWT tới R2, tách biệt `Uploading (99%)` → `Verifying upload` → `Stored in R2 (100%)`.
+   - Upload trực tiếp lên Cloudflare R2 qua `XMLHttpRequest` (`upload.onprogress`), gửi nguyên bản `File` và toàn bộ `requiredHeaders`, không dùng `FormData`, không gửi JWT tới R2. Tiến độ chuyển byte có thể đạt 100% khi vẫn đang xác minh; chỉ complete thành công mới chuyển sang `Stored in R2`.
    - Khôi phục phiên bền vững khi mất phản hồi PUT (thử `complete` với `uploadId` hiện có trước khi PUT lại, xử lý 404/409/410/412/422/503).
    - Xem metadata HEAD thật, preview UTF-8 an toàn (xử lý 413 oversized, 404, 422), tải xuống qua signed URL, tạo thư mục, xóa chính xác 1 key có hộp thoại xác nhận.
 2. **Working review/metadata features**:
@@ -60,23 +60,34 @@ Ba trạng thái **Storage State**, **Review State** và **Ingestion State** đ�
 
 ## E. Tests
 
-Các lệnh kiểm thử đã chạy thực tế:
+Kết quả rà soát ngày 21/11/2026 thay thế số liệu 19 test của báo cáo ban đầu:
 
-1. **Frontend Knowledge Unit & Integration Tests**:
-   - Lệnh: `./apps/frontend/node_modules/.bin/tsx --test apps/frontend/tests/knowledge-*.test.ts`
-   - Kết quả: **PASS (19/19 tests)** (`knowledge-api.test.ts`, `knowledge-folders.test.ts`, `knowledge-operations.test.ts`, `knowledge-upload-queue.test.ts`, `knowledge-upload-transport.test.ts`).
-2. **Frontend TypeScript Typecheck**:
-   - Lệnh: `./apps/frontend/node_modules/.bin/tsc -p apps/frontend/tsconfig.json --noEmit`
-   - Kết quả: **PASS (0 errors)**.
-3. **Frontend ESLint**:
-   - Lệnh: `npm --prefix apps/frontend run lint`
-   - Kết quả: **PASS (0 errors)** trên toàn bộ codebase.
-4. **Frontend Production Build**:
-   - Lệnh: `npm --prefix apps/frontend run build`
-   - Kết quả: **PASS** — biên dịch và tạo thành công toàn bộ 24 static/dynamic routes bao gồm `/admin/documents`, `/admin/documents/upload`, `/admin/documents/details`, `/admin/documents/metadata`, `/admin/documents/review`, `/admin/documents/ingestion`.
-5. **Backend Knowledge Storage Unit Tests**:
-   - Lệnh: `python -X utf8 -m unittest apps.backend.tests.test_knowledge_library_storage -v`
-   - Kết quả: **PASS (14/14 storage & offline migration tests)**.
+| Kiểm tra | Kết quả thực tế |
+|---|---|
+| 5 file `tests/knowledge-*.test.ts`, runner tsx chuẩn | **23/23 PASS**, khoảng 1 giây |
+| `tsc --noEmit --incremental --pretty false` | **PASS**, không lỗi kiểu |
+| Lint phạm vi Knowledge và Admin layout/review/ingestion | **PASS**, không warning/error trong phạm vi sửa |
+| Production build trên bản sao riêng trong `.catalog-test-runtime/knowledge-build-*`, dùng lại dependencies hiện có, không sao chép `.env*` | **PASS**, tạo 24 trang static; còn 2 warning `<img>` sẵn có ở `app/(tour)/content/[slug]/page.tsx` và khuyến nghị optional `sharp` |
+| Backend storage + API + contract trong lượt audit | **31/31 PASS** |
+| Backend PostgreSQL thực, database `test_*` loopback và schema dùng một lần | **5/5 PASS**, đã dọn tài nguyên test; không migrate database ứng dụng |
+| Edge/CDP + API/R2 fixture loopback | **PASS**: XHR, signed headers, đổi đích upload, complete, tạo folder, preview an toàn, xóa đúng key, 6 trang ở desktop/mobile, modal mobile, rỗng/503/401/403; không JavaScript exception |
+
+Lệnh FE chạy từ `apps/frontend`:
+
+```powershell
+.\node_modules\.bin\tsx.cmd --test tests/knowledge-api.test.ts tests/knowledge-folders.test.ts tests/knowledge-operations.test.ts tests/knowledge-upload-transport.test.ts tests/knowledge-upload-queue.test.ts
+.\node_modules\.bin\tsc.cmd --noEmit --incremental --pretty false
+```
+
+Lệnh nhóm BE chạy từ root, bằng Python của virtualenv hiện có:
+
+```powershell
+python -X utf8 -m unittest apps.backend.tests.test_knowledge_library_storage apps.backend.tests.test_knowledge_library_api apps.backend.tests.test_knowledge_library_contract -v
+```
+
+Runner TS trong sandbox mặc định từng gặp `uv_os_get_passwd ENOMEM`; đã kiểm tra bằng runner transpile tạm và sau đó chạy lại runner tsx chuẩn thành công. Những lần browser harness đầu tiên lỗi do trùng cổng fixture/cách chờ modal đóng đã được sửa; lượt cuối đạt với 19 ảnh trong `.catalog-test-runtime/rag-figma/acceptance/`. Xem [cách chạy lại browser test](../../apps/frontend/tests/browser/README.md).
+
+Không chạy lại toàn bộ regression ngoài phạm vi Knowledge, không ghi/xóa R2 production, không xác nhận CORS hay credentials của môi trường triển khai thật bằng fixture. Hướng dẫn test tay hiện hành: [manual-test-vi.md](manual-test-vi.md).
 
 ## F. Git history
 
@@ -111,12 +122,30 @@ Các lệnh kiểm thử đã chạy thực tế:
   27. `5b80d8a` — `style(rag-ui): redesign edit metadata and document details screens to match Figma specs`
   28. `cbd5cec` — `style(rag-ui): align pending review and ingestion screens with Figma structure`
 
+### Bổ sung sau khi rà soát lại FE/BE
+
+| Phát hiện và thay đổi | Commit chính | File/phạm vi |
+|---|---|---|
+| Staging lồng trong prefix cũ có thể bị lộ sau khi đổi scope thư viện | `6e68a4f` | `core/r2_library.py`, `services/knowledge_policy.py`, storage regression test |
+| Đuôi file, hủy khi đang tạo phiên, tiến độ byte | `d10a4c0`, `67fd480` | file policy, upload queue, transport/queue tests |
+| Xác thực DTO trả về và tách cache/queue theo tài khoản | `e448fe1` | response policy, service, provider/session, API/folder tests |
+| Upload modal chỉ chạy các file thuộc folder đang xem; retry/start một hàng không chạy file khác | `0f9926c`, `7c1f941` | upload queue, modal/workspace, regression test |
+| Theme tối kế thừa, logo bị cắt, menu sai khoảng cách, tìm kiếm sidebar chưa hoạt động | `5e79a98` | Admin layout, DesignIcon, shared CSS, library |
+| Modal centered, folder picker thật, responsive và bo góc | `967f113`, `b5e1d39` | UploadModal, shared CSS |
+| Không suy đoán Not run/Not indexed, region từ language/folder hoặc tên workspace | `7c1f941`, `4cfa60a` | library/details/metadata/review/ingestion/account |
+| Chuyển key vẫn có thể thấy dữ liệu cũ; dialog giữ lỗi cũ | `d8129cd`, `5998e70` | details/metadata/FileDialogs |
+| Đổi đích vẫn ở workspace; đúng nhóm hành động và tỷ lệ cột Figma | `64b36ac`, `9e6e62e` | FolderBrowser, upload page, details/metadata/CSS |
+| Browser acceptance tái chạy được, gồm desktop/mobile và XHR thật vào fixture | `9c34243` | `apps/frontend/tests/browser/` |
+
+Xem thay đổi đầy đủ bằng `git log a1444ba..HEAD --oneline` và `git diff a1444ba..HEAD --stat`. Không push hoặc deploy.
+
 ## G. Remaining issues & Deployment requirements
 
 1. **Backend Advanced RAG Contracts**: Khi backend bổ sung các endpoint lưu metadata biên tập, duyệt revision và quản lý job ingestion cho bucket `knowledge-heritage`, có thể mở khóa các nút đang đặt ở trạng thái `disabled` trên `EditDocumentMetadata`, `PendingReviewPage`, `IngestionPage` và `DocumentDetails`.
 2. **CORS khi triển khai**:
    - Backend FastAPI cần cho phép origin của Admin Frontend kèm header `Authorization`, `Content-Type`, `X-Correlation-ID`.
    - Bucket Cloudflare R2 `knowledge-heritage` cần cấu hình CORS cho phép phương thức `PUT`, `GET`, `HEAD` từ origin của Admin Frontend và cho phép các `AllowedHeaders` mà backend ký (`Content-Type`, `If-None-Match`, `x-amz-meta-*`). Tuyệt đối không dùng wildcard `*` kèm credentials.
+3. **Giới hạn so với Figma**: giữ bố cục, token và SVG gốc, nhưng thay dữ liệu demo bằng dữ liệu thật/chưa khả dụng. Không xác nhận pixel-identical. Chưa tạo màn job details có job thật vì thiếu API định danh/trạng thái job. Font Roboto dùng FontLoader hiện có, phụ thuộc khả năng tải Google Fonts của trình duyệt.
 
 ## H. Manual acceptance
 
@@ -131,9 +160,9 @@ Các bước kiểm thử nghiệm thu toàn bộ luồng trên giao diện Admi
 3. **Tạo thư mục mới**:
    - Bấm **Create folder**, nhập tên thư mục NFC Unicode hợp lệ, bấm xác nhận và kiểm tra danh sách tự làm mới.
 4. **Upload qua Modal và Trang Upload riêng**:
-   - Bấm **Upload documents** để mở Modal (hoặc **Upload workspace** để sang `/admin/documents/upload`).
+   - Bấm **Upload documents** để mở Modal (hoặc **Open full upload page** để sang `/admin/documents/upload`).
    - Chọn các file `.md`, `.txt`, `.json` (<= 10 MiB). Kiểm tra file sai định dạng (ví dụ `.pdf`) bị từ chối ngay với thông báo rõ ràng.
-   - Bấm **Upload to R2** / **Start upload**: quan sát trạng thái chuyển từ `Preparing` → `Uploading` (% tiến độ thực từ XHR) → `Verifying upload` → `Stored in R2` kèm key thực tế.
+   - Bấm **Upload N files** / **Start upload**: quan sát trạng thái chuyển từ `Preparing` → `Uploading` (% tiến độ thực từ XHR) → `Verifying upload` → `Stored in R2` kèm key thực tế.
 5. **Xem chi tiết, Preview, Tải xuống và Xóa (`/admin/documents/details?key=...`)**:
    - Từ bảng tài liệu hoặc hàng đợi upload vừa xong, bấm vào tên file hoặc **View** để mở trang chi tiết.
    - Kiểm tra 3 thẻ trạng thái độc lập (`Storage status: Stored in R2`, `Review status: Unavailable`, `Ingestion status: Unavailable`), bảng thuộc tính HEAD và khung preview văn bản UTF-8 an toàn.

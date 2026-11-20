@@ -17,3 +17,16 @@ Mốc bắt đầu: `99efb23`. Nhánh: `feature/rag-document-library-fe-r2`. Com
 | P11 | Tài liệu và nghiệm thu | DONE | Commit tài liệu cuối |
 
 Không chạy thao tác ghi/xóa trên dữ liệu R2 production. Thiếu API nâng cao được mô tả rõ, không dùng dữ liệu mẫu Figma làm dữ liệu sản phẩm.
+
+## Rà soát lại ngày 21/11/2026
+
+Đã hoàn tất audit trong phạm vi Knowledge Library FE/BE, sửa lỗi tìm được và kiểm tra lại giao diện. Những mục review/ingestion thiếu API vẫn là phụ thuộc chưa hoàn tất, không được đánh dấu là workflow production hoạt động.
+
+- BE: 31 test storage/API/contract và 5 test PostgreSQL đạt; đã sửa lộ staging khi đổi prefix.
+- FE: 23 test Knowledge đạt bằng runner chuẩn; typecheck và lint phạm vi sửa đạt.
+- Production build trên bản sao riêng đạt, tạo 24 trang static. Còn 2 warning ảnh có sẵn ở trang tour và khuyến nghị optional sharp.
+- Browser: XHR upload, folder picker/create, exact-key delete, preview an toàn, 6 trang desktop/mobile, modal mobile và rỗng/503/401/403 đều đạt; 19 ảnh trong `.catalog-test-runtime/rag-figma/acceptance/`.
+- Sửa theme kế thừa, SVG logo, nhóm nút/cột Figma, modal mobile; chặn dữ liệu cũ khi đổi key/tài khoản; giới hạn upload theo tập file được chọn; không suy đoán trạng thái review/ingestion.
+- Các commit tiếp tục từ `e448fe1`: `0f9926c`, `5e79a98`, `967f113`, `7c1f941`, `5998e70`, `d8129cd`, `64b36ac`, `9e6e62e`, `4cfa60a`, `9c34243`, `b5e1d39`.
+
+Chi tiết kết quả và giới hạn tại [final-report.md](final-report.md); nghiệm thu bằng [manual-test-vi.md](manual-test-vi.md); chạy lại fixture ở [browser README](../../apps/frontend/tests/browser/README.md).

@@ -32,3 +32,9 @@ Giữ Admin layout/router/auth hiện có. Dùng Ant Design Button/Input/Select/
 `heritage-documents-demo`, cây Vietnam/Central/Northern/Southern/Drafts, tên người dùng, file PDF/DOCX/CSV, số đếm, trạng thái, phần trăm và job trong thiết kế đều chỉ minh họa. Dữ liệu sản phẩm đến từ backend `knowledge-heritage`. Danh sách hiện không cung cấp review, ingestion, uploader hoặc số bản ghi tổng thể; không tự điền các giá trị đó. MIME upload phải theo backend `.md`, `.txt`, `.json`, không theo gợi ý PDF/DOCX/CSV trong Figma.
 
 Giữ bố cục các phần nâng cao nhưng hiển thị chưa khả dụng và khóa hành động khi thiếu API. Metadata HEAD của object vẫn hoạt động; không đồng nhất nó với metadata biên tập/revision. Xem [ma trận API](api-integration-matrix.md) và [báo cáo thiếu chức năng](feature-gap-report.md).
+
+## Kiểm chứng sau triển khai
+
+Ngày 21/11/2026 đã kiểm tra bằng Edge/CDP tại 1920×1200 và 390×844, với dữ liệu giả lập ngoài mã sản phẩm. Khung Library desktop đo được x=284, y=28, rộng 1612, cao 1144; modal rộng 720, nền trắng, centered và responsive. Đã sửa light theme bị ảnh hưởng bởi global dark theme, logo bị cắt do span inline, khoảng cách menu, nhóm hành động details và tỷ lệ cột 1.75:1.
+
+Có 19 ảnh kiểm tra trong `.catalog-test-runtime/rag-figma/acceptance/`, không commit dữ liệu fixture vào giao diện production. Sự khác biệt có chủ ý: không hiển thị demo user/file/job/status hoặc định dạng upload ngoài contract BE; các mục thiếu API hiển thị Unavailable. Kết quả không phải tuyên bố pixel-identical cho toàn bộ các trạng thái Figma.
