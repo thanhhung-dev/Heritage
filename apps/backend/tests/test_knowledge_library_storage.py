@@ -54,6 +54,24 @@ class KnowledgeStorageTests(unittest.TestCase):
         self.assert_status(422, new_name, "tài liệu.txt")
         self.assertEqual(new_name("Việt Nam.md"), "Việt Nam.md")
 
+    def test_staging_stays_private_when_library_scope_is_widened(self):
+        # A previous deployment may have stored staging below a narrower root.
+        # Widening to the bucket root must not make those unverified bytes public
+        # through any of the admin library object operations.
+        hidden = "old-scope/__knowledge_library_uploads__/session/unverified.md"
+        self.client.seed(hidden, b"unverified upload", "text/markdown")
+        self.client.seed("old-scope/published.md", b"published", "text/markdown")
+        nested = self.storage.list_objects("old-scope/")
+        self.assertEqual(nested["folders"], [])
+        self.assertEqual([row["key"] for row in nested["files"]], ["old-scope/published.md"])
+        for operation in (self.storage.object_info, self.storage.preview, self.storage.download, self.storage.delete_file):
+            with self.subTest(operation=operation.__name__):
+                self.assert_status(422, operation, hidden)
+        self.assert_status(422, self.storage.list_objects, "old-scope/__knowledge_library_uploads__/")
+        self.assert_status(422, self.storage.create_folder, "old-scope/", "__knowledge_library_uploads__")
+        self.assertIn(hidden, self.client.objects)
+        self.assertFalse(any(method == "delete" for method, _ in self.client.calls))
+
     def test_invalid_keys_names_scope_and_upload_policy(self):
         for key in ("", "/", "../x", "a/../x", "a//b", "a\\b", "https://x", "a%2fb", "a\x00b", "a\u202eb", "folder/"):
             with self.subTest(key=key):

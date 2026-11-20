@@ -13,8 +13,8 @@ from fastapi import HTTPException
 
 from apps.backend.core.r2 import R2Storage
 from apps.backend.services.knowledge_policy import (
-    BUCKET, STAGING, URL_SECONDS, UPLOAD_TYPES, library_path, new_name,
-    preview_limit, root_prefix,
+    BUCKET, URL_SECONDS, UPLOAD_TYPES, library_path, new_name,
+    preview_limit, staging_path,
 )
 
 log = logging.getLogger(__name__)
@@ -44,13 +44,12 @@ class KnowledgeR2(R2Storage):
         if cursor:
             options["ContinuationToken"] = cursor
         page = self.call("list_objects_v2", **options)
-        hidden = root_prefix() + STAGING
         return {"bucket": BUCKET, "prefix": prefix,
                 "folders": [{"name": row["Prefix"][len(prefix):].rstrip("/"), "prefix": row["Prefix"]}
-                            for row in page.get("CommonPrefixes", []) if row["Prefix"] != hidden],
+                            for row in page.get("CommonPrefixes", []) if not staging_path(row["Prefix"])],
                 "files": [{"name": row["Key"][len(prefix):], "key": row["Key"], "size": row["Size"],
                            "lastModified": row["LastModified"]} for row in page.get("Contents", [])
-                          if row["Key"] != prefix and not row["Key"].endswith("/")],
+                          if row["Key"] != prefix and not row["Key"].endswith("/") and not staging_path(row["Key"])],
                 "nextContinuationToken": page.get("NextContinuationToken")}
 
     def maybe_head(self, key):

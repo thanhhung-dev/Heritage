@@ -30,6 +30,11 @@ def preview_limit() -> int:
     return configured_limit("KNOWLEDGE_PREVIEW_MAX_BYTES", 128 * 1024, 1024**2)
 
 
+def staging_path(value: str) -> bool:
+    """Recognize reserved staging directories even after the allowed root changes."""
+    return STAGING.rstrip("/") in value.split("/")[:-1]
+
+
 def _path(value: str, *, prefix: bool) -> str:
     # Never decode, strip, normalize, or join a client key into a different key.
     try:
@@ -51,7 +56,7 @@ def _path(value: str, *, prefix: bool) -> str:
 def root_prefix() -> str:
     try:
         root = _path(os.environ.get("R2_KNOWLEDGE_LIBRARY_PREFIX", ""), prefix=True)
-        if STAGING in root:
+        if staging_path(root):
             raise ValueError
         return root
     except (HTTPException, ValueError):
@@ -61,7 +66,7 @@ def root_prefix() -> str:
 def library_path(value: str, *, prefix: bool = False) -> str:
     value = _path(value, prefix=prefix)
     root = root_prefix()
-    if not value.startswith(root) or value.startswith(root + STAGING):
+    if not value.startswith(root) or staging_path(value):
         raise HTTPException(422, "Path is outside the allowed library scope.")
     return value
 
