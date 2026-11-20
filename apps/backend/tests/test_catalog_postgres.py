@@ -3,8 +3,13 @@ from types import SimpleNamespace
 from datetime import datetime, timedelta, timezone
 import threading
 from uuid import uuid4
+import json
+import os
+import subprocess
+import sys
 
 from sqlalchemy import select, text
+from sqlalchemy.engine import make_url
 
 from apps.backend.models.heritage_classification import ClassificationJob, CulturalContent, HeritageClassification
 from apps.backend.services.classification_store import manual_override
@@ -145,3 +150,23 @@ class CatalogPostgresTests(fixtures.CatalogPostgresFixture):
         await run_next(self.factory)
         async with self.factory() as db:
             self.assertEqual((await db.scalars(select(HeritageClassification))).all(), [])
+
+    async def test_operator_backfill_cli_defaults_to_preview_and_rolls_back_its_own_run(self):
+        await self.heritage()
+        url = make_url(os.environ["CATALOG_TEST_DATABASE_URL"]).update_query_dict({"options": "-csearch_path=" + self.schema})
+        environment = {**os.environ, "DATABASE_URL": url.render_as_string(hide_password=False)}
+        async def command(*args):
+            result = await asyncio.to_thread(subprocess.run,
+                [sys.executable, "-X", "utf8", "scripts/classify-heritage.py", *args],
+                cwd=fixtures.ROOT, env=environment, capture_output=True, text=True, encoding="utf-8", timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return json.loads(result.stdout)
+        preview = await command()
+        self.assertTrue(preview["dry_run"])
+        self.assertEqual(preview["items"][0]["action"], "PREVIEW")
+        async with self.factory() as db:
+            self.assertEqual(await db.scalar(text("SELECT count(*) FROM heritage_classifications")), 0)
+        applied = await command("--apply")
+        self.assertEqual(applied["items"][0]["action"], "APPLIED")
+        restored = await command("--rollback", applied["run_id"])
+        self.assertEqual(restored["items"][0]["action"], "ROLLED_BACK")
