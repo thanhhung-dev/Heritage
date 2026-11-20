@@ -29,8 +29,15 @@ from apps.backend.models.interactive_highlight import InteractiveHighlight  # no
 from apps.backend.models.interactive_highlight_passage import InteractiveHighlightPassage  # noqa: F401
 from apps.backend.models.scene_highlight import SceneHighlight  # noqa: F401
 from apps.backend.models.chat import ChatSession, ChatMessage, ChatFeedback, Conversation, MessageCitation  # noqa: F401
+from apps.backend.models.knowledge import KnowledgeDocument, KnowledgeUpload  # noqa: F401
+from apps.backend.models.heritage_classification import (  # noqa: F401
+    HeritageCategory, CulturalContent, HeritageClassification, ContentRelation,
+    ClassificationJob, ClassificationAudit,
+)
 
 __all__ = [
+    "HeritageCategory", "CulturalContent", "HeritageClassification", "ContentRelation",
+    "ClassificationJob", "ClassificationAudit", "KnowledgeDocument", "KnowledgeUpload",
     # base
     "Base", "TimestampMixin", "AsyncSessionLocal", "engine", "DATABASE_URL",
     # admin / identity
