@@ -26,9 +26,9 @@ export default function PendingReviewPage() {
       </header>
 
       <div className={styles.contextBar}>
-        <span className={styles.contextBadge}>TRUTHFUL BACKEND STATE</span>
+        <span className={styles.contextBadge}>REVIEW UNAVAILABLE</span>
         <span className={styles.contextText}>
-          The mounted <code>/api/admin/knowledge</code> endpoints provide Cloudflare R2 storage operations only · Review transitions are not exposed
+          Review tools are not enabled for this library yet.
         </span>
       </div>
 
@@ -61,7 +61,7 @@ export default function PendingReviewPage() {
           <div className={styles.panel}>
             <div className={styles.panelHeading}>
               <h2>Submissions awaiting review</h2>
-              <p>0 revisions awaiting decision · Backend review endpoint not connected</p>
+              <p>The review queue is not available yet.</p>
             </div>
 
             <div className={styles.figmaTable} role="table" aria-label="Pending review submissions">

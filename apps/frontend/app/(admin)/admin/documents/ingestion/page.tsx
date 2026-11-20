@@ -29,9 +29,9 @@ export default function IngestionPage() {
       </header>
 
       <div className={styles.contextBar}>
-        <span className={styles.contextBadge}>TRUTHFUL BACKEND STATE</span>
+        <span className={styles.contextBadge}>INGESTION UNAVAILABLE</span>
         <span className={styles.contextText}>
-          No RAG ingestion job endpoints are attached to <code>/api/admin/knowledge</code> · R2 uploads never auto-index into the chatbot
+          Ingestion tools are not enabled for this library yet.
         </span>
       </div>
 
@@ -53,7 +53,7 @@ export default function IngestionPage() {
         <div className={styles.stateCard}>
           <div className={styles.stateTitle}>
             <span className={styles.stateLabel}>Chatbot availability</span>
-            <span className={styles.badges}>Not indexed</span>
+            <span className={styles.badges}>Unavailable</span>
           </div>
           <p className={styles.stateSummary}>Files are never marked as chatbot-ready without a real indexing response.</p>
         </div>
@@ -64,7 +64,7 @@ export default function IngestionPage() {
           <div className={styles.panel}>
             <div className={styles.panelHeading}>
               <h2>Ingestion jobs</h2>
-              <p>0 jobs · Fake processing progress and synthetic job records are never rendered</p>
+              <p>Job information is not available yet.</p>
             </div>
 
             <div className={styles.figmaTable} role="table" aria-label="Ingestion jobs">
@@ -97,19 +97,19 @@ export default function IngestionPage() {
             <div className={styles.metaStack}>
               <div className={styles.metaField}>
                 <span className={styles.metaFieldLabel}>1. Text extraction & validation</span>
-                <span className={styles.metaFieldValue}>Not run (R2 raw text preview is available in Document details)</span>
+                <span className={styles.metaFieldValue}>Unavailable · Text preview is available in Document details</span>
               </div>
               <div className={styles.metaField}>
                 <span className={styles.metaFieldLabel}>2. Semantic chunking</span>
-                <span className={styles.metaFieldValue}>Not run</span>
+                <span className={styles.metaFieldValue}>Unavailable</span>
               </div>
               <div className={styles.metaField}>
                 <span className={styles.metaFieldLabel}>3. BGE-M3 embedding generation</span>
-                <span className={styles.metaFieldValue}>Not run</span>
+                <span className={styles.metaFieldValue}>Unavailable</span>
               </div>
               <div className={styles.metaField}>
                 <span className={styles.metaFieldLabel}>4. Search index publication</span>
-                <span className={styles.metaFieldValue}>Not run</span>
+                <span className={styles.metaFieldValue}>Unavailable</span>
               </div>
             </div>
             <div>
