@@ -16,6 +16,7 @@
 .brand strong { font-family: Poppins, Arial, sans-serif; font-size: 16px; font-weight: 900; }
 .logoSlot { position: relative; width: 20px; height: 20px; overflow: hidden; flex: 0 0 auto; }
 .logoNative {
+  display: block;
   width: 64px;
   height: 64px;
   mask-image: url('/knowledge-icons/library-Group.svg');
@@ -491,6 +492,7 @@
 .chunkColAction { width: 70px; flex-shrink: 0; }
 .chrome :global(.ant-menu-item), .chrome :global(.ant-menu-submenu-title) { font-size: 14px; }
 .chrome :global(.ant-btn), .page :global(.ant-btn) { box-shadow: none; }
+.chrome :global(.ant-btn-primary:not(:disabled)), .dialog :global(.ant-btn-primary:not(:disabled)) { color: #fff !important; }
 .chrome :global(.ant-input), .chrome :global(.ant-select-selector) { box-shadow: none; }
 .page a:focus-visible, .page button:focus-visible, .chrome a:focus-visible, .chrome button:focus-visible { outline: 2px solid #615f57; outline-offset: 3px; }
 @media (max-width: 1200px) {

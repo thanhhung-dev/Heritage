@@ -14,6 +14,7 @@ import {
   Typography,
   Breadcrumb,
   App as AntApp,
+  theme as antdTheme,
 } from 'antd';
 import {
   DashboardOutlined,
@@ -177,6 +178,7 @@ export default function AdminLayout({
   return (
     <ConfigProvider
       theme={{
+        ...(libraryMode ? { inherit: false, algorithm: antdTheme.defaultAlgorithm } : {}),
         token: {
           colorPrimary: adminColors.primary,
           colorInfo: adminColors.primary,
@@ -188,7 +190,8 @@ export default function AdminLayout({
           colorBorder: adminColors.border,
           colorBgLayout: adminColors.background,
           borderRadius: libraryMode ? 12 : 8,
-          ...(libraryMode ? { controlHeight: 32, colorBgContainer: '#fff' } : {}),
+          ...(libraryMode ? { controlHeight: 32, colorBgContainer: '#fff',
+            colorTextDisabled: '#928f86', colorBgContainerDisabled: '#f8f7f3' } : {}),
           fontFamily: adminFont,
         },
         components: {
@@ -196,10 +199,16 @@ export default function AdminLayout({
             itemSelectedBg: libraryMode ? 'rgba(0,0,0,.06)' : 'rgba(255, 155, 45, 0.15)',
             itemSelectedColor: adminColors.primary,
             itemBorderRadius: 8,
+            ...(libraryMode ? { itemHeight: 32, itemMarginBlock: 2, itemMarginInline: 4,
+              itemColor: '#201f1c', itemDisabledColor: '#928f86', groupTitleColor: '#928f86' } : {}),
           },
           Button: {
             fontWeight: libraryMode ? 400 : 600,
           },
+          ...(libraryMode ? {
+            Modal: { contentBg: '#fff', headerBg: '#fff', titleColor: '#201f1c', borderRadiusLG: 14 },
+            Tree: { nodeSelectedBg: 'rgba(0,0,0,.06)', nodeSelectedColor: '#201f1c' },
+          } : {}),
         },
       }}
     >
@@ -241,7 +250,7 @@ export default function AdminLayout({
                 {libraryMode ? <>
                   {!collapsed && <Link href="/admin" aria-label="Heritage Admin"><KnowledgeBrand /></Link>}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {!collapsed && <span aria-hidden="true" className={knowledgeStyles.chromeToggle}><DesignIcon name="library-SearchIcon" /></span>}
+                    {!collapsed && <Link href="/admin/documents?focus=search" aria-label="Search documents" className={knowledgeStyles.chromeToggle}><DesignIcon name="library-SearchIcon" /></Link>}
                     <button type="button" className={knowledgeStyles.chromeToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}><DesignIcon name="library-CollapseSidebar" /></button>
                   </div>
                 </> : collapsed ? (

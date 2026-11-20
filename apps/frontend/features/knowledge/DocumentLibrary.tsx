@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { App, Dropdown, Tooltip } from "antd";
@@ -50,6 +50,8 @@ export function DocumentLibrary() {
   const listing = useKnowledgeFolder(query.has("prefix") ? query.get("prefix")! : undefined);
 
   const [search, setSearch] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (query.get("focus") === "search") searchInput.current?.focus(); }, [query]);
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -133,6 +135,7 @@ export function DocumentLibrary() {
           <div className={styles.toolbar}>
             <input
               type="search"
+              ref={searchInput}
               className={styles.searchInput}
               value={search}
               onChange={e => {
