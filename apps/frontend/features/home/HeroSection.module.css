@@ -316,3 +316,13 @@
     padding: 20px 20px 20px 24px;
   }
 }
+
+/* The absence of curated experiences must not reserve a full triptych canvas. */
+.heroSection.emptyHero { height: auto; min-height: 0; max-height: none; padding-bottom: 48px; }
+.emptyHero .heroLayout { height: auto; flex: none; width: 100%; }
+.emptyHero .heroTile { flex: none; width: 100%; padding: 16px clamp(24px, 3.5vw, 48px); }
+.emptyHero .hp_hero_headline_area { width: 100%; max-width: 820px; }
+@media (max-width: 640px) {
+  .emptyHero .hp_hero_headline_area { text-align: left; }
+  .emptyHero .heroTile { align-items: flex-start; }
+}

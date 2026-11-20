@@ -138,6 +138,7 @@ export function HeroSection({
         styles.hp_hero_ready,
         triptychStyles.hp_hero_triptych,
         triptychStyles.hp_hero_ready,
+        !loading && displayItems.length === 0 ? styles.emptyHero : "",
         className,
       ]
         .filter(Boolean)
