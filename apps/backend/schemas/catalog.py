@@ -3,15 +3,17 @@ from typing import Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, StrictBool, TypeAdapter, field_validator, model_validator
 
 from apps.backend.services.heritage_taxonomy import validate_categories
 
 EntityType = Literal["place", "artifact", "collection", "event", "person", "practice"]
 SectionKey = Literal["featured", "artifacts_treasures", "people_traditions", "festivals_practices", "artifact_collection"]
+_http_url = TypeAdapter(AnyHttpUrl)
 
 
 def safe_url(value):
+    _http_url.validate_python(value)
     parsed = urlsplit(value)
     if (any(ord(c) < 32 for c in value) or parsed.scheme not in {"http", "https"}
             or not parsed.hostname or parsed.username or parsed.password or parsed.fragment):
