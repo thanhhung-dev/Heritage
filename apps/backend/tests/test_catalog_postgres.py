@@ -2,6 +2,7 @@ import asyncio
 from types import SimpleNamespace
 from datetime import datetime, timedelta, timezone
 import threading
+from uuid import uuid4
 
 from sqlalchemy import select, text
 
@@ -124,3 +125,23 @@ class CatalogPostgresTests(fixtures.CatalogPostgresFixture):
             job = (await db.scalars(select(ClassificationJob))).one()
             self.assertEqual((job.status, job.attempts), ("DONE", 2))
             self.assertEqual(await db.scalar(text("SELECT count(*) FROM heritage_classifications")), 2)
+
+    async def test_only_linked_reviewed_identity_evidence_is_used_and_withdrawal_requeues(self):
+        await self.heritage("Subject A", "")
+        entity_id = uuid4()
+        async with self.engine.begin() as conn:
+            await conn.execute(text("""INSERT INTO entity(id,name,type,summary,entry_status,source_document_id)
+                VALUES(:id,'Subject A','place','Subject A là một bảo tàng được xác minh.','reviewed',:source)"""),
+                {"id": entity_id, "source": uuid4()})
+            await conn.execute(text("UPDATE heritage_content SET knowledge_entity_id=:id"), {"id": entity_id})
+        await run_next(self.factory)
+        async with self.factory() as db:
+            self.assertEqual((await db.scalars(select(HeritageClassification.category_key))).all(), ["museum"])
+        async with self.engine.begin() as conn:
+            await conn.execute(text("UPDATE entity SET entry_status='withdrawn' WHERE id=:id"), {"id": entity_id})
+        async with self.factory() as db:
+            content = (await db.scalars(select(CulturalContent))).one()
+            self.assertEqual(content.classification_status, "pending")
+        await run_next(self.factory)
+        async with self.factory() as db:
+            self.assertEqual((await db.scalars(select(HeritageClassification))).all(), [])

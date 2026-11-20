@@ -5,6 +5,7 @@ from anyio import CancelScope
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
+from sqlalchemy import event
 
 from apps.backend.api import admin_catalog, catalog
 from apps.backend.core import security
@@ -116,3 +117,44 @@ class CatalogApiTests(fixtures.CatalogPostgresFixture):
         async with self.engine.begin() as conn:
             await conn.execute(text("UPDATE account SET is_active=false WHERE id=1"))
         self.assertEqual(self.client.get("/api/admin/catalog/contents", headers=self.admin).status_code, 401)
+
+    async def test_featured_requires_editorial_opt_in_media_and_a_real_tour_reference(self):
+        heritage_id = await self.heritage("Chùa kiểm thử")
+        await self.drain()
+        async with self.factory() as db:
+            content_id = await db.scalar(select(CulturalContent.id))
+        result = self.client.patch(f"/api/admin/catalog/contents/{content_id}", headers=self.admin,
+            json={"expected_revision": 1, "is_featured": True})
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(self.client.get("/api/catalog/sections/featured").json()["items"], [])
+        async with self.engine.begin() as conn:
+            scene_id = await conn.scalar(text("INSERT INTO scene(heritage_id,sequence,title) VALUES(:id,0,'Scene') RETURNING id"), {"id": heritage_id})
+            await conn.execute(text("INSERT INTO model_asset(scene_id,file_url) VALUES(:id,'models/test.glb')"), {"id": scene_id})
+        self.assertEqual(len(self.client.get("/api/catalog/sections/featured").json()["items"]), 1)
+        async with self.factory() as db:
+            source = (await db.execute(text("SELECT publish_state,card_image_url FROM heritage WHERE id=:id"), {"id": heritage_id})).one()
+            self.assertEqual(tuple(source), ("published", "images/test.jpg"))
+
+    async def test_medium_confidence_is_review_only_and_queries_do_not_grow_per_card(self):
+        await self.heritage("Unknown subject")
+        from apps.backend.services.heritage_classifier import Prediction
+        await run_next(self.factory, classifier=lambda *args, **kwargs: Prediction(
+            "place", ("museum",), "museum", 0.7, "Uncertain evidence", "semantic"))
+        review = self.client.get("/api/admin/catalog/contents?status=review", headers=self.admin)
+        self.assertEqual(len(review.json()["items"]), 1)
+        self.assertEqual(self.client.get("/api/catalog/contents").json()["items"], [])
+        for _ in range(12):
+            self.create()
+        await self.drain()
+        statements = []
+        def capture(_connection, _cursor, statement, _parameters, _context, _many):
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+        event.listen(self.engine.sync_engine, "before_cursor_execute", capture)
+        try:
+            result = self.client.get("/api/catalog/sections?limit=8")
+        finally:
+            event.remove(self.engine.sync_engine, "before_cursor_execute", capture)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(len(result.json()["artifact_collection"]["items"]), 8)
+        self.assertLessEqual(len(statements), 10)
