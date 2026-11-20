@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Input, Modal } from "antd";
 import { ApiError } from "../../lib/api";
 import { knowledgeApi, knowledgeError } from "../../services/knowledge.service";
@@ -10,6 +10,7 @@ import styles from "./knowledge.module.css";
 export function CreateFolderDialog({ prefix, open, close, created }: { prefix: string; open: boolean; close: () => void; created: () => void }) {
   const [name, setName] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const lock = useRef(false);
+  useEffect(() => { if (open) { setName(""); setError(""); } }, [open, prefix]);
   async function submit() {
     if (lock.current) return;
     if (!name.trim()) { setError("Enter a folder name."); return; }
@@ -31,6 +32,7 @@ export function CreateFolderDialog({ prefix, open, close, created }: { prefix: s
 
 export function DeleteFileDialog({ file, close, deleted }: { file: KnowledgeFile | null; close: () => void; deleted: () => void }) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const lock = useRef(false);
+  useEffect(() => { setError(""); }, [file?.key]);
   async function remove() {
     if (!file || lock.current) return;
     lock.current = true; setBusy(true); setError("");
