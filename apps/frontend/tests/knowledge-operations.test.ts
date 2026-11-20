@@ -75,11 +75,11 @@ test("upload progress formatting and state labels keep 100% transfer distinct fr
     loaded: 5,
     total: 5,
   };
-  assert.equal(uploadPercent(uploadingEntry), 99);
+  assert.equal(uploadPercent(uploadingEntry), 100);
   assert.equal(uploadStateLabel("uploading"), "Uploading");
   assert.equal(uploadStateLabel("verifying"), "Verifying upload");
   assert.equal(uploadStateLabel("stored"), "Stored in R2");
-  assert.match(formatEntryProgress(uploadingEntry), /99%/);
+  assert.match(formatEntryProgress(uploadingEntry), /100%/);
 
   const storedEntry: UploadEntry = { ...uploadingEntry, state: "stored" };
   assert.equal(uploadPercent(storedEntry), 100);

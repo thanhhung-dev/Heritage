@@ -13,7 +13,7 @@ async function settle(queue: KnowledgeUploadQueue) {
   }
   assert.fail("Queue did not reach a terminal state");
 }
-function fixture(overrides: { complete?: (id: string) => Response | Promise<Response>; begin?: () => Response } = {}) {
+function fixture(overrides: { complete?: (id: string) => Response | Promise<Response>; begin?: (signal?: AbortSignal | null) => Response | Promise<Response> } = {}) {
   const calls: string[] = []; let count = 0;
   const tickets = new Map<string, KnowledgeUploadTicket>();
   const result = (id: string): KnowledgeCompletion => {
@@ -25,7 +25,7 @@ function fixture(overrides: { complete?: (id: string) => Response | Promise<Resp
     const path = new URL(String(url)).pathname;
     if (path.endsWith("/upload-url")) {
       calls.push("begin");
-      if (overrides.begin) return overrides.begin();
+      if (overrides.begin) return overrides.begin(init?.signal);
       const data = JSON.parse(String(init?.body)) as { folder: string; filename: string };
       const ticket: KnowledgeUploadTicket = { uploadId: "id-" + ++count, objectKey: data.folder + data.filename,
         uploadUrl: "https://r2.example.invalid/temporary", method: "PUT", requiredHeaders: { "If-None-Match": "*" },
@@ -133,4 +133,35 @@ test("expired URL with missing staging explains the reservation instead of creat
   assert.equal(queue.getSnapshot()[0].state, "failed");
   assert.match(queue.getSnapshot()[0].error ?? "", /session expires/);
   assert.equal(f.calls.filter(c => c === "begin").length, 1); queue.dispose();
+});
+
+test("cancelling session preparation learns its durable ID without sending bytes and retry reuses that ID", async () => {
+  const begin = deferred<Response>(); let requestSignal: AbortSignal | null | undefined;
+  const ticket: KnowledgeUploadTicket = { uploadId: "reserved-session", objectKey: "area/note.md", method: "PUT",
+    uploadUrl: "https://r2.example.invalid/temporary", requiredHeaders: { "If-None-Match": "*" }, expiresIn: 300,
+    sessionExpiresAt: "2099-01-01T00:00:00Z" };
+  let completionAttempts = 0; let puts = 0;
+  const f = fixture({ begin: signal => { requestSignal = signal; return begin.promise; }, complete: id => {
+    assert.equal(id, ticket.uploadId);
+    if (++completionAttempts === 1) return new Response("{}", { status: 404 });
+    return Response.json({ uploadId: id, status: "stored", object: { bucket: "knowledge-heritage", key: ticket.objectKey,
+      name: "note.md", size: 5, contentType: "text/markdown", metadata: {}, etag: '"test"', lastModified: "2026-11-20T00:00:00Z" } });
+  } });
+  const queue = new KnowledgeUploadQueue(f.api, async () => { puts++; });
+  const file = new File(["hello"], "note.md");
+  queue.add([file], "area/"); queue.start();
+  const id = queue.getSnapshot()[0].id;
+  assert.equal(queue.getSnapshot()[0].state, "preparing");
+  assert.equal(queue.cancel(id), true);
+  assert.equal(requestSignal?.aborted, false);
+  assert.equal(queue.add([file], "area/").length, 1);
+  begin.resolve(Response.json(ticket));
+  for (let i = 0; i < 100 && !queue.getSnapshot()[0].error?.includes("Retry checks"); i++) await new Promise(r => setTimeout(r, 1));
+  assert.equal(puts, 0);
+  assert.equal(queue.getSnapshot()[0].state, "cancelled");
+  queue.retry(id); await settle(queue);
+  assert.equal(queue.getSnapshot()[0].state, "stored");
+  assert.equal(puts, 1);
+  assert.deepEqual(f.calls, ["begin", "complete:reserved-session", "complete:reserved-session"]);
+  queue.dispose();
 });

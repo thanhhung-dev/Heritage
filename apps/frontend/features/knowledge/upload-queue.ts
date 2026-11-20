@@ -32,7 +32,7 @@ export function uploadStateLabel(state: UploadState): string {
 export function uploadPercent(entry: Pick<UploadEntry, "state" | "loaded" | "total">): number {
   if (entry.state === "stored" || entry.state === "verifying") return 100;
   if (entry.total <= 0) return 0;
-  return Math.min(99, Math.max(0, Math.round((entry.loaded / entry.total) * 100)));
+  return Math.min(100, Math.max(0, Math.round((entry.loaded / entry.total) * 100)));
 }
 
 export function formatEntryProgress(entry: Pick<UploadEntry, "state" | "loaded" | "total">): string {
@@ -47,6 +47,7 @@ export class KnowledgeUploadQueue {
   private listeners = new Set<() => void>();
   private transfers = new Map<string, SignedTransfer>();
   private active = new Map<string, AbortController>();
+  private cancelled = new Set<string>();
   private started = false;
   private disposed = false;
   private readonly concurrency: number;
@@ -71,7 +72,7 @@ export class KnowledgeUploadQueue {
         const contentType = uploadFileType(file);
         // Repeated clicks/selections must not create duplicate active sessions.
         if ([...this.entries, ...added].some(entry => entry.folder === folder && entry.file.name === file.name
-            && !["cancelled", "failed"].includes(entry.state))) {
+            && (this.active.has(entry.id) || !["cancelled", "failed"].includes(entry.state)))) {
           errors.push(`${file.name}: already in this upload queue.`); continue;
         }
         added.push({ id: this.options.id?.() ?? crypto.randomUUID(), file, folder, contentType,
@@ -84,20 +85,28 @@ export class KnowledgeUploadQueue {
   start() { if (!this.disposed) { this.started = true; this.pump(); } }
   retry(id: string) {
     if (this.active.has(id) || !this.entries.some(entry => entry.id === id && ["failed", "cancelled"].includes(entry.state))) return;
+    this.cancelled.delete(id);
     this.update(id, { state: "queued", error: undefined });
     this.start();
   }
   cancel(id: string): boolean {
     const entry = this.entries.find(row => row.id === id);
     if (!entry || !["queued", "preparing", "uploading"].includes(entry.state)) return false;
-    this.update(id, { state: "cancelled", error: "Cancelled. A retry checks the existing session before uploading again." });
-    this.active.get(id)?.abort();
+    this.cancelled.add(id);
+    this.update(id, { state: "cancelled", error: entry.state === "preparing"
+      ? "Cancelled. Waiting for the upload session response; no file will be sent."
+      : "Cancelled. A retry checks the existing session before uploading again." });
+    // Session creation is durable: aborting its response can lose the only
+    // uploadId while the backend still reserves the filename. Learn the ticket
+    // first, keep it for recovery, and never start the cancelled file's PUT.
+    if (entry.state === "uploading") this.active.get(id)?.abort();
     return true;
   }
   remove(id: string) {
     if (this.active.has(id)) return;
     this.entries = this.entries.filter(entry => entry.id !== id);
     this.transfers.delete(id);
+    this.cancelled.delete(id);
     this.emit();
   }
   private pump() {
@@ -149,18 +158,21 @@ export class KnowledgeUploadQueue {
         transfer = { ticket, urlExpiresAt: (this.options.now?.() ?? Date.now()) + ticket.expiresIn * 1000 - 5000 };
         this.transfers.set(entry.id, transfer);
       }
-      if (signal.aborted) throw new DOMException("Upload cancelled", "AbortError");
+      if (signal.aborted || this.cancelled.has(entry.id)) throw new DOMException("Upload cancelled", "AbortError");
       this.update(entry.id, { state: "uploading", error: undefined, loaded: 0 });
       await this.directUpload(transfer.ticket, entry.file, signal, progress => {
         if (!signal.aborted) this.update(entry.id, { loaded: Math.min(progress.loaded, entry.file.size), total: progress.total });
       });
-      if (signal.aborted) throw new DOMException("Upload cancelled", "AbortError");
+      if (signal.aborted || this.cancelled.has(entry.id)) throw new DOMException("Upload cancelled", "AbortError");
       this.update(entry.id, { state: "verifying", loaded: entry.file.size });
       const result = await this.api.complete(transfer.ticket.uploadId, signal);
       this.stored(entry, transfer, result);
     } catch (error) {
-      this.update(entry.id, { state: signal.aborted ? "cancelled" : "failed",
-        error: signal.aborted ? "Cancelled. Retry checks the existing upload session first."
+      const wasCancelled = signal.aborted || this.cancelled.has(entry.id);
+      this.update(entry.id, { state: wasCancelled ? "cancelled" : "failed",
+        error: wasCancelled ? this.transfers.has(entry.id)
+          ? "Cancelled. Retry checks the existing upload session first."
+          : "Cancelled before a session was confirmed. If retry reports a conflict, wait for that session to expire."
           : error instanceof R2TransferError ? error.message : knowledgeError(error) });
     }
   }
@@ -173,5 +185,6 @@ export class KnowledgeUploadQueue {
     }
     this.listeners.clear();
     this.transfers.clear();
+    this.cancelled.clear();
   }
 }
