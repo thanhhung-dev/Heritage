@@ -73,16 +73,6 @@ export interface HeroSectionProps {
 
 const LOCAL_FALLBACK_IMAGE = "/images/cung-an-dinh.jpg";
 
-/**
- * Ba di sản được ưu tiên lên hero, theo thứ tự. Chỉ là *thứ tự chọn* trong danh
- * sách lấy từ API — không kèm dữ liệu nào, để hero luôn phản ánh DB.
- */
-export const FEATURED_HERO_SLUGS = [
-  ["lang-tu-duc", "tu-duc-tomb"],
-  ["cung-an-dinh", "an-dinh-palace"],
-  ["ngu-hanh-son", "marble-mountains"],
-] as const;
-
 export function getCardImageUrl(item?: TriptychCardData): string {
   if (!item) return LOCAL_FALLBACK_IMAGE;
   return item.splash_image_url || item.card_image_url || LOCAL_FALLBACK_IMAGE;
@@ -95,25 +85,14 @@ export function selectFeaturedTriptychItems(
     return [];
   }
 
-  const picked: TriptychCardData[] = [];
-  for (let i = 0; i < FEATURED_HERO_SLUGS.length; i++) {
-    const slugCandidates = FEATURED_HERO_SLUGS[i];
-    const matched = sourceItems.find((item) =>
-      (slugCandidates as readonly string[]).includes(item.slug)
-    );
-    // Không khớp slug ưu tiên: chỉ lấy theo đúng thứ tự khi API trả về đúng 3 mục,
-    // tránh gán nhầm di sản của vị trí khác.
-    const item = matched ?? (sourceItems.length === 3 ? sourceItems[i] : undefined);
-    if (!item) continue;
-    picked.push({
+  // Membership/ranking comes from the backend's reviewed featured placement.
+  // Taking three hero slots is a layout limit, never a classification rule.
+  return sourceItems.slice(0, 3).map((item) => ({
       ...item,
       card_image_url: item.card_image_url || item.splash_image_url,
       splash_image_url: item.splash_image_url || item.card_image_url,
       href: item.href || `/content/${item.slug}`,
-    });
-  }
-
-  return picked.slice(0, 3);
+    }));
 }
 
 export function HeroSection({
