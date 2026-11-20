@@ -1,7 +1,10 @@
 """Knowledge operations on the existing R2 adapter and its SDK connection."""
 import json
+import codecs
+import hashlib
 import logging
 import os
+from tempfile import SpooledTemporaryFile
 from pathlib import PurePosixPath
 from urllib.parse import quote
 
@@ -155,3 +158,53 @@ class KnowledgeR2(R2Storage):
         self.call("head_object", Key=key)
         # Exactly one key. Never use DeleteObjects, prefix scans or marker deletion.
         self.call("delete_object", Key=key)
+
+    @staticmethod
+    def verify_identity(upload, head, *, published=False):
+        if (head["ContentLength"] != upload.size_bytes
+                or head.get("ContentType") != upload.content_type
+                or head.get("ContentEncoding")
+                or head.get("Metadata", {}).get("upload-id") != upload.id):
+            raise HTTPException(422, "Object size, type or identity does not match this upload session.")
+        if published and not head.get("Metadata", {}).get("content-sha256"):
+            raise HTTPException(409, "Destination was not verified by this upload session.")
+
+    def publish_verified(self, upload):
+        """Bounded disk spool; validate all bytes before a create-only destination PUT."""
+        head = self.call("head_object", Key=upload.staging_key)
+        self.verify_identity(upload, head)
+        stream = self.call("get_object", Key=upload.staging_key, IfMatch=head["ETag"])["Body"]
+        with SpooledTemporaryFile(max_size=1024**2, mode="w+b") as spool:
+            decoder, digest, total = codecs.getincrementaldecoder("utf-8")(), hashlib.sha256(), 0
+            try:
+                while True:
+                    chunk = stream.read(min(65536, upload.size_bytes - total + 1))
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > upload.size_bytes:
+                        raise HTTPException(422, "Uploaded content exceeds the declared size.")
+                    text = decoder.decode(chunk)
+                    if any(ord(c) < 32 and c not in "\r\n\t" for c in text):
+                        raise HTTPException(422, "Uploaded text contains binary control bytes.")
+                    digest.update(chunk)
+                    spool.write(chunk)
+                decoder.decode(b"", final=True)
+            except UnicodeDecodeError:
+                raise HTTPException(422, "Uploaded text must use valid UTF-8.") from None
+            except (BotoCoreError, OSError):
+                raise HTTPException(503, "Cannot verify knowledge upload content.") from None
+            finally:
+                stream.close()
+            if total != upload.size_bytes:
+                raise HTTPException(422, "Uploaded content is incomplete.")
+            if PurePosixPath(upload.filename).suffix.lower() == ".json":
+                spool.seek(0)
+                self.validate_json(self.decode_text(spool.read()))
+            spool.seek(0)
+            self.call("put_object", Key=upload.final_key, Body=spool,
+                      ContentLength=total, ContentType=upload.content_type, IfNoneMatch="*",
+                      Metadata={"upload-id": upload.id, "content-sha256": digest.hexdigest()})
+        result = self.call("head_object", Key=upload.final_key)
+        self.verify_identity(upload, result, published=True)
+        return result
