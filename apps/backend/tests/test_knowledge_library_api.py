@@ -227,6 +227,24 @@ class KnowledgeLibraryApiTests(unittest.IsolatedAsyncioTestCase):
                 "filename": "x.txt", "contentType": "text/plain", "size": 5})
             self.assertEqual(response.status_code, 422, response.text)
 
+    async def test_multibyte_text_across_stream_boundary_and_changed_completed_object(self):
+        raw = b"x" * 65535 + "ệ Việt Nam".encode()
+        _, upload = await self.begin(raw=raw)
+        response = await self.request("POST", f"/uploads/{upload.id}/complete")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(self.s3.objects[upload.final_key]["body"], raw)
+        self.s3.objects[upload.final_key]["ETag"] = '"changed"'
+        self.assertEqual((await self.request("POST", f"/uploads/{upload.id}/complete")).status_code, 409)
+
+    async def test_tokens_require_finite_expiry_and_valid_subject(self):
+        import jwt
+        for changes in ({"exp": float("inf")}, {"exp": float("nan")}, {"exp": 0}, {"exp": None},
+                        {"sub": "9223372036854775808"}, {"sub": "not-an-id"}):
+            claims = {"sub": "1", "role": "ADMIN", "exp": datetime.now(timezone.utc).timestamp() + 60, **changes}
+            encoded = jwt.encode(claims, security.SECRET_KEY, algorithm=security.ALGORITHM)
+            response = await self.request("GET", "/objects", auth=False, headers={"Authorization": "Bearer " + encoded})
+            self.assertEqual(response.status_code, 401, response.text)
+
 
 if __name__ == "__main__":
     unittest.main()

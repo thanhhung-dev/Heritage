@@ -19,18 +19,21 @@ def main():
         root = storage.list_objects(root_prefix(), limit=20)
         print(f"PASS fixed bucket listing: {len(root['folders'])} folders, {len(root['files'])} files on first page; "
               f"has_next_page={root['nextContinuationToken'] is not None}")
-        if root["folders"]:
-            nested = storage.list_objects(root["folders"][0]["prefix"], limit=20)
-            print(f"PASS nested listing: {len(nested['folders'])} folders, {len(nested['files'])} files on first page")
-            files = nested["files"] or root["files"]
-        else:
-            files = root["files"]
+        page, files, depth = root, root["files"], 0
+        # Follow only the first returned folder at each level, at most eight
+        # levels. No recursive inventory and no assumptions about folder names.
+        while not files and page["folders"] and depth < 8:
+            page = storage.list_objects(page["folders"][0]["prefix"], limit=20)
+            depth += 1
+            print(f"PASS nested listing depth={depth}: {len(page['folders'])} folders, {len(page['files'])} files on first page")
+            files = page["files"]
+        if depth == 0:
             print("SKIPPED nested listing: no folder on the first root page")
         if files:
             metadata = storage.object_info(files[0]["key"])
             print(f"PASS real HEAD: size={metadata['size']}; etag_present={bool(metadata['etag'])}")
         else:
-            print("SKIPPED HEAD: no file on the two inspected pages")
+            print("SKIPPED HEAD: no file within the bounded inspection path")
         print("Read-only operations completed. No object names, credentials or URLs printed.")
         return 0
     except HTTPException as error:

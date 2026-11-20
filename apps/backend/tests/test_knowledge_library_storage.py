@@ -154,6 +154,35 @@ class KnowledgeStorageTests(unittest.TestCase):
         for header in ("content-length", "content-type", "if-none-match", "x-amz-meta-upload-id"):
             self.assertIn(header, signed)
 
+    def test_real_sdk_accepts_atomic_publish_protocol_without_copy_or_network(self):
+        import hashlib
+        from datetime import datetime, timezone
+        from types import SimpleNamespace
+        from botocore.response import StreamingBody
+        from botocore.stub import ANY, Stubber
+        client = boto3.client("s3", endpoint_url="https://r2.example.invalid", region_name="auto",
+            aws_access_key_id="synthetic-access", aws_secret_access_key="synthetic-secret",
+            config=Config(signature_version="s3v4"))
+        self.addCleanup(client.close)
+        raw = b"hello"
+        upload = SimpleNamespace(id="test-id", staging_key="stage/test.txt", final_key="test.txt",
+            filename="test.txt", content_type="text/plain", size_bytes=len(raw))
+        marker = {"upload-id": upload.id}
+        published_marker = {**marker, "content-sha256": hashlib.sha256(raw).hexdigest()}
+        head = {"ContentLength": len(raw), "ContentType": "text/plain", "ETag": '"etag"',
+                "LastModified": datetime.now(timezone.utc), "Metadata": marker}
+        with Stubber(client) as stub:
+            stub.add_response("head_object", head, {"Bucket": "knowledge-heritage", "Key": upload.staging_key})
+            stub.add_response("get_object", {"Body": StreamingBody(io.BytesIO(raw), len(raw))},
+                {"Bucket": "knowledge-heritage", "Key": upload.staging_key, "IfMatch": head["ETag"]})
+            stub.add_response("put_object", {"ETag": head["ETag"]}, {"Bucket": "knowledge-heritage",
+                "Key": upload.final_key, "Body": ANY, "ContentLength": len(raw), "ContentType": "text/plain",
+                "IfNoneMatch": "*", "Metadata": published_marker})
+            stub.add_response("head_object", {**head, "Metadata": published_marker},
+                {"Bucket": "knowledge-heritage", "Key": upload.final_key})
+            self.assertEqual(KnowledgeR2(client=client).publish_verified(upload)["ContentLength"], len(raw))
+            stub.assert_no_pending_responses()
+
 
 if __name__ == "__main__":
     unittest.main()
