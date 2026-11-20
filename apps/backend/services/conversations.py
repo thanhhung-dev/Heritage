@@ -23,6 +23,7 @@ from apps.backend.schemas.chat import (
     ConversationResponse, MessageCitationResponse,
 )
 from apps.backend.services.chat_context import bounded_history
+from apps.backend.services.context_store import enqueue_quietly, forget_quietly, history_if_fresh, mark_down
 
 
 class ChatServiceError(Exception):
@@ -69,8 +70,9 @@ def message_response(message: ChatMessage) -> ChatMessageResponse:
 
 
 class ConversationService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, contexts=None):
         self.db = db
+        self.contexts = contexts
 
     async def require_account(self, account_id: int) -> None:
         account = (await self.db.execute(
@@ -124,6 +126,7 @@ class ConversationService:
             conversation = await self.require_owned(conversation_id, account_id, lock=True)
             await self.db.delete(conversation)
             await self.db.commit()
+            await forget_quietly(self.contexts, conversation_id)
         except BaseException:
             await self.db.rollback()
             raise
@@ -144,12 +147,24 @@ class ConversationService:
                     raise ChatServiceError("bad_request", "Di sản không khớp với cuộc trò chuyện hiện tại.")
                 if request.conversation_context:
                     raise ChatServiceError("bad_request", "Hội thoại đã lưu sử dụng lịch sử từ máy chủ; không nhận lịch sử thay thế.")
-                rows = (await self.db.execute(
-                    select(ChatMessage.role, ChatMessage.content)
-                    .where(ChatMessage.conversation_id == conversation.id)
-                    .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()).limit(MAX_CONTEXT_MESSAGES)
-                )).all()
-                history = bounded_history(rows)
+                latest_id = (await self.db.execute(
+                    select(ChatMessage.id).where(ChatMessage.conversation_id == conversation.id)
+                    .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()).limit(1)
+                )).scalar_one_or_none()
+                history = None
+                if self.contexts is not None and latest_id is not None:
+                    try:
+                        history = history_if_fresh(await self.contexts.load(conversation.id), latest_id)
+                    except Exception:
+                        mark_down()
+                        history = None
+                if history is None:
+                    rows = (await self.db.execute(
+                        select(ChatMessage.role, ChatMessage.content)
+                        .where(ChatMessage.conversation_id == conversation.id)
+                        .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()).limit(MAX_CONTEXT_MESSAGES)
+                    )).all()
+                    history = bounded_history(rows)
             else:
                 conversation = Conversation(
                     id=uuid4(), account_id=account_id, title=request.message[:200], heritage_id=request.heritage_id,
@@ -222,6 +237,7 @@ class ConversationService:
             )
             # Both turns and every citation commit as one unit before the response is sent.
             await self.db.commit()
+            await enqueue_quietly(self.contexts, conversation.id)
             return response
         except TimeoutError:
             await self.db.rollback()

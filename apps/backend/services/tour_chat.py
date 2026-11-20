@@ -7,7 +7,7 @@ import re
 
 from apps.backend.ai.answering.conversation import (
     ConversationAnswer, append_graph_follow_up_hint, related_follow_ups, grounded_source_ids,
-    is_social_turn, prior_user_questions,
+    dialogue_turns, is_social_turn, prior_user_questions,
 )
 from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.services.tour_guide import GUIDE_STORIES, TourFocus, guide_stories
@@ -43,6 +43,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
 
     history = [item.model_dump() for item in request.conversation_context]
     user_history = prior_user_questions(history)
+    dialogue = dialogue_turns(history)
     selected_marker = bool(reply_context and reply_context.highlight_id is not None)
     links = reply_context.passage_links if selected_marker else None
     focus = TourFocus(title=reply_context.highlight_title or "Điểm đang chọn") if links else None
@@ -126,7 +127,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         ]
         graph_context = result.graph_context
 
-    if selected_marker and not evidence and not social and destination is None:
+    if selected_marker and not evidence and not social and destination is None and not dialogue:
         return response(scoped_missing(area), "insufficient_evidence")
 
     # Bound whole evidence chunks; never accidentally send unbounded adapter output.
@@ -138,7 +139,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             selected.append(item)
             context += ("\n\n" if context else "") + block
     evidence = selected
-    if selected_marker and not evidence and not social and destination is None:
+    if selected_marker and not evidence and not social and destination is None and not dialogue:
         return response(scoped_missing(area), "insufficient_evidence")
     ids = {str(item.id) for item in evidence}
     story = next((story for story in guide_stories(area.id, reply_context.scene_title, reply_context.highlight_title)
@@ -158,7 +159,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         raw = generate(
             question=question, context=context, conversation=True,
             retrieval_status="available" if evidence else "not_found",
-            active_area_id=area.id, user_history=user_history,
+            active_area_id=area.id, user_history=user_history, dialogue=dialogue,
             artifact_title=focus.title if focus else None,
         )
         return raw, generation_details()
@@ -185,7 +186,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
                 and allowed_tour_output(answer.answer, "out_of_scope", area, destination=destination)):
             return response(answer.answer, "out_of_scope", questions=answer.follow_up_questions)
         return response(scoped_refusal(area, destination), "out_of_scope")
-    if story_evidence_missing:
+    if story_evidence_missing and answer.answer_type != "conversation":
         return response(scoped_missing(area), "insufficient_evidence")
 
     if answer.answer_type == "answered":
@@ -203,7 +204,9 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     if answer.answer_type == "insufficient_evidence":
         return response(scoped_missing(area), "insufficient_evidence")
     if answer.answer_type == "conversation":
-        return response(scoped_refusal(area), "out_of_scope")
+        if allowed_tour_output(answer.answer, "conversation", area):
+            return response(answer.answer, "conversation", questions=answer.follow_up_questions)
+        return response("Mình chỉ nhắc lại được nội dung đã có trong hội thoại này.", "conversation")
     if not allowed_tour_output(answer.answer, "out_of_scope", area):
         return response(scoped_refusal(area), "out_of_scope")
     return response(answer.answer, "out_of_scope", questions=answer.follow_up_questions)

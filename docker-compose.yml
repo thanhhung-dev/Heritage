@@ -106,6 +106,31 @@ services:
       retries: 12
       start_period: 120s
 
+
+  redis:
+    image: docker.io/redis:7
+    container_name: heritage-redis
+    restart: unless-stopped
+    mem_limit: 160m
+    cpus: 0.5
+    networks:
+      - heritage-network
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-heritage-dev-password}
+    # Không đưa mật khẩu vào argv. volatile-lru chỉ loại snapshot có TTL, không loại hàng đợi.
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - 'umask 077; printf "requirepass %s\nmaxmemory 128mb\nmaxmemory-policy volatile-lru\nappendonly yes\n" "$$REDIS_PASSWORD" > /tmp/redis.conf; exec redis-server /tmp/redis.conf'
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   backend:
     build:
       context: .
@@ -123,10 +148,15 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       LANGFUSE_HOST: ${LANGFUSE_HOST_DOCKER:-http://langfuse-web:3000}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-heritage-dev-password}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       llm:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
@@ -143,6 +173,44 @@ services:
       timeout: 10s
       retries: 5
       start_period: 240s
+
+  context-worker:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    image: heritage-backend:local
+    container_name: heritage-context-worker
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-heritage-dev-password}
+    command: ["python", "-m", "apps.backend.workers.context"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - heritage-network
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os,redis; c=redis.Redis(host=os.environ['REDIS_HOST'], port=int(os.environ['REDIS_PORT']), password=os.environ.get('REDIS_PASSWORD') or None, socket_connect_timeout=1, socket_timeout=1); raise SystemExit(0 if c.get('heritage:ai:context:worker') else 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
 
   langfuse-worker:
     image: docker.langfuse.com/langfuse/langfuse-worker:4
@@ -338,4 +406,5 @@ volumes:
   langfuse_clickhouse_data:
   langfuse_clickhouse_logs:
   langfuse_redis_data:
+  redis_data:
   langfuse_minio_data:

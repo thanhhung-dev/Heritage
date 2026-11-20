@@ -44,6 +44,17 @@ at most six user/assistant messages, 2,000 characters each, 6,000 total. Each
 heritage/scene context is limited to 2,000 serialized characters. Invalid request
 fields, UUIDs or unsupported roles return 422.
 
+Saved conversations still load that bound from PostgreSQL. When `REDIS_HOST` is
+set, the context worker prepares the same bound after each committed turn. The
+next turn uses the snapshot only if `through_message_id` is still the latest
+saved message. A miss, a stale snapshot, or a Redis error reads PostgreSQL and
+does not change the answer contract. The snapshot is user history, not evidence.
+
+Questions about this conversation are answered from the saved user and assistant
+turns. Those turns are not historical evidence. The model must use
+`answer_type=conversation` and no sources for them; the server keeps that answer
+instead of treating it as out of scope. Heritage facts still require passages.
+
 ### Optional tour companion context
 
 The tour client additionally sends `heritage_id` and a bounded `tour_context`:

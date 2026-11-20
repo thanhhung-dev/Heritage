@@ -203,7 +203,8 @@ def generate_response_with_details(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
     active_area_id: str | None = None, rewrite: bool = False,
-    user_history: list[str] | None = None, artifact_title: str | None = None,
+    user_history: list[str] | None = None, dialogue: list[dict] | None = None,
+    artifact_title: str | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
@@ -214,7 +215,7 @@ def generate_response_with_details(
     elif conversation:
         messages = conversation_messages(
             context, question, retrieval_status, active_area_id=active_area_id,
-            user_history=user_history, artifact_title=artifact_title,
+            user_history=user_history, dialogue=dialogue, artifact_title=artifact_title,
         )
         schema = conversation_json_schema(context)
     else:
@@ -253,10 +254,11 @@ def generate_response(
     question: str, context: str = "", max_tokens: int = MAX_TOKENS, *,
     conversation: bool = False, retrieval_status: str = "available",
     active_area_id: str | None = None, rewrite: bool = False,
-    user_history: list[str] | None = None, artifact_title: str | None = None,
+    user_history: list[str] | None = None, dialogue: list[dict] | None = None,
+    artifact_title: str | None = None,
 ) -> str:
     return generate_response_with_details(
         question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
-        active_area_id=active_area_id, rewrite=rewrite, user_history=user_history,
+        active_area_id=active_area_id, rewrite=rewrite, user_history=user_history, dialogue=dialogue,
         artifact_title=artifact_title,
     ).answer

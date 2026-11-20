@@ -255,6 +255,55 @@ class ChatConversationTests(unittest.TestCase):
         self.assertEqual(rejected.status_code, 400)
         self.assertEqual(self.counts(), (1, 4, 2))
 
+    def test_fresh_context_snapshot_is_used_and_delete_forgets_it(self):
+        class MemoryContexts:
+            def __init__(self):
+                self.jobs = []
+                self.snapshots = {}
+                self.forgotten = []
+
+            async def load(self, conversation_id):
+                return self.snapshots.get(conversation_id)
+
+            async def enqueue(self, conversation_id):
+                self.jobs.append(conversation_id)
+
+            async def delete(self, conversation_id):
+                self.forgotten.append(conversation_id)
+
+        store = MemoryContexts()
+        with patch("apps.backend.services.context_store.configured_store", return_value=store):
+            created = self.create_conversation()
+            conversation_id = UUID(created["conversation_id"])
+            self.assertEqual(store.jobs, [conversation_id])
+            store.snapshots[conversation_id] = {
+                "through_message_id": str(uuid4()),
+                "history": [{"role": "user", "content": "Câu cũ không được dùng"}],
+            }
+            self.generate.reset_mock()
+            stale = self.client.post("/api/chat/message", headers=self.headers(), json={
+                "message": "Còn kiến trúc thế nào?", "conversation_id": created["conversation_id"],
+            })
+            self.assertEqual(stale.status_code, 201, stale.text)
+            self.assertEqual(self.generate.call_args_list[0].kwargs["user_history"], ["Chùa Thiên Mụ xây năm nào?"])
+
+            with Session(self.engine) as db:
+                latest = db.scalar(select(ChatMessage.id).where(ChatMessage.conversation_id == conversation_id)
+                                   .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()))
+            store.snapshots[conversation_id] = {
+                "through_message_id": str(latest),
+                "history": [{"role": "user", "content": "Câu đã chuẩn bị từ Redis"}],
+            }
+            self.generate.reset_mock()
+            fresh = self.client.post("/api/chat/message", headers=self.headers(), json={
+                "message": "Còn kiến trúc thế nào?", "conversation_id": created["conversation_id"],
+            })
+            self.assertEqual(fresh.status_code, 201, fresh.text)
+            self.assertEqual(self.generate.call_args_list[0].kwargs["user_history"], ["Câu đã chuẩn bị từ Redis"])
+            self.client.delete(f"/api/chat/conversations/{conversation_id}", headers=self.headers())
+            self.assertEqual(store.forgotten, [conversation_id])
+
+
     def test_owner_delete_cascades_and_leaves_other_account_intact(self):
         a = self.create_conversation(1)
         b = self.create_conversation(2)

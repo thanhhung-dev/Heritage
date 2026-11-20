@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from apps.backend.ai.answering.conversation import (
     ConversationAnswer, append_graph_follow_up_hint, evidence_cite_id, grounded_source_ids,
-    is_social_turn, prior_user_questions, related_follow_ups, rewrite_followup,
+    dialogue_turns, is_social_turn, prior_user_questions, related_follow_ups, rewrite_followup,
 )
 from apps.backend.api.public.chat.schemas import ChatRequest, ChatResponse
 from apps.backend.common.config import chat_timeout_seconds
@@ -89,6 +89,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         )
 
     history = [item.model_dump() for item in req.conversation_context]
+    dialogue = dialogue_turns(history)
     asked = question
     if prior_user_questions(history):
         asked = await asyncio.to_thread(rewrite_followup, question, history, generate_response)
@@ -152,6 +153,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
     def generate():
         raw = generate_response(
             question=asked, context=context, conversation=True, retrieval_status="available",
+            dialogue=dialogue,
         )
         return raw, get_generation_details()
 

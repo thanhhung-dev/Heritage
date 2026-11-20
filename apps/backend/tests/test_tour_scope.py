@@ -118,6 +118,25 @@ class AreaApiTests(unittest.TestCase):
             repository.search_evidence.assert_not_awaited()
             self.assertEqual(generate.call_count, 1)
 
+    def test_dialogue_answer_is_kept_instead_of_an_area_refusal(self):
+        asked = "Tư liệu nào giải thích ý nghĩa của bia?"
+        raw = {"answer_type": "conversation", "answer": f"Bạn vừa hỏi: {asked}", "source_ids": []}
+        for response, repository, generate in self.exercise("nãy h tôi nói gì ấy nhỉ", raw=raw, extra={
+            "conversation_context": [
+                {"role": "user", "content": asked},
+                {"role": "assistant", "content": "Bia được soạn năm 1871."},
+            ],
+        }):
+            self.assertEqual(response.status_code, 200, response.text)
+            data = response.json()
+            self.assertEqual(data["answer_type"], "conversation")
+            self.assertEqual(data["answer"], f"Bạn vừa hỏi: {asked}")
+            self.assertEqual(data["sources"], [])
+            self.assertNotIn("mở tour", data["answer"])
+            self.assertEqual(generate.call_args.kwargs["dialogue"][0]["content"], asked)
+            self.assertEqual(generate.call_args.kwargs["dialogue"][1]["role"], "assistant")
+            repository.search_evidence.assert_awaited()
+
     def test_explicit_other_area_calls_model_once_and_fails_closed(self):
         raw = {
             "answer_type": "answered",

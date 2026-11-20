@@ -132,6 +132,47 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(result["answer_type"], "answered")
                     self.assertEqual(result["sources"][0]["passage_id"], expected)
 
+    async def test_dialogue_question_keeps_the_model_conversation_answer(self):
+        from apps.backend.ai.answering.conversation import conversation_messages
+        from apps.backend.services.tour_chat import answer_in_area
+
+        asked = "Tư liệu nào giải thích ý nghĩa của Bia Đá Và Những nỗi niềm khắc trên đá?"
+        replied = "Bia Khiêm Cung Ký được soạn năm 1871."
+        request = ChatRequest(
+            message="nãy h tôi nói gì ấy nhỉ", active_area_id="khiem-lang", heritage_id=7,
+            tour_context={"scene_id": 31, "mode": "walk", "highlight_id": 61},
+            conversation_context=[
+                {"role": "user", "content": asked},
+                {"role": "assistant", "content": replied},
+            ],
+        )
+        snapshot = TourReplyContext(
+            scene_id=31, scene_key="s4", scene_title="Bia đá và những nỗi niềm", mode="walk",
+            highlight_id=61, highlight_title="Bia Đá Và Những nỗi niềm khắc trên đá",
+            passage_links={"42": {"content_hash": "hash", "object_key": "", "bucket": ""}},
+        )
+        repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(
+            evidence=[], graph_context=[],
+        )))
+        generate = Mock(return_value=json.dumps({
+            "answer_type": "conversation", "answer": f"Bạn vừa hỏi: {asked}", "source_ids": [],
+        }))
+        result = await answer_in_area(
+            request, repository, generate, lambda: SimpleNamespace(truncated=False), reply_context=snapshot,
+        )
+        self.assertEqual(result["answer_type"], "conversation")
+        self.assertEqual(result["answer"], f"Bạn vừa hỏi: {asked}")
+        self.assertEqual(result["sources"], [])
+        self.assertEqual(generate.call_args.kwargs["dialogue"], [
+            {"role": "user", "content": asked},
+            {"role": "assistant", "content": replied},
+        ])
+        prompt = conversation_messages("passage", request.message, dialogue=generate.call_args.kwargs["dialogue"])
+        self.assertEqual([item["role"] for item in prompt], ["system", "user", "assistant", "user"])
+        self.assertIn(asked, prompt[1]["content"])
+        self.assertIn(replied, prompt[2]["content"])
+        self.assertIn("không phải bằng chứng lịch sử", prompt[0]["content"])
+
     async def test_reviewed_story_requires_its_evidence_and_keeps_original_context(self):
         from apps.backend.services.tour_chat import answer_in_area, TourChatError
         from apps.backend.services.tour_guide import GUIDE_STORIES
@@ -199,9 +240,10 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
             "[Passage 42]\nDữ kiện", request.message, "available",
             active_area_id="khiem-lang", user_history=["Vua Tự Đức là ai?"],
         )
-        self.assertEqual(len(prompt), 2)
+        self.assertEqual([item["role"] for item in prompt], ["system", "user", "user"])
+        self.assertEqual(prompt[1]["content"], "Vua Tự Đức là ai?")
         self.assertIn("Câu hỏi: Ông ấy làm gì ở đây?", prompt[-1]["content"])
-        self.assertIn("Vua Tự Đức là ai?", prompt[-1]["content"])
+        self.assertNotIn("LỊCH SỬ CÂU HỎI", prompt[-1]["content"])
         self.assertEqual(
             set(conversation_json_schema()["required"]),
             {"answer_type", "answer", "source_ids"},

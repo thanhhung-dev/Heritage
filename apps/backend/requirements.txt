@@ -26,6 +26,9 @@ alembic==1.18.4
 SQLAlchemy==2.0.54
 psycopg[binary]==3.3.6
 
+# Bounded chat-context queue
+redis==8.1.0
+
 # Observability
 langfuse==4.15.6
 prometheus-client==0.24.1

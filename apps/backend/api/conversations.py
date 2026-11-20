@@ -19,7 +19,7 @@ from apps.backend.schemas.chat import (
     ChatAnswer, ChatMessageCreate, ChatResponse, ConversationDetailResponse, ConversationResponse,
 )
 from apps.backend.services.conversations import ChatServiceError, ConversationService
-from apps.backend.services import chat_fallback
+from apps.backend.services import chat_fallback, context_store
 from apps.backend.services.tour_guide import resolve_tour_context
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ async def get_chat_db():
 
 
 def get_conversation_service(db=Depends(get_chat_db)):
-    return ConversationService(db)
+    return ConversationService(db, contexts=context_store.configured_store())
 
 
 async def validated_tour_context(request):
