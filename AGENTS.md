@@ -136,4 +136,4 @@ Understand ──> Analyze ──> Plan ──> Implement ──> Test ──> R
 
 ## 7. Quy tắc commit thường trực của người dùng
 
-Người dùng yêu cầu tăng nhịp commit x4 cho khối lượng công việc tương đương. Chủ động commit local sau từng bước nhỏ, hoàn chỉnh và có ý nghĩa; tách implementation, sửa lỗi, kiểm thử và tài liệu khi phù hợp. Không tạo commit rỗng hoặc thay đổi giả để tăng số lượng. Không tự push, tạo PR hoặc deploy. Quy tắc áp dụng mặc định cho các task tiếp theo đến khi người dùng thay đổi yêu cầu.
+Theo yêu cầu mới nhất, người dùng yêu cầu tăng nhịp commit x3 cho khối lượng công việc tương đương. Chủ động commit local sau từng bước nhỏ, hoàn chỉnh và có ý nghĩa; tách implementation, sửa lỗi, kiểm thử và tài liệu khi phù hợp. Không tạo commit rỗng hoặc thay đổi giả để tăng số lượng. Không tự push, tạo PR hoặc deploy. Quy tắc áp dụng mặc định cho các task tiếp theo đến khi người dùng thay đổi yêu cầu.
