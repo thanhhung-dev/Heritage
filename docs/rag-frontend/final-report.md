@@ -104,6 +104,12 @@ Các lệnh kiểm thử đã chạy thực tế:
   20. `b22bcdf` — `feat(rag-ui): connect supported R2 metadata and truthful review ingestion states`
   21. `ae6d25a` — `test(rag): add document library operations and upload progress coverage`
   22. `e07cbc7` — `fix(rag): decouple pure upload progress formatters from CSS module imports for node test runner`
+  23. `a1444ba` — `docs(rag): document frontend integration and acceptance results`
+  24. `9520104` — `style(rag-ui): align sidebar header account pill and Figma design tokens`
+  25. `7c91b3e` — `style(rag-ui): redesign folder tree and document library table to match Figma layout`
+  26. `bc38a9c` — `style(rag-ui): redesign upload modal and upload workspace to match Figma specs`
+  27. `5b80d8a` — `style(rag-ui): redesign edit metadata and document details screens to match Figma specs`
+  28. `cbd5cec` — `style(rag-ui): align pending review and ingestion screens with Figma structure`
 
 ## G. Remaining issues & Deployment requirements
 
