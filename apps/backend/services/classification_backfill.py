@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from apps.backend.models.heritage_classification import ClassificationAudit, ClassificationJob, CulturalContent
 from apps.backend.services.classification_store import apply_prediction, record_audit, restore_snapshot, snapshot
+from apps.backend.services.classification_input import classification_input
 from apps.backend.services.heritage_classifier import ContentInput, classify, decision
 
 
@@ -14,8 +15,7 @@ async def backfill(factory, *, apply=False, limit=1000, after_id=0, high=0.9, me
     async with factory() as db:
         rows = list((await db.scalars(select(CulturalContent).where(CulturalContent.id > after_id)
             .order_by(CulturalContent.id).limit(limit))).all())
-        inputs = [(row.id, row.input_revision, row.locked_by_admin, ContentInput(row.title,
-            row.tagline or "", row.headline or "", row.description or "", row.entity_type_hint, row.source_url)) for row in rows]
+        inputs = [(row.id, row.input_revision, row.locked_by_admin, await classification_input(db, row)) for row in rows]
     changes = []
     for content_id, revision, locked, source in inputs:
         prediction = classify(source)

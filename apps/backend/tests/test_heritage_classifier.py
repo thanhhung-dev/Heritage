@@ -63,3 +63,13 @@ class HeritageClassifierTests(unittest.TestCase):
                                     ("person", ["artisan"], "festival")):
             with self.assertRaises(ValueError):
                 validate_categories(kind, keys, primary)
+
+    def test_reviewed_identity_and_subject_evidence_clarify_ambiguous_names(self):
+        result = classify(ContentInput(title="Bình số 01", entity_type_hint="artifact", source_url="https://example.org/source"))
+        self.assertEqual(result.categories, ("artifact",))
+        result = classify(ContentInput(title="Ngũ Hành Sơn", tagline="Danh thắng có nhiều lễ hội"))
+        self.assertEqual(result.categories, ("scenic_landscape",))
+        result = classify(ContentInput(title="Một địa điểm", tagline="Lễ hội được tổ chức hàng năm"))
+        self.assertEqual(result.categories, ())
+        result = classify(ContentInput(title="Di sản A", reviewed_context="Di sản A là một bảo tàng được ghi nhận."))
+        self.assertEqual(result.categories, ("museum",))

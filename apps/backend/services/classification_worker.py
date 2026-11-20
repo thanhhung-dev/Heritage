@@ -14,6 +14,7 @@ from sqlalchemy import and_, or_, select, update
 from apps.backend.db.base import AsyncSessionLocal, configure_database, dispose_database
 from apps.backend.models.heritage_classification import ClassificationJob, CulturalContent
 from apps.backend.services.classification_semantic import configured_semantic
+from apps.backend.services.classification_input import classification_input
 from apps.backend.services.classification_store import apply_prediction
 from apps.backend.services.heritage_classifier import ContentInput, classify
 
@@ -40,8 +41,7 @@ async def run_next(factory=AsyncSessionLocal, *, classifier=classify, run_id=Non
         job.leased_until, job.attempts = now + timedelta(seconds=lease_seconds), job.attempts + 1
         content = await db.get(CulturalContent, job.content_id)
         content_id, generation, lease, attempts = job.content_id, job.generation, job.lease_token, job.attempts
-        source = ContentInput(content.title, content.tagline or "", content.headline or "",
-                              content.description or "", content.entity_type_hint, content.source_url)
+        source = await classification_input(db, content)
         await db.commit()
     try:
         prediction = await asyncio.to_thread(classifier, source, semantic=configured_semantic())

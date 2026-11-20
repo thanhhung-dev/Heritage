@@ -27,6 +27,7 @@ def propose(content):
                      "Entity types: place, artifact, collection, event, person, practice. Categories: " + ", ".join(BY_KEY)},
                     {"role": "user", "content": json.dumps({"title": content.title, "tagline": content.tagline,
                      "headline": content.headline, "description": content.description[:6000],
+                     "reviewed_linked_evidence": content.reviewed_context[:2000],
                      "reviewed_entity_type": content.entity_type_hint}, ensure_ascii=False)},
                 ]})
         response.raise_for_status()

@@ -21,6 +21,7 @@ class ContentInput:
     entity_type_hint: str | None = None
     # Only independently reviewed structured data may supply a type hint.
     source_url: str | None = None
+    reviewed_context: str = ""
 
 
 @dataclass(frozen=True)
@@ -70,11 +71,24 @@ def classify(content: ContentInput, *, semantic=None) -> Prediction:
         # Only a definition of this exact subject may establish its nature.
         # "The museum stores artifacts" and subordinate festival references do
         # not become definitions of the containing place.
-        definition = re.match(r"^\s*" + re.escape(title) + r"\s+(?:là|is)\s+(?:(?:một|an?|the)\s+)?([^.!?\n]{1,500})",
-                              content.description, re.IGNORECASE)
-        if definition:
-            evidence = definition.group(0)
-            match = subject_rule(definition.group(1))
+        for definition_text in (content.description, content.reviewed_context):
+            definition = re.match(r"^\s*" + re.escape(title) + r"\s+(?:là|is)\s+(?:(?:một|an?|the)\s+)?([^.!?\n]{1,500})",
+                                  definition_text, re.IGNORECASE)
+            if definition:
+                evidence = definition.group(0)
+                match = subject_rule(definition.group(1))
+                if match:
+                    break
+    if match is None:
+        # Place descriptors and descriptors compatible with an independently
+        # reviewed type hint can clarify an otherwise ambiguous proper name.
+        for descriptor in (content.headline, content.tagline):
+            proposed = subject_rule(descriptor)
+            if proposed and (proposed[0] == "place" or proposed[0] == content.entity_type_hint):
+                match, evidence = proposed, descriptor
+                break
+    if match is None and content.source_url and content.entity_type_hint in {"artifact", "collection"}:
+        match, evidence = (content.entity_type_hint, ("artifact",)), "Reviewed artifact identity with explicit source URL"
     if match:
         kind, keys = match
         if content.entity_type_hint and content.entity_type_hint != kind:
@@ -96,7 +110,7 @@ def classify(content: ContentInput, *, semantic=None) -> Prediction:
             validate_categories(kind, keys, primary)
             quoted = proposed["evidence"]
             confidence = proposed["confidence"]
-            source = "\n".join((content.title, content.tagline, content.headline, content.description))
+            source = "\n".join((content.title, content.tagline, content.headline, content.description, content.reviewed_context))
             if (not isinstance(quoted, str) or not quoted.strip() or quoted not in source
                     or type(confidence) not in {int, float} or not math.isfinite(confidence)
                     or not 0 <= confidence <= 1):
