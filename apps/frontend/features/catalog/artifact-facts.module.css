@@ -1,0 +1,6 @@
+.facts { margin: 20px 0; }
+.facts > div { margin-bottom: 12px; }
+.facts dt { color: #bda783; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; margin-bottom: 4px; }
+.facts dd { color: inherit; font-size: 13px; margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
+.facts a { color: inherit; }
+.facts a:hover { text-decoration: underline; }

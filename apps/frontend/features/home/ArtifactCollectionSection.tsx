@@ -4,18 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import type { CatalogContent } from "@/services/catalog.service";
+import { ArtifactFacts } from "@/features/catalog/ArtifactFacts";
 import styles from "./ArtifactCollectionSection.module.css";
-
-export const FACT_LABELS = { period: "Niên đại / thời kỳ", material: "Chất liệu", origin: "Nguồn gốc", custodian: "Nơi lưu giữ" } as const;
-
-export function ArtifactFacts({ item }: { item: CatalogContent }) {
-  return <dl className={styles.facts}>{Object.entries(FACT_LABELS).map(([key, label]) => {
-    const fact = item.metadata[key as keyof typeof FACT_LABELS];
-    return fact ? <div key={key}><dt>{label}</dt><dd>
-      <a href={fact.source_url} target="_blank" rel="noopener noreferrer">{fact.value}</a>
-    </dd></div> : null;
-  })}</dl>;
-}
 
 function ArtifactImage({ item }: { item: CatalogContent }) {
   const [failed, setFailed] = useState(false);

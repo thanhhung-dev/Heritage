@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ApiError } from "@/config/api";
 import { getCatalogDetail, type CatalogDetail as Detail } from "@/services/catalog.service";
-import { ArtifactFacts } from "@/features/home/ArtifactCollectionSection";
+import { ArtifactFacts } from "./ArtifactFacts";
 import styles from "./catalog-detail.module.css";
 
 const KIND_LABELS = { place: "Địa điểm di sản", artifact: "Cổ vật & hiện vật", collection: "Bộ sưu tập",
