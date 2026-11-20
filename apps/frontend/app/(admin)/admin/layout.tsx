@@ -33,6 +33,10 @@ import {
 
 import styles from './heritage.module.css';
 import { tapestryColors } from '@/styles/theme/heritageTheme';
+import FontLoader from '@/components/FontLoader';
+import { DesignIcon, KnowledgeBrand } from '@/features/knowledge/DesignIcon';
+import { KnowledgeAccount } from '@/features/knowledge/KnowledgeAccount';
+import knowledgeStyles from '@/features/knowledge/knowledge.module.css';
 
 // 1. HeritageLogo (Logo dải màu sọc đa sắc chuẩn Figma)
 function HeritageLogo({ size = 32 }: { size?: number }) {
@@ -103,6 +107,22 @@ export default function AdminLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const libraryMode = pathname.startsWith('/admin/documents');
+  const adminFont = libraryMode ? 'Roboto, Arial, sans-serif' : "'Poppins', sans-serif";
+  const adminColors = libraryMode ? { ...tapestryColors, primary: '#201f1c', background: '#fbfbf8',
+    surface: '#f8f7f3', surfaceHover: '#ebe9e0', border: 'rgba(0,0,0,.1)', borderStrong: 'rgba(0,0,0,.15)' } : tapestryColors;
+  const libraryMenu = [
+    { key: '/admin', icon: <DesignIcon name="library-DashboardIcon" />, label: <Link href="/admin">Dashboard</Link> },
+    { key: '/admin/documents', icon: <DesignIcon name="library-Files" />, label: <Link href="/admin/documents">Document library</Link> },
+    { key: '/admin/documents/review', icon: <DesignIcon name="library-ClipboardCheck" />, label: <Link href="/admin/documents/review">Pending review</Link> },
+    { key: '/admin/documents/ingestion', icon: <DesignIcon name="library-Hash" />, label: <Link href="/admin/documents/ingestion">Ingestion</Link> },
+    { type: 'group' as const, label: 'ADMINISTRATION', children: [
+      { key: 'library-members', disabled: true, icon: <DesignIcon name="library-Users" />, label: 'Members' },
+      { key: 'library-activity', disabled: true, icon: <DesignIcon name="library-Eye" />, label: 'Activity log' },
+    ] },
+  ];
+  const librarySelection = pathname.startsWith('/admin/documents/review') ? '/admin/documents/review'
+    : pathname.startsWith('/admin/documents/ingestion') ? '/admin/documents/ingestion' : '/admin/documents';
 
   const menuItems = [
     {
@@ -158,46 +178,50 @@ export default function AdminLayout({
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: tapestryColors.primary,
-          colorInfo: tapestryColors.primary,
+          colorPrimary: adminColors.primary,
+          colorInfo: adminColors.primary,
           colorSuccess: '#16a34a',
           colorWarning: '#b07d1a',
           colorError: '#c0492c',
-          colorText: 'rgba(240, 232, 221, 0.85)',
-          colorTextSecondary: 'rgba(240, 232, 221, 0.5)',
-          colorBorder: tapestryColors.border,
-          colorBgLayout: tapestryColors.background,
-          borderRadius: 8,
-          fontFamily: "'Poppins', sans-serif",
+          colorText: libraryMode ? '#201f1c' : 'rgba(240, 232, 221, 0.85)',
+          colorTextSecondary: libraryMode ? '#928f86' : 'rgba(240, 232, 221, 0.5)',
+          colorBorder: adminColors.border,
+          colorBgLayout: adminColors.background,
+          borderRadius: libraryMode ? 12 : 8,
+          ...(libraryMode ? { controlHeight: 32, colorBgContainer: '#fff' } : {}),
+          fontFamily: adminFont,
         },
         components: {
           Menu: {
-            itemSelectedBg: 'rgba(255, 155, 45, 0.15)',
-            itemSelectedColor: tapestryColors.primary,
+            itemSelectedBg: libraryMode ? 'rgba(0,0,0,.06)' : 'rgba(255, 155, 45, 0.15)',
+            itemSelectedColor: adminColors.primary,
             itemBorderRadius: 8,
           },
           Button: {
-            fontWeight: 600,
+            fontWeight: libraryMode ? 400 : 600,
           },
         },
       }}
     >
       <AntApp>
-        <Layout style={{ minHeight: '100vh', background: tapestryColors.background, fontFamily: "'Poppins', sans-serif" }}>
+        {libraryMode && <FontLoader url="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap" />}
+        <Layout className={libraryMode ? knowledgeStyles.chrome : undefined} style={{ minHeight: '100vh', background: adminColors.background, fontFamily: adminFont }}>
           {/* Sidebar cố định 100vh */}
           <Sider
-            width={264}
-            collapsedWidth={76}
+            width={libraryMode ? 260 : 264}
+            collapsedWidth={libraryMode ? 64 : 76}
+            breakpoint={libraryMode ? 'lg' : undefined}
+            onBreakpoint={broken => { if (libraryMode) setCollapsed(broken); }}
             collapsed={collapsed}
             trigger={null}
-            theme="dark"
+            theme={libraryMode ? 'light' : 'dark'}
             style={{
               height: '100vh',
               position: 'sticky',
               top: 0,
               left: 0,
-              borderRight: `1px solid ${tapestryColors.border}`,
-              background: tapestryColors.surface,
+              borderRight: `1px solid ${adminColors.border}`,
+              background: adminColors.surface,
               zIndex: 100,
             }}
           >
@@ -209,12 +233,15 @@ export default function AdminLayout({
                   alignItems: 'center',
                   justifyContent: collapsed ? 'center' : 'space-between',
                   padding: collapsed ? '16px 0' : '16px 18px',
-                  borderBottom: `1px solid ${tapestryColors.border}`,
-                  minHeight: 70,
+                  borderBottom: libraryMode ? 'none' : `1px solid ${tapestryColors.border}`,
+                  minHeight: libraryMode ? 52 : 70,
                   flexShrink: 0,
                 }}
               >
-                {collapsed ? (
+                {libraryMode ? <>
+                  {!collapsed && <Link href="/admin" aria-label="Heritage Admin"><KnowledgeBrand /></Link>}
+                  <button type="button" className={knowledgeStyles.chromeToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}><DesignIcon name="library-CollapseSidebar" /></button>
+                </> : collapsed ? (
                   <div onClick={() => setCollapsed(false)} style={{ cursor: 'pointer' }}>
                     <HeritageLogoMini size={32} />
                   </div>
@@ -265,18 +292,19 @@ export default function AdminLayout({
 
               {/* Menu cuộn */}
               <div style={{ flex: 1, overflowY: 'auto' }}>
+                {libraryMode && !collapsed && <div className={knowledgeStyles.navLabel}>HERITAGE ADMIN</div>}
                 <Menu
                   mode="inline"
-                  selectedKeys={[pathname]}
+                  selectedKeys={[libraryMode ? librarySelection : pathname]}
                   defaultOpenKeys={['structured']}
-                  items={menuItems}
-                  className={styles['main-menu']}
-                  style={{ fontFamily: "'Poppins', sans-serif", borderRight: 0 }}
+                  items={libraryMode ? libraryMenu : menuItems}
+                  className={libraryMode ? knowledgeStyles.mainMenu : styles['main-menu']}
+                  style={{ fontFamily: adminFont, borderRight: 0, background: libraryMode ? 'transparent' : undefined }}
                 />
               </div>
 
               {/* KHỐI ACCOUNT BẮT BUỘC DÍNH CHẶT DƯỚI GÓC ĐÁY MÀN HÌNH */}
-              <div
+              {libraryMode ? <KnowledgeAccount collapsed={collapsed} /> : <div
                 style={{
                   padding: '16px',
                   borderTop: `1px solid ${tapestryColors.border}`,
@@ -326,13 +354,13 @@ export default function AdminLayout({
                     </div>
                   )}
                 </div>
-              </div>
+              </div>}
             </div>
           </Sider>
 
           {/* Nội dung bên phải */}
           <Layout style={{ minWidth: 0 }}>
-            <Header className={styles['app-header']}>
+            {!libraryMode && <Header className={styles['app-header']}>
               <div className={styles['page-heading']}>
                 <Breadcrumb
                   items={[
@@ -362,9 +390,9 @@ export default function AdminLayout({
                   Add Document
                 </Button>
               </Space>
-            </Header>
+            </Header>}
 
-            <Content className={styles['app-content']} style={{ fontFamily: "'Poppins', sans-serif" }}>
+            <Content className={libraryMode ? knowledgeStyles.content : styles['app-content']} style={{ fontFamily: adminFont }}>
               {children}
             </Content>
           </Layout>
