@@ -15,6 +15,12 @@ import os
 # Business/KG tables only; passage vectors are indexed in OpenSearch.
 REQUIRED_EXTENSIONS = ("pgcrypto", "pg_trgm", "unaccent")
 
+# These tables require the transactional queue/evidence triggers in Alembic.
+# Creating bare ORM tables first would both omit those triggers and make the
+# subsequent reviewed migration fail with duplicate-table errors.
+ALEMBIC_CATALOG_TABLES = frozenset({"heritage_categories", "heritage_content", "heritage_classifications",
+    "heritage_content_relations", "heritage_classification_jobs", "heritage_classification_audit"})
+
 SEED_STATEMENTS = (
     "INSERT INTO corpus_release(version) VALUES (1) ON CONFLICT DO NOTHING",
 )
@@ -51,6 +57,8 @@ def _add_missing_columns(engine) -> None:
     existing_tables = set(inspector.get_table_names())
 
     for table in Base.metadata.sorted_tables:
+        if table.name in ALEMBIC_CATALOG_TABLES:
+            continue
         if table.name not in existing_tables:
             continue
         present = {column["name"] for column in inspector.get_columns(table.name)}
@@ -89,7 +97,8 @@ def ensure_schema(database_url: str) -> None:
                     text(f'CREATE EXTENSION IF NOT EXISTS "{extension}"')
                 )
 
-        Base.metadata.create_all(engine, checkfirst=True)
+        Base.metadata.create_all(engine, tables=[table for table in Base.metadata.tables.values()
+                                                if table.name not in ALEMBIC_CATALOG_TABLES], checkfirst=True)
         _add_missing_columns(engine)
 
         with engine.begin() as connection:
