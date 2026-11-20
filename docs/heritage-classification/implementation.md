@@ -22,4 +22,22 @@ Homepage policy: individual artifacts → new collection; reviewed artifact coll
 
 No real artifact/person/event is seeded automatically. New public non-place content requires reviewed source evidence. Uncertain classifications go to review; locked manual classifications survive worker runs. Existing records, media URLs and publish_state remain authoritative and untouched.
 
-Progress and actual test results will be updated during implementation.
+## Final implementation checkpoint
+
+All seven implementation phases are complete for this branch. Scoped acceptance passed; wider pre-existing failures are explicitly recorded, not relabeled as passing. See [test-matrix.md](test-matrix.md) and [operations.md](operations.md) for executed commands, remaining rollout work and manual verification.
+
+| Phase | Result |
+|---|---|
+| Audit | Root causes traced to homepage slug lists, narrator promotion and positional preview slicing; local data availability checked read-only |
+| Database | Additive Alembic revision with six editorial tables, fourteen categories, constraints/indexes and four transactional triggers |
+| Engine | Subject-first deterministic rules, reviewed linked identity evidence, opt-in bounded llama proposals, confidence/review, lease/retry worker and audited backfill/rollback |
+| Backend | Public taxonomy/catalog/sections/detail, strict independent entity creation, current-account admin checks, locked overrides, retry/status and sourced relations |
+| Frontend | API-only homepage/preview, server-ranked hero, exclusive placements, sourced artifact collection/detail, pagination, periodic cache-free refresh and honest empty states |
+| Testing | 13 PostgreSQL/API tests, 146 selected backend tests and 4 catalog frontend tests passed; type/lint/production build and desktop/mobile browser checks passed |
+| Report | Operator runbook, API/placement policy, data boundaries, exact evidence and baseline failures documented |
+
+Primary files: `models/heritage_classification.py`, `migrations/versions/20261120_09_heritage_classification.{py,sql}`, `services/heritage_taxonomy.py`, `heritage_classifier.py`, `classification_{input,semantic,store,worker,backfill}.py`, `services/catalog.py`, `schemas/catalog.py`, `api/catalog.py`, `api/admin_catalog.py`, public homepage/preview/catalog routes and their home/catalog components. The legacy initializer excludes trigger-managed catalog tables, preventing bare ORM tables from blocking the migration. Compose has an opt-in worker profile.
+
+No request requires paid AI, no SQL trigger calls a model, and no public render request scans documents or invokes classification. Admin locks survive source changes and worker runs. Taxonomy is independent of UI sections, region and publication state. Multi-category membership is preserved while homepage placement is exclusive. New artifact/person/event/practice records need explicit sourced editorial input; marker media and narrator rows are never auto-promoted.
+
+Rollout remains separate: the current application DB has no heritage data, so no real dataset was backfilled and no live-site classification accuracy is claimed. Migrations/backfill must be reviewed and applied to the intended dev/staging/production target by the operator. No source heritage row, media URL, publication state, RAG strategy or remote branch was changed by this implementation run.
