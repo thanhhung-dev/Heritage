@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { UPLOAD_ACCEPT, formatFileSize } from "./file-policy";
+import { UPLOAD_ACCEPT } from "./file-policy";
 import { DesignIcon } from "./DesignIcon";
 import { useKnowledge } from "./KnowledgeProvider";
-import type { UploadEntry, UploadState } from "./upload-queue";
+import { formatEntryProgress, uploadPercent, uploadStateLabel, type UploadEntry } from "./upload-queue";
 import styles from "./knowledge.module.css";
+
+export { formatEntryProgress, uploadPercent, uploadStateLabel };
 
 const emptyEntries: readonly UploadEntry[] = [];
 
@@ -25,24 +27,6 @@ export function useUploadEntries() {
     cancelled: entries.filter(e => e.state === "cancelled").length,
   }), [entries]);
   return { queue, entries, summary };
-}
-
-export function uploadStateLabel(state: UploadState): string {
-  switch (state) {
-    case "queued": return "Ready to upload";
-    case "preparing": return "Preparing";
-    case "uploading": return "Uploading";
-    case "verifying": return "Verifying upload";
-    case "stored": return "Stored in R2";
-    case "failed": return "Failed";
-    case "cancelled": return "Cancelled";
-  }
-}
-
-export function uploadPercent(entry: UploadEntry): number {
-  if (entry.state === "stored" || entry.state === "verifying") return 100;
-  if (entry.total <= 0) return 0;
-  return Math.min(99, Math.max(0, Math.round((entry.loaded / entry.total) * 100)));
 }
 
 export function UploadDropzone({
@@ -108,8 +92,4 @@ export function UploadDropzone({
       </button>
     </div>
   );
-}
-
-export function formatEntryProgress(entry: UploadEntry): string {
-  return `${formatFileSize(entry.loaded)} of ${formatFileSize(entry.total)} · ${uploadPercent(entry)}%`;
 }

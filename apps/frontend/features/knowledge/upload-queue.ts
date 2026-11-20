@@ -1,6 +1,6 @@
 import { ApiError } from "../../lib/api";
 import { knowledgeError } from "../../services/knowledge.service";
-import { uploadFileType } from "./file-policy";
+import { formatFileSize, uploadFileType } from "./file-policy";
 import { R2TransferError, type DirectUpload } from "./upload-transport";
 import type { KnowledgeApi, KnowledgeCompletion, KnowledgeObject, KnowledgeUploadTicket } from "./types";
 
@@ -15,6 +15,28 @@ export interface UploadEntry {
   total: number;
   error?: string;
   object?: KnowledgeObject;
+}
+
+export function uploadStateLabel(state: UploadState): string {
+  switch (state) {
+    case "queued": return "Ready to upload";
+    case "preparing": return "Preparing";
+    case "uploading": return "Uploading";
+    case "verifying": return "Verifying upload";
+    case "stored": return "Stored in R2";
+    case "failed": return "Failed";
+    case "cancelled": return "Cancelled";
+  }
+}
+
+export function uploadPercent(entry: Pick<UploadEntry, "state" | "loaded" | "total">): number {
+  if (entry.state === "stored" || entry.state === "verifying") return 100;
+  if (entry.total <= 0) return 0;
+  return Math.min(99, Math.max(0, Math.round((entry.loaded / entry.total) * 100)));
+}
+
+export function formatEntryProgress(entry: Pick<UploadEntry, "state" | "loaded" | "total">): string {
+  return `${formatFileSize(entry.loaded)} of ${formatFileSize(entry.total)} · ${uploadPercent(entry)}%`;
 }
 interface SignedTransfer { ticket: KnowledgeUploadTicket; urlExpiresAt: number }
 interface QueueOptions { concurrency?: number; now?: () => number; id?: () => string; onStored?: (object: KnowledgeObject) => void }

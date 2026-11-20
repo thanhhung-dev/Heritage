@@ -4,8 +4,7 @@ import { createKnowledgeApi, knowledgeError } from "../services/knowledge.servic
 import { ApiError } from "../lib/api";
 import { checkedPage, uploadHref, libraryHref, documentHref } from "../features/knowledge/folder-state";
 import { formatFileSize } from "../features/knowledge/file-policy";
-import { formatEntryProgress, uploadPercent, uploadStateLabel } from "../features/knowledge/UploadControls";
-import type { UploadEntry } from "../features/knowledge/upload-queue";
+import { formatEntryProgress, uploadPercent, uploadStateLabel, type UploadEntry } from "../features/knowledge/upload-queue";
 
 test("document operations handle preview 413/404, download URL requests, folder creation and exact-key deletion", async () => {
   const seen: { method: string; url: string; body?: string }[] = [];
