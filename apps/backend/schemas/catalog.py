@@ -56,6 +56,16 @@ class CatalogPage(BaseModel):
     next_offset: int | None
 
 
+class RelatedContent(BaseModel):
+    relation_type: str
+    content: CatalogCard
+    source_url: str
+
+
+class CatalogDetail(CatalogCard):
+    related_entities: list[RelatedContent]
+
+
 class CategoryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     key: str
