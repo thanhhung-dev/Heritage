@@ -1,234 +1,81 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Avatar, Button, ConfigProvider, Modal, theme } from "antd";
-import {
-  HeroSection,
-  DiscoverMoreSection,
-  HeritageCarouselSection,
-  HeritageInfoModal,
-  type HeritageItem,
-} from "@/features/home";
-import {
-  getHeritages,
-  type HeritageItem as HeritageRecord,
-} from "@/services/heritage.service";
+import { useEffect, useState } from "react";
+import { HeroSection, DiscoverMoreSection, HeritageCarouselSection } from "@/features/home";
+import { ArtifactCollectionSection } from "@/features/home/ArtifactCollectionSection";
+import { CatalogInfoModal } from "@/features/home/CatalogInfoModal";
+import { appendCatalogPage, toCatalogCard } from "@/features/home/catalog-cards";
+import { getCatalogSection, getCatalogSections, type CatalogContent, type CatalogSections, type SectionKey } from "@/services/catalog.service";
 import styles from "@/features/home/HeritageCarouselSection.module.css";
 
-// Curated groups for the published heritage list, which has no category field.
-const ARTIFACT_HERITAGE_SLUGS = new Set([
-  "cuu-dinh",
-  "bao-tang-dieu-khac-cham",
-]);
-
-const FESTIVAL_HERITAGE_SLUGS = new Set([
-  "dien-hon-chen",
-  "lang-sinh",
-  "cau-ngoi-thanh-toan",
-  "ngu-hanh-son",
-  "dinh-lang-tuy-loan",
-  "dinh-lang-nam-o",
-  "pho-co-hoi-an",
-  "lang-gom-thanh-ha",
-  "lang-da-non-nuoc",
-]);
-
-function toFeaturedCard(item: HeritageRecord): HeritageItem {
-  const year = item.publish_date ? new Date(item.publish_date).getUTCFullYear() : NaN;
-
-  return {
-    slug: item.slug,
-    title: item.title,
-    region: item.region,
-    description: item.description,
-    card_image_url: item.card_image_url || item.splash_image_url,
-    published: Number.isFinite(year) ? `Published ${year}` : null,
-    language_label: item.language1?.name || "",
-    href: `/content/${encodeURIComponent(item.slug)}`,
-  };
-}
-
-function toPeopleCards(heritages: HeritageRecord[]): HeritageItem[] {
-  const people = new Map<string, HeritageItem>();
-
-  for (const heritage of heritages) {
-    for (const voice of Array.isArray(heritage.voices) ? heritage.voices : []) {
-      if (!voice.name?.trim()) continue;
-      const key = voice.id != null
-        ? `voice-${voice.id}`
-        : `${heritage.slug}-${voice.name}`;
-      if (people.has(key)) continue;
-
-      people.set(key, {
-        slug: key,
-        kind: "person",
-        title: voice.name,
-        region: voice.title,
-        description: voice.bio,
-        card_image_url: voice.headshot_url,
-        href: `/content/${encodeURIComponent(heritage.slug)}`,
-        heritageTitle: heritage.title,
-      });
-    }
-  }
-
-  return Array.from(people.values());
-}
+const SECTIONS: { key: SectionKey; title: string; description: string; empty: string }[] = [
+  { key: "featured", title: "Featured Experiences", description: "Những trải nghiệm được tuyển chọn để bắt đầu hành trình khám phá.", empty: "Chưa có trải nghiệm nổi bật được tuyển chọn." },
+  { key: "artifacts_treasures", title: "Artifacts & Treasures", description: "Những bộ sưu tập có nguồn tư liệu và câu chuyện riêng.", empty: "Chưa có bộ sưu tập hiện vật đã được xuất bản." },
+  { key: "artifact_collection", title: "Heritage Artifacts Collection", description: "", empty: "" },
+  { key: "people_traditions", title: "People & Traditions", description: "Nhân vật, nghệ nhân và truyền thống văn hóa được ghi nhận.", empty: "Chưa có nội dung nhân vật hoặc truyền thống được xuất bản." },
+  { key: "festivals_practices", title: "Festivals & Community Practices", description: "Khám phá các lễ hội, nghi lễ và thực hành văn hóa qua câu chuyện của chính chúng.", empty: "Chưa có lễ hội hoặc thực hành văn hóa được xuất bản." },
+];
 
 export default function HomePage() {
-  const [apiItems, setApiItems] = useState<HeritageRecord[]>([]);
+  const [sections, setSections] = useState<CatalogSections | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string>();
   const [attempt, setAttempt] = useState(0);
-  const [modalItem, setModalItem] = useState<HeritageRecord | null>(null);
-  const [selectedPerson, setSelectedPerson] = useState<HeritageItem | null>(null);
+  const [loadingMore, setLoadingMore] = useState<SectionKey | null>(null);
+  const [selected, setSelected] = useState<CatalogContent | null>(null);
+  const retry = () => setAttempt((value) => value + 1);
 
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(false);
-
-    getHeritages()
-      .then((data) => {
-        if (!Array.isArray(data)) throw new Error("Invalid heritage list");
-        if (!active) return;
-        setApiItems(data.filter((item) => item && item.slug && item.title));
-      })
-      .catch(() => {
-        if (active) setError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => { active = false; };
+    const controller = new AbortController();
+    getCatalogSections(controller.signal).then((data) => {
+      if (controller.signal.aborted) return;
+      setSections(data);
+      setError(undefined);
+      setSelected((previous) => previous
+        ? Object.values(data).flatMap((page) => page.items).find((item) => item.id === previous.id) ?? null : null);
+    }).catch(() => {
+      if (!controller.signal.aborted) setError("Chưa tải được nội dung. Bạn có thể thử lại khi máy chủ sẵn sàng.");
+    }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, [attempt]);
 
   useEffect(() => {
-    if (!error) return;
-    const retry = () => {
-      if (document.visibilityState === "visible") setAttempt((value) => value + 1);
-    };
-    const timer = window.setTimeout(retry, 30_000);
-    window.addEventListener("online", retry);
-    window.addEventListener("focus", retry);
+    const refresh = () => { if (document.visibilityState === "visible") retry(); };
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); window.removeEventListener("online", refresh); };
+  }, []);
 
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("online", retry);
-      window.removeEventListener("focus", retry);
-    };
-  }, [error, attempt]);
-
-  const featuredItems = useMemo(() => apiItems.map(toFeaturedCard), [apiItems]);
-  const artifactItems = useMemo(
-    () => featuredItems.filter((item) => ARTIFACT_HERITAGE_SLUGS.has(item.slug)),
-    [featuredItems],
-  );
-  const peopleItems = useMemo(() => toPeopleCards(apiItems), [apiItems]);
-  const festivalItems = useMemo(
-    () => featuredItems.filter((item) => FESTIVAL_HERITAGE_SLUGS.has(item.slug)),
-    [featuredItems],
-  );
-
-  const openHeritageInfo = (slug: string) => {
-    setModalItem(apiItems.find((item) => item.slug === slug) ?? null);
+  const info = (slug: string) => setSelected(sections
+    ? Object.values(sections).flatMap((page) => page.items).find((item) => item.slug === slug) ?? null : null);
+  const more = async (key: SectionKey) => {
+    const offset = sections?.[key].next_offset;
+    if (offset == null || loadingMore) return;
+    setLoadingMore(key);
+    try {
+      const next = await getCatalogSection(key, offset);
+      setSections((current) => current && current[key].next_offset === offset
+        ? { ...current, [key]: appendCatalogPage(current[key], next) } : current);
+    } catch { setError("Chưa tải được trang tiếp theo. Vui lòng thử lại."); }
+    finally { setLoadingMore(null); }
   };
-  const retry = () => setAttempt((value) => value + 1);
-  const apiError = error
-    ? "Chưa tải được nội dung. Trang sẽ thử kết nối lại khi máy chủ sẵn sàng."
-    : undefined;
 
-  return (
-    <div className={styles.homePage}>
-      <HeroSection items={apiItems} loading={loading} onInfo={openHeritageInfo} />
-
-      <HeritageCarouselSection
-        title="Featured Experiences"
-        description="Curated selection of our favorite Tapestry experiences"
-        items={featuredItems}
-        useFirstCardBackdrop
-        loading={loading}
-        error={apiError}
-        onRetry={retry}
-        onCardClick={openHeritageInfo}
-        emptyMessage="Chưa có trải nghiệm di sản được xuất bản."
-      />
-
-      <HeritageCarouselSection
-        title="Artifacts & Treasures"
-        description="The tools, art, and objects that shape human history"
-        items={artifactItems}
-        useFirstCardBackdrop
-        loading={loading}
-        error={apiError}
-        onRetry={retry}
-        onCardClick={openHeritageInfo}
-        emptyMessage="Chưa có nội dung hiện vật và bảo vật."
-      />
-
-      <HeritageCarouselSection
-        title="People & Traditions"
-        description="Community members share their personal stories and memories"
-        items={peopleItems}
-        useFirstCardBackdrop
-        loading={loading}
-        error={apiError}
-        onRetry={retry}
-        onCardClick={(key) => {
-          setSelectedPerson(peopleItems.find((item) => item.slug === key) ?? null);
-        }}
-        emptyMessage="Chưa có câu chuyện từ nhân vật và cộng đồng."
-      />
-
-      <HeritageCarouselSection
-        title="Festivals & Community Practices"
-        description="Discover festivals and traditions through the places that keep them alive"
-        className={styles.festivalSection}
-        items={festivalItems}
-        useFirstCardBackdrop
-        loading={loading}
-        error={apiError}
-        onRetry={retry}
-        onCardClick={openHeritageInfo}
-        emptyMessage="Chưa có nội dung lễ hội và sinh hoạt cộng đồng."
-      />
-
-      <DiscoverMoreSection />
-      <HeritageInfoModal item={modalItem} onClose={() => setModalItem(null)} />
-
-      <ConfigProvider theme={{
-        algorithm: theme.darkAlgorithm,
-        token: { colorPrimary: "#ff9b2d", fontFamily: "Poppins, sans-serif" },
-      }}>
-        <Modal
-          open={selectedPerson !== null}
-          title={selectedPerson?.title}
-          onCancel={() => setSelectedPerson(null)}
-          footer={selectedPerson?.href ? (
-            <Button type="primary" href={selectedPerson.href}>
-              Khám phá {selectedPerson.heritageTitle}
-            </Button>
-          ) : null}
-          centered
-          destroyOnHidden
-        >
-          {selectedPerson && (
-            <div className={styles.personDetail}>
-              <Avatar
-                shape="square"
-                size={96}
-                src={selectedPerson.card_image_url || undefined}
-                alt={selectedPerson.title}
-              >
-                {selectedPerson.title.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}
-              </Avatar>
-              {selectedPerson.region && <p className={styles.personRole}>{selectedPerson.region}</p>}
-              <p>{selectedPerson.description || "Chưa có phần giới thiệu nhân vật."}</p>
-            </div>
-          )}
-        </Modal>
-      </ConfigProvider>
-    </div>
-  );
+  return <div className={styles.homePage}>
+    <HeroSection items={sections?.featured.items.map(toCatalogCard) ?? []} loading={loading} onInfo={info} />
+    {SECTIONS.map(({ key, title, description, empty }) => <div key={key}>
+      {key === "artifact_collection"
+        ? <ArtifactCollectionSection items={sections?.[key].items ?? []} loading={loading} error={error} onRetry={retry} onInfo={info} />
+        : <HeritageCarouselSection title={title} description={description}
+          items={sections?.[key].items.map(toCatalogCard) ?? []} loading={loading} error={error}
+          onRetry={retry} onCardClick={info} emptyMessage={empty} useFirstCardBackdrop
+          className={key === "festivals_practices" ? styles.festivalSection : undefined} />}
+      {sections?.[key].next_offset != null && <div className={styles.loadMore}>
+        <button onClick={() => more(key)} disabled={loadingMore !== null}
+          aria-label={`Xem thêm ${title}`}>{loadingMore === key ? "Đang tải…" : "Xem thêm"}</button>
+      </div>}
+    </div>)}
+    <DiscoverMoreSection />
+    <CatalogInfoModal item={selected} onClose={() => setSelected(null)} />
+  </div>;
 }
