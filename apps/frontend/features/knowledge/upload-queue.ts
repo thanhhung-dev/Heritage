@@ -49,6 +49,7 @@ export class KnowledgeUploadQueue {
   private active = new Map<string, AbortController>();
   private cancelled = new Set<string>();
   private started = false;
+  private scheduledIds: Set<string> | null = null;
   private disposed = false;
   private readonly concurrency: number;
 
@@ -82,12 +83,20 @@ export class KnowledgeUploadQueue {
     if (added.length) { this.entries = [...this.entries, ...added]; this.emit(); if (this.started) this.pump(); }
     return errors;
   }
-  start() { if (!this.disposed) { this.started = true; this.pump(); } }
+  start(ids?: readonly string[]) {
+    if (this.disposed) return;
+    if (!this.started) this.scheduledIds = ids ? new Set(ids) : null;
+    else if (!ids) this.scheduledIds = null;
+    else if (this.scheduledIds) for (const id of ids) this.scheduledIds.add(id);
+    this.started = true;
+    this.pump();
+    if (!this.active.size) this.started = false;
+  }
   retry(id: string) {
     if (this.active.has(id) || !this.entries.some(entry => entry.id === id && ["failed", "cancelled"].includes(entry.state))) return;
     this.cancelled.delete(id);
     this.update(id, { state: "queued", error: undefined });
-    this.start();
+    this.start([id]);
   }
   cancel(id: string): boolean {
     const entry = this.entries.find(row => row.id === id);
@@ -112,13 +121,15 @@ export class KnowledgeUploadQueue {
   private pump() {
     if (this.disposed || !this.started) return;
     while (this.active.size < this.concurrency) {
-      const entry = this.entries.find(row => row.state === "queued" && !this.active.has(row.id));
+      const entry = this.entries.find(row => row.state === "queued" && !this.active.has(row.id)
+        && (!this.scheduledIds || this.scheduledIds.has(row.id)));
       if (!entry) break;
       const controller = new AbortController();
       this.active.set(entry.id, controller);
       void this.run(entry, controller).finally(() => {
         this.active.delete(entry.id);
-        if (!this.active.size && !this.entries.some(row => row.state === "queued")) this.started = false;
+        if (!this.active.size && !this.entries.some(row => row.state === "queued"
+          && (!this.scheduledIds || this.scheduledIds.has(row.id)))) this.started = false;
         this.pump();
       });
     }

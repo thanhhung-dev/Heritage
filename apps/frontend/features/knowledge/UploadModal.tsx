@@ -186,7 +186,7 @@ export function UploadDocumentsModal({
             type="button"
             className={`${styles.figmaBtn} ${styles.figmaBtnPrimary}`}
             disabled={activeInFolder || queuedInFolder.length === 0}
-            onClick={() => queue?.start()}
+            onClick={() => queue?.start(queuedInFolder.map(entry => entry.id))}
           >
             {activeInFolder
               ? "Uploading…"

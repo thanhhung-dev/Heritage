@@ -126,6 +126,24 @@ test("cancelled queued files do not call backend and active cancellation does no
   assert.equal(f.calls.filter(c => c === "begin").length, 2); queue.dispose();
 });
 
+test("folder-scoped start leaves hidden queued files untouched and retry authorizes only its file", async () => {
+  const f = fixture(); let fail = true;
+  const queue = new KnowledgeUploadQueue(f.api, async () => { if (fail) throw new R2TransferError("offline", 0); });
+  queue.add([new File(["hello"], "selected.md")], "selected/");
+  queue.add([new File(["hello"], "hidden.md")], "hidden/");
+  const selected = queue.getSnapshot()[0].id;
+  queue.start([selected]);
+  for (let i = 0; i < 100 && queue.getSnapshot()[0].state !== "failed"; i++) await new Promise(r => setTimeout(r, 1));
+  assert.deepEqual(queue.getSnapshot().map(row => row.state), ["failed", "queued"]);
+  fail = false; queue.retry(selected);
+  for (let i = 0; i < 100 && queue.getSnapshot()[0].state !== "stored"; i++) await new Promise(r => setTimeout(r, 1));
+  assert.deepEqual(queue.getSnapshot().map(row => row.state), ["stored", "queued"]);
+  assert.equal(f.calls.filter(call => call === "begin").length, 1);
+  queue.start(); await settle(queue);
+  assert.deepEqual(queue.getSnapshot().map(row => row.state), ["stored", "stored"]);
+  queue.dispose();
+});
+
 test("expired URL with missing staging explains the reservation instead of creating duplicate sessions", async () => {
   const f = fixture({ complete: () => new Response("{}", { status: 404 }) }); let now = 0;
   const queue = new KnowledgeUploadQueue(f.api, async () => { throw new R2TransferError("network", 0); }, { now: () => now });
