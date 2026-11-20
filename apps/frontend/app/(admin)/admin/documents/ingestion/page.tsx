@@ -1,69 +1,132 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "antd";
 import { DesignIcon } from "@/features/knowledge/DesignIcon";
+import { KnowledgeTopPath } from "@/features/knowledge/FolderBrowser";
 import { libraryHref } from "@/features/knowledge/folder-state";
+import { useKnowledge } from "@/features/knowledge/KnowledgeProvider";
 import styles from "@/features/knowledge/knowledge.module.css";
 
 export default function IngestionPage() {
+  const { root } = useKnowledge();
   return (
     <section className={styles.page} aria-label="RAG Ingestion">
+      <KnowledgeTopPath prefix={root} current="Ingestion" />
+
       <header className={styles.header}>
         <div>
           <h1>Ingestion</h1>
-          <p>Monitor chunking, embedding (BGE-M3), and indexing jobs for approved knowledge documents.</p>
+          <p>Run and monitor extraction, chunking, BGE-M3 embedding, and indexing jobs for approved revisions.</p>
         </div>
         <div className={styles.actions}>
-          <Link href={libraryHref()}>
-            <Button icon={<DesignIcon name="library-ArrowLeft" />}>Back to Document library</Button>
+          <button type="button" className={`${styles.figmaBtn} ${styles.figmaBtnPrimary}`} disabled>
+            Run ingestion
+          </button>
+          <Link href={libraryHref()} className={styles.figmaBtn}>
+            Back to library
           </Link>
         </div>
       </header>
 
+      <div className={styles.contextBar}>
+        <span className={styles.contextBadge}>TRUTHFUL BACKEND STATE</span>
+        <span className={styles.contextText}>
+          No RAG ingestion job endpoints are attached to <code>/api/admin/knowledge</code> · R2 uploads never auto-index into the chatbot
+        </span>
+      </div>
+
       <div className={styles.stateCards}>
-        <div className={styles.panel}>
+        <div className={styles.stateCard}>
           <div className={styles.stateTitle}>
-            <strong>Storage state</strong>
-            <span className={styles.badges}>Active in R2</span>
+            <span className={styles.stateLabel}>Storage</span>
+            <span className={styles.badges}>Stored in R2</span>
           </div>
-          <p className={styles.muted}>
-            Objects stored in <code>knowledge-heritage</code> are verified in Cloudflare R2 only. Storage completion never triggers automatic indexing.
-          </p>
+          <p className={styles.stateSummary}>Source files are stored in bucket knowledge-heritage.</p>
         </div>
-        <div className={styles.panel}>
+        <div className={styles.stateCard}>
           <div className={styles.stateTitle}>
-            <strong>Ingestion job API</strong>
+            <span className={styles.stateLabel}>Ingestion jobs</span>
             <span className={styles.badges}>Unavailable</span>
           </div>
-          <p className={styles.muted}>
-            The mounted <code>/api/admin/knowledge</code> contract does not expose ingestion job creation, progress stages, chunk inspection, or retry endpoints.
-          </p>
+          <p className={styles.stateSummary}>Job creation, stage progress, and retry endpoints are not mounted.</p>
         </div>
-        <div className={styles.panel}>
+        <div className={styles.stateCard}>
           <div className={styles.stateTitle}>
-            <strong>Chatbot availability</strong>
-            <span className={styles.badges}>Separate from R2 upload</span>
+            <span className={styles.stateLabel}>Chatbot availability</span>
+            <span className={styles.badges}>Not indexed</span>
           </div>
-          <p className={styles.muted}>
-            Uploaded R2 files are never marked as indexed or chatbot-ready without a verified backend ingestion pipeline response.
-          </p>
+          <p className={styles.stateSummary}>Files are never marked as chatbot-ready without a real indexing response.</p>
         </div>
       </div>
 
-      <div className={styles.panel}>
-        <div className={styles.empty}>
-          <DesignIcon name="library-Hash" />
-          <h2>RAG ingestion job endpoints are not exposed for R2 library objects</h2>
-          <p className={styles.muted}>
-            No simulated indexing jobs or percentage bars are shown. Manage and verify your stored source files in the R2 Document library.
-          </p>
-          <div className={styles.actions}>
-            <Link href={libraryHref()}>
-              <Button type="primary">Open Document library</Button>
-            </Link>
-            <Button disabled>Start ingestion job (unavailable)</Button>
-            <Button disabled>Retry failed job (unavailable)</Button>
+      <div className={styles.twoColumns}>
+        <div className={styles.mainColumn} style={{ gap: 20 }}>
+          <div className={styles.panel}>
+            <div className={styles.panelHeading}>
+              <h2>Ingestion jobs</h2>
+              <p>0 jobs · Fake processing progress and synthetic job records are never rendered</p>
+            </div>
+
+            <div className={styles.figmaTable} role="table" aria-label="Ingestion jobs">
+              <div className={styles.figmaTableHeader} role="row">
+                <div className={styles.colFile} role="columnheader">Job / document</div>
+                <div className={styles.colReview} role="columnheader">Stage</div>
+                <div className={styles.colIngestion} role="columnheader">Status</div>
+                <div className={styles.colActions} role="columnheader">Actions</div>
+              </div>
+              <div className={styles.empty}>
+                <DesignIcon name="library-Hash" />
+                <h2>No ingestion job API is connected</h2>
+                <p className={styles.muted}>
+                  The backend Knowledge Library currently implements the 8 Cloudflare R2 storage endpoints. Extraction, chunking, BGE-M3 embedding, and vector indexing job APIs are not exposed for these objects.
+                </p>
+                <Link href={libraryHref()} className={`${styles.figmaBtn} ${styles.figmaBtnPrimary}`}>
+                  Browse R2 Document library
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.mainColumn} style={{ gap: 16 }}>
+          <div className={styles.panel}>
+            <div className={styles.panelHeading}>
+              <h2>Pipeline stages</h2>
+              <p>Expected stages once backend ingestion job endpoints are connected.</p>
+            </div>
+            <div className={styles.metaStack}>
+              <div className={styles.metaField}>
+                <span className={styles.metaFieldLabel}>1. Text extraction & validation</span>
+                <span className={styles.metaFieldValue}>Not run (R2 raw text preview is available in Document details)</span>
+              </div>
+              <div className={styles.metaField}>
+                <span className={styles.metaFieldLabel}>2. Semantic chunking</span>
+                <span className={styles.metaFieldValue}>Not run</span>
+              </div>
+              <div className={styles.metaField}>
+                <span className={styles.metaFieldLabel}>3. BGE-M3 embedding generation</span>
+                <span className={styles.metaFieldValue}>Not run</span>
+              </div>
+              <div className={styles.metaField}>
+                <span className={styles.metaFieldLabel}>4. Search index publication</span>
+                <span className={styles.metaFieldValue}>Not run</span>
+              </div>
+            </div>
+            <div>
+              <button type="button" className={styles.figmaBtn} disabled>
+                Retry failed job (unavailable)
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.notice}>
+            <DesignIcon name="library-Info" />
+            <div className={styles.noticeBody}>
+              <span className={styles.noticeTitle}>Storage state ≠ Ingestion state</span>
+              <p>
+                Uploading a file to <code>knowledge-heritage</code> only completes R2 storage. It never simulates or triggers background RAG indexing.
+              </p>
+            </div>
           </div>
         </div>
       </div>
