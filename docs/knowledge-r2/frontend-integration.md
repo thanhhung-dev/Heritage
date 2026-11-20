@@ -1,27 +1,27 @@
-# Frontend integration and manual acceptance
+# Hướng dẫn tích hợp Frontend và test tay
 
-This change supplies backend APIs only. Existing R2 objects immediately appear through listings; no import, copy, rename or upload is required. Use the admin login API and its bearer access token. Never send the admin token to R2.
+Thay đổi này cung cấp các API backend cho Knowledge Library. File có sẵn trên R2 sẽ xuất hiện khi lấy danh sách; không cần nhập lại dữ liệu, sao chép, đổi tên hay tải lên lại. Đăng nhập bằng API Admin hiện có và dùng access token dạng Bearer. Không gửi token Admin đến R2.
 
-## Exact upload flow
+## Quy trình tải file lên
 
-1. Admin opens Knowledge Library. Request `GET /api/admin/knowledge/objects`, with no prefix to start at the server-configured root.
-2. Render `folders` and `files`. Navigate using each returned `prefix`, retain each exact `key`, and use URLSearchParams for query strings. Fetch additional pages using `nextContinuationToken` until null, even after an empty filtered page. Reset pagination when changing folders.
-3. Admin selects the destination folder and one local File. Match its extension to the API's explicit MIME allowlist; do not rely on browser `file.type` being populated.
-4. POST `/api/admin/knowledge/upload-url` with `{folder, filename, contentType, size: file.size}`. A 409 means the name is occupied or reserved by an active upload; ask the admin to choose another name. The backend never silently renames files.
-5. PUT the raw File to the returned `uploadUrl`, using every `requiredHeaders` entry. Do not use multipart/FormData, do not add Authorization, and do not manually set Content-Length from browser JavaScript. The browser computes that signed header from the exact File body.
-6. After the PUT succeeds, POST `/api/admin/knowledge/uploads/{uploadId}/complete` with the admin bearer token and no body. Do not treat the R2 PUT alone as completed library storage.
-7. Backend verifies staging and publishes atomically. Display `Stored` after completion returns 200. This status does not mean indexed, embedded or available to the chatbot.
-8. Refresh the selected folder listing. Preserve the selected prefix, clear old pagination and display the exact destination returned by completion.
+1. Admin mở Knowledge Library. Gọi `GET /api/admin/knowledge/objects` và không truyền prefix để bắt đầu tại thư mục gốc đã cấu hình trên server.
+2. Hiển thị `folders` và `files`. Điều hướng bằng `prefix` được trả về, giữ nguyên từng `key` và dùng URLSearchParams để tạo query string. Lấy trang tiếp theo bằng `nextContinuationToken` đến khi giá trị này là null, kể cả khi trang hiện tại rỗng sau bước lọc. Khi đổi thư mục, bắt đầu lại phân trang.
+3. Admin chọn thư mục đích và một File trên máy. Xác định MIME theo danh sách phần mở rộng được API cho phép; không phụ thuộc vào `file.type` vì trình duyệt có thể trả chuỗi rỗng.
+4. Gọi POST `/api/admin/knowledge/upload-url` với `{folder, filename, contentType, size: file.size}`. Mã 409 nghĩa là tên file đã tồn tại hoặc đang được một phiên upload khác giữ chỗ; yêu cầu Admin chọn tên khác. Backend không tự đổi tên file.
+5. Gửi PUT với nội dung File nguyên bản đến `uploadUrl`, kèm đầy đủ các header trong `requiredHeaders`. Không dùng multipart/FormData, không thêm Authorization và không tự đặt Content-Length bằng JavaScript trên trình duyệt. Trình duyệt tự tính header đã ký này từ đúng nội dung File.
+6. Sau khi PUT thành công, gọi POST `/api/admin/knowledge/uploads/{uploadId}/complete`, kèm Bearer token Admin và không gửi body. Chỉ PUT thành công trên R2 chưa có nghĩa file đã được lưu hoàn chỉnh vào thư viện.
+7. Backend kiểm tra file ở vùng tạm (staging) và ghi vào vị trí đích bằng thao tác nguyên tử. Hiển thị trạng thái đã lưu khi complete trả 200. Trạng thái này không có nghĩa file đã được lập chỉ mục, tạo embedding hoặc đưa vào chatbot.
+8. Tải lại danh sách thư mục đang chọn. Giữ prefix hiện tại, xóa trạng thái phân trang cũ và hiển thị đúng vị trí đích do complete trả về.
 
-Use `XMLHttpRequest.upload.onprogress` for direct PUT progress (`loaded/total`). A progress value of 100% means transfer finished; show a separate `Verifying upload…` state while completing. Fetch can upload the same File but does not provide the same portable upload-progress event.
+Dùng `XMLHttpRequest.upload.onprogress` để hiển thị tiến độ PUT trực tiếp (`loaded/total`). Khi tiến độ đạt 100%, việc truyền dữ liệu đã xong; tiếp tục hiển thị trạng thái “Đang xác minh file…” trong lúc gọi complete. Fetch cũng tải được File nhưng không có sự kiện theo dõi tiến độ upload tương đương trên các trình duyệt.
 
-If a PUT response is lost, retrying the immutable staging key can return 412 because the first PUT succeeded. Call complete to find out; do not remove If-None-Match or overwrite staging. After a completion network error/503, retry complete with the same upload ID. A completed session returns its real object; a missing final object is not recreated. An expired unpublished session returns 410 and needs a new session. Signed URLs expire after five minutes, sessions after fifteen. Keep URLs only in memory and redact them from analytics and error reports.
+Nếu mất phản hồi PUT, gửi lại đến staging key không cho ghi đè có thể nhận 412 vì lần PUT đầu đã thành công. Gọi complete để xác định kết quả; không bỏ If-None-Match hoặc ghi đè staging. Nếu complete gặp lỗi mạng/503, gọi lại bằng cùng upload ID. Phiên đã hoàn tất sẽ trả thông tin file thật; file đích đã bị xóa sẽ không được tạo lại. Phiên hết hạn mà chưa ghi file đích trả 410 và cần tạo phiên mới. URL có chữ ký hết hạn sau 5 phút, phiên upload hết hạn sau 15 phút. Chỉ giữ URL trong bộ nhớ và loại bỏ URL khỏi dữ liệu phân tích, log và báo cáo lỗi.
 
-## Browser CORS configuration
+## Cấu hình CORS trên trình duyệt
 
-There are two separate policies: backend `CORS_ORIGINS` for authenticated API requests, and bucket CORS for direct PUT/GET to R2. The bucket stays private. An administrator must review and apply exact deployment origins in Cloudflare; implementation did not change production policies. Replace the illustrative domain below with the actual Admin origin, including scheme and port. Add localhost only in a reviewed development policy.
+Cần cấu hình hai chính sách: `CORS_ORIGINS` của backend cho các yêu cầu API có xác thực, và CORS của bucket cho PUT/GET trực tiếp đến R2. Bucket vẫn ở chế độ riêng tư. Người quản trị cần kiểm tra và cấu hình đúng origin triển khai trên Cloudflare; phần triển khai này chưa thay đổi chính sách production. Thay domain minh họa bên dưới bằng origin Admin thực tế, gồm giao thức và cổng nếu có. Chỉ thêm localhost vào chính sách dành cho môi trường phát triển đã được rà soát.
 
-Cloudflare dashboard CORS policy shape:
+Mẫu chính sách CORS trong Cloudflare Dashboard:
 
 ```json
 [
@@ -35,30 +35,32 @@ Cloudflare dashboard CORS policy shape:
 ]
 ```
 
-Do not add wildcard origins/headers or DELETE permission for this flow. Delete requests go to the authenticated backend. `OPTIONS` is handled as CORS preflight and is not an AllowedMethods entry. When using the S3 API to configure CORS, wrap the rule array in `{"CORSRules":[...]}`; do not replace an existing policy without review. Use the R2 S3 endpoint in generated URLs, not a public/custom CDN hostname.
+Không thêm origin/header dạng wildcard hoặc quyền DELETE cho luồng này. Yêu cầu xóa đi qua backend có xác thực. `OPTIONS` được xử lý như CORS preflight và không phải một mục trong AllowedMethods. Nếu cấu hình CORS bằng S3 API, bọc mảng quy tắc trong `{"CORSRules":[...]}`; rà soát trước khi thay chính sách hiện có. URL được tạo phải sử dụng endpoint S3 của R2, không thay bằng hostname CDN công khai hoặc domain tùy chỉnh.
 
-Include an `Origin` header when examining CORS with command-line tools. Test the browser preflight from the actual Admin origin and confirm the three required upload headers are accepted. Signed URL expiration may appear to JavaScript as a CORS/network error because R2 omits CORS headers on expired responses; request a fresh session or retry completion when the original upload may already exist. See [Cloudflare CORS documentation](https://developers.cloudflare.com/r2/buckets/cors/) and [presigned URL documentation](https://developers.cloudflare.com/r2/api/s3/presigned-urls/).
+Khi kiểm tra CORS bằng công cụ dòng lệnh, cần gửi header `Origin`. Kiểm tra preflight trên trình duyệt từ đúng origin Admin và xác nhận ba header upload bắt buộc được chấp nhận. URL có chữ ký hết hạn có thể hiện thành lỗi CORS/mạng trong JavaScript vì R2 không trả header CORS cho phản hồi hết hạn. Khi đó, tạo phiên mới hoặc gọi lại complete nếu file có thể đã được tải lên. Tham khảo [tài liệu CORS của Cloudflare](https://developers.cloudflare.com/r2/buckets/cors/) và [tài liệu URL có chữ ký](https://developers.cloudflare.com/r2/api/s3/presigned-urls/).
 
-## Metadata, preview, download and deletion
+## Xem thông tin, xem trước, tải xuống và xóa file
 
-GET `/object?key=...` for actual size, MIME, timestamps, ETag and allowed metadata. GET `/preview?key=...` returns escaped JSON containing raw UTF-8 text; display through text nodes/`<pre>`. Markdown/HTML strings must not execute. A 413 offers download instead. POST `/download-url` with `{key}` and open its short-lived attachment URL. No permanent private URL is needed.
+Gọi GET `/object?key=...` để lấy dung lượng, MIME, thời gian, ETag và metadata được phép hiển thị. GET `/preview?key=...` trả JSON chứa văn bản UTF-8 nguyên bản; hiển thị bằng text node hoặc `<pre>`. Không để nội dung Markdown/HTML được thực thi. Nếu nhận 413, cung cấp lựa chọn tải xuống. Gọi POST `/download-url` với `{key}` rồi mở URL tải xuống ngắn hạn được trả về. Không cần URL riêng tư cố định.
 
-For creation, POST `/folders` with `{parentPrefix, folderName}` and refresh. For deletion, show a confirmation containing the exact filename/key, then send one DELETE `/objects` body `{key}`. Refresh after 204. Never submit a folder prefix, a wildcard, an array or `recursive`; all are outside this contract. Coordinate external writers because deletion acts on the current object at the selected key, without an atomic ETag-delete guarantee.
+Để tạo thư mục, gọi POST `/folders` với `{parentPrefix, folderName}` rồi tải lại danh sách. Khi xóa, hiển thị xác nhận có tên file/key chính xác, sau đó gửi một DELETE `/objects` với body `{key}`. Tải lại danh sách sau mã 204. Không gửi prefix thư mục, ký tự đại diện, mảng hoặc `recursive`; các cách này không thuộc luồng tích hợp. Phối hợp với các công cụ ghi dữ liệu bên ngoài vì thao tác xóa tác động đến object hiện tại tại key đã chọn, không bảo đảm so sánh ETag và xóa nguyên tử.
 
-## Deployment and manual test steps
+<a id="deployment-and-manual-test-steps"></a>
 
-1. Configure the server variables in [.env.example](.env.example). Reuse existing R2 credentials and database conventions. Use a private `JWT_SECRET_KEY`, never the repository's legacy public fallback. Existing login and this module must use the same signing configuration before process startup.
-2. Review Alembic history before applying `20261120_knowledge_library` (parent `20261120_classification`) through the normal deployment migration process. It creates only `knowledge_library_upload`; it does not rewrite existing rows or R2 objects. Do not use create_all or stamp an incompatible database. The implementation's PostgreSQL tests applied it only to disposable resources.
-3. Provision an active admin account through the existing account flow, verify its `roles` record is ADMIN, and log in. Open backend `/docs`, click Authorize and enter its bearer token. Confirm all eight library operations appear.
-4. Safe production read checks: list root; click a returned folder prefix; page with a low limit; inspect one existing file; preview a small text file; request a short download link. Do not assume any sample folder names exist. Confirm 401 without a token and 403 for an ordinary user.
-5. Perform **write/delete acceptance only in a dedicated test environment**, using a bucket/account with synthetic data and the required bucket name `knowledge-heritage`. Set a dedicated library scope such as `qa-library/` and create test filenames there. Never select existing production files for these checks.
-6. Create a logical QA folder, request an upload URL for a small UTF-8 `.md`, PUT the exact bytes and complete. Confirm listing/metadata/preview match the bytes; repeat complete and confirm the same result. Confirm there is no chatbot/RAG ingestion.
-7. Request another session with that filename and expect 409. Try `.html`, wrong MIME, zero/oversize, traversal and recursive-delete fields; expect 422. On the dedicated test resource, verify size/identity mismatch cannot complete and an expired session returns 410.
-8. Delete only the synthetic file using its exact returned key; expect 204, then 404 on metadata. Confirm a sibling test file and the folder marker remain. No recursive folder-delete operation is provided.
+## Triển khai và test tay
 
-## Automated verification commands
+1. Cấu hình các biến phía server trong [.env.example](.env.example). Tái sử dụng thông tin xác thực R2 và quy ước database hiện có. Đặt `JWT_SECRET_KEY` riêng tư, không dùng khóa dự phòng công khai trong repository. API đăng nhập và module này phải dùng cùng cấu hình ký token ngay từ lúc khởi động tiến trình.
+2. Kiểm tra lịch sử Alembic trước khi áp dụng `20261120_knowledge_library` (migration cha: `20261120_classification`) theo quy trình triển khai của dự án. Migration chỉ tạo `knowledge_library_upload`, không ghi lại dữ liệu cũ hoặc object R2. Không dùng create_all hoặc stamp database có schema không tương thích. Các test PostgreSQL của task chỉ áp dụng migration trên tài nguyên test tạm thời.
+3. Tạo hoặc dùng tài khoản Admin đang hoạt động theo luồng tài khoản hiện có, kiểm tra bản ghi `roles` là ADMIN rồi đăng nhập. Mở `/docs` của backend, bấm **Authorize** và nhập Bearer token. Kiểm tra đủ 8 thao tác của thư viện.
+4. Kiểm tra chỉ đọc an toàn trên production: lấy danh sách gốc; mở một prefix thư mục được trả về; phân trang với limit nhỏ; xem thông tin một file có sẵn; xem trước một file văn bản nhỏ; tạo liên kết tải xuống ngắn hạn. Không giả định tên thư mục mẫu tồn tại. Kiểm tra không có token trả 401 và tài khoản thường trả 403.
+5. **Chỉ kiểm tra ghi/xóa trong môi trường test riêng**, dùng bucket/tài khoản chứa dữ liệu giả lập và tên bucket bắt buộc `knowledge-heritage`. Đặt phạm vi thư viện riêng, ví dụ `qa-library/`, rồi tạo file test trong đó. Không chọn file production có sẵn để thử các thao tác này.
+6. Tạo thư mục QA, xin upload URL cho một file UTF-8 `.md` nhỏ, PUT đúng nội dung rồi gọi complete. Kiểm tra danh sách, metadata và preview khớp nội dung đã gửi; gọi lại complete và xác nhận kết quả giống nhau. Kiểm tra file không tự được đưa vào chatbot/RAG.
+7. Xin phiên upload khác với cùng tên file và kiểm tra mã 409. Thử `.html`, MIME sai, dung lượng bằng 0/quá giới hạn, đường dẫn đi lên thư mục cha và trường yêu cầu xóa đệ quy; phải nhận 422. Trên tài nguyên test riêng, kiểm tra file sai dung lượng/định danh không thể complete và phiên hết hạn trả 410.
+8. Chỉ xóa file test bằng đúng key được trả về; kiểm tra mã 204 rồi 404 khi xem metadata. Xác nhận file test bên cạnh và object đánh dấu thư mục vẫn còn. API không cung cấp thao tác xóa thư mục đệ quy.
 
-From repository root, with the existing backend virtualenv and test dependencies:
+## Lệnh kiểm thử tự động
+
+Chạy từ thư mục gốc repository, dùng virtualenv backend và các thư viện test hiện có:
 
 ```text
 python -X utf8 -m unittest apps.backend.tests.test_knowledge_library_storage apps.backend.tests.test_knowledge_library_api apps.backend.tests.test_knowledge_library_contract -v
@@ -66,6 +68,6 @@ python -X utf8 -m unittest apps.backend.tests.test_knowledge_library_postgres -v
 python -X utf8 scripts/verify-knowledge-r2.py
 ```
 
-For PostgreSQL tests, explicitly set `KNOWLEDGE_TEST_DATABASE_URL` to a loopback `postgresql+psycopg://.../test_*` database dedicated to automated tests. Without it, those tests skip. They apply the migration inside randomly named owned schemas and clean up only those schemas. Every R2 write/delete in tests goes to a synthetic in-memory client. The smoke script allows only real R2 listing and HEAD and never prints file names, credentials or signed URLs.
+Để chạy test PostgreSQL, đặt rõ `KNOWLEDGE_TEST_DATABASE_URL` trỏ đến database `postgresql+psycopg://.../test_*` trên localhost dành riêng cho test tự động. Nếu thiếu biến này, các test PostgreSQL sẽ được bỏ qua. Test áp dụng migration trong schema có tên ngẫu nhiên do test tự tạo và chỉ dọn các schema đó. Mọi thao tác ghi/xóa R2 trong test đều chạy trên client giả lập trong bộ nhớ. Script kiểm tra kết nối R2 thật chỉ lấy danh sách và HEAD, không in tên file, thông tin xác thực hoặc URL có chữ ký.
 
-Abandoned staging objects and old session records are retained for recovery. Operators should review a lifecycle policy restricted to the reserved `__knowledge_library_uploads__/` prefix under the configured root, with retention comfortably beyond session expiry; no cleanup/lifecycle policy was installed. Keep recovery records and audit/retention requirements in mind before database pruning. Apply per-admin upload/write rate limits at the deployment gateway because this repository has no existing distributed limiter.
+Object staging bị bỏ dở và bản ghi phiên cũ được giữ lại để khôi phục. Người vận hành nên rà soát chính sách vòng đời chỉ áp dụng cho prefix dành riêng `__knowledge_library_uploads__/` dưới thư mục gốc đã cấu hình, với thời gian lưu dài hơn thời hạn phiên một khoảng phù hợp; task chưa cài chính sách hay tác vụ dọn dẹp. Cân nhắc nhu cầu khôi phục, kiểm toán và lưu giữ trước khi xóa bản ghi database. Cấu hình giới hạn tần suất upload/ghi theo từng Admin tại gateway triển khai vì repository chưa có bộ giới hạn phân tán.
