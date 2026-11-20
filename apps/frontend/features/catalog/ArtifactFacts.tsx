@@ -2,10 +2,10 @@ import type { CatalogContent } from "@/services/catalog.service";
 import styles from "./artifact-facts.module.css";
 
 const FACT_LABELS = {
-  period: "Niên đại / thời kỳ",
-  material: "Chất liệu",
-  origin: "Nguồn gốc",
-  custodian: "Nơi lưu giữ",
+  period: "Date / period",
+  material: "Material",
+  origin: "Origin",
+  custodian: "Held at",
 } as const;
 
 export function ArtifactFacts({ item }: { item: CatalogContent }) {
