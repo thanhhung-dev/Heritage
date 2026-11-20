@@ -30,7 +30,7 @@ async def record_audit(db, content, before, actor, run_id):
     return after
 
 
-async def apply_prediction(db, content, prediction: Prediction, *, run_id, high=0.9, medium=0.55):
+async def apply_prediction(db, content, prediction: Prediction, *, run_id, high=0.9, medium=0.55, actor="worker"):
     before = await snapshot(db, content)
     if not content.locked_by_admin:
         await db.execute(delete(HeritageClassification).where(HeritageClassification.content_id == content.id))
@@ -45,7 +45,19 @@ async def apply_prediction(db, content, prediction: Prediction, *, run_id, high=
         content.classification_status = "applied"
     content.classified_revision = content.input_revision
     await db.flush()
-    return await record_audit(db, content, before, "worker" if not content.locked_by_admin else "worker:locked", run_id)
+    return await record_audit(db, content, before, actor if not content.locked_by_admin else actor + ":locked", run_id)
+
+
+async def restore_snapshot(db, content, state):
+    await db.execute(delete(HeritageClassification).where(HeritageClassification.content_id == content.id))
+    for row in state["categories"]:
+        values = dict(row)
+        if values.get("reviewed_at"):
+            values["reviewed_at"] = datetime.fromisoformat(values["reviewed_at"])
+        db.add(HeritageClassification(content_id=content.id, **values))
+    for key in ("entity_type", "classification_status", "classified_revision", "locked_by_admin"):
+        setattr(content, key, state[key])
+    await db.flush()
 
 
 async def manual_override(db, content_id, data, actor):
