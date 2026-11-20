@@ -18,7 +18,9 @@ SECTION_KEYS = ("featured", "artifacts_treasures", "people_traditions", "festiva
 def public_conditions():
     return (CulturalContent.publish_state == "published", CulturalContent.classification_status == "applied",
             CulturalContent.classified_revision == CulturalContent.input_revision,
-            CulturalContent.entity_type.is_not(None))
+            CulturalContent.entity_type.is_not(None),
+            or_(CulturalContent.source_heritage_id.is_(None), exists(select(Heritage.id).where(
+                Heritage.id == CulturalContent.source_heritage_id, Heritage.publish_state == "published").correlate(CulturalContent))))
 
 
 def primary_in(keys):
@@ -53,6 +55,7 @@ def image_url(raw):
         parsed = urlsplit(raw)
         if (raw != raw.strip() or any(ord(c) < 32 for c in raw) or "\\" in raw or raw.startswith("//")
                 or parsed.scheme not in {"", "http", "https"} or parsed.username or parsed.password
+                or (parsed.scheme and not parsed.hostname)
                 or parsed.fragment or any(part == ".." for part in unquote(parsed.path).split("/"))):
             return None
         resolved = asset_policy().resolve(raw)

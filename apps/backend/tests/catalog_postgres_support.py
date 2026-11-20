@@ -40,7 +40,8 @@ class CatalogPostgresFixture(unittest.IsolatedAsyncioTestCase):
         self.addAsyncCleanup(self.drop_schema)
         async with self.engine.begin() as conn:
             await conn.exec_driver_sql((ROOT / "schema.sql").read_text(encoding="utf-8"))
-            await conn.execute(text("CREATE TABLE entity(id UUID PRIMARY KEY)"))
+            await conn.execute(text("""CREATE TABLE entity(id UUID PRIMARY KEY,name TEXT,type TEXT,summary TEXT,
+                entry_status TEXT,source_document_id UUID,source_passage_id UUID)"""))
             await conn.run_sync(KnowledgeDocument.__table__.create)
             await conn.exec_driver_sql((ROOT / "apps/backend/migrations/versions/20261120_09_heritage_classification.sql").read_text(encoding="utf-8"))
 

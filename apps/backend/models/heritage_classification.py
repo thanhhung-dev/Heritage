@@ -21,7 +21,7 @@ class CulturalContent(Base):
     __tablename__ = "heritage_content"
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     source_heritage_id: Mapped[int | None] = mapped_column(ForeignKey("heritage.id", ondelete="CASCADE"), unique=True)
-    slug: Mapped[str] = mapped_column(String(250), unique=True)
+    slug: Mapped[str] = mapped_column(Text, unique=True)
     title: Mapped[str] = mapped_column(Text)
     tagline: Mapped[str | None] = mapped_column(Text)
     headline: Mapped[str | None] = mapped_column(Text)

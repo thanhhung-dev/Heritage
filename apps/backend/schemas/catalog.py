@@ -12,7 +12,8 @@ SectionKey = Literal["featured", "artifacts_treasures", "people_traditions", "fe
 
 def safe_url(value):
     parsed = urlsplit(value)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+    if (any(ord(c) < 32 for c in value) or parsed.scheme not in {"http", "https"}
+            or not parsed.hostname or parsed.username or parsed.password or parsed.fragment):
         raise ValueError("Supply an HTTP(S) source URL without credentials or fragments")
     return value
 
