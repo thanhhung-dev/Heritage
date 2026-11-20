@@ -7,6 +7,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
+from unittest.mock import patch
 
 from fastapi import HTTPException
 from sqlalchemy import inspect, text
@@ -36,7 +37,7 @@ class KnowledgePostgresTests(unittest.IsolatedAsyncioTestCase):
         if (url.drivername != "postgresql+psycopg" or url.host not in {"localhost", "127.0.0.1", "::1"}
                 or not (url.database or "").startswith("test_")):
             self.fail("Only an explicit loopback postgresql+psycopg test_* database is permitted")
-        self.enterContext(__import__("unittest.mock", fromlist=["patch"]).patch.dict(os.environ,
+        self.enterContext(patch.dict(os.environ,
             {"R2_KNOWLEDGE_BUCKET": "knowledge-heritage", "R2_KNOWLEDGE_LIBRARY_PREFIX": ""}))
         self.schema = "knowledge_test_" + uuid4().hex
         self.engine = create_async_engine(url, poolclass=NullPool,

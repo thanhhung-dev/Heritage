@@ -23,8 +23,8 @@ def library_claims(credentials=Depends(bearer)):
         raise unauthorized
     if not security.SECRET_KEY or security.SECRET_KEY == "your-secret-key-change-this-in-production":
         raise HTTPException(503, "Configure a private JWT signing key before enabling the knowledge library.")
-    payload = security.decode_access_token(credentials.credentials)
     try:
+        payload = security.decode_access_token(credentials.credentials)
         expires = payload["exp"]
         actor = int(payload["sub"])
         if (isinstance(expires, bool) or not isinstance(expires, (float, int))

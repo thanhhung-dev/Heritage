@@ -27,18 +27,22 @@ class KnowledgeLibrary:
 
     async def begin_upload(self, data, actor_id):
         key = upload_key(data.folder, data.filename, data.contentType, data.size)
-        if (await run_in_threadpool(self.storage.maybe_head, key) is not None
-                or await run_in_threadpool(self.storage.maybe_head, key + "/") is not None):
-            raise HTTPException(409, "Destination file or folder already exists.")
-        # A logical folder can exist without a marker object.
-        page = await run_in_threadpool(self.storage.call, "list_objects_v2", Prefix=key + "/", MaxKeys=1)
-        if page.get("Contents"):
-            raise HTTPException(409, "A folder already uses this destination name.")
         now, upload_id = utcnow(), str(uuid4())
+        staging_key = root_prefix() + STAGING + upload_id + "/" + data.filename
+        if len(staging_key.encode("utf-8")) > 1024:
+            raise HTTPException(422, "Configured scope leaves insufficient key length for upload staging.")
+        if await run_in_threadpool(self.storage.maybe_head, key) is not None:
+            raise HTTPException(409, "Destination file already exists.")
+        # A logical folder can exist without a marker object.
+        # At the maximum key length, key + '/' cannot be a valid object/prefix.
+        if len(key.encode("utf-8")) < 1024:
+            page = await run_in_threadpool(self.storage.call, "list_objects_v2", Prefix=key + "/", MaxKeys=1)
+            if page.get("Contents"):
+                raise HTTPException(409, "A folder already uses this destination name.")
         await self.db.execute(update(LibraryUpload).where(LibraryUpload.status == "PENDING",
             LibraryUpload.expires_at <= now).values(status="EXPIRED", reservation_key=None))
         upload = LibraryUpload(id=upload_id, actor_id=actor_id, bucket=BUCKET, final_key=key,
-            reservation_key=key, staging_key=root_prefix() + STAGING + upload_id + "/" + data.filename,
+            reservation_key=key, staging_key=staging_key,
             filename=data.filename, content_type=data.contentType, size_bytes=data.size,
             status="PENDING", expires_at=now + timedelta(seconds=SESSION_SECONDS))
         self.db.add(upload)

@@ -218,6 +218,15 @@ class KnowledgeLibraryApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.request("DELETE", "/objects", json={"key": "manual/a.txt"})).status_code, 404)
         self.assertIn("manual/", self.s3.objects)
 
+    async def test_key_byte_limits_include_server_generated_staging_path(self):
+        result, upload = await self.begin(filename="b" * 252 + ".md", folder="a" * 768 + "/")
+        self.assertEqual(len(upload.final_key.encode()), 1024)
+        self.assertTrue(all(len(c[1].get("Key", c[1].get("Prefix", "")).encode()) <= 1024 for c in self.s3.calls))
+        with patch.dict(os.environ, {"R2_KNOWLEDGE_LIBRARY_PREFIX": "a" * 980 + "/"}):
+            response = await self.request("POST", "/upload-url", json={"folder": "a" * 980 + "/",
+                "filename": "x.txt", "contentType": "text/plain", "size": 5})
+            self.assertEqual(response.status_code, 422, response.text)
+
 
 if __name__ == "__main__":
     unittest.main()
