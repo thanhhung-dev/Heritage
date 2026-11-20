@@ -10,7 +10,9 @@ depends_on = None
 
 
 def upgrade():
-    op.get_bind().exec_driver_sql(Path(__file__).with_suffix(".sql").read_text(encoding="utf-8"))
+    # Alembic operations support both a live connection and offline --sql;
+    # MockConnection deliberately has no exec_driver_sql method.
+    op.execute(Path(__file__).with_suffix(".sql").read_text(encoding="utf-8"))
 
 
 def downgrade():

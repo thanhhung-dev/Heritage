@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import sys
 import unittest
+import importlib.util
 from uuid import uuid4
 
 from sqlalchemy import text
@@ -43,7 +44,16 @@ class CatalogPostgresFixture(unittest.IsolatedAsyncioTestCase):
             await conn.execute(text("""CREATE TABLE entity(id UUID PRIMARY KEY,name TEXT,type TEXT,summary TEXT,
                 entry_status TEXT,source_document_id UUID,source_passage_id UUID)"""))
             await conn.run_sync(KnowledgeDocument.__table__.create)
-            await conn.exec_driver_sql((ROOT / "apps/backend/migrations/versions/20261120_09_heritage_classification.sql").read_text(encoding="utf-8"))
+            def migrate(connection):
+                from alembic.migration import MigrationContext
+                from alembic.operations import Operations
+                path = ROOT / "apps/backend/migrations/versions/20261120_09_heritage_classification.py"
+                spec = importlib.util.spec_from_file_location("catalog_migration", path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                with Operations.context(MigrationContext.configure(connection)):
+                    module.upgrade()
+            await conn.run_sync(migrate)
 
     async def drop_schema(self):
         async with self.engine.begin() as conn:
