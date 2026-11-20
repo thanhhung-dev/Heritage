@@ -240,7 +240,10 @@ export default function AdminLayout({
               >
                 {libraryMode ? <>
                   {!collapsed && <Link href="/admin" aria-label="Heritage Admin"><KnowledgeBrand /></Link>}
-                  <button type="button" className={knowledgeStyles.chromeToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}><DesignIcon name="library-CollapseSidebar" /></button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {!collapsed && <span aria-hidden="true" className={knowledgeStyles.chromeToggle}><DesignIcon name="library-SearchIcon" /></span>}
+                    <button type="button" className={knowledgeStyles.chromeToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => setCollapsed(!collapsed)}><DesignIcon name="library-CollapseSidebar" /></button>
+                  </div>
                 </> : collapsed ? (
                   <div onClick={() => setCollapsed(false)} style={{ cursor: 'pointer' }}>
                     <HeritageLogoMini size={32} />
