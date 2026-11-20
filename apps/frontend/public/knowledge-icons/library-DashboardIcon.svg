@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Dashboard icon">
+<path id="Building outline" d="M8.67 3.33333V2H14V14H12.6675" stroke-width="1.333" stroke="#201F1C"/>
+<path id="Building edge" d="M8.001 14H8V9.99913L8.001 9.11" stroke-width="1.333" stroke="#201F1C"/>
+<path id="Building outline_2" d="M5.3365 6.6665H9.3335V13.3335H5.3365V6.6665Z" stroke-width="1.333" stroke="#201F1C"/>
+<path id="Building detail" d="M7.338 8.67H7.33" stroke-width="1.333" stroke="#201F1C"/>
+<path id="Building detail_2" d="M7.338 11.33H7.33" stroke-width="1.333" stroke="#201F1C"/>
+</g>
+</svg>
