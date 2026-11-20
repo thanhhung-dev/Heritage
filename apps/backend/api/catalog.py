@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.schemas.catalog import CatalogDetail, CatalogPage, CategoryOut, EntityType, SectionKey
@@ -29,8 +30,15 @@ def no_cache(response: Response):
     response.headers["Cache-Control"] = "no-store"
 
 
+async def public_db(db=Depends(get_db)):
+    # Keep entity rows, categories and all section placements in one snapshot
+    # while a background worker commits new classifications concurrently.
+    await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+    return db
+
+
 @router.get("/categories", response_model=list[CategoryOut])
-async def categories(response: Response, db=Depends(get_db)):
+async def categories(response: Response, db=Depends(public_db)):
     no_cache(response)
     return await CatalogService(db).categories()
 
@@ -39,7 +47,7 @@ async def categories(response: Response, db=Depends(get_db)):
 async def contents(response: Response, category: str | None = None, entity_type: EntityType | None = None,
                    sort: Literal["title", "newest"] = "title",
                    limit: Annotated[int, Query(ge=1, le=100)] = 20,
-                   offset: Annotated[int, Query(ge=0, le=10000)] = 0, db=Depends(get_db)):
+                   offset: Annotated[int, Query(ge=0, le=10000)] = 0, db=Depends(public_db)):
     no_cache(response)
     if category and category not in BY_KEY:
         raise HTTPException(422, "Unknown taxonomy category.")
@@ -47,7 +55,7 @@ async def contents(response: Response, category: str | None = None, entity_type:
 
 
 @router.get("/sections", response_model=dict[SectionKey, CatalogPage])
-async def sections(response: Response, limit: Annotated[int, Query(ge=1, le=30)] = 8, db=Depends(get_db)):
+async def sections(response: Response, limit: Annotated[int, Query(ge=1, le=30)] = 8, db=Depends(public_db)):
     no_cache(response)
     service = CatalogService(db)
     # Sequential bounded reads share one session. Query count is independent of
@@ -59,12 +67,12 @@ async def sections(response: Response, limit: Annotated[int, Query(ge=1, le=30)]
 async def section_page(section: SectionKey, response: Response,
                        sort: Literal["title", "newest"] = "title",
                        limit: Annotated[int, Query(ge=1, le=100)] = 8,
-                       offset: Annotated[int, Query(ge=0, le=10000)] = 0, db=Depends(get_db)):
+                       offset: Annotated[int, Query(ge=0, le=10000)] = 0, db=Depends(public_db)):
     no_cache(response)
     return await CatalogService(db).page(section=section, sort=sort, limit=limit, offset=offset)
 
 
 @router.get("/contents/{slug}", response_model=CatalogDetail)
-async def detail(slug: str, response: Response, db=Depends(get_db)):
+async def detail(slug: str, response: Response, db=Depends(public_db)):
     no_cache(response)
     return await CatalogService(db).detail(slug)

@@ -1,4 +1,6 @@
 import secrets
+import os
+import psycopg
 from unittest.mock import patch
 
 from anyio import CancelScope
@@ -6,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 from sqlalchemy import event
+from sqlalchemy.engine import make_url
 
 from apps.backend.api import admin_catalog, catalog
 from apps.backend.core import security
@@ -158,3 +161,31 @@ class CatalogApiTests(fixtures.CatalogPostgresFixture):
         self.assertEqual(result.status_code, 200, result.text)
         self.assertEqual(len(result.json()["artifact_collection"]["items"]), 8)
         self.assertLessEqual(len(statements), 10)
+
+    async def test_worker_commit_between_public_queries_cannot_mix_entity_and_category_snapshots(self):
+        created = self.create()
+        await self.drain()
+        changed = []
+        url = make_url(os.environ["CATALOG_TEST_DATABASE_URL"]).set(drivername="postgresql")
+        def change_after_entity_read(_connection, _cursor, statement, _parameters, _context, _many):
+            if not changed and statement.lstrip().startswith("SELECT heritage_classifications."):
+                changed.append(True)
+                with psycopg.connect(url.render_as_string(hide_password=False),
+                                     options="-csearch_path=" + self.schema) as connection:
+                    connection.execute("UPDATE heritage_content SET entity_type='event',entity_type_hint='event' WHERE id=%s", (created["id"],))
+                    connection.execute("DELETE FROM heritage_classifications WHERE content_id=%s", (created["id"],))
+                    connection.execute("""INSERT INTO heritage_classifications(content_id,category_key,is_primary,
+                        confidence,classification_source,reasoning_summary)
+                        VALUES(%s,'festival',true,1,'manual','Concurrent reviewed identity')""", (created["id"],))
+                    connection.execute("UPDATE heritage_content SET classification_status='applied',classified_revision=input_revision WHERE id=%s", (created["id"],))
+        event.listen(self.engine.sync_engine, "before_cursor_execute", change_after_entity_read)
+        try:
+            result = self.client.get("/api/catalog/sections")
+        finally:
+            event.remove(self.engine.sync_engine, "before_cursor_execute", change_after_entity_read)
+        self.assertTrue(changed)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(result.json()["artifact_collection"]["items"][0]["primary_category"], "artifact")
+        next_response = self.client.get("/api/catalog/sections").json()
+        self.assertEqual(next_response["artifact_collection"]["items"], [])
+        self.assertEqual(next_response["festivals_practices"]["items"][0]["primary_category"], "festival")
