@@ -126,6 +126,7 @@ class ContentPatch(StrictInput):
     publish_state: Literal["draft", "published"] | None = None
     verified_metadata: ArtifactFacts | None = None
     source_url: str | None = Field(default=None, max_length=2048)
+    entity_type_hint: Literal["artifact", "collection", "event", "person", "practice"] | None = None
     is_featured: StrictBool | None = None
     featured_rank: int | None = Field(default=None, ge=0, le=100000, strict=True)
 
@@ -134,7 +135,7 @@ class ContentPatch(StrictInput):
         changed = self.model_fields_set - {"expected_revision"}
         if not changed:
             raise ValueError("Supply a content/editorial change")
-        for name in changed & {"title", "publish_state", "verified_metadata", "source_url", "is_featured", "featured_rank"}:
+        for name in changed & {"title", "publish_state", "verified_metadata", "source_url", "entity_type_hint", "is_featured", "featured_rank"}:
             if getattr(self, name) is None:
                 raise ValueError(f"{name} cannot be null")
         if "source_url" in changed:

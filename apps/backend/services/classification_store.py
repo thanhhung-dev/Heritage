@@ -66,6 +66,8 @@ async def manual_override(db, content_id, data, actor):
         raise HTTPException(404, "Catalog content not found.")
     if data.expected_revision != content.input_revision:
         raise HTTPException(409, "Content changed; reload before review.")
+    if content.source_heritage_id is None and data.entity_type != content.entity_type_hint:
+        raise HTTPException(422, "Review the independent entity type hint before changing its classification.")
     try:
         validate_categories(data.entity_type, data.categories, data.primary_category)
     except ValueError as error:

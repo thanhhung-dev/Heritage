@@ -103,7 +103,8 @@ class CatalogService:
                     safe_url(source)
             except ValueError:
                 source = None
-            if content.source_heritage_id is None and (not source or not content.entity_type_hint):
+            if content.source_heritage_id is None and (not source or not content.entity_type_hint
+                    or content.entity_type == "place" or content.entity_type != content.entity_type_hint):
                 continue
             image = image_url(content.card_image_url) or image_url(content.splash_image_url)
             if require_image and not image:
