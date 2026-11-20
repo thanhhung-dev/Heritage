@@ -199,7 +199,7 @@ export function UploadDocumentsPage() {
                             <button
                               type="button"
                               className={`${styles.figmaBtn} ${styles.figmaBtnPrimary}`}
-                              onClick={() => queue?.start()}
+                              onClick={() => queue?.start([entry.id])}
                             >
                               Start upload
                             </button>
@@ -253,7 +253,7 @@ export function UploadDocumentsPage() {
                 </div>
                 <div className={styles.metaField}>
                   <span className={styles.metaFieldLabel}>Review / ingestion</span>
-                  <span className={styles.metaFieldValue}>Unavailable · Not run</span>
+                  <span className={styles.metaFieldValue}>Unavailable</span>
                 </div>
               </div>
 

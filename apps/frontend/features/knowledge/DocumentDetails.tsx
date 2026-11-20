@@ -200,9 +200,9 @@ export function DocumentDetails() {
             <div className={styles.stateCard}>
               <div className={styles.stateTitle}>
                 <span className={styles.stateLabel}>Ingestion</span>
-                <span className={styles.badges}>Not run</span>
+                <span className={styles.badges}>Unavailable</span>
               </div>
-              <p className={styles.stateSummary}>No ingestion job endpoint connected · Not available to chatbot</p>
+              <p className={styles.stateSummary}>Ingestion and chatbot availability are not reported.</p>
             </div>
           </div>
 
@@ -276,7 +276,7 @@ export function DocumentDetails() {
               <div className={styles.panel}>
                 <div className={styles.panelHeading}>
                   <h2>Chunks</h2>
-                  <p>0 chunks generated · RAG chunking & OpenSearch indexing API is not connected for R2 library objects</p>
+                  <p>Chunk information is not available for this file.</p>
                 </div>
 
                 <div className={styles.figmaTable} role="table" aria-label="Chunks">
@@ -289,13 +289,13 @@ export function DocumentDetails() {
                   </div>
                   <div className={styles.empty} style={{ padding: "28px 16px" }}>
                     <p className={styles.muted}>
-                      No chunks are available because the mounted <code>/api/admin/knowledge</code> contract does not run or expose RAG chunking jobs.
+                      This library does not currently provide chunk previews.
                     </p>
                   </div>
                 </div>
 
                 <div className={styles.pagination}>
-                  <span className={styles.muted}>Showing 0 of 0 chunks · Truthful backend state</span>
+                  <span className={styles.muted}>Chunk count unavailable</span>
                   <button type="button" className={styles.figmaBtn} disabled>
                     View all chunks
                   </button>
@@ -319,13 +319,13 @@ export function DocumentDetails() {
                     <div className={styles.metaField}>
                       <span className={styles.metaFieldLabel}>Region</span>
                       <span className={styles.metaFieldValue}>
-                        {object.metadata?.["language"] || folderLabel}
+                        {object.metadata?.["region"] || "Not provided"}
                       </span>
                     </div>
                     <div className={styles.metaField}>
                       <span className={styles.metaFieldLabel}>Document type</span>
                       <span className={styles.metaFieldValue}>
-                        {object.metadata?.["source-type"] || "Not persisted"}
+                        {object.metadata?.["document-type"] || "Not provided"}
                       </span>
                     </div>
                   </div>
@@ -385,10 +385,10 @@ export function DocumentDetails() {
               <div className={styles.panel}>
                 <div className={styles.panelHeading}>
                   <h2>Ingestion status & retry</h2>
-                  <p>No active or failed ingestion job is attached to this R2 object</p>
+                  <p>Ingestion job information is unavailable for this file.</p>
                 </div>
                 <p style={{ fontSize: 14, lineHeight: "17.5px", fontWeight: 500, color: "#201f1c" }}>
-                  INGESTION_API_NOT_MOUNTED
+                  Ingestion tools unavailable
                 </p>
                 <p style={{ fontSize: 14, lineHeight: "20px", color: "#201f1c" }}>
                   The file is verified in Cloudflare R2 (<code>{object.bucket}</code>). RAG indexing jobs and retry endpoints are not exposed on <code>/api/admin/knowledge</code>.

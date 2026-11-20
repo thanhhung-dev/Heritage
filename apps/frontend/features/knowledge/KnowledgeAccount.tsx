@@ -20,7 +20,7 @@ export function KnowledgeAccount({ collapsed }: { collapsed: boolean }) {
     </div>
     <div className={styles.accountFooter} style={collapsed ? { justifyContent: "center", padding: "16px 0" } : undefined}>
       <span className={styles.accountAvatar} aria-hidden="true">{initials}</span>
-      {!collapsed && <div className={styles.account}><div className={styles.accountName}>{user ? name : "Not signed in"}</div><span className={styles.accountSub}>Default Workspace</span></div>}
+      {!collapsed && <div className={styles.account}><div className={styles.accountName}>{user ? name : "Not signed in"}</div><span className={styles.accountSub}>{user?.role ?? "Administrator access required"}</span></div>}
     </div>
   </>;
 }

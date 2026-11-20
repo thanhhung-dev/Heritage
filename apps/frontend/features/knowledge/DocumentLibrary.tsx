@@ -250,7 +250,7 @@ export function DocumentLibrary() {
 
                         <div className={styles.colIngestion} role="cell">
                           <Tooltip title={advancedUnavailable}>
-                            <span className={styles.badges}>Not run</span>
+                            <span className={styles.badges}>Unavailable</span>
                           </Tooltip>
                         </div>
 

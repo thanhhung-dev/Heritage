@@ -135,14 +135,14 @@ export function EditDocumentMetadata() {
                 <span className={styles.stateLabel}>Review</span>
                 <span className={styles.badges}>Unavailable</span>
               </div>
-              <p className={styles.stateSummary}>Not approved for ingestion · Backend review API not exposed.</p>
+              <p className={styles.stateSummary}>Review status is not reported for this file.</p>
             </div>
             <div className={styles.stateCard}>
               <div className={styles.stateTitle}>
                 <span className={styles.stateLabel}>Ingestion</span>
-                <span className={styles.badges}>Not run</span>
+                <span className={styles.badges}>Unavailable</span>
               </div>
-              <p className={styles.stateSummary}>Not indexed in OpenSearch · Not available to chatbot</p>
+              <p className={styles.stateSummary}>Ingestion and chatbot availability are not reported.</p>
             </div>
           </div>
 
@@ -169,7 +169,7 @@ export function EditDocumentMetadata() {
                     <div className={styles.fieldRow}>
                       <label htmlFor="doc-meta-region">Region *</label>
                       <div className={styles.readonlyControl} id="doc-meta-region">
-                        <span>{object.metadata?.["language"] || "Unavailable (no editorial API)"}</span>
+                        <span>{object.metadata?.["region"] || "Not provided"}</span>
                         <DesignIcon name="edit-metadata-ChevronDown" />
                       </div>
                     </div>
@@ -177,7 +177,7 @@ export function EditDocumentMetadata() {
                     <div className={styles.fieldRow}>
                       <label htmlFor="doc-meta-type">Document type *</label>
                       <div className={styles.readonlyControl} id="doc-meta-type">
-                        <span>{object.metadata?.["source-type"] || "Unavailable (no editorial API)"}</span>
+                        <span>{object.metadata?.["document-type"] || "Not provided"}</span>
                         <DesignIcon name="edit-metadata-ChevronDown" />
                       </div>
                     </div>
@@ -199,7 +199,7 @@ export function EditDocumentMetadata() {
                   <div className={styles.noticeBody}>
                     <span className={styles.noticeTitle}>Save without submitting</span>
                     <p>
-                      Save draft keeps a revision editable and unapproved. It does not create embeddings, start ingestion, or update OpenSearch. Editorial draft endpoints are not yet exposed by the backend.
+                      Metadata editing is not available yet. The original file remains stored in R2.
                     </p>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export function EditDocumentMetadata() {
                 </div>
 
                 <p className={styles.muted}>
-                  Submitting saves metadata and changes Review to Pending review. The original file remains stored in R2. Ingestion stays Not run until an Admin approves and runs it.
+                  Saving drafts and submitting for review will be available when review tools are enabled.
                 </p>
               </div>
             </div>
