@@ -161,7 +161,7 @@
 .stateTitle { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .stateLabel { font-size: 14px; line-height: 20px; font-weight: 400; color: var(--knowledge-muted); letter-spacing: -.154px; }
 .stateSummary { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--knowledge-text); }
-.twoColumns { display: grid; grid-template-columns: minmax(0, 1fr) 500px; gap: 24px; width: 100%; align-items: start; }
+.twoColumns { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr); gap: 24px; width: 100%; align-items: start; }
 .twoColumnsMetadata { display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 24px; width: 100%; align-items: start; }
 .uploadNextSteps { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 20px; width: 100%; align-items: start; }
 .account { color: var(--knowledge-text); font-size: 14px; line-height: 20px; min-width: 0; flex: 1; }

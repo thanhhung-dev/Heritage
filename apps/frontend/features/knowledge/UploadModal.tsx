@@ -58,6 +58,7 @@ export function UploadDocumentsModal({
       footer={null}
       width={720}
       centered
+      destroyOnHidden
       styles={{ mask: { backgroundColor: "rgba(32,31,28,.32)" } }}
       closable={!activeInFolder}
       maskClosable={!activeInFolder}

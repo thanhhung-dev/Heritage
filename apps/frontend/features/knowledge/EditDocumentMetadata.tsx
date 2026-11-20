@@ -8,7 +8,7 @@ import { ApiError } from "../../lib/api";
 import { isAborted, knowledgeApi, knowledgeError } from "../../services/knowledge.service";
 import { DesignIcon } from "./DesignIcon";
 import { KnowledgeTopPath } from "./FolderBrowser";
-import { documentHref, libraryHref } from "./folder-state";
+import { libraryHref } from "./folder-state";
 import { formatFileSize } from "./file-policy";
 import { downloadKnowledgeFile } from "./knowledge-actions";
 import { KnowledgeFeedback } from "./KnowledgeFeedback";
@@ -96,16 +96,13 @@ export function EditDocumentMetadata() {
           <h1>Edit document metadata</h1>
           <p>
             {object
-              ? `${object.name} · Stored in R2 · Review workflow unavailable`
+              ? object.name
               : "Inspect storage metadata and editorial fields"}
           </p>
         </div>
         <div className={styles.actions}>
           {object && (
             <>
-              <Link href={documentHref("details", object.key)} className={styles.figmaBtn}>
-                Document details
-              </Link>
               <button type="button" className={styles.figmaBtn} onClick={() => void handleViewOriginal()}>
                 View original
               </button>
@@ -117,7 +114,7 @@ export function EditDocumentMetadata() {
       <div className={styles.contextBar}>
         <span className={styles.contextBadge}>CLOUDFLARE R2</span>
         <span className={styles.contextText}>
-          Original file properties are read from <code>GET /api/admin/knowledge/object</code> · Editorial draft persistence is not available in the current backend
+          Original file properties · Metadata editing and review unavailable
         </span>
       </div>
 
@@ -166,7 +163,7 @@ export function EditDocumentMetadata() {
                       <span>{object.name.replace(/\.[^.]+$/, "")}</span>
                     </div>
                     <span className={styles.muted}>
-                      Use a descriptive title. The original filename is kept separately.
+                      Suggested from the filename. An editorial title has not been saved.
                     </span>
                   </div>
 

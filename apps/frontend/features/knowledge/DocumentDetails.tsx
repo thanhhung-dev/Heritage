@@ -9,7 +9,7 @@ import { isAborted, knowledgeApi, knowledgeError } from "../../services/knowledg
 import { DesignIcon } from "./DesignIcon";
 import { DeleteFileDialog } from "./FileDialogs";
 import { KnowledgeTopPath } from "./FolderBrowser";
-import { breadcrumbParts, documentHref, libraryHref } from "./folder-state";
+import { documentHref, libraryHref } from "./folder-state";
 import { formatFileSize } from "./file-policy";
 import { downloadKnowledgeFile } from "./knowledge-actions";
 import { KnowledgeFeedback } from "./KnowledgeFeedback";
@@ -103,8 +103,6 @@ export function DocumentDetails() {
   }, [key, attempt]);
 
   const folderPrefix = parentFolderPrefix(root, key);
-  const folderParts = breadcrumbParts(root, folderPrefix);
-  const folderLabel = folderParts.length ? folderParts.map(p => p.label).join(" / ") : "All documents";
   const previewStatus = previewError instanceof ApiError ? previewError.status : undefined;
   const ext = object?.name.includes(".") ? object.name.split(".").pop()?.toUpperCase() : "FILE";
 
@@ -143,7 +141,7 @@ export function DocumentDetails() {
           <h1>Document details</h1>
           <p>
             {object
-              ? `${object.name} · Stored in R2 · ${folderLabel}`
+              ? object.name
               : key || "Inspect Cloudflare R2 object details"}
           </p>
         </div>
@@ -161,16 +159,6 @@ export function DocumentDetails() {
                   Replace file
                 </button>
               </Tooltip>
-              <Link href={documentHref("metadata", object.key)} className={styles.figmaBtn}>
-                Edit metadata
-              </Link>
-              <button
-                type="button"
-                className={`${styles.figmaBtn} ${styles.figmaBtnDanger}`}
-                onClick={() => setDeleting(true)}
-              >
-                Delete file
-              </button>
             </>
           )}
         </div>
@@ -179,7 +167,7 @@ export function DocumentDetails() {
       <div className={styles.contextBar}>
         <span className={styles.contextBadge}>CLOUDFLARE R2</span>
         <span className={styles.contextText}>
-          Live object HEAD & safe UTF-8 text preview from bucket <code>knowledge-heritage</code> · Review and ingestion states are separate from R2 storage
+          Original file and text preview · Review and ingestion unavailable
         </span>
       </div>
 
@@ -312,13 +300,14 @@ export function DocumentDetails() {
 
             <div className={styles.mainColumn} style={{ gap: 16 }}>
               <div className={styles.panel}>
-                <div className={styles.panelHeading}>
+                <div className={styles.replacementHeader}>
                   <h2>Metadata and original file</h2>
+                  <Link href={documentHref("metadata", object.key)} className={styles.rowActionLink}>Edit metadata</Link>
                 </div>
 
                 <div className={styles.metaStack}>
                   <div className={styles.metaField}>
-                    <span className={styles.metaFieldLabel}>Title</span>
+                    <span className={styles.metaFieldLabel}>Title from filename</span>
                     <span className={styles.metaFieldValue}>{object.name.replace(/\.[^.]+$/, "")}</span>
                   </div>
 
@@ -387,6 +376,9 @@ export function DocumentDetails() {
                     </div>
                   </div>
                 </div>
+                <div className={styles.dividerTop}>
+                  <button type="button" className={`${styles.figmaBtn} ${styles.figmaBtnDanger}`} onClick={() => setDeleting(true)}>Delete file</button>
+                </div>
               </div>
 
               <div className={styles.panel}>
@@ -398,7 +390,7 @@ export function DocumentDetails() {
                   Ingestion tools unavailable
                 </p>
                 <p style={{ fontSize: 14, lineHeight: "20px", color: "#201f1c" }}>
-                  The file is verified in Cloudflare R2 (<code>{object.bucket}</code>). RAG indexing jobs and retry endpoints are not exposed on <code>/api/admin/knowledge</code>.
+                  This original file is stored in R2. Ingestion monitoring and retry are not available yet.
                 </p>
                 <div>
                   <button
