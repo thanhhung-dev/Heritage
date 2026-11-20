@@ -8,11 +8,11 @@ import { getCatalogSection, getCatalogSections, type CatalogContent, type Catalo
 import styles from "@/features/home/HeritageCarouselSection.module.css";
 
 const SECTIONS: { key: SectionKey; title: string; description: string; empty: string }[] = [
-  { key: "featured", title: "Featured Experiences", description: "Những trải nghiệm được tuyển chọn để bắt đầu hành trình khám phá.", empty: "Chưa có trải nghiệm nổi bật được tuyển chọn." },
-  { key: "artifacts_treasures", title: "Artifacts & Treasures", description: "Những bộ sưu tập có nguồn tư liệu và câu chuyện riêng.", empty: "Chưa có bộ sưu tập hiện vật đã được xuất bản." },
+  { key: "featured", title: "Featured Experiences", description: "Curated experiences to begin your journey of discovery.", empty: "No featured experiences have been selected yet." },
+  { key: "artifacts_treasures", title: "Artifacts & Treasures", description: "Discover collections with their own stories and documented sources.", empty: "No artifact collections have been published yet." },
   { key: "artifact_collection", title: "Heritage Artifacts Collection", description: "Explore artifacts and the stories they preserve, supported by verified sources.", empty: "No verified artifacts have been published yet." },
-  { key: "people_traditions", title: "People & Traditions", description: "Nhân vật, nghệ nhân và truyền thống văn hóa được ghi nhận.", empty: "Chưa có nội dung nhân vật hoặc truyền thống được xuất bản." },
-  { key: "festivals_practices", title: "Festivals & Community Practices", description: "Khám phá các lễ hội, nghi lễ và thực hành văn hóa qua câu chuyện của chính chúng.", empty: "Chưa có lễ hội hoặc thực hành văn hóa được xuất bản." },
+  { key: "people_traditions", title: "People & Traditions", description: "Meet the people, artisans, and traditions that shape cultural heritage.", empty: "No stories about people or traditions have been published yet." },
+  { key: "festivals_practices", title: "Festivals & Community Practices", description: "Explore festivals, rituals, and cultural practices through their own stories.", empty: "No festivals or cultural practices have been published yet." },
 ];
 
 export default function HomePage() {
@@ -33,7 +33,7 @@ export default function HomePage() {
       setSelected((previous) => previous
         ? Object.values(data).flatMap((page) => page.items).find((item) => item.id === previous.id) ?? null : null);
     }).catch(() => {
-      if (!controller.signal.aborted) setError("Chưa tải được nội dung. Bạn có thể thử lại khi máy chủ sẵn sàng.");
+      if (!controller.signal.aborted) setError("Content is unavailable right now. Please try again when the server is ready.");
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [attempt]);
@@ -56,7 +56,7 @@ export default function HomePage() {
       const next = await getCatalogSection(key, offset);
       setSections((current) => current && current[key].next_offset === offset
         ? { ...current, [key]: appendCatalogPage(current[key], next) } : current);
-    } catch { setError("Chưa tải được trang tiếp theo. Vui lòng thử lại."); }
+    } catch { setError("Unable to load more content. Please try again."); }
     finally { setLoadingMore(null); }
   };
 
@@ -69,7 +69,7 @@ export default function HomePage() {
           className={key === "festivals_practices" ? styles.festivalSection : undefined} />
       {sections?.[key].next_offset != null && <div className={styles.loadMore}>
         <button onClick={() => more(key)} disabled={loadingMore !== null}
-          aria-label={`Xem thêm ${title}`}>{loadingMore === key ? "Đang tải…" : "Xem thêm"}</button>
+          aria-label={`Load more ${title}`}>{loadingMore === key ? "Loading…" : "Load more"}</button>
       </div>}
     </div>)}
     <DiscoverMoreSection />

@@ -57,7 +57,7 @@ export function HeritageCarouselSection({
   useFirstCardBackdrop = false,
   loading = false,
   error,
-  emptyMessage = "Chưa có nội dung.",
+  emptyMessage = "No content available yet.",
   onRetry,
   onCardClick,
   className,
@@ -150,7 +150,7 @@ export function HeritageCarouselSection({
               className={styles.navButton}
               disabled={!hasCards || !scrollable.left}
               onClick={() => scroll(-1)}
-              aria-label={`Cuộn trái danh mục ${title}`}
+              aria-label={`Scroll ${title} left`}
               aria-controls={listId}
               icon={<LeftOutlined aria-hidden="true" />}
             />
@@ -159,7 +159,7 @@ export function HeritageCarouselSection({
               className={styles.navButton}
               disabled={!hasCards || !scrollable.right}
               onClick={() => scroll(1)}
-              aria-label={`Cuộn phải danh mục ${title}`}
+              aria-label={`Scroll ${title} right`}
               aria-controls={listId}
               icon={<RightOutlined aria-hidden="true" />}
             />
@@ -172,7 +172,7 @@ export function HeritageCarouselSection({
             type="warning"
             showIcon
             title={error}
-            action={onRetry && <Button size="small" onClick={onRetry}>Thử lại</Button>}
+            action={onRetry && <Button size="small" onClick={onRetry}>Try again</Button>}
           />
         )}
 
@@ -193,9 +193,9 @@ export function HeritageCarouselSection({
               <Alert
                 type="warning"
                 showIcon
-                title="Chưa thể tải nội dung"
+                title="Unable to load content"
                 description={error}
-                action={onRetry && <Button onClick={onRetry}>Thử lại</Button>}
+                action={onRetry && <Button onClick={onRetry}>Try again</Button>}
               />
             </div>
           ) : !hasCards ? (
