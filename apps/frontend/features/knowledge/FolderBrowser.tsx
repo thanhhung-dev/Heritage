@@ -76,10 +76,12 @@ export function FolderBrowser({
   prefix,
   onSelect,
   showDestinationNote = false,
+  id,
 }: {
   prefix: string;
   onSelect: (prefix: string) => void;
   showDestinationNote?: boolean;
+  id?: string;
 }) {
   const { root, folderPages, remember } = useKnowledge();
   const [expanded, setExpanded] = useState<string[]>([root]);
@@ -127,7 +129,6 @@ export function FolderBrowser({
   }
 
   function renderFolderNodes(parentPrefix: string, depth: number): React.ReactNode {
-    if (depth > 8) return null;
     const subFolders = (folderPages[parentPrefix]?.folders ?? []).filter(
       row => row.prefix.startsWith(parentPrefix) && row.prefix !== parentPrefix,
     );
@@ -163,14 +164,14 @@ export function FolderBrowser({
   const selectedName = selectedParts.at(-1)?.label || "All documents";
 
   return (
-    <aside className={styles.folderBrowser} aria-label="R2 folders">
+    <aside id={id} className={styles.folderBrowser} aria-label="R2 folders">
       <div className={styles.storageHeading}>
         <DesignIcon name="library-Database" />
         <span>Cloudflare R2</span>
       </div>
       <p className={styles.bucket}>knowledge-heritage</p>
 
-      <div className={styles.folderList} role="tree" aria-label="Folder tree">
+      <nav className={styles.folderList} aria-label="Folder tree">
         <button
           type="button"
           className={`${styles.folderRow} ${prefix === root ? styles.folderRowActive : ""}`}
@@ -182,7 +183,7 @@ export function FolderBrowser({
           <span className={styles.folderRowCount}>{rootCount}</span>
         </button>
         {renderFolderNodes(root, 0)}
-      </div>
+      </nav>
 
       {folderPages[prefix]?.nextContinuationToken && (
         <button

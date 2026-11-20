@@ -87,6 +87,7 @@ export function UploadDocumentsPage() {
 
       <div className={styles.workspace}>
         <FolderBrowser
+          id="upload-destination-folders"
           prefix={listing.prefix}
           showDestinationNote
           onSelect={prefix => router.push(uploadHref(prefix))}
@@ -98,9 +99,13 @@ export function UploadDocumentsPage() {
             <span className={styles.destinationBreadcrumbText}>
               {destinationLine(root, listing.prefix)}
             </span>
-            <Link href={libraryHref(listing.prefix)} className={styles.figmaBtn}>
+            <button type="button" className={styles.figmaBtn} onClick={() => {
+              const folders = document.getElementById("upload-destination-folders");
+              folders?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              folders?.querySelector<HTMLButtonElement>("button")?.focus();
+            }}>
               Change destination
-            </Link>
+            </button>
           </div>
 
           <UploadDropzone
