@@ -1,11 +1,14 @@
 import asyncio
 from types import SimpleNamespace
+from datetime import datetime, timedelta, timezone
+import threading
 
 from sqlalchemy import select, text
 
 from apps.backend.models.heritage_classification import ClassificationJob, CulturalContent, HeritageClassification
 from apps.backend.services.classification_store import manual_override
 from apps.backend.services.classification_worker import run_next
+from apps.backend.services.classification_backfill import backfill, rollback
 from apps.backend.tests import catalog_postgres_support as fixtures
 
 
@@ -68,3 +71,56 @@ class CatalogPostgresTests(fixtures.CatalogPostgresFixture):
             self.assertEqual(job.status, "RETRY")
             self.assertNotIn("secret-password", job.last_error)
             self.assertEqual(job.attempts, 1)
+
+    async def test_backfill_preview_apply_idempotence_and_guarded_rollback(self):
+        await self.heritage()
+        preview = await backfill(self.factory)
+        self.assertTrue(preview["dry_run"])
+        async with self.factory() as db:
+            self.assertEqual(await db.scalar(text("SELECT count(*) FROM heritage_classifications")), 0)
+        applied = await backfill(self.factory, apply=True)
+        self.assertEqual(applied["items"][0]["action"], "APPLIED")
+        unchanged = await backfill(self.factory, apply=True)
+        self.assertEqual(unchanged["items"][0]["action"], "UNCHANGED")
+        restored = await rollback(self.factory, applied["run_id"])
+        self.assertEqual(restored["items"][0]["action"], "ROLLED_BACK")
+        applied = await backfill(self.factory, apply=True)
+        async with self.engine.begin() as conn:
+            await conn.execute(text("UPDATE heritage SET description='New revision'"))
+        conflict = await rollback(self.factory, applied["run_id"])
+        self.assertEqual(conflict["items"][0]["action"], "SKIP_CONFLICT")
+
+    async def test_source_edit_during_inference_cannot_finish_the_newer_job(self):
+        await self.heritage()
+        started, release = threading.Event(), threading.Event()
+        from apps.backend.services.heritage_classifier import classify
+        def delayed(source, **kwargs):
+            started.set()
+            if not release.wait(10):
+                raise RuntimeError("test worker timeout")
+            return classify(source)
+        work = asyncio.create_task(run_next(self.factory, classifier=delayed))
+        try:
+            self.assertTrue(await asyncio.to_thread(started.wait, 5))
+            async with self.engine.begin() as conn:
+                await conn.execute(text("UPDATE heritage SET title='Bảo tàng thay đổi'"))
+        finally:
+            release.set()
+            await work
+        async with self.factory() as db:
+            job = (await db.scalars(select(ClassificationJob))).one()
+            self.assertEqual((job.generation, job.status), (2, "PENDING"))
+        await run_next(self.factory)
+        async with self.factory() as db:
+            self.assertEqual((await db.scalars(select(HeritageClassification.category_key))).all(), ["museum"])
+
+    async def test_expired_crash_lease_is_recovered_without_duplicate_classifications(self):
+        await self.heritage()
+        async with self.engine.begin() as conn:
+            await conn.execute(text("UPDATE heritage_classification_jobs SET status='RUNNING',attempts=1,leased_until=:expired"),
+                               {"expired": datetime.now(timezone.utc) - timedelta(seconds=1)})
+        self.assertTrue(await run_next(self.factory))
+        async with self.factory() as db:
+            job = (await db.scalars(select(ClassificationJob))).one()
+            self.assertEqual((job.status, job.attempts), ("DONE", 2))
+            self.assertEqual(await db.scalar(text("SELECT count(*) FROM heritage_classifications")), 2)
