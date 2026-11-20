@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Response
 from fastapi.security import HTTPBearer
-from sqlalchemy import text
+from sqlalchemy import DateTime, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from apps.backend.core import security
@@ -52,7 +52,8 @@ async def library_db():
 
 async def library_admin(actor=Depends(library_claims), db=Depends(library_db)):
     account = (await db.execute(text("SELECT a.is_active,a.locked_until,r.name FROM account a "
-        "JOIN roles r ON r.id=a.role_id WHERE a.id=:id"), {"id": actor})).mappings().one_or_none()
+        "JOIN roles r ON r.id=a.role_id WHERE a.id=:id").columns(locked_until=DateTime(timezone=True)),
+        {"id": actor})).mappings().one_or_none()
     locked = account["locked_until"] if account else None
     if locked and locked.tzinfo is None:
         locked = locked.replace(tzinfo=timezone.utc)

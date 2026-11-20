@@ -108,6 +108,11 @@ class KnowledgeStorageTests(unittest.TestCase):
         self.assert_status(409, self.storage.preview, "x.txt")
         self.assertTrue(self.client.streams[-1].closed)
 
+    def test_empty_legacy_text_preview_does_not_issue_invalid_range_get(self):
+        self.client.seed("empty.txt", b"")
+        self.assertEqual(self.storage.preview("empty.txt")["content"], "")
+        self.assertFalse(any(c[0] == "get" for c in self.client.calls))
+
     def test_marker_conflict_and_exact_delete_preserve_siblings(self):
         self.storage.create_folder("", "test")
         self.assert_status(409, self.storage.create_folder, "", "test")

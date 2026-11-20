@@ -31,7 +31,8 @@ class KnowledgeR2(R2Storage):
             return super().call(method, **kwargs)
         except HTTPException as error:
             # Do not log keys, credentials, signed URLs or provider error bodies.
-            log.warning("knowledge_storage_failure operation=%s status=%s", method, error.status_code)
+            logger = log.warning if error.status_code >= 500 else log.debug
+            logger("knowledge_storage_failure operation=%s status=%s", method, error.status_code)
             raise HTTPException(error.status_code, {
                 404: "Knowledge object not found.",
                 409: "Knowledge object already exists or changed; refresh the library.",
@@ -107,6 +108,10 @@ class KnowledgeR2(R2Storage):
         size, maximum = head["ContentLength"], preview_limit()
         if size > maximum:
             raise HTTPException(413, "Object exceeds the text preview limit; use download.")
+        if size == 0:
+            if extension == ".json":
+                self.validate_json("")
+            return {"key": key, "content": "", "size": 0, "etag": head["ETag"]}
         stream = self.call("get_object", Key=key, IfMatch=head["ETag"], Range=f"bytes=0-{maximum}")["Body"]
         try:
             raw = stream.read(maximum + 1)
