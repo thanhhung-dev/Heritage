@@ -144,6 +144,28 @@ services:
       retries: 5
       start_period: 240s
 
+  classification-worker:
+    image: heritage-backend:local
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    profiles: [classification]
+    restart: unless-stopped
+    env_file: [.env]
+    command: [python, -m, apps.backend.services.classification_worker]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-heritagegraph}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-heritagegraph}
+      LLAMA_SERVER_URL: ${LLAMA_SERVER_URL_DOCKER:-http://llm:8080}
+      HERITAGE_CLASSIFICATION_USE_LLM: ${HERITAGE_CLASSIFICATION_USE_LLM:-false}
+      HERITAGE_CLASSIFICATION_HIGH: ${HERITAGE_CLASSIFICATION_HIGH:-0.9}
+      HERITAGE_CLASSIFICATION_MEDIUM: ${HERITAGE_CLASSIFICATION_MEDIUM:-0.55}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [heritage-network]
+    mem_limit: 512m
+    cpus: 1
+
   langfuse-worker:
     image: docker.langfuse.com/langfuse/langfuse-worker:4
     profiles: [langfuse]
