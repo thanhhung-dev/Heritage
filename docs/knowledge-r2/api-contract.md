@@ -1,16 +1,16 @@
-# Admin knowledge library API
+# Tài liệu API quản trị Knowledge Library
 
-Base path: `/api/admin/knowledge`. All eight operations require `Authorization: Bearer <access-token>` from the existing login API and a currently active, unlocked ADMIN account. Password reset tokens cannot authorize these operations. Upload sessions belong to the administrator who created them. No endpoint accepts a bucket; requests with unknown body fields fail with 422.
+Đường dẫn gốc: `/api/admin/knowledge`. Cả 8 thao tác đều yêu cầu `Authorization: Bearer <access-token>` lấy từ API đăng nhập hiện có và tài khoản ADMIN đang hoạt động, không bị khóa. Token đặt lại mật khẩu không được dùng cho các thao tác này. Phiên upload thuộc về Admin đã tạo phiên. API không nhận tên bucket từ client; body có trường không được khai báo sẽ bị từ chối với mã 422.
 
-Successful responses have `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`. JSON responses contain text as data, never executable HTML. `/docs` and `/openapi.json` include schemas, bearer security and operation-specific errors.
+Phản hồi thành công có `Cache-Control: no-store` và `X-Content-Type-Options: nosniff`. Nội dung văn bản được trả trong JSON dưới dạng dữ liệu, không phải HTML để thực thi. `/docs` và `/openapi.json` mô tả schema, xác thực Bearer và lỗi của từng thao tác.
 
-## Browse a folder
+## Duyệt thư mục
 
 `GET /objects?prefix=documents/&limit=100&continuationToken=...`
 
-- `prefix`: exact slash-terminated prefix; omit to use configured root (bucket root by default). Explicit `prefix=` means bucket root and is rejected if a narrower scope is configured.
-- `limit`: 1–1000, default 100; counts R2 entries including prefixes/markers before filtering.
-- `continuationToken`: optional opaque token from the previous response; URL-encode it, retain the same prefix. Do not parse or increment it.
+- `prefix`: prefix chính xác, kết thúc bằng dấu `/`; bỏ qua để dùng thư mục gốc đã cấu hình, mặc định là gốc bucket. Truyền rõ `prefix=` nghĩa là gốc bucket và bị từ chối nếu server đã giới hạn phạm vi hẹp hơn.
+- `limit`: từ 1 đến 1000, mặc định 100; tính theo các mục R2 trước khi lọc, bao gồm prefix và object đánh dấu thư mục.
+- `continuationToken`: token phân trang tùy chọn lấy từ phản hồi trước; mã hóa URL và giữ nguyên prefix. Không phân tích hoặc tự tăng giá trị token.
 
 ```json
 {
@@ -22,9 +22,9 @@ Successful responses have `Cache-Control: no-store` and `X-Content-Type-Options:
 }
 ```
 
-This is synthetic example data. One `ListObjectsV2(Prefix, Delimiter='/')` request supplies each page. Common prefixes are logical folders, files stay at their current level, and marker objects are excluded from files. Empty/missing prefixes return empty arrays. Private staging is excluded. A filtered page can be empty and still contain a next token; keep paging until the token is null. Browsing never registers/imports objects into a database or downloads file contents.
+Dữ liệu trên chỉ là ví dụ giả lập. Mỗi trang tương ứng một lần gọi `ListObjectsV2(Prefix, Delimiter='/')`. Common prefix được hiển thị như thư mục logic; file chỉ xuất hiện ở cấp thư mục hiện tại; object đánh dấu thư mục không nằm trong danh sách file. Prefix rỗng hoặc không tồn tại trả các mảng rỗng. Vùng staging riêng tư được ẩn. Một trang sau khi lọc có thể rỗng nhưng vẫn có token tiếp theo; cần tiếp tục đến khi token là null. Duyệt thư mục không đăng ký/nhập object vào database và không tải nội dung file.
 
-## Request an upload URL
+## Xin URL tải file lên
 
 `POST /upload-url` → **201**
 
@@ -44,17 +44,17 @@ This is synthetic example data. One `ListObjectsV2(Prefix, Delimiter='/')` reque
 }
 ```
 
-Upload precisely the declared bytes to `uploadUrl`, without wrapping them in FormData. URL validity is 300 seconds; durable completion sessions last 900 seconds. `Content-Length` is signed and must match `size`; browsers set it automatically from the File/Blob. Clients must send every returned required header unchanged.
+Gửi đúng số byte đã khai báo đến `uploadUrl`, không bọc nội dung bằng FormData. URL có hiệu lực 300 giây; phiên xác nhận upload được lưu bền vững và tồn tại 900 giây. `Content-Length` được ký và phải khớp `size`; trình duyệt tự đặt từ File/Blob. Client phải gửi nguyên các header bắt buộc được trả về.
 
-Uploads support `.md`/`text/markdown`, `.txt`/`text/plain` and `.json`/`application/json`. Size must be positive and at most `KNOWLEDGE_MAX_UPLOAD_BYTES` (default 10 MiB; deployment maximum 32 MiB). Whole-file UTF-8 validation and JSON validation occur during completion. No indexing/OCR/classification follows upload.
+Các loại file được hỗ trợ: `.md`/`text/markdown`, `.txt`/`text/plain`, `.json`/`application/json`. Dung lượng phải lớn hơn 0 và không vượt `KNOWLEDGE_MAX_UPLOAD_BYTES` (mặc định 10 MiB, giới hạn cấu hình tối đa 32 MiB). Toàn bộ nội dung UTF-8 và cấu trúc JSON được kiểm tra khi complete. Upload không kích hoạt lập chỉ mục, OCR hoặc phân loại.
 
-New names must be NFC Unicode, at most 255 UTF-8 bytes, and cannot contain separators, control/format characters, URL/path metacharacters or surrounding whitespace. Keys/prefixes are at most 1024 UTF-8 bytes and reject absolute paths, traversal, repeated separators, backslashes, percent-encoded paths and URI/drive prefixes. Existing Unicode keys are used exactly, without normalization. Uploads outside configured scope or inside the reserved staging prefix are rejected.
+Tên mới phải ở dạng Unicode NFC, dài tối đa 255 byte UTF-8, không chứa dấu phân cách đường dẫn, ký tự điều khiển/định dạng, ký tự đặc biệt của URL/đường dẫn hoặc khoảng trắng đầu/cuối. Key/prefix dài tối đa 1024 byte UTF-8; từ chối đường dẫn tuyệt đối, đường dẫn đi lên thư mục cha, dấu phân cách lặp, dấu gạch chéo ngược, đường dẫn mã hóa phần trăm và tiền tố URI/ổ đĩa. Key Unicode hiện có được giữ nguyên, không tự chuẩn hóa. Upload ngoài phạm vi cấu hình hoặc vào prefix staging dành riêng sẽ bị từ chối.
 
-The default conflict policy is **reject**, never rename/overwrite: an existing destination or an active reservation returns 409. Atomic conditional destination PUT also rejects a writer that races the preliminary HEAD. A reserved session persists across process restarts and backend instances. A signing/transaction failure may require retry or session expiry; never assume a network timeout proves failure.
+Chính sách mặc định khi trùng tên là **từ chối**, không đổi tên hoặc ghi đè: file đích đã tồn tại hoặc có phiên đang giữ chỗ trả 409. PUT có điều kiện tại vị trí đích còn chặn được tác vụ ghi đồng thời xuất hiện sau HEAD sơ bộ. Phiên giữ chỗ tồn tại qua lần khởi động lại tiến trình và giữa nhiều instance backend. Lỗi ký URL/giao dịch có thể cần thử lại hoặc chờ phiên hết hạn; không coi timeout là bằng chứng chắc chắn thao tác đã thất bại.
 
-## Complete an upload
+## Xác nhận hoàn tất upload
 
-`POST /uploads/{uploadId}/complete` → **200**, no request body.
+`POST /uploads/{uploadId}/complete` → **200**, không gửi body.
 
 ```json
 {
@@ -64,25 +64,25 @@ The default conflict policy is **reject**, never rename/overwrite: an existing d
 }
 ```
 
-The backend locks the database session, HEADs staging, validates signed identity/MIME/size, reads the full object conditionally against its ETag into a bounded disk spool, validates actual content and publishes with `If-None-Match: *`. It verifies the final HEAD and persists completion. Caller-supplied keys, ETags or sizes never select the completed object.
+Backend khóa bản ghi phiên trong database, HEAD object staging, kiểm tra định danh/MIME/dung lượng đã ký, đọc toàn bộ object theo điều kiện ETag vào vùng đệm đĩa có giới hạn, kiểm tra nội dung thực tế rồi ghi đích với `If-None-Match: *`. Sau đó backend kiểm tra HEAD của file đích và lưu trạng thái hoàn tất. Key, ETag hoặc dung lượng do client tự gửi lại không quyết định object được xác nhận.
 
-Repeated completion returns the same stored object after a real HEAD. If the final object was removed, return 404 without recreating it. If it changed, return 409. If publication succeeded but the DB commit was lost, the final upload identity allows recovery on retry, including after session expiry. An expired, unpublished session returns **410**; missing staging/session returns 404; incorrect ownership returns 403; size/MIME/identity/content mismatch returns 422. A competing destination write returns 409. Failed validation never publishes the destination.
+Gọi complete nhiều lần sẽ trả cùng object đã lưu sau một lần HEAD thực tế. Nếu file đích đã bị xóa, trả 404 và không tạo lại. Nếu file đã thay đổi, trả 409. Nếu R2 ghi đích thành công nhưng database chưa commit được, định danh upload trên file đích cho phép khôi phục khi gọi lại, kể cả sau khi phiên hết hạn. Phiên hết hạn nhưng chưa ghi đích trả **410**; thiếu staging/phiên trả 404; không phải chủ phiên trả 403; sai dung lượng/MIME/định danh/nội dung trả 422. Tác vụ ghi khác chiếm vị trí đích trả 409. Nội dung không đạt kiểm tra sẽ không được ghi vào vị trí đích.
 
-## File metadata
+## Xem thông tin file
 
-`GET /object?key=documents/history/notes.md` → **200**, the `object` shape above without its enclosing wrapper. Reads actual `HeadObject`. Only `language` and `source-type` user metadata are exposed. Arbitrary custom metadata, upload bookkeeping, storage response headers and provider internals are not exposed. Folder marker keys are not accepted as files.
+`GET /object?key=documents/history/notes.md` → **200**, trả trực tiếp cấu trúc `object` ở trên, không có lớp bọc bên ngoài. Dữ liệu được đọc bằng `HeadObject` thực tế. Chỉ metadata người dùng có tên `language` và `source-type` được hiển thị. Không trả metadata tùy ý, thông tin nội bộ của phiên upload, header phản hồi storage hoặc chi tiết nội bộ nhà cung cấp. Key đánh dấu thư mục không được chấp nhận như file.
 
-## Short download URL
+## Tạo URL tải xuống ngắn hạn
 
-`POST /download-url` with `{"key":"documents/history/notes.md"}` → **200**
+`POST /download-url` với `{"key":"documents/history/notes.md"}` → **200**
 
 ```json
 {"key":"documents/history/notes.md","downloadUrl":"<ephemeral-presigned-get-url>","expiresIn":300}
 ```
 
-HEAD must succeed before signing. GET uses attachment disposition, a safely encoded filename and `application/octet-stream`. The URL is a temporary bearer capability; never log or persist it. Objects remain private; no public object URL is generated. A link can return changed content if an independent writer replaces that key before use.
+HEAD phải thành công trước khi ký URL. GET dùng chế độ tải file đính kèm, tên file được mã hóa an toàn và `application/octet-stream`. Ai có URL tạm thời này đều có thể sử dụng trong thời hạn cho phép; không ghi log hoặc lưu lâu dài. Object vẫn riêng tư, không tạo URL công khai. Liên kết có thể trả nội dung mới nếu một công cụ độc lập thay object tại cùng key trước khi liên kết được sử dụng.
 
-## Safe text preview
+## Xem trước văn bản an toàn
 
 `GET /preview?key=documents/history/notes.md` → **200**
 
@@ -90,29 +90,29 @@ HEAD must succeed before signing. GET uses attachment disposition, a safely enco
 {"key":"documents/history/notes.md","content":"# Example\nPlain source text","contentType":"text/plain; charset=utf-8","size":123,"etag":"\"example-etag\""}
 ```
 
-The HTTP response is `application/json`; `contentType` describes the embedded source text. Render `content` as a text node or escaped code block. Do not feed it to `innerHTML` or an unsanitized Markdown renderer. Reads at most configured preview bytes + 1 using Range and If-Match, then closes the body. Maximum defaults to 128 KiB, capped at 1 MiB. Errors: **413** too large, **415** unsupported extension, 422 binary/invalid UTF-8 or JSON, 409 changed/incomplete content, 404 missing object. Empty existing `.txt`/`.md` files are supported.
+Phản hồi HTTP là `application/json`; trường `contentType` mô tả văn bản bên trong. Hiển thị `content` qua text node hoặc khối mã đã escape. Không đưa vào `innerHTML` hoặc trình render Markdown chưa làm sạch nội dung. Backend đọc tối đa số byte preview đã cấu hình cộng 1 bằng Range và If-Match, rồi đóng luồng dữ liệu. Giới hạn mặc định 128 KiB, tối đa 1 MiB. Lỗi: **413** nếu quá lớn, **415** nếu không hỗ trợ phần mở rộng, 422 nếu là nhị phân/UTF-8 hoặc JSON không hợp lệ, 409 nếu file thay đổi hoặc nội dung chưa đầy đủ, 404 nếu không tồn tại. Hỗ trợ file `.txt`/`.md` rỗng đã có sẵn.
 
-## Create a logical folder
+## Tạo thư mục logic
 
-`POST /folders` with `{"parentPrefix":"documents/","folderName":"history"}` → **201**
+`POST /folders` với `{"parentPrefix":"documents/","folderName":"history"}` → **201**
 
 ```json
 {"name":"history","prefix":"documents/history/"}
 ```
 
-Creates a zero-byte slash marker with a create-only conditional PUT. Existing marker/prefix or a file with the same name returns 409. Existing folders are discoverable without markers; no marker is inserted during browsing. Parent prefixes are logical and need not have physical markers. No folder rename/move/delete endpoint exists.
+Tạo object đánh dấu thư mục 0 byte, có key kết thúc bằng `/`, bằng PUT có điều kiện chỉ cho tạo mới. Nếu marker/prefix hoặc file cùng tên đã tồn tại, trả 409. Thư mục hiện có vẫn được nhận diện dù không có marker; thao tác duyệt không tự tạo marker. Prefix cha là đường dẫn logic, không bắt buộc có object đánh dấu thư mục. Không có API đổi tên/di chuyển/xóa thư mục.
 
-## Delete exactly one file
+## Xóa chính xác một file
 
-`DELETE /objects` with `{"key":"documents/history/notes.md"}` → **204**, no body. HEAD must find the exact object first. Empty/root/slash-terminated keys, recursive flags, arrays and extra bucket fields fail validation. The only storage mutation is `DeleteObject(Key=the_exact_key)`; siblings and marker objects are untouched. Missing object returns 404. No bulk or recursive operation exists.
+`DELETE /objects` với `{"key":"documents/history/notes.md"}` → **204**, không có body phản hồi. HEAD phải tìm thấy đúng object trước khi xóa. Key rỗng/gốc/kết thúc bằng `/`, cờ xóa đệ quy, mảng và trường bucket bổ sung đều không hợp lệ. Thao tác thay đổi storage duy nhất là `DeleteObject(Key=the_exact_key)`; file bên cạnh và object đánh dấu thư mục không bị tác động. File không tồn tại trả 404. Không có thao tác xóa hàng loạt hoặc đệ quy.
 
-Deletion targets the current object at that key. R2's documented S3 write-condition table does not promise conditional DeleteObject; this API does not promise ETag-based compare-and-delete. If an independent tool replaces the same key between HEAD and deletion, its current contents can be deleted. Coordinate outside writers when confirming deletions. Production deletion was not exercised during implementation.
+Lệnh xóa nhắm đến object hiện tại tại key đó. Bảng điều kiện ghi S3 trong tài liệu R2 không cam kết DeleteObject có điều kiện; API này không cam kết so sánh ETag rồi xóa nguyên tử. Nếu một công cụ độc lập thay object tại cùng key giữa HEAD và lúc xóa, nội dung mới có thể bị xóa. Cần phối hợp với các công cụ ghi bên ngoài khi xác nhận xóa. Không chạy thử xóa dữ liệu production trong quá trình triển khai task.
 
-## Common errors and usage
+## Lỗi chung và ví dụ sử dụng
 
-Error bodies follow FastAPI's `{"detail":"safe message"}` convention; schema-validation details are an array. Missing/invalid/expired access token → 401 (`WWW-Authenticate: Bearer`); non-admin → 403; validation → 422; missing object/session → 404; conflict → 409; storage/configuration/database unavailable → 503. Unexpected provider messages and credentials are never returned. Provider-rejected opaque pagination tokens currently return sanitized 503; restart listing without that token.
+Body lỗi theo quy ước FastAPI `{"detail":"thông báo an toàn"}`; lỗi kiểm tra schema có phần chi tiết dạng mảng. Thiếu/sai/hết hạn access token → 401 (`WWW-Authenticate: Bearer`); không có quyền Admin → 403; dữ liệu không hợp lệ → 422; không tìm thấy object/phiên → 404; xung đột → 409; storage/cấu hình/database không khả dụng → 503. Không trả thông báo nội bộ bất ngờ từ nhà cung cấp hoặc thông tin xác thực. Nếu nhà cung cấp từ chối token phân trang, hiện API trả 503 với thông báo an toàn; lấy lại danh sách từ đầu mà không truyền token đó.
 
-Example read-only request (shell variables are placeholders):
+Ví dụ yêu cầu chỉ đọc; các biến shell là giá trị minh họa cần tự cấu hình:
 
 ```bash
 curl --get "$API_BASE/api/admin/knowledge/objects" \
@@ -120,4 +120,4 @@ curl --get "$API_BASE/api/admin/knowledge/objects" \
   --data-urlencode 'prefix=documents/' --data-urlencode 'limit=100'
 ```
 
-Production operators must provision the migration, private JWT signing configuration, current admin accounts, private bucket-scoped R2 permissions and exact-origin CORS. Rate limiting belongs to the existing deployment gateway; no distributed limiter was present in this repository. See [frontend integration](frontend-integration.md) for browser behavior and manual acceptance steps.
+Người vận hành production cần áp dụng migration, cấu hình khóa ký JWT riêng tư, tài khoản Admin hợp lệ, quyền R2 giới hạn đúng bucket riêng tư và CORS với origin chính xác. Giới hạn tần suất yêu cầu được cấu hình tại gateway triển khai; repository chưa có bộ giới hạn phân tán. Xem [hướng dẫn tích hợp Frontend và test tay](frontend-integration.md) để biết cách xử lý trên trình duyệt và các bước kiểm tra thủ công.
