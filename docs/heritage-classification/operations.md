@@ -89,6 +89,8 @@ Swagger/OpenAPI nằm ở `/docs` và `/openapi.json` của backend. Các API he
 
 `limit` tối đa 100 (endpoint gộp sections tối đa 30), `offset` tối đa 10000; sort title hoặc newest, tie-break bằng ID. Category/type dùng làm filter đúng taxonomy, không dùng region hay publish_state làm loại. Public API không gọi LLM, không đọc toàn bộ corpus, không truy vấn theo từng card. Response `Cache-Control: no-store`; homepage refetch mỗi 30 giây khi visible, khi focus/online và có nút tải thêm. Phân loại pending/review/unclassified hoặc stale không xuất hiện công khai.
 
+Các query trong cùng một request public dùng snapshot PostgreSQL repeatable-read/read-only, tránh trộn entity/category từ hai thời điểm khi worker commit đồng thời. Request kế tiếp nhận snapshot mới; admin API dùng transaction ghi riêng.
+
 Các endpoint `/api/admin/catalog` yêu cầu bearer token ADMIN hiện hành; kiểm tra thêm role, active và locked_until từ account/roles trong DB. Token có claim admin nhưng tài khoản thực là user bị từ chối. Dùng login hiện có `/api/auth/login` và Authorize trong Swagger.
 
 | API admin | Mục đích |

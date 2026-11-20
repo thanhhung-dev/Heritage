@@ -33,11 +33,13 @@ All seven implementation phases are complete for this branch. Scoped acceptance 
 | Engine | Subject-first deterministic rules, reviewed linked identity evidence, opt-in bounded llama proposals, confidence/review, lease/retry worker and audited backfill/rollback |
 | Backend | Public taxonomy/catalog/sections/detail, strict independent entity creation, current-account admin checks, locked overrides, retry/status and sourced relations |
 | Frontend | API-only homepage/preview, server-ranked hero, exclusive placements, sourced artifact collection/detail, pagination, periodic cache-free refresh and honest empty states |
-| Testing | 13 PostgreSQL/API tests, 146 selected backend tests and 4 catalog frontend tests passed; type/lint/production build and desktop/mobile browser checks passed |
+| Testing | 15 PostgreSQL/API tests, 146 selected backend tests and 4 catalog frontend tests passed; type/lint/production build and desktop/mobile browser checks passed |
 | Report | Operator runbook, API/placement policy, data boundaries, exact evidence and baseline failures documented |
 
 Primary files: `models/heritage_classification.py`, `migrations/versions/20261120_09_heritage_classification.{py,sql}`, `services/heritage_taxonomy.py`, `heritage_classifier.py`, `classification_{input,semantic,store,worker,backfill}.py`, `services/catalog.py`, `schemas/catalog.py`, `api/catalog.py`, `api/admin_catalog.py`, public homepage/preview/catalog routes and their home/catalog components. The legacy initializer excludes trigger-managed catalog tables, preventing bare ORM tables from blocking the migration. Compose has an opt-in worker profile.
 
 No request requires paid AI, no SQL trigger calls a model, and no public render request scans documents or invokes classification. Admin locks survive source changes and worker runs. Taxonomy is independent of UI sections, region and publication state. Multi-category membership is preserved while homepage placement is exclusive. New artifact/person/event/practice records need explicit sourced editorial input; marker media and narrator rows are never auto-promoted.
+
+Public catalog requests use one read-only repeatable-read snapshot so concurrent worker commits cannot mix an entity with different category rows or duplicate its placement across sections in the same response. The admin write-session dependency remains separate. The final PostgreSQL test commits such a change between the entity and category queries, then verifies both the stable first response and the updated next response.
 
 Rollout remains separate: the current application DB has no heritage data, so no real dataset was backfilled and no live-site classification accuracy is claimed. Migrations/backfill must be reviewed and applied to the intended dev/staging/production target by the operator. No source heritage row, media URL, publication state, RAG strategy or remote branch was changed by this implementation run.

@@ -28,7 +28,7 @@ $py='C:\Capstone 1\.venv\Scripts\python.exe'
 & $py -X utf8 scripts/verify-catalog.py apps/backend/tests/test_catalog_postgres.py apps/backend/tests/test_catalog_api.py
 ```
 
-**13 passed, no failures/skips, 24.82s.** The runner creates/removes an owned database, and each test uses its own schema. Fixture preparation executes the actual Alembic `upgrade()` through MigrationContext/Operations, including source/evidence triggers. The application DB is never the test target.
+**15 passed, no failures/skips, 35.60s.** The runner creates/removes an owned database, and each test uses its own schema. Fixture preparation executes the actual Alembic `upgrade()` through MigrationContext/Operations, including source/evidence triggers. The application DB is never the test target. The final additions execute the operator backfill CLI as real subprocesses (default dry-run, apply, rollback) and commit a concurrent identity/category change between two public SELECTs, proving that one response retains its repeatable-read snapshot and the next response sees the new data.
 
 ```powershell
 & $py -X utf8 -m pytest apps/backend/tests/test_heritage_classifier.py apps/backend/tests/test_catalog_migration.py apps/backend/tests/test_db_init.py apps/backend/tests/test_heritage_api.py apps/backend/tests/test_tour_context.py apps/backend/tests/test_tour_scope.py apps/backend/tests/test_chat_conversation.py apps/backend/tests/test_startup_config.py apps/backend/tests/test_profile_schema_validation.py apps/backend/tests/test_p2_links.py apps/backend/tests/test_prompt.py -q --tb=short
@@ -57,6 +57,8 @@ A second disposable preview served explicitly labeled synthetic UI fixtures to N
 - `C:\Capstone 1\.catalog-test-runtime\catalog-section-mobile.png`
 
 These contain a modern application icon and clearly labeled test content, not historical artifact data. No such fixtures were inserted into the application database. The UI preview database was verified by its generated name and exact fixture slugs before removal. Children, browser and preview worktree were cleaned up.
+
+Final cleanup checks confirmed ports **8000, 3006 and 9224 closed**, zero UI preview databases and no application catalog migration. Each integration runner also reported removal of its owned database. An execution-tool interrupt ended the interactive preview without running Python's normal cleanup message; its exact leftover fixture database was inspected, confirmed to have zero connections and removed explicitly. Normal `--check` completion did execute automatic cleanup. Screenshots and review logs remain outside Git.
 
 ## Wider baseline regressions — not a fully green repository claim
 
