@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Modal } from "antd";
 import { DesignIcon } from "./DesignIcon";
-import { breadcrumbParts, documentHref, uploadHref } from "./folder-state";
+import { breadcrumbParts, documentHref } from "./folder-state";
+import { FolderBrowser } from "./FolderBrowser";
 import { formatFileSize } from "./file-policy";
 import { useKnowledge } from "./KnowledgeProvider";
 import { UploadDropzone, uploadPercent, uploadStateLabel, useUploadEntries } from "./UploadControls";
@@ -27,7 +28,10 @@ export function UploadDocumentsModal({
   const { root } = useKnowledge();
   const { queue, entries } = useUploadEntries();
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const folderEntries = entries.filter(entry => entry.folder === prefix);
+  const [destination, setDestination] = useState(prefix);
+  const [choosingFolder, setChoosingFolder] = useState(false);
+  useEffect(() => { if (open) { setDestination(prefix); setChoosingFolder(false); setValidationErrors([]); } }, [open, prefix]);
+  const folderEntries = entries.filter(entry => entry.folder === destination);
   const activeInFolder = folderEntries.some(entry => ["preparing", "uploading", "verifying"].includes(entry.state));
   const queuedInFolder = folderEntries.filter(entry => entry.state === "queued");
   const latestStored = folderEntries.filter(entry => entry.state === "stored" && entry.object).at(-1)?.object;
@@ -53,6 +57,8 @@ export function UploadDocumentsModal({
       onCancel={closeModal}
       footer={null}
       width={720}
+      centered
+      styles={{ mask: { backgroundColor: "rgba(32,31,28,.32)" } }}
       closable={!activeInFolder}
       maskClosable={!activeInFolder}
       closeIcon={<DesignIcon name="upload-modal-X" />}
@@ -75,17 +81,21 @@ export function UploadDocumentsModal({
             <DesignIcon name="upload-modal-FolderOpen" />
             <div>
               <span className={styles.muted}>Cloudflare R2</span>
-              <span className={styles.destinationPath}>{destinationBreadcrumbLabel(root, prefix)}</span>
+              <span className={styles.destinationPath}>{destinationBreadcrumbLabel(root, destination)}</span>
             </div>
-            <Link href={uploadHref(prefix)} onClick={closeModal} className={styles.figmaBtn}>
+            <button type="button" disabled={activeInFolder} onClick={() => setChoosingFolder(value => !value)} className={styles.figmaBtn}>
               Change folder
-            </Link>
+            </button>
           </div>
+          {choosingFolder && <div className={styles.folderPicker}>
+            <FolderBrowser prefix={destination} onSelect={folder => { setDestination(folder); setChoosingFolder(false); }} />
+          </div>}
         </div>
 
         <UploadDropzone
-          folder={prefix}
+          folder={destination}
           variant="modal"
+          disabled={entries.some(entry => ["preparing", "uploading", "verifying"].includes(entry.state))}
           onErrors={errors => setValidationErrors(errors)}
         />
 
@@ -159,14 +169,11 @@ export function UploadDocumentsModal({
           <div className={styles.noticeBody}>
             <span className={styles.noticeTitle}>Upload does not publish to the chatbot</span>
             <p>
-              Files are stored in Cloudflare R2 (<code>knowledge-heritage</code>) only. Complete metadata and submit for review separately. Only approved, successfully indexed documents become available to the chatbot.
+              Files are stored in Cloudflare R2 only. Review and chatbot indexing are not available yet.
             </p>
           </div>
         </div>
 
-        <p className={styles.muted}>
-          Connected to Cloudflare R2 · Supported formats: .md, .txt, .json · Verified via backend completion
-        </p>
       </div>
 
       <div className={styles.modalFooterBar}>
@@ -177,7 +184,7 @@ export function UploadDocumentsModal({
           <button type="button" className={styles.figmaBtn} disabled={activeInFolder} onClick={closeModal}>
             {folderEntries.some(e => e.state === "stored") && queuedInFolder.length === 0 ? "Done" : "Cancel"}
           </button>
-          {latestStored && (
+          {latestStored && !activeInFolder && (
             <Link href={documentHref("metadata", latestStored.key)} onClick={closeModal} className={styles.figmaBtn}>
               Continue to metadata
             </Link>

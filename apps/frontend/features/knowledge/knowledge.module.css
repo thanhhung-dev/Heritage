@@ -9,7 +9,7 @@
   background: var(--knowledge-bg);
   font-family: Roboto, Arial, sans-serif;
 }
-.content { min-width: 0; padding: 28px 24px 12px; background: var(--knowledge-bg); }
+.content { min-width: 0; padding: 28px 24px; background: var(--knowledge-bg); }
 .icon { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-width: 16px; vertical-align: middle; }
 .icon img { display: block; max-width: none; }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: #000; white-space: nowrap; }
@@ -28,7 +28,7 @@
 }
 .logoNative img { display: block; max-width: none; }
 .page {
-  min-height: calc(100vh - 40px);
+  min-height: calc(100vh - 56px);
   min-width: 0;
   padding: 24px;
   border: 0.5px solid var(--knowledge-border);
@@ -309,6 +309,9 @@
 .pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; width: 100%; }
 .replacementHeader { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; width: 100%; }
 .dialogDescription { margin: 6px 0 0; font-size: 14px; line-height: 20px; color: var(--knowledge-muted); letter-spacing: -.154px; }
+.dialog :global(.ant-modal-container), .dialog :global(.ant-modal-content) { border-radius: 14px; }
+.folderPicker { max-height: 260px; overflow-y: auto; padding: 12px; border: 1px solid var(--knowledge-border); border-radius: 8px; }
+.folderPicker .folderBrowser { min-height: 0; border: 0; padding: 0; }
 .dialog label { display: block; margin: 12px 0 8px; font-size: 14px; font-weight: 500; color: var(--knowledge-text); }
 .dialogFooter { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 20px; }
 .modalFooterBar {
