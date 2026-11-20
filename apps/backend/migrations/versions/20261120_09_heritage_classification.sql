@@ -78,3 +78,63 @@ CREATE TABLE heritage_classification_audit (
 );
 CREATE INDEX ix_classification_audit_run ON heritage_classification_audit(run_id);
 CREATE INDEX ix_classification_audit_content ON heritage_classification_audit(content_id);
+
+-- Trigger work stays inside the source transaction; no HTTP/model calls occur.
+CREATE FUNCTION heritage_content_revision() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP='UPDATE' AND ROW(NEW.title,NEW.tagline,NEW.headline,NEW.description,NEW.region,
+        NEW.card_image_url,NEW.splash_image_url,NEW.publish_state,NEW.entity_type_hint,
+        NEW.source_url,NEW.verified_metadata,NEW.knowledge_entity_id,NEW.source_document_id,
+        NEW.interactive_highlight_id,NEW.slug)
+        IS DISTINCT FROM ROW(OLD.title,OLD.tagline,OLD.headline,OLD.description,OLD.region,
+        OLD.card_image_url,OLD.splash_image_url,OLD.publish_state,OLD.entity_type_hint,
+        OLD.source_url,OLD.verified_metadata,OLD.knowledge_entity_id,OLD.source_document_id,
+        OLD.interactive_highlight_id,OLD.slug) THEN
+        NEW.input_revision := OLD.input_revision+1;
+        NEW.classification_status := 'pending';
+        NEW.updated_at := now();
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER heritage_content_revision_trigger BEFORE UPDATE ON heritage_content
+    FOR EACH ROW EXECUTE FUNCTION heritage_content_revision();
+
+CREATE FUNCTION enqueue_heritage_classification() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP='INSERT' OR NEW.input_revision IS DISTINCT FROM OLD.input_revision THEN
+        INSERT INTO heritage_classification_jobs(content_id,generation)
+        VALUES(NEW.id,NEW.input_revision)
+        ON CONFLICT(content_id) DO UPDATE SET generation=EXCLUDED.generation,status='PENDING',
+            attempts=0,available_at=now(),leased_until=NULL,lease_token=NULL,last_error=NULL,updated_at=now();
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER heritage_content_queue_trigger AFTER INSERT OR UPDATE ON heritage_content
+    FOR EACH ROW EXECUTE FUNCTION enqueue_heritage_classification();
+
+CREATE FUNCTION sync_heritage_catalog() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO heritage_content(source_heritage_id,slug,title,tagline,headline,description,region,
+        card_image_url,splash_image_url,publish_state)
+    VALUES(NEW.id,'heritage-'||NEW.slug,NEW.title,NEW.tagline,NEW.headline,NEW.description,NEW.region,
+        NEW.card_image_url,NEW.splash_image_url,NEW.publish_state)
+    ON CONFLICT(source_heritage_id) DO UPDATE SET slug=EXCLUDED.slug,title=EXCLUDED.title,
+        tagline=EXCLUDED.tagline,headline=EXCLUDED.headline,description=EXCLUDED.description,
+        region=EXCLUDED.region,card_image_url=EXCLUDED.card_image_url,
+        splash_image_url=EXCLUDED.splash_image_url,publish_state=EXCLUDED.publish_state
+    WHERE ROW(heritage_content.slug,heritage_content.title,heritage_content.tagline,heritage_content.headline,
+        heritage_content.description,heritage_content.region,heritage_content.card_image_url,
+        heritage_content.splash_image_url,heritage_content.publish_state)
+        IS DISTINCT FROM ROW(EXCLUDED.slug,EXCLUDED.title,EXCLUDED.tagline,EXCLUDED.headline,
+        EXCLUDED.description,EXCLUDED.region,EXCLUDED.card_image_url,EXCLUDED.splash_image_url,EXCLUDED.publish_state);
+    RETURN NEW;
+END $$;
+CREATE TRIGGER heritage_catalog_source_trigger AFTER INSERT OR UPDATE OF slug,title,tagline,headline,
+    description,region,card_image_url,splash_image_url,publish_state ON heritage
+    FOR EACH ROW EXECUTE FUNCTION sync_heritage_catalog();
+
+-- Project existing records and queue them; never UPDATE the original heritage.
+INSERT INTO heritage_content(source_heritage_id,slug,title,tagline,headline,description,region,
+    card_image_url,splash_image_url,publish_state)
+SELECT id,'heritage-'||slug,title,tagline,headline,description,region,card_image_url,splash_image_url,publish_state
+FROM heritage;
