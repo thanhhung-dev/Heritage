@@ -1,184 +1,427 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { App, Button, Tooltip } from "antd";
+import { App, Tooltip } from "antd";
 import { ApiError } from "../../lib/api";
 import { isAborted, knowledgeApi, knowledgeError } from "../../services/knowledge.service";
 import { DesignIcon } from "./DesignIcon";
 import { DeleteFileDialog } from "./FileDialogs";
-import { KnowledgeBreadcrumbs } from "./FolderBrowser";
-import { documentHref, libraryHref } from "./folder-state";
+import { KnowledgeTopPath } from "./FolderBrowser";
+import { breadcrumbParts, documentHref, libraryHref } from "./folder-state";
 import { formatFileSize } from "./file-policy";
 import { downloadKnowledgeFile } from "./knowledge-actions";
 import { KnowledgeFeedback } from "./KnowledgeFeedback";
 import { useKnowledge } from "./KnowledgeProvider";
 import type { KnowledgeObject, KnowledgePreview } from "./types";
 import styles from "./knowledge.module.css";
-import view from "./document-details.module.css";
 
 function parentFolderPrefix(root: string, key: string): string {
-  const slash = key.lastIndexOf("/");
-  const candidate = slash < 0 ? root : key.slice(0, slash + 1);
+  const slashIndex = key.lastIndexOf("/");
+  if (slashIndex === -1) return root;
+  const candidate = key.slice(0, slashIndex + 1);
   return candidate.startsWith(root) ? candidate : root;
 }
 
-function updatedAt(value: string): string {
-  return new Date(value).toLocaleString("en-GB", { timeZone: "UTC", dateStyle: "medium", timeStyle: "short" });
-}
+const PREVIEW_PAGE_CHARS = 1800;
 
 export function DocumentDetails() {
-  const query = useSearchParams(), router = useRouter(), { message } = App.useApp(), { root } = useKnowledge();
+  const query = useSearchParams();
+  const router = useRouter();
+  const { message } = App.useApp();
+  const { root } = useKnowledge();
   const key = query.get("key") ?? "";
+
   const [object, setObject] = useState<KnowledgeObject | null>(null);
   const [objectLoading, setObjectLoading] = useState(true);
   const [objectError, setObjectError] = useState<unknown>();
+
   const [preview, setPreview] = useState<KnowledgePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(true);
   const [previewError, setPreviewError] = useState<unknown>();
+  const [previewPage, setPreviewPage] = useState(1);
+
   const [attempt, setAttempt] = useState(0);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    setObject(null); setPreview(null); setDeleting(false);
-    setObjectError(undefined); setPreviewError(undefined);
+    setPreviewPage(1);
     if (!key) {
-      setObjectLoading(false); setPreviewLoading(false);
-      setObjectError(new ApiError("Select a document to view its details.", 422));
+      setObject(null);
+      setObjectLoading(false);
+      setObjectError(new ApiError("Select a document key to inspect details.", 422));
+      setPreview(null);
+      setPreviewLoading(false);
       return;
     }
     const controller = new AbortController();
-    setObjectLoading(true); setPreviewLoading(true);
-    void knowledgeApi.object(key, controller.signal).then(result => {
-      if (!controller.signal.aborted) { setObject(result); setObjectLoading(false); }
-    }).catch(error => {
-      if (!isAborted(error) && !controller.signal.aborted) { setObjectError(error); setObjectLoading(false); }
-    });
-    void knowledgeApi.preview(key, controller.signal).then(result => {
-      if (!controller.signal.aborted) { setPreview(result); setPreviewLoading(false); }
-    }).catch(error => {
-      if (!isAborted(error) && !controller.signal.aborted) { setPreviewError(error); setPreviewLoading(false); }
-    });
+    setObjectLoading(true);
+    setObjectError(undefined);
+    setPreviewLoading(true);
+    setPreviewError(undefined);
+    setPreview(null);
+
+    void knowledgeApi.object(key, controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted) {
+          setObject(result);
+          setObjectLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!isAborted(err) && !controller.signal.aborted) {
+          setObject(null);
+          setObjectError(err);
+          setObjectLoading(false);
+        }
+      });
+
+    void knowledgeApi.preview(key, controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted) {
+          setPreview(result);
+          setPreviewLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!isAborted(err) && !controller.signal.aborted) {
+          setPreview(null);
+          setPreviewError(err);
+          setPreviewLoading(false);
+        }
+      });
+
     return () => controller.abort();
   }, [key, attempt]);
 
-  // A changed URL must never briefly expose actions for the previous document.
-  const currentObject = object?.key === key ? object : null;
-  const currentPreview = preview?.key === key ? preview : null;
-  const loading = objectLoading || Boolean(key && !currentObject && !objectError);
   const folderPrefix = parentFolderPrefix(root, key);
+  const folderParts = breadcrumbParts(root, folderPrefix);
+  const folderLabel = folderParts.length ? folderParts.map(p => p.label).join(" / ") : "All documents";
   const previewStatus = previewError instanceof ApiError ? previewError.status : undefined;
+  const ext = object?.name.includes(".") ? object.name.split(".").pop()?.toUpperCase() : "FILE";
+
+  const previewPages = useMemo(() => {
+    if (!preview) return [];
+    const text = preview.content;
+    if (!text.length) return [""];
+    const pages: string[] = [];
+    for (let i = 0; i < text.length; i += PREVIEW_PAGE_CHARS) {
+      pages.push(text.slice(i, i + PREVIEW_PAGE_CHARS));
+    }
+    return pages;
+  }, [preview]);
+
+  const totalPreviewPages = Math.max(1, previewPages.length);
+  const shownPreviewPage = Math.min(previewPage, totalPreviewPages);
 
   async function handleDownload() {
-    if (!currentObject) return;
-    try { await downloadKnowledgeFile(currentObject.key); }
-    catch (error) { void message.error(knowledgeError(error)); }
+    if (!key) return;
+    try {
+      await downloadKnowledgeFile(key);
+    } catch (e) {
+      void message.error(knowledgeError(e));
+    }
   }
 
   return (
-    <section className={styles.page + " " + view.page} aria-label="Document details">
-      <KnowledgeBreadcrumbs prefix={folderPrefix} current={currentObject?.name || "Document details"} />
-      <header className={view.header}>
-        <div className={view.titleBlock}>
+    <section className={styles.page} aria-label="Document details">
+      <KnowledgeTopPath
+        prefix={folderPrefix}
+        current={object?.name || key || "Document details"}
+      />
+
+      <header className={styles.header}>
+        <div>
           <h1>Document details</h1>
-          <p>{currentObject ? currentObject.name + " · " + formatFileSize(currentObject.size) : "View the original document and its storage details."}</p>
+          <p>
+            {object
+              ? `${object.name} · Stored in R2 · ${folderLabel}`
+              : key || "Inspect Cloudflare R2 object details"}
+          </p>
         </div>
         <div className={styles.actions}>
-          {currentObject ? <>
-            <Button onClick={() => void handleDownload()}>View original</Button>
-            <Button onClick={() => void handleDownload()}>Download file</Button>
-            <Tooltip title="Versioned file replacement is not enabled.">
-              <Button disabled>Replace file</Button>
-            </Tooltip>
-          </> : <Link href={libraryHref(folderPrefix)}><Button>Back to library</Button></Link>}
+          {object && (
+            <>
+              <button type="button" className={styles.figmaBtn} onClick={() => void handleDownload()}>
+                View original
+              </button>
+              <button type="button" className={styles.figmaBtn} onClick={() => void handleDownload()}>
+                Download file
+              </button>
+              <Tooltip title="Versioned replacement is not supported by the current R2 backend contract.">
+                <button type="button" className={styles.figmaBtn} disabled>
+                  Replace file
+                </button>
+              </Tooltip>
+              <Link href={documentHref("metadata", object.key)} className={styles.figmaBtn}>
+                Edit metadata
+              </Link>
+              <button
+                type="button"
+                className={`${styles.figmaBtn} ${styles.figmaBtnDanger}`}
+                onClick={() => setDeleting(true)}
+              >
+                Delete file
+              </button>
+            </>
+          )}
         </div>
       </header>
 
-      {loading ? <KnowledgeFeedback loading /> : objectError || !currentObject ? (
-        <KnowledgeFeedback error={objectError} retry={() => setAttempt(n => n + 1)} />
-      ) : <>
-        <div className={view.statusCards}>
-          <section className={view.statusCard}>
-            <div className={view.statusHeading}><span>Storage</span><span className={styles.badges}>Stored in R2</span></div>
-            <p>Original file is stored and available to download.</p>
-          </section>
-          <section className={view.statusCard}>
-            <div className={view.statusHeading}><span>Review</span><span className={styles.badges}>Unavailable</span></div>
-            <p>Review tools are not enabled for this document.</p>
-          </section>
-          <section className={view.statusCard}>
-            <div className={view.statusHeading}><span>Ingestion</span><span className={styles.badges}>Unavailable</span></div>
-            <p>Ingestion is not enabled. Chatbot availability is unknown.</p>
-          </section>
-        </div>
+      <div className={styles.contextBar}>
+        <span className={styles.contextBadge}>CLOUDFLARE R2</span>
+        <span className={styles.contextText}>
+          Live object HEAD & safe UTF-8 text preview from bucket <code>knowledge-heritage</code> · Review and ingestion states are separate from R2 storage
+        </span>
+      </div>
 
-        <div className={view.columns}>
-          <div className={view.column}>
-            <section className={view.panel}>
-              <div className={view.panelHeading}>
-                <div><h2>Text preview</h2><p className={view.description}>Original file content · UTF-8 text</p></div>
-                <Button size="small" onClick={() => void handleDownload()}>Download original</Button>
+      {objectLoading ? (
+        <KnowledgeFeedback loading />
+      ) : objectError || !object ? (
+        <KnowledgeFeedback error={objectError} retry={() => setAttempt(n => n + 1)} />
+      ) : (
+        <>
+          <div className={styles.stateCards}>
+            <div className={styles.stateCard}>
+              <div className={styles.stateTitle}>
+                <span className={styles.stateLabel}>Storage</span>
+                <span className={styles.badges}>Stored in R2</span>
               </div>
-              {previewLoading ? <KnowledgeFeedback loading /> : currentPreview ? (
-                <pre className={view.textPreview} aria-label="Raw text preview">{currentPreview.content}</pre>
-              ) : (
-                <div className={view.previewUnavailable} role="status">
-                  <DesignIcon name="details-Info" />
-                  <div><strong>{previewStatus === 413 ? "This file is too large to preview" : previewStatus === 404 ? "The original file was not found" : "Preview is not available"}</strong>
-                    <p>{previewStatus === 413 || previewStatus === 415 || previewStatus === 422
-                      ? "Download the original file to view its contents." : knowledgeError(previewError)}</p>
-                    <Button size="small" onClick={() => void handleDownload()}>Download file</Button>
+              <p className={styles.stateSummary}>Original file is stored and available to download.</p>
+            </div>
+            <div className={styles.stateCard}>
+              <div className={styles.stateTitle}>
+                <span className={styles.stateLabel}>Review</span>
+                <span className={styles.badges}>Unavailable</span>
+              </div>
+              <p className={styles.stateSummary}>No editorial review status returned by the R2 backend.</p>
+            </div>
+            <div className={styles.stateCard}>
+              <div className={styles.stateTitle}>
+                <span className={styles.stateLabel}>Ingestion</span>
+                <span className={styles.badges}>Not run</span>
+              </div>
+              <p className={styles.stateSummary}>No ingestion job endpoint connected · Not available to chatbot</p>
+            </div>
+          </div>
+
+          <div className={styles.twoColumns}>
+            <div className={styles.mainColumn} style={{ gap: 20 }}>
+              <div className={styles.panel}>
+                <div className={styles.replacementHeader}>
+                  <div className={styles.panelHeading} style={{ flex: 1 }}>
+                    <h2>Extracted text</h2>
+                    <p className={styles.muted}>
+                      {preview
+                        ? `${preview.content.length.toLocaleString()} characters · ${totalPreviewPages} ${totalPreviewPages === 1 ? "page" : "pages"} · Raw UTF-8 preview from R2`
+                        : "Raw UTF-8 text preview from R2"}
+                    </p>
+                  </div>
+                  {preview && (
+                    <div className={styles.actions}>
+                      <span className={styles.muted}>
+                        Page {shownPreviewPage} of {totalPreviewPages}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.figmaBtn}
+                        disabled={shownPreviewPage <= 1}
+                        onClick={() => setPreviewPage(p => p - 1)}
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.figmaBtn}
+                        disabled={shownPreviewPage >= totalPreviewPages}
+                        onClick={() => setPreviewPage(p => p + 1)}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {previewLoading ? (
+                  <KnowledgeFeedback loading />
+                ) : preview ? (
+                  <div className={styles.previewContainer}>
+                    <pre className={styles.previewPre} aria-label="Raw UTF-8 text preview">
+                      {previewPages[shownPreviewPage - 1] || "(Empty file)"}
+                    </pre>
+                    <p className={styles.muted}>
+                      Rendered safely as plain text without executing HTML or Markdown · Source key: {object.key} · Page {shownPreviewPage}.
+                    </p>
+                  </div>
+                ) : (
+                  <div className={styles.error} role="alert">
+                    <strong>
+                      {previewStatus === 413
+                        ? "File exceeds the 128 KiB preview size limit (HTTP 413)"
+                        : previewStatus === 404
+                        ? "Object not found for preview (HTTP 404)"
+                        : previewStatus === 415 || previewStatus === 422
+                        ? "Preview not supported for this content"
+                        : "Preview unavailable"}
+                    </strong>
+                    <p>{knowledgeError(previewError)}</p>
+                    <button type="button" className={styles.figmaBtn} onClick={() => void handleDownload()}>
+                      Download file instead
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.panel}>
+                <div className={styles.panelHeading}>
+                  <h2>Chunks</h2>
+                  <p>0 chunks generated · RAG chunking & OpenSearch indexing API is not connected for R2 library objects</p>
+                </div>
+
+                <div className={styles.figmaTable} role="table" aria-label="Chunks">
+                  <div className={styles.figmaTableHeader} role="row">
+                    <div className={styles.chunkColId} role="columnheader">Chunk</div>
+                    <div className={styles.chunkColPage} role="columnheader">Page</div>
+                    <div className={styles.chunkColPreview} role="columnheader">Content preview</div>
+                    <div className={styles.chunkColTokens} role="columnheader">Tokens</div>
+                    <div className={styles.chunkColAction} role="columnheader" />
+                  </div>
+                  <div className={styles.empty} style={{ padding: "28px 16px" }}>
+                    <p className={styles.muted}>
+                      No chunks are available because the mounted <code>/api/admin/knowledge</code> contract does not run or expose RAG chunking jobs.
+                    </p>
                   </div>
                 </div>
-              )}
-            </section>
 
-            <section className={view.panel}>
-              <h2>Chunks</h2>
-              <p className={view.description}>No extracted chunks are available for this document.</p>
-              <div className={view.tableScroll}>
-                <table className={view.chunkTable} aria-label="Document chunks">
-                  <thead><tr><th>Chunk</th><th>Page</th><th>Content preview</th><th>Tokens</th></tr></thead>
-                  <tbody><tr><td colSpan={4}>Chunk inspection is not enabled.</td></tr></tbody>
-                </table>
+                <div className={styles.pagination}>
+                  <span className={styles.muted}>Showing 0 of 0 chunks · Truthful backend state</span>
+                  <button type="button" className={styles.figmaBtn} disabled>
+                    View all chunks
+                  </button>
+                </div>
               </div>
-              <div className={view.panelFooter}><span>Ingestion data is unavailable.</span><Button size="small" disabled>View all chunks</Button></div>
-            </section>
+            </div>
+
+            <div className={styles.mainColumn} style={{ gap: 16 }}>
+              <div className={styles.panel}>
+                <div className={styles.panelHeading}>
+                  <h2>Metadata and original file</h2>
+                </div>
+
+                <div className={styles.metaStack}>
+                  <div className={styles.metaField}>
+                    <span className={styles.metaFieldLabel}>Title</span>
+                    <span className={styles.metaFieldValue}>{object.name.replace(/\.[^.]+$/, "")}</span>
+                  </div>
+
+                  <div className={styles.metaTwoCols}>
+                    <div className={styles.metaField}>
+                      <span className={styles.metaFieldLabel}>Region</span>
+                      <span className={styles.metaFieldValue}>
+                        {object.metadata?.["language"] || folderLabel}
+                      </span>
+                    </div>
+                    <div className={styles.metaField}>
+                      <span className={styles.metaFieldLabel}>Document type</span>
+                      <span className={styles.metaFieldValue}>
+                        {object.metadata?.["source-type"] || "Not persisted"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={styles.metaField}>
+                    <span className={styles.metaFieldLabel}>Citation source URL</span>
+                    <span className={styles.metaFieldValue}>Not provided by backend</span>
+                  </div>
+
+                  <div className={styles.dividerTop}>
+                    <div className={styles.metaField}>
+                      <span className={styles.metaFieldLabel}>Original file name</span>
+                      <span className={styles.metaFieldValue}>{object.name}</span>
+                    </div>
+
+                    <div className={styles.metaTwoCols}>
+                      <div className={styles.metaField}>
+                        <span className={styles.metaFieldLabel}>Format</span>
+                        <span className={styles.metaFieldValue}>{ext}</span>
+                      </div>
+                      <div className={styles.metaField}>
+                        <span className={styles.metaFieldLabel}>Size</span>
+                        <span className={styles.metaFieldValue}>{formatFileSize(object.size)}</span>
+                      </div>
+                    </div>
+
+                    <div className={styles.metaField}>
+                      <span className={styles.metaFieldLabel}>R2 object key</span>
+                      <span className={styles.metaFieldValue}>{object.key}</span>
+                    </div>
+
+                    <div className={styles.metaTwoCols}>
+                      <div className={styles.metaField}>
+                        <span className={styles.metaFieldLabel}>Uploaded by</span>
+                        <span className={styles.metaFieldValue}>Not provided by R2 HEAD</span>
+                      </div>
+                      <div className={styles.metaField}>
+                        <span className={styles.metaFieldLabel}>Updated (UTC)</span>
+                        <span className={styles.metaFieldValue}>
+                          {new Date(object.lastModified).toLocaleString("en-GB", {
+                            timeZone: "UTC",
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className={styles.metaField}>
+                      <span className={styles.metaFieldLabel}>ETag</span>
+                      <span className={styles.metaFieldValue}>{object.etag || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.panel}>
+                <div className={styles.panelHeading}>
+                  <h2>Ingestion status & retry</h2>
+                  <p>No active or failed ingestion job is attached to this R2 object</p>
+                </div>
+                <p style={{ fontSize: 14, lineHeight: "17.5px", fontWeight: 500, color: "#201f1c" }}>
+                  INGESTION_API_NOT_MOUNTED
+                </p>
+                <p style={{ fontSize: 14, lineHeight: "20px", color: "#201f1c" }}>
+                  The file is verified in Cloudflare R2 (<code>{object.bucket}</code>). RAG indexing jobs and retry endpoints are not exposed on <code>/api/admin/knowledge</code>.
+                </p>
+                <div>
+                  <button
+                    type="button"
+                    className={`${styles.figmaBtn} ${styles.figmaBtnPrimary}`}
+                    disabled
+                  >
+                    Retry ingestion
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.notice}>
+                <DesignIcon name="details-Info" />
+                <div className={styles.noticeBody}>
+                  <p>
+                    Replace file requires a versioned draft revision contract. The current R2 storage backend prevents overwriting existing keys.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
+        </>
+      )}
 
-          <div className={view.column}>
-            <section className={view.panel}>
-              <div className={view.panelHeading}><h2>Metadata and original file</h2><Link href={documentHref("metadata", currentObject.key)}>View metadata</Link></div>
-              <dl className={view.metadata}>
-                <div className={view.fullWidth}><dt>Title</dt><dd className={view.missing}>Editorial metadata is not available.</dd></div>
-                <div className={view.fullWidth + " " + view.fileSection}><dt>Original filename</dt><dd>{currentObject.name}</dd></div>
-                <div><dt>Format</dt><dd>{currentObject.name.includes(".") ? currentObject.name.split(".").pop()?.toUpperCase() : "FILE"}</dd></div>
-                <div><dt>Size</dt><dd>{formatFileSize(currentObject.size)}</dd></div>
-                <div className={view.fullWidth}><dt>R2 bucket</dt><dd>{currentObject.bucket}</dd></div>
-                <div className={view.fullWidth}><dt>R2 object key</dt><dd><code>{currentObject.key}</code></dd></div>
-                <div><dt>Uploaded by</dt><dd className={view.missing}>Not provided</dd></div>
-                <div><dt>Updated (UTC)</dt><dd><time dateTime={currentObject.lastModified}>{updatedAt(currentObject.lastModified)}</time></dd></div>
-              </dl>
-              <details className={view.technicalDetails}><summary>Technical details</summary><dl className={view.metadata}>
-                <div className={view.fullWidth}><dt>Content type</dt><dd>{currentObject.contentType}</dd></div>
-                <div className={view.fullWidth}><dt>ETag</dt><dd><code>{currentObject.etag || "—"}</code></dd></div>
-              </dl></details>
-              <div className={view.fileActions}><Link href={libraryHref(folderPrefix)}>Back to folder</Link><Button danger type="text" size="small" onClick={() => setDeleting(true)}>Delete file</Button></div>
-            </section>
-
-            <section className={view.panel}>
-              <h2>Ingestion</h2>
-              <p className={view.description}>No processing job is available for this document.</p>
-              <p className={view.bodyText}>Processing status, errors and retry tools are not enabled.</p>
-              <Tooltip title="Ingestion tools are not enabled for this library."><Button disabled>Retry ingestion</Button></Tooltip>
-            </section>
-            <div className={view.notice}><DesignIcon name="details-Info" /><p>Storage, review and ingestion are independent. Uploading a file does not make it available to the chatbot.</p></div>
-          </div>
-        </div>
-      </>}
-
-      <DeleteFileDialog file={deleting && currentObject ? currentObject : null} close={() => setDeleting(false)} deleted={() => router.push(libraryHref(folderPrefix))} />
+      <DeleteFileDialog
+        file={deleting && object ? object : null}
+        close={() => setDeleting(false)}
+        deleted={() => router.push(libraryHref(folderPrefix))}
+      />
     </section>
   );
 }
