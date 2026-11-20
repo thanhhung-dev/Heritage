@@ -8,7 +8,8 @@ import { knowledgeError } from "../../services/knowledge.service";
 import { DesignIcon } from "./DesignIcon";
 import { FolderBrowser, KnowledgeBreadcrumbs } from "./FolderBrowser";
 import { CreateFolderDialog, DeleteFileDialog } from "./FileDialogs";
-import { documentHref, libraryHref } from "./folder-state";
+import { UploadDocumentsModal } from "./UploadModal";
+import { documentHref, libraryHref, uploadHref } from "./folder-state";
 import { formatFileSize } from "./file-policy";
 import { KnowledgeFeedback } from "./KnowledgeFeedback";
 import { downloadKnowledgeFile } from "./knowledge-actions";
@@ -22,7 +23,7 @@ export function DocumentLibrary() {
   const query = useSearchParams(), router = useRouter(), { message } = App.useApp();
   const listing = useKnowledgeFolder(query.has("prefix") ? query.get("prefix")! : undefined);
   const [search, setSearch] = useState(""); const [page, setPage] = useState(1);
-  const [createOpen, setCreateOpen] = useState(false); const [deleting, setDeleting] = useState<KnowledgeFile | null>(null);
+  const [createOpen, setCreateOpen] = useState(false); const [uploadOpen, setUploadOpen] = useState(false); const [deleting, setDeleting] = useState<KnowledgeFile | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   useEffect(() => { setPage(1); setSearch(""); setSelectedKey(null); }, [listing.prefix]);
   const files = listing.page?.files;
@@ -53,7 +54,8 @@ export function DocumentLibrary() {
   return <section className={styles.page} aria-label="Document library">
     <header className={styles.header}><div><h1>Document library</h1><p>Manage original files, metadata, review status, and ingestion in one place.</p></div>
       <div className={styles.actions}><Button disabled={listing.loading || Boolean(listing.error)} onClick={() => setCreateOpen(true)}>Create folder</Button>
-        <Link href={"/admin/documents/upload?" + new URLSearchParams({ prefix: listing.prefix })}><Button type="primary">Upload documents</Button></Link></div>
+        <Link href={uploadHref(listing.prefix)}><Button>Upload workspace</Button></Link>
+        <Button type="primary" disabled={listing.loading || Boolean(listing.error)} onClick={() => setUploadOpen(true)}>Upload documents</Button></div>
     </header>
     <div className={styles.workspace}>
       <FolderBrowser prefix={listing.prefix} onSelect={prefix => router.push(libraryHref(prefix))} />
@@ -82,6 +84,7 @@ export function DocumentLibrary() {
       </div>
     </div>
     <CreateFolderDialog prefix={listing.prefix} open={createOpen} close={() => setCreateOpen(false)} created={listing.refresh} />
+    <UploadDocumentsModal prefix={listing.prefix} open={uploadOpen} onClose={() => setUploadOpen(false)} />
     <DeleteFileDialog file={deleting} close={() => setDeleting(null)} deleted={listing.refresh} />
   </section>;
 }

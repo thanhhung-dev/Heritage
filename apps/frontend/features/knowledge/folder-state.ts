@@ -40,6 +40,10 @@ export function libraryHref(prefix?: string): string {
   return "/admin/documents" + (prefix === undefined ? "" : "?" + new URLSearchParams({ prefix }));
 }
 
+export function uploadHref(prefix?: string): string {
+  return "/admin/documents/upload" + (prefix === undefined ? "" : "?" + new URLSearchParams({ prefix }));
+}
+
 export function documentHref(view: "details" | "metadata", key: string): string {
   return `/admin/documents/${view}?` + new URLSearchParams({ key });
 }
