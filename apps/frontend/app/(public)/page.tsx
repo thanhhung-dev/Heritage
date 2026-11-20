@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { HeroSection, DiscoverMoreSection, HeritageCarouselSection } from "@/features/home";
-import { ArtifactCollectionSection } from "@/features/home/ArtifactCollectionSection";
 import { CatalogInfoModal } from "@/features/home/CatalogInfoModal";
 import { appendCatalogPage, toCatalogCard } from "@/features/home/catalog-cards";
 import { getCatalogSection, getCatalogSections, type CatalogContent, type CatalogSections, type SectionKey } from "@/services/catalog.service";
@@ -11,7 +10,7 @@ import styles from "@/features/home/HeritageCarouselSection.module.css";
 const SECTIONS: { key: SectionKey; title: string; description: string; empty: string }[] = [
   { key: "featured", title: "Featured Experiences", description: "Những trải nghiệm được tuyển chọn để bắt đầu hành trình khám phá.", empty: "Chưa có trải nghiệm nổi bật được tuyển chọn." },
   { key: "artifacts_treasures", title: "Artifacts & Treasures", description: "Những bộ sưu tập có nguồn tư liệu và câu chuyện riêng.", empty: "Chưa có bộ sưu tập hiện vật đã được xuất bản." },
-  { key: "artifact_collection", title: "Heritage Artifacts Collection", description: "", empty: "" },
+  { key: "artifact_collection", title: "Heritage Artifacts Collection", description: "Explore artifacts and the stories they preserve, supported by verified sources.", empty: "No verified artifacts have been published yet." },
   { key: "people_traditions", title: "People & Traditions", description: "Nhân vật, nghệ nhân và truyền thống văn hóa được ghi nhận.", empty: "Chưa có nội dung nhân vật hoặc truyền thống được xuất bản." },
   { key: "festivals_practices", title: "Festivals & Community Practices", description: "Khám phá các lễ hội, nghi lễ và thực hành văn hóa qua câu chuyện của chính chúng.", empty: "Chưa có lễ hội hoặc thực hành văn hóa được xuất bản." },
 ];
@@ -64,12 +63,10 @@ export default function HomePage() {
   return <div className={styles.homePage}>
     <HeroSection items={sections?.featured.items.map(toCatalogCard) ?? []} loading={loading} onInfo={info} />
     {SECTIONS.map(({ key, title, description, empty }) => <div key={key}>
-      {key === "artifact_collection"
-        ? <ArtifactCollectionSection items={sections?.[key].items ?? []} loading={loading} error={error} onRetry={retry} onInfo={info} />
-        : <HeritageCarouselSection title={title} description={description}
+      <HeritageCarouselSection title={title} description={description}
           items={sections?.[key].items.map(toCatalogCard) ?? []} loading={loading} error={error}
           onRetry={retry} onCardClick={info} emptyMessage={empty} useFirstCardBackdrop
-          className={key === "festivals_practices" ? styles.festivalSection : undefined} />}
+          className={key === "festivals_practices" ? styles.festivalSection : undefined} />
       {sections?.[key].next_offset != null && <div className={styles.loadMore}>
         <button onClick={() => more(key)} disabled={loadingMore !== null}
           aria-label={`Xem thêm ${title}`}>{loadingMore === key ? "Đang tải…" : "Xem thêm"}</button>
