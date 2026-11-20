@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Button, Tree, type TreeProps } from "antd";
 import { isAborted, knowledgeApi, knowledgeError } from "../../services/knowledge.service";
 import { appendKnowledgePage, breadcrumbParts, libraryHref, readKnowledgePage } from "./folder-state";
 import { useKnowledge } from "./KnowledgeProvider";
@@ -12,57 +11,211 @@ import styles from "./knowledge.module.css";
 export function KnowledgeBreadcrumbs({ prefix, current }: { prefix: string; current?: string }) {
   const { root } = useKnowledge();
   const parts = breadcrumbParts(root, prefix);
-  return <nav className={styles.breadcrumbs} aria-label="Folder breadcrumbs">
-    <Link href={libraryHref()}>Cloudflare R2</Link><DesignIcon name="library-ChevronRight" />
-    <Link href={libraryHref()} aria-current={!parts.length && !current ? "page" : undefined}>All documents</Link>
-    {parts.map((part, index) => <span key={part.prefix} className={styles.crumbPart}>
-      <DesignIcon name="library-ChevronRight" /><Link href={libraryHref(part.prefix)} aria-current={index === parts.length - 1 && !current ? "page" : undefined}>{part.label}</Link>
-    </span>)}
-    {current && <span className={styles.crumbPart}><DesignIcon name="library-ChevronRight" /><span aria-current="page">{current}</span></span>}
-  </nav>;
+  return (
+    <nav className={styles.breadcrumbs} aria-label="Folder breadcrumbs">
+      <Link href={libraryHref()}>Cloudflare R2</Link>
+      <DesignIcon name="library-ChevronRight" />
+      <Link href={libraryHref()} aria-current={!parts.length && !current ? "page" : undefined}>All documents</Link>
+      {parts.map((part, index) => (
+        <span key={part.prefix} className={styles.crumbPart}>
+          <DesignIcon name="library-ChevronRight" />
+          <Link href={libraryHref(part.prefix)} aria-current={index === parts.length - 1 && !current ? "page" : undefined}>
+            {part.label}
+          </Link>
+        </span>
+      ))}
+      {current && (
+        <span className={styles.crumbPart}>
+          <DesignIcon name="library-ChevronRight" />
+          <span aria-current="page">{current}</span>
+        </span>
+      )}
+    </nav>
+  );
 }
 
-export function FolderBrowser({ prefix, onSelect }: { prefix: string; onSelect: (prefix: string) => void }) {
+export function KnowledgeTopPath({
+  prefix,
+  fileLabel,
+  current,
+}: {
+  prefix: string;
+  fileLabel?: string;
+  current?: string;
+}) {
+  const { root } = useKnowledge();
+  const parts = breadcrumbParts(root, prefix);
+  return (
+    <nav className={styles.topPath} aria-label="Workspace path">
+      <Link href={libraryHref()}>Document library</Link>
+      <span>{"  /  "}</span>
+      <Link href={libraryHref()}>Cloudflare R2</Link>
+      {parts.map(part => (
+        <span key={part.prefix}>
+          <span>{"  /  "}</span>
+          <Link href={libraryHref(part.prefix)}>{part.label}</Link>
+        </span>
+      ))}
+      {fileLabel && (
+        <>
+          <span>{"  /  "}</span>
+          <span>{fileLabel}</span>
+        </>
+      )}
+      {current && (
+        <>
+          <span>{"  /  "}</span>
+          <span className={styles.topPathCurrent}>{current}</span>
+        </>
+      )}
+    </nav>
+  );
+}
+
+export function FolderBrowser({
+  prefix,
+  onSelect,
+  showDestinationNote = false,
+}: {
+  prefix: string;
+  onSelect: (prefix: string) => void;
+  showDestinationNote?: boolean;
+}) {
   const { root, folderPages, remember } = useKnowledge();
   const [expanded, setExpanded] = useState<string[]>([root]);
   const [error, setError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
   const controllers = useRef(new Set<AbortController>());
-  useEffect(() => () => { for (const controller of controllers.current) controller.abort(); }, []);
-  useEffect(() => { setExpanded(keys => Array.from(new Set([...keys, root, ...breadcrumbParts(root, prefix).map(p => p.prefix)]))); }, [prefix, root]);
+
+  useEffect(() => () => {
+    for (const controller of controllers.current) controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const ancestorPrefixes = breadcrumbParts(root, prefix).map(p => p.prefix);
+    setExpanded(keys => Array.from(new Set([...keys, root, ...ancestorPrefixes])));
+    for (const folder of [root, ...ancestorPrefixes]) {
+      if (!folderPages[folder]) void load(folder);
+    }
+  }, [prefix, root]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load(folder: string, more = false) {
     const existing = folderPages[folder];
     if (existing && !more) return;
-    const controller = new AbortController(); controllers.current.add(controller);
+    const controller = new AbortController();
+    controllers.current.add(controller);
     try {
       setError("");
-      const page = await readKnowledgePage(knowledgeApi, folder, more ? existing?.nextContinuationToken ?? undefined : undefined, controller.signal);
+      const page = await readKnowledgePage(
+        knowledgeApi,
+        folder,
+        more ? existing?.nextContinuationToken ?? undefined : undefined,
+        controller.signal,
+      );
       if (!controller.signal.aborted) remember(more && existing ? appendKnowledgePage(existing, page) : page);
-    } catch (e) { if (!isAborted(e) && !controller.signal.aborted) setError(knowledgeError(e)); }
-    finally { controllers.current.delete(controller); }
+    } catch (e) {
+      if (!isAborted(e) && !controller.signal.aborted) setError(knowledgeError(e));
+    } finally {
+      controllers.current.delete(controller);
+    }
   }
-  function children(folder: string, depth = 0): NonNullable<TreeProps["treeData"]> {
-    if (depth > 40) return [];
-    return (folderPages[folder]?.folders ?? []).filter(row => row.prefix.startsWith(folder) && row.prefix !== folder).map(row => ({
-      key: row.prefix, title: row.name, icon: <DesignIcon name={row.prefix === prefix ? "library-FolderOpen" : "library-Folder"} />,
-      isLeaf: folderPages[row.prefix] ? !folderPages[row.prefix].folders.length && !folderPages[row.prefix].nextContinuationToken : false,
-      children: folderPages[row.prefix] ? children(row.prefix, depth + 1) : undefined,
-    }));
+
+  function selectFolder(targetPrefix: string) {
+    onSelect(targetPrefix);
+    setExpanded(keys => keys.includes(targetPrefix) ? keys : [...keys, targetPrefix]);
+    if (!folderPages[targetPrefix]) void load(targetPrefix);
   }
-  return <aside className={styles.folderBrowser} aria-label="R2 folders">
-    <div className={styles.storageHeading}><DesignIcon name="library-Database" />Cloudflare R2</div>
-    <div className={styles.bucket}>knowledge-heritage</div>
-    <Tree className={styles.folderTree} showIcon blockNode selectedKeys={[prefix]} expandedKeys={expanded}
-      onExpand={keys => setExpanded(keys.map(String))} loadData={node => load(String(node.key))}
-      switcherIcon={<DesignIcon name="library-ChevronRight" />}
-      onSelect={keys => { if (keys.length) onSelect(String(keys[0])); }}
-      treeData={[{ key: root, title: "All documents", icon: <DesignIcon name="library-FolderOpen" />, children: children(root) }]} />
-    {folderPages[prefix]?.nextContinuationToken && <Button size="small" loading={loadingMore} onClick={async () => {
-      setLoadingMore(true); await load(prefix, true); setLoadingMore(false);
-    }}>Load more folder entries</Button>}
-    {error && <div role="alert" className={styles.error}><p>{error}</p><Button size="small" onClick={() => void load(prefix)}>Retry folders</Button></div>}
-    <p className={styles.treeNote}>Folders organize stored files. They do not change review or ingestion status.</p>
-    {root && <p className={styles.treeNote}>Library scope: {root}</p>}
-  </aside>;
+
+  function renderFolderNodes(parentPrefix: string, depth: number): React.ReactNode {
+    if (depth > 8) return null;
+    const subFolders = (folderPages[parentPrefix]?.folders ?? []).filter(
+      row => row.prefix.startsWith(parentPrefix) && row.prefix !== parentPrefix,
+    );
+    return subFolders.map(folder => {
+      const isSelected = folder.prefix === prefix;
+      const isOpen = expanded.includes(folder.prefix) || prefix.startsWith(folder.prefix);
+      const loadedPage = folderPages[folder.prefix];
+      const countLabel = loadedPage
+        ? `${loadedPage.files.length}${loadedPage.nextContinuationToken ? "+" : ""}`
+        : undefined;
+      return (
+        <div key={folder.prefix}>
+          <button
+            type="button"
+            className={`${styles.folderRow} ${isSelected ? styles.folderRowActive : ""} ${depth > 0 ? styles.folderRowChild : ""}`}
+            style={depth > 1 ? { paddingLeft: `${8 + depth * 20}px` } : undefined}
+            aria-current={isSelected ? "page" : undefined}
+            onClick={() => selectFolder(folder.prefix)}
+          >
+            <DesignIcon name={isSelected || isOpen ? "library-FolderOpen" : "library-Folder"} />
+            <span className={styles.folderRowLabel}>{folder.name}</span>
+            {countLabel !== undefined && <span className={styles.folderRowCount}>{countLabel}</span>}
+          </button>
+          {isOpen && loadedPage && renderFolderNodes(folder.prefix, depth + 1)}
+        </div>
+      );
+    });
+  }
+
+  const rootPage = folderPages[root];
+  const rootCount = rootPage ? `${rootPage.files.length}${rootPage.nextContinuationToken ? "+" : ""}` : "0";
+  const selectedParts = breadcrumbParts(root, prefix);
+  const selectedName = selectedParts.at(-1)?.label || "All documents";
+
+  return (
+    <aside className={styles.folderBrowser} aria-label="R2 folders">
+      <div className={styles.storageHeading}>
+        <DesignIcon name="library-Database" />
+        <span>Cloudflare R2</span>
+      </div>
+      <p className={styles.bucket}>knowledge-heritage</p>
+
+      <div className={styles.folderList} role="tree" aria-label="Folder tree">
+        <button
+          type="button"
+          className={`${styles.folderRow} ${prefix === root ? styles.folderRowActive : ""}`}
+          aria-current={prefix === root ? "page" : undefined}
+          onClick={() => selectFolder(root)}
+        >
+          <DesignIcon name={prefix === root ? "library-FolderOpen" : "library-Folder"} />
+          <span className={styles.folderRowLabel}>All documents</span>
+          <span className={styles.folderRowCount}>{rootCount}</span>
+        </button>
+        {renderFolderNodes(root, 0)}
+      </div>
+
+      {folderPages[prefix]?.nextContinuationToken && (
+        <button
+          type="button"
+          className={styles.figmaBtn}
+          disabled={loadingMore}
+          onClick={async () => {
+            setLoadingMore(true);
+            await load(prefix, true);
+            setLoadingMore(false);
+          }}
+        >
+          {loadingMore ? "Loading…" : "Load more folders"}
+        </button>
+      )}
+
+      {error && (
+        <div role="alert" className={styles.error}>
+          <p>{error}</p>
+          <button type="button" className={styles.figmaBtn} onClick={() => void load(prefix)}>
+            Retry folders
+          </button>
+        </div>
+      )}
+
+      {showDestinationNote && (
+        <p className={styles.treeNote}>
+          Selected destination: {selectedName}. Folder counts include loaded completed uploads only.
+        </p>
+      )}
+      <p className={styles.treeNote}>
+        Folders organize stored files. They do not change review or indexing status.
+      </p>
+    </aside>
+  );
 }
