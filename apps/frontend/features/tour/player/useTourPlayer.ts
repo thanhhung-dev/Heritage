@@ -86,10 +86,12 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     let transitionTimer: number | undefined;
     const waitForArrival = (cameraDuration = 0, withSfx = false) => {
       const sfx = withSfx ? playTransition() : Promise.resolve();
-      // Màn che giữ 620ms rồi mở trong 420ms; camera bay có thể lâu hơn.
-      const arrival = new Promise<void>((resolve) => {
-        transitionTimer = window.setTimeout(resolve, Math.max(1040, cameraDuration * 1000));
-      });
+      const arrival =
+        cameraDuration > 0
+          ? new Promise<void>((resolve) => {
+              transitionTimer = window.setTimeout(resolve, cameraDuration * 1000);
+            })
+          : Promise.resolve();
       void Promise.all([arrival, sfx]).then(() => {
         if (!cancelled) setReadyScene({ key: currentSceneKey, engine, playback: scenePlayback });
       });

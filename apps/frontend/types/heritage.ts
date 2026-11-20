@@ -70,6 +70,7 @@ export interface HeritageVoiceClip {
   id: number;
   video_url: string | null;
   audio_url: string | null;
+  captions_url?: string | null;
   bubble_text: string | null;
   sort_order: number;
   voice: HeritageVoice;

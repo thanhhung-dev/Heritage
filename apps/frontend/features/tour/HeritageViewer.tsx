@@ -35,7 +35,7 @@ import { useTourPlayer } from "./player/useTourPlayer";
 import { TOUR_SFX } from "./player/audio-config";
 import ExploreControls from "./components/ExploreControls";
 import ExploreInfoPanel from "./components/ExploreInfoPanel";
-import ExploreTooltip, { RotateTooltip } from "./components/ExploreTooltip";
+import ExploreTooltip from "./components/ExploreTooltip";
 import LookAroundHint from "./components/LookAroundHint";
 import MobileJoystick from "./components/MobileJoystick";
 import HighlightPanel from "./components/HighlightPanel";
@@ -169,15 +169,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       window.clearTimeout(timer);
     };
   }, [hasAudio, isEnded, playbackKey, player.isSceneTransitioning, player.exploreMode]);
-
-  // Chuyển cảnh: màn đen mờ dần che lúc camera bay, rồi mở ra (kiểu CyArk Tapestry).
-  // Dùng CSS transition của .sceneFade qua thuộc tính opacity điều khiển bằng class.
-  const [sceneFading, setSceneFading] = useState(false);
-  useEffect(() => {
-    setSceneFading(true);
-    const timer = window.setTimeout(() => setSceneFading(false), 620);
-    return () => window.clearTimeout(timer);
-  }, [playbackKey]);
 
   // Trong ~2s đầu ở scene mới: hiện Prev Scene. Sau đó (hoặc khi narration kết thúc
   // và còn scene trước): hiện theo trạng thái ended.
@@ -396,21 +387,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
         }}
         aria-hidden="true"
       />
-
-      {/* Cinematic top/bottom bars */}
-      <div
-        aria-hidden="true"
-        className={`${styles.cinematicBar} ${styles["cinematicBar--top"]} ${sceneFading ? styles.cinematicBarActive : ""}`}
-        id="cinematicBarTop"
-      />
-      <div
-        aria-hidden="true"
-        className={`${styles.cinematicBar} ${styles["cinematicBar--bottom"]} ${sceneFading ? styles.cinematicBarActive : ""}`}
-        id="cinematicBarBottom"
-      />
-
-      {/* Scene-transition blackout */}
-      <div className={`${styles.sceneFade} ${sceneFading ? styles.sceneFadeActive : ""}`} aria-hidden="true" />
 
       {/* Bottom media strip */}
       <div
@@ -1052,9 +1028,6 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
       {/* Chế độ đi bộ: gợi ý điều khiển giữa màn hình + panel giới thiệu bên phải.
           Bản gốc cũng bật hai thứ này cùng lúc với việc vào `free_explore`. */}
       {player.exploreMode === "walk" && <ExploreTooltip key={`tip-${playbackKey}`} />}
-      {(player.exploreMode === "standard" || player.exploreMode === "free") && (
-        <RotateTooltip key={`rot-${playbackKey}`} />
-      )}
       {player.exploreMode === "walk" && <ExploreInfoPanel key={`info-${playbackKey}`}
         title={player.exploreTitle} description={player.exploreDescription} />}
       {/* Đi bộ trên mobile: không có WASD nên thay bằng cần gạt ảo. CSS chỉ bật

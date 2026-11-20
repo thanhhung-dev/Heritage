@@ -616,7 +616,9 @@ export function createTourEngine(
       sceneLookAround = active;
       sceneLookAroundAllowed = allowed;
       if (!active || !allowed) cameraController.setLookAround(false);
-      controls.enableRotate = !active || (allowed && !playbackPlaying);
+      if (!explore.isActive()) {
+        controls.enableRotate = !active || (allowed && !playbackPlaying);
+      }
       invalidate();
     },
 

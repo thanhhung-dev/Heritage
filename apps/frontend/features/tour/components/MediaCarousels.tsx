@@ -1,17 +1,21 @@
 "use client";
 
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   HeritageInteractiveHighlight,
   HeritageMediaItem,
   HeritageVoice,
   HeritageVoiceClip,
 } from "@/types/heritage";
-import styles from "../styles.module.css";
+import styles from "@/features/tour/styles.module.css";
 
 const NAV_ITEMS_CDN = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/nav_items";
 const UI_ICONS_CDN = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/icons";
+const SAFE_URL_RE = /^(https?:\/\/|\/(?!\/))/i;
+const IMAGE_EXT_RE = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i;
+const HIGHLIGHT_NAME_MAX_LEN = 18;
+const CAROUSEL_STEP_PX = 220;
 
 export type ActiveTourPopup =
   | { kind: "overview_voice"; voice: HeritageVoice }
@@ -19,8 +23,25 @@ export type ActiveTourPopup =
   | { kind: "media_item"; item: HeritageMediaItem }
   | null;
 
-function scrollByOffset(ref: RefObject<HTMLDivElement | null>, dir: -1 | 1) {
-  ref.current?.scrollBy({ left: dir * 220, behavior: "smooth" });
+function isSafeUrl(url?: string | null): url is string {
+  return Boolean(url && SAFE_URL_RE.test(url));
+}
+
+function resolveHighlightThumb(item: HeritageInteractiveHighlight): string | null {
+  if (isSafeUrl(item.thumb_url)) return item.thumb_url;
+  if (isSafeUrl(item.media_url)) {
+    const pathname = item.media_url.split(/[?#]/, 1)[0];
+    if (item.media_type === "image" || IMAGE_EXT_RE.test(pathname)) {
+      return item.media_url;
+    }
+  }
+  return null;
+}
+
+function formatHighlightName(title: string): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= HIGHLIGHT_NAME_MAX_LEN) return trimmed;
+  return `${trimmed.slice(0, HIGHLIGHT_NAME_MAX_LEN)}…`;
 }
 
 export function SceneMediaCarousel({
@@ -212,8 +233,52 @@ export function InteractiveMediaCarousel({
   onSelectHighlight: (id: number) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const sorted = [...highlights].sort((a, b) => a.sort_order - b.sort_order);
+  const itemsRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState(0);
+  const [maxOffset, setMaxOffset] = useState(0);
+  const [failedThumbIds, setFailedThumbIds] = useState<ReadonlySet<number>>(
+    () => new Set(),
+  );
+
+  const sorted = useMemo(
+    () => [...highlights].sort((a, b) => a.sort_order - b.sort_order),
+    [highlights],
+  );
   const shouldDisplay = visible && sorted.length > 0;
+  const hasOverflow = maxOffset > 1;
+
+  const measureOverflow = useCallback(() => {
+    const viewport = viewportRef.current;
+    const items = itemsRef.current;
+    if (!viewport || !items) return;
+    const nextMax = Math.max(0, items.scrollWidth - viewport.clientWidth);
+    setMaxOffset(nextMax);
+    setOffset((prev) => Math.max(-nextMax, Math.min(0, prev)));
+  }, []);
+
+  useEffect(() => {
+    setOffset(0);
+    setFailedThumbIds(new Set());
+  }, [highlights]);
+
+  useEffect(() => {
+    if (!shouldDisplay) return;
+    const viewport = viewportRef.current;
+    const items = itemsRef.current;
+    if (!viewport || !items) return;
+    measureOverflow();
+    const observer = new ResizeObserver(measureOverflow);
+    observer.observe(viewport);
+    observer.observe(items);
+    return () => observer.disconnect();
+  }, [shouldDisplay, sorted.length, measureOverflow]);
+
+  const slideBy = (dir: -1 | 1) => {
+    if (!hasOverflow) return;
+    setOffset((prev) =>
+      Math.max(-maxOffset, Math.min(0, prev - dir * CAROUSEL_STEP_PX)),
+    );
+  };
 
   return (
     <div
@@ -221,19 +286,21 @@ export function InteractiveMediaCarousel({
       id="intMediaCarousel"
       style={{ display: shouldDisplay ? "flex" : "none" }}
     >
-      <button
-        type="button"
-        tabIndex={0}
-        className={`${styles.carouselArrow} ${styles.navIconBg}`}
-        id="intCarouselArrow_left"
-        aria-label="Scroll left"
-        onClick={() => scrollByOffset(viewportRef, -1)}
-      >
-        <LeftOutlined
-          className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-          aria-hidden="true"
-        />
-      </button>
+      {hasOverflow && (
+        <button
+          type="button"
+          tabIndex={0}
+          className={`${styles.carouselArrow} ${styles.navIconBg}`}
+          id="intCarouselArrow_left"
+          aria-label="Scroll left"
+          onClick={() => slideBy(-1)}
+        >
+          <LeftOutlined
+            className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
+            aria-hidden="true"
+          />
+        </button>
+      )}
 
       <div
         className={styles.intCarouselViewport}
@@ -241,34 +308,52 @@ export function InteractiveMediaCarousel({
         ref={viewportRef}
       >
         <div
-          className={styles.intMediaCarouselItems}
+          className={`${styles.intMediaCarouselItems} ${hasOverflow ? styles.carouselOverflow : ""}`}
           id="intMediaCarouselItems"
+          ref={itemsRef}
+          style={{ transform: `translateX(${offset}px)` }}
         >
           {sorted.map((item, index) => {
             const active = selectedHighlightId === item.id;
+            const thumbSrc = failedThumbIds.has(item.id)
+              ? null
+              : resolveHighlightThumb(item);
+            const label = item.popup_title?.trim() || `Highlight ${index + 1}`;
             return (
               <button
                 key={item.id}
                 type="button"
-                className={`${styles.intMediaCard} ${active ? styles.intMediaCardActive : ""}`}
+                className={`${styles.intHighlightItem} ${styles.intHighActive} ${active ? styles.intHighlightSelected : ""}`}
                 id={`intHighlight_${item.id}`}
-                aria-label={item.popup_title ?? `Highlight ${index + 1}`}
+                data-idx={index}
+                data-inthighid={item.id}
+                aria-label={label}
                 aria-pressed={active}
                 onClick={() => onSelectHighlight(item.id)}
               >
-                {item.thumb_url ? (
-                  <img
-                    className={styles.intMediaCardThumb}
-                    src={item.thumb_url}
-                    alt={item.popup_title ?? ""}
-                  />
-                ) : (
-                  <span className={styles.intMediaCardBadge}>{index + 1}</span>
-                )}
+                <div className={styles.intHighlightImgWrap}>
+                  {thumbSrc && (
+                    <img
+                      className={styles.intHighlightImg}
+                      src={thumbSrc}
+                      alt=""
+                      onError={() =>
+                        setFailedThumbIds((prev) => {
+                          const next = new Set(prev);
+                          next.add(item.id);
+                          return next;
+                        })
+                      }
+                    />
+                  )}
+                  <div className={styles.intHighlightNum} aria-hidden="true">
+                    {index + 1}
+                  </div>
+                </div>
                 {item.popup_title && (
-                  <span className={styles.intMediaCardTitle}>
-                    {item.popup_title}
-                  </span>
+                  <div className={styles.intHighlightName}>
+                    {formatHighlightName(item.popup_title)}
+                  </div>
                 )}
               </button>
             );
@@ -276,19 +361,21 @@ export function InteractiveMediaCarousel({
         </div>
       </div>
 
-      <button
-        type="button"
-        tabIndex={0}
-        className={`${styles.carouselArrow} ${styles.navIconBg}`}
-        id="intCarouselArrow_right"
-        aria-label="Scroll right"
-        onClick={() => scrollByOffset(viewportRef, 1)}
-      >
-        <RightOutlined
-          className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
-          aria-hidden="true"
-        />
-      </button>
+      {hasOverflow && (
+        <button
+          type="button"
+          tabIndex={0}
+          className={`${styles.carouselArrow} ${styles.navIconBg}`}
+          id="intCarouselArrow_right"
+          aria-label="Scroll right"
+          onClick={() => slideBy(1)}
+        >
+          <RightOutlined
+            className={`${styles.navIcons} ${styles.carouselArrowIcon}`}
+            aria-hidden="true"
+          />
+        </button>
+      )}
     </div>
   );
 }

@@ -92,6 +92,7 @@ class VoiceClipOut(BaseModel):
     id: int
     video_url: str | None = None
     audio_url: str | None = None
+    captions_url: str | None = None
     bubble_text: str | None = None
     sort_order: int
     voice: VoiceOut

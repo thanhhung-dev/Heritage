@@ -2,10 +2,9 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import styles from "../styles.module.css";
+import styles from "@/features/tour/styles.module.css";
 
 const UI_ICONS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/icons";
-const TUTORIAL_ASSETS = "https://tapestry-storage-a0fkf0afgte8hndt.z01.azurefd.net/ui-elements/tutorial";
 
 export default function ExploreTooltip() {
   const [visible, setVisible] = useState(true);
@@ -63,39 +62,5 @@ export default function ExploreTooltip() {
         </div>
       </div>
     </>
-  );
-}
-
-/**
- * Tooltip hướng dẫn "Hover to Rotate" (#rotateTooltip) khi vào chế độ khám phá 3D
- * (`standard` hoặc `free`). Tự ẩn sau thao tác con trỏ đầu tiên.
- */
-export function RotateTooltip() {
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const dismiss = () => setVisible(false);
-    document.addEventListener("pointerdown", dismiss, { once: true });
-    return () => document.removeEventListener("pointerdown", dismiss);
-  }, []);
-
-  if (!visible) return null;
-
-  return (
-    <div className={styles.centerUI} aria-hidden="true">
-      <div id="rotateTooltip" className={`${styles.rotateTooltip} ${styles.visible}`}>
-        <div className={styles.rotateTooltipText}>Hover to Rotate</div>
-        <div className={styles.rotateTooltipGif}>
-          <Image
-            className={styles.rotateToolTip}
-            src={`${TUTORIAL_ASSETS}/rotate_tooltip.gif`}
-            alt="Rotate Tool Tip: prompt to hover and rotate"
-            width={120}
-            height={120}
-            unoptimized
-          />
-        </div>
-      </div>
-    </div>
   );
 }

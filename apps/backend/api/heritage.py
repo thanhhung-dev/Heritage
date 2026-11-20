@@ -120,6 +120,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
             id=clip.id,
             video_url=clip.video_url,
             audio_url=clip.audio_url,
+            captions_url=clip.captions_url,
             bubble_text=clip.bubble_text,
             sort_order=clip.sort_order,
             voice=VoiceOut.model_validate(clip.voice),
@@ -154,7 +155,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
     for model in models_out:
         _resolve_urls(model, policy, "file_url")
     for clip in voices_out:
-        _resolve_urls(clip, policy, "video_url", "audio_url")
+        _resolve_urls(clip, policy, "video_url", "audio_url", "captions_url")
         _resolve_urls(clip.voice, policy, "headshot_url", "intro_video_url")
     for item in media_out:
         _resolve_urls(item, policy, "asset_url", "thumb_url")
@@ -213,20 +214,30 @@ def _scene_playback(scene: SceneDetailOut) -> ScenePlaybackOut:
     """Derive the audio/timing entry for one scene from its serialized payload.
 
     - ``narrationUrl``: audio của voice_clip đầu tiên (theo ``sort_order``) có URL.
-    - ``captionsUrl``: DB chưa có nguồn phụ đề ⇒ ``None``.
+    - ``captionsUrl``: phụ đề ``.vtt`` của voice_clip narration (fallback sang clip
+      đầu tiên có ``captions_url``).
     - ``timedHighlights``: bảng ``scene_highlight`` chưa lưu mốc thời gian nên
       highlight bắt đầu ở 0s và kéo dài hết narration (``endSeconds = None``).
     - ``explore*``: lấy từ interactive đầu tiên có ``explore_area``.
     """
-    narration_url = next(
-        (clip.audio_url for clip in scene.voice_clips if clip.audio_url), None
+    narration_clip = next(
+        (clip for clip in scene.voice_clips if clip.audio_url), None
+    )
+    narration_url = narration_clip.audio_url if narration_clip is not None else None
+    captions_url = (
+        narration_clip.captions_url
+        if narration_clip is not None and narration_clip.captions_url
+        else next(
+            (clip.captions_url for clip in scene.voice_clips if clip.captions_url),
+            None,
+        )
     )
     explore = next(
         (item for item in scene.interactive if item.explore_area is not None), None
     )
     return ScenePlaybackOut(
         narrationUrl=narration_url,
-        captionsUrl=None,
+        captionsUrl=captions_url,
         timedHighlights=[
             TimedHighlightOut(
                 id=highlight.id,

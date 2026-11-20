@@ -31,6 +31,11 @@ class VoiceClip(Base):
         nullable=True,
     )
 
+    captions_url: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     bubble_text: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,

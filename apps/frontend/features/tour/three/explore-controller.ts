@@ -37,6 +37,7 @@ export function createExploreController(
   const move = new THREE.Vector3();
   const yAxis = new THREE.Vector3(0, 1, 0);
 
+  let activeMode: ExploreMode | null = null;
   let walk: { eyeHeight: number; area: ExploreArea | null } | null = null;
   let walkEntryEyeHeight = 0;
   let boundaryVisible = false;
@@ -69,6 +70,8 @@ export function createExploreController(
       if (walk) walk.area = next;
     },
 
+    isActive: () => activeMode !== null,
+
     isWalking: () => walk !== null,
 
     /** Cần gạt ảo trên mobile — chỉ có tác dụng khi đang đi bộ. */
@@ -81,6 +84,7 @@ export function createExploreController(
     },
 
     enter(mode: ExploreMode, eyeHeight?: number) {
+      activeMode = mode;
       if (!entry) {
         entry = cameraController.snapshot();
         entryMaxPolarAngle = controls.maxPolarAngle;
@@ -122,9 +126,10 @@ export function createExploreController(
       }
 
       stopWalk();
-      // Scene view khoá zoom (chỉ kéo xoay), nhưng vào chế độ 3D thì cần zoom
-      // để ngắm kỹ chi tiết. `exit()` trả lại `entryZoom` (false) như cũ.
-      controls.enableZoom = true;
+      // Dive Deeper (standard/free): giữ nguyên góc nhìn cố định, không cho kéo/zoom/pan camera.
+      controls.enableRotate = false;
+      controls.enablePan = false;
+      controls.enableZoom = false;
       controls.maxPolarAngle =
         mode === "free" ? Math.PI : Math.max(Math.PI / 2, controls.getPolarAngle());
     },
@@ -141,6 +146,7 @@ export function createExploreController(
     },
 
     exit(duration = 0) {
+      activeMode = null;
       stopWalk();
       if (entry) {
         cameraController.restore(entry, duration);
