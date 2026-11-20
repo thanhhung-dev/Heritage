@@ -18,11 +18,16 @@ ResourceId = Annotated[int, Path(gt=0, lt=2**63)]
 async def current_admin(user=Depends(require_admin), db=Depends(get_db)):
     try:
         account_id = int(user["sub"])
+        if not 0 < account_id < 2**63:
+            raise ValueError
     except (ValueError, TypeError, KeyError):
         raise HTTPException(401, "Invalid administrative account.") from None
     account = (await db.execute(text("SELECT a.is_active,a.locked_until,r.name FROM account a "
         "JOIN roles r ON r.id=a.role_id WHERE a.id=:id"), {"id": account_id})).mappings().one_or_none()
-    if not account or not account["is_active"] or (account["locked_until"] and account["locked_until"] > datetime.now(timezone.utc)):
+    locked = account["locked_until"] if account else None
+    if locked and locked.tzinfo is None:
+        locked = locked.replace(tzinfo=timezone.utc)
+    if not account or not account["is_active"] or (locked and locked > datetime.now(timezone.utc)):
         raise HTTPException(401, "Administrative account unavailable.")
     if account["name"].lower() != "admin":
         raise HTTPException(403, "Current administrator permission required.")
@@ -110,6 +115,9 @@ async def classify_manually(content_id: ResourceId, data: ClassificationOverride
 @router.post("/contents/{content_id}/reclassify", status_code=202)
 async def reclassify(content_id: ResourceId, db=Depends(get_db)):
     content = await locate(db, content_id)
+    existing = await db.get(ClassificationJob, content_id, with_for_update=True)
+    if existing and existing.generation == content.input_revision and existing.status in {"PENDING", "RUNNING"}:
+        return {"content_id": content_id, "status": existing.status, "locked_by_admin": content.locked_by_admin}
     # Locked overrides remain locked; requeueing cannot bypass the reviewer.
     await db.execute(text("""INSERT INTO heritage_classification_jobs(content_id,generation)
         VALUES(:id,:generation) ON CONFLICT(content_id) DO UPDATE SET status='PENDING',attempts=0,

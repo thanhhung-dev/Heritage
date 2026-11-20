@@ -51,7 +51,7 @@ SUBJECT_RULES = (
     (r"^(?:chua|den|dinh lang|thanh duong|nha tho|mieu|tu vien|pagoda|temple)\b", "place", ("religious_site", "architecture")),
     (r"^(?:cung|dai noi|hoang thanh|thanh noi|lang tam|lang vua|palace|citadel)\b", "place", ("architecture", "historical_site")),
     (r"^(?:nha guol|nha rong|nha co|cau|cong|thap)\b", "place", ("architecture",)),
-    (r"^(?:danh thang|danh lam|nui|hang dong|vuon quoc gia|bai bien|scenic landscape)\b", "place", ("scenic_landscape",)),
+    (r"^(?:danh thang|danh lam|quan the nui|quan the danh thang|khu danh thang|nui|hang dong|vuon quoc gia|bai bien|scenic landscape)\b", "place", ("scenic_landscape",)),
     (r"^(?:di tich lich su|chien truong|khu luu niem)\b", "place", ("historical_site",)),
 )
 

@@ -1,10 +1,11 @@
 """Public catalog DTOs and strict editorial inputs."""
 from typing import Literal
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
-from apps.backend.services.heritage_taxonomy import BY_KEY, validate_categories
+from apps.backend.services.heritage_taxonomy import validate_categories
 
 EntityType = Literal["place", "artifact", "collection", "event", "person", "practice"]
 SectionKey = Literal["featured", "artifacts_treasures", "people_traditions", "festivals_practices", "artifact_collection"]
@@ -103,9 +104,9 @@ class ContentCreate(StrictInput):
     splash_image_url: str | None = Field(default=None, max_length=2048)
     publish_state: Literal["draft", "published"] = "draft"
     verified_metadata: ArtifactFacts = Field(default_factory=ArtifactFacts)
-    knowledge_entity_id: str | None = None
-    source_document_id: str | None = None
-    interactive_highlight_id: int | None = Field(default=None, gt=0)
+    knowledge_entity_id: UUID | None = None
+    source_document_id: UUID | None = None
+    interactive_highlight_id: int | None = Field(default=None, gt=0, lt=2**63, strict=True)
     _source = field_validator("source_url")(safe_url)
 
     @field_validator("slug")
