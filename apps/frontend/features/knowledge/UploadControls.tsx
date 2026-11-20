@@ -80,15 +80,17 @@ export function UploadDropzone({
         }}
       />
       <DesignIcon name={variant === "page" ? "upload-page-CloudUpload" : "upload-modal-CloudUpload"} />
-      <p className={styles.dropzoneTitle}>Drag and drop files here, or browse from your computer</p>
-      <p className={styles.muted}>Supported by backend: Markdown (.md), Plain text (.txt), JSON (.json) up to 10 MiB per file.</p>
+      <p className={styles.dropzoneTitle}>Drag and drop documents here</p>
+      <p className={styles.dropzoneSubtitle}>
+        Select multiple Markdown (.md), TXT (.txt), or JSON (.json) files (up to 10 MiB each).
+      </p>
       <button
         type="button"
         disabled={disabled}
-        className={styles.browseButton}
+        className={`${styles.figmaBtn} ${variant === "page" ? styles.figmaBtnPrimary : ""}`}
         onClick={() => inputRef.current?.click()}
       >
-        Choose files
+        {variant === "page" ? "Choose files" : "Browse files"}
       </button>
     </div>
   );
