@@ -365,6 +365,29 @@
   opacity: 1;
 }
 
+.ssNavBarIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: skewY(6deg);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ssNavBarIcon img {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  filter: brightness(0) invert(0.94);
+  opacity: 1;
+  transition: filter 0.3s ease;
+}
+
+.ssActiveNavBar .ssNavBarIcon img {
+  filter: brightness(0) invert(0.94) drop-shadow(0 0 6px rgba(240, 232, 221, 0.9))
+    drop-shadow(0 0 12px rgba(240, 232, 221, 0.4));
+}
+
 /* ── Active NavBar ──────────────────────────────────────────── */
 
 .ssActiveNavBar {
@@ -1004,30 +1027,41 @@
 }
 
 .closedCaptions {
+  display: flex;
+  justify-content: center;
   margin: auto;
-  height: 70px;
-  max-width: 408px;
+  height: auto;
+  max-width: min(680px, 86vw);
   z-index: 15;
   color: #fff;
   text-align: center;
 }
 
 .closedCaptionsText {
-  display: flex;
-  margin: auto;
-  height: inherit;
-  max-width: 357px;
-  width: 100%;
-  padding: 0 25px;
-  text-align: center;
+  display: inline-flex;
+  justify-content: center;
   align-items: center;
+  margin: auto;
+  width: fit-content;
+  max-width: 100%;
+  height: auto;
+  padding: 10px 20px;
+  line-height: 1.45;
+  text-align: center;
+  white-space: pre-line;
   box-sizing: border-box;
   background-color: var(--black-opacity-70);
   border-radius: 10px;
 }
 
 .closedCaptionsText:empty {
+  display: none;
   background-color: transparent;
+}
+
+.closedCaptionsText.ccLoading {
+  font-style: italic;
+  opacity: 0.7;
 }
 
 /* ─────────────────────────────────────────────────────────────

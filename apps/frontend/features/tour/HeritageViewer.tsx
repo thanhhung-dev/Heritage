@@ -344,19 +344,34 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
         aria-label="Tour navigation"
       >
         <div className={styles.ssNavBars}>
-          {keys.map((key) => {
+          {keys.map((key, idx) => {
             const active = key === sceneKey;
+            const isFirst = idx === 0;
+            const isLast = keys.length > 1 && idx === keys.length - 1;
+            const hasIcon = isFirst || isLast;
+            const displayNo = key.replace(/^s/i, "");
             return (
-              <div key={key} className={styles.ssNavBarGroup}>
+              <div
+                key={key}
+                className={`${styles.ssNavBarGroup} ${hasIcon ? styles.survey : ""}`}
+              >
                 <Link
                   href={`/content/${slug}/${key}`}
                   role="tab"
                   aria-selected={active}
                   className={`${styles.ssNavBar} ${active ? styles.ssActiveNavBar : ""}`}
-                  data-no={key}
-                  aria-label={`Scene ${key}`}
+                  data-no={hasIcon ? undefined : displayNo}
+                  aria-label={sceneTitle(key) || `Scene ${displayNo}`}
                   title={sceneTitle(key)}
                 >
+                  {hasIcon && (
+                    <span className={styles.ssNavBarIcon} aria-hidden="true">
+                      <img
+                        src={`${INTERACTIVE_ICONS}/${isFirst ? "navigation_home.svg" : "navigation_flag.svg"}`}
+                        alt=""
+                      />
+                    </span>
+                  )}
                   <span className={styles.ssDivBarText}>{sceneTitle(key)}</span>
                 </Link>
               </div>
@@ -398,14 +413,25 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
         <div
           className={styles.closedCaptionsGroup}
           id="closedCaptionsGroup"
-          style={{ display: ccOn ? "block" : "none" }}
+          style={{ display: ccOn && !exploreActive ? "block" : "none" }}
         >
           <div className={styles.closedCaptions} id="closedCaptions">
-            <div
-              className={styles.closedCaptionsText}
-              dir="auto"
-              id="closedCaptionsText"
-            >{player.captionText}</div>
+            {(() => {
+              const isAudioLoading =
+                hasAudio &&
+                !isEnded &&
+                !player.error &&
+                (player.isSceneTransitioning || player.duration === 0);
+              return (
+                <div
+                  className={`${styles.closedCaptionsText} ${isAudioLoading ? styles.ccLoading : ""}`}
+                  dir="auto"
+                  id="closedCaptionsText"
+                >
+                  {isAudioLoading ? "Audio Loading..." : player.captionText}
+                </div>
+              );
+            })()}
           </div>
         </div>
 
