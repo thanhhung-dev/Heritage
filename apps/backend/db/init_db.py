@@ -19,7 +19,8 @@ REQUIRED_EXTENSIONS = ("pgcrypto", "pg_trgm", "unaccent")
 # Creating bare ORM tables first would both omit those triggers and make the
 # subsequent reviewed migration fail with duplicate-table errors.
 ALEMBIC_CATALOG_TABLES = frozenset({"heritage_categories", "heritage_content", "heritage_classifications",
-    "heritage_content_relations", "heritage_classification_jobs", "heritage_classification_audit"})
+    "heritage_content_relations", "heritage_classification_jobs", "heritage_classification_audit",
+    "knowledge_library_upload"})
 
 SEED_STATEMENTS = (
     "INSERT INTO corpus_release(version) VALUES (1) ON CONFLICT DO NOTHING",
