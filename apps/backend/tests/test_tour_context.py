@@ -38,6 +38,9 @@ class TourContextTests(unittest.TestCase):
                             Column("scene_id", Integer), Column("mode", Text))
         highlight = Table("interactive_highlight", metadata, Column("id", Integer, primary_key=True),
                           Column("interactive_id", Integer), Column("popup_title", Text))
+        Table("interactive_highlight_passage", metadata, Column("highlight_id", Integer, primary_key=True),
+              Column("passage_id", Text, primary_key=True), Column("content_hash", Text),
+              Column("object_key", Text), Column("bucket", Text))
         engine = create_engine("sqlite://")
         self.addCleanup(engine.dispose)
         metadata.create_all(engine)
@@ -139,12 +142,13 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
                                             "story_id": story.id, "completed_story_ids": ["untrusted instruction"]},
                               conversation_context=[{"role": "user", "content": "Vua Tự Đức là ai?"}])
         snapshot = TourReplyContext(scene_id=31, scene_key="s3", scene_title="Cảnh thử nghiệm",
-                                    mode="walk", highlight_id=61, highlight_title="Điểm thử nghiệm", story_id=story.id)
-        evidence = SimpleNamespace(id="42", text="Dữ kiện thử nghiệm tại Khiêm Lăng.", active_area_id="khiem-lang",
-                                   to_source=lambda: {"passage_id": "42", "active_area_id": "khiem-lang"})
+                                    mode="walk", highlight_id=61, highlight_title="Điểm thử nghiệm", story_id=story.id,
+                                    passage_links={"42": {"content_hash": "hash", "object_key": "", "bucket": ""}})
+        evidence = SimpleNamespace(id="42", text="Dữ kiện thử nghiệm tại Khiêm Lăng.", active_area_id="lang-tu-duc",
+                                   to_source=lambda: {"passage_id": "42", "active_area_id": "lang-tu-duc"})
         repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(evidence=[evidence], graph_context=[])))
         generate = Mock(return_value=json.dumps({"answer_type": "answered", "answer": evidence.text, "source_ids": ["42"]}))
-        with patch.dict(GUIDE_STORIES, {("khiem-lang", snapshot.scene_title, snapshot.highlight_title): (story,)}):
+        with patch.dict(GUIDE_STORIES, {("lang-tu-duc", snapshot.scene_title, snapshot.highlight_title): (story,)}):
             result = await answer_in_area(request, repository, generate, lambda: SimpleNamespace(truncated=False), reply_context=snapshot)
             self.assertEqual(result["reply_context"]["story_id"], story.id)
             self.assertEqual(result["reply_context"]["highlight_id"], 61)
@@ -152,7 +156,7 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
             self.assertGreaterEqual(len(result["follow_up_questions"]), 1)
             self.assertLessEqual(len(result["follow_up_questions"]), 3)
             self.assertEqual(generate.call_args.kwargs["user_history"], ["Vua Tự Đức là ai?"])
-            self.assertIn("Điểm được chọn: Điểm thử nghiệm", repository.search_evidence.call_args.args[0])
+            self.assertIn("Điểm đang chọn: Điểm thử nghiệm", repository.search_evidence.call_args.args[0])
             self.assertEqual(generate.call_count, 1)
             self.assertTrue(generate.call_args.kwargs.get("conversation"))
 
@@ -161,8 +165,7 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
             missing = await answer_in_area(request, repository, generate, lambda: SimpleNamespace(truncated=False), reply_context=snapshot)
             self.assertEqual(missing["answer_type"], "insufficient_evidence")
             self.assertIsNone(missing["reply_context"]["story_id"])
-            self.assertEqual(generate.call_count, 1)
-            self.assertTrue(generate.call_args.kwargs.get("conversation"))
+            generate.assert_not_called()
             evidence.id = "42"
             generate.return_value = json.dumps({"answer_type": "answered", "answer": evidence.text, "source_ids": ["invented"]})
             invented = await answer_in_area(request, repository, generate, lambda: SimpleNamespace(truncated=False), reply_context=snapshot)
@@ -176,8 +179,8 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
                               tour_context={"scene_id": 31, "narration": "skipped"},
                               conversation_context=[{"role": "user", "content": "Vua Tự Đức là ai?"}])
         snapshot = TourReplyContext(scene_id=31, scene_key="s3", scene_title="Cảnh mới", mode="scene")
-        evidence = SimpleNamespace(id="42", text="Dữ kiện về Khiêm Lăng.", active_area_id="khiem-lang",
-                                   to_source=lambda: {"passage_id": "42", "active_area_id": "khiem-lang"})
+        evidence = SimpleNamespace(id="42", text="Dữ kiện về Khiêm Lăng.", active_area_id="lang-tu-duc",
+                                   to_source=lambda: {"passage_id": "42", "active_area_id": "lang-tu-duc"})
         repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(evidence=[evidence], graph_context=[])))
         generate = Mock(return_value=json.dumps({
             "answer_type": "answered", "answer": evidence.text, "source_ids": ["42"],
@@ -209,8 +212,8 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
 
         request = ChatRequest(message="Nó làm bằng gì?", active_area_id="khiem-lang",
                               conversation_context=[{"role": "user", "content": "Tôi hỏi về nhà bia."}])
-        evidence = SimpleNamespace(id="42", text="Dữ kiện có nguồn.", active_area_id="khiem-lang",
-                                   to_source=lambda: {"passage_id": "42", "active_area_id": "khiem-lang"})
+        evidence = SimpleNamespace(id="42", text="Dữ kiện có nguồn.", active_area_id="lang-tu-duc",
+                                   to_source=lambda: {"passage_id": "42", "active_area_id": "lang-tu-duc"})
 
         async def search(*args, **kwargs):
             await asyncio.sleep(.04)
@@ -230,179 +233,61 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
                 else:
                     result = await answer_in_area(request, SimpleNamespace(search_evidence=search), generate,
                                                   lambda: SimpleNamespace(truncated=False))
-                    self.assertEqual(result["sources"], [{"passage_id": "42", "active_area_id": "khiem-lang"}])
+                    self.assertEqual(result["sources"], [{"passage_id": "42", "active_area_id": "lang-tu-duc"}])
 
 
-    async def test_verified_artifact_filters_evidence_and_other_marker_fails_closed(self):
+    async def test_selected_badge_keeps_partial_answers_grounded_and_deselection_returns_to_p1(self):
         from apps.backend.services.tour_chat import answer_in_area
-        from apps.backend.services.tour_guide import TOUR_ARTIFACTS, TourArtifact
 
-        artifact_a = TourArtifact(
-            id="bia-khiem-cung", title="Bia Khiêm Cung Ký",
-            aliases=("Khiêm Cung Ký",), source_ids=frozenset({"a-source"}),
-        )
-        artifact_b = TourArtifact(
-            id="van-tu", title="Văn tự trên bia",
-            aliases=("Văn tự",), source_ids=frozenset({"b-source"}),
-        )
-        evidence_a = SimpleNamespace(
-            id="a-source", text="Bia Khiêm Cung Ký có nội dung do vua Tự Đức tự soạn.",
-            active_area_id="khiem-lang",
-            to_source=lambda: {"passage_id": "a-source", "active_area_id": "khiem-lang"},
-        )
-        evidence_b = SimpleNamespace(
-            id="b-source", text="Dữ kiện riêng của cổ vật B.", active_area_id="khiem-lang",
-            to_source=lambda: {"passage_id": "b-source", "active_area_id": "khiem-lang"},
-        )
+        a = SimpleNamespace(id="a-source", text="Bia Khiêm Cung Ký do Tự Đức soạn nội dung.",
+                            active_area_id="lang-tu-duc",
+                            to_source=lambda: {"passage_id": "a-source", "active_area_id": "lang-tu-duc"})
+        b = SimpleNamespace(id="b-source", text="Dữ kiện về một điểm khác.", active_area_id="lang-tu-duc",
+                            to_source=lambda: {"passage_id": "b-source", "active_area_id": "lang-tu-duc"})
         repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(
-            evidence=[evidence_a, evidence_b], graph_context=[],
-        )))
-        snapshot = TourReplyContext(
-            scene_id=31, scene_key="s3", scene_title="Cảnh thử nghiệm",
-            mode="standard", highlight_id=61, highlight_title="Nhãn popup không dùng làm danh tính",
-        )
-        request = ChatRequest(
-            message="Ai soạn nội dung bia?", active_area_id="khiem-lang", heritage_id=7,
-            tour_context={"scene_id": 31, "mode": "standard", "highlight_id": 61},
-        )
+            evidence=[a, b], graph_context=[])))
+        snapshot = TourReplyContext(scene_id=31, scene_key="s3", scene_title="Cảnh bia",
+                                    mode="standard", highlight_id=61, highlight_title="Bia Khiêm Cung Ký",
+                                    passage_links={"a-source": {"content_hash": "hash", "object_key": "", "bucket": ""}})
+        request = ChatRequest(message="Ai khắc chữ trên bia?", active_area_id="lang-tu-duc", heritage_id=7,
+                              tour_context={"scene_id": 31, "mode": "standard", "highlight_id": 61})
         generate = Mock(return_value=json.dumps({
-            "answer_type": "answered", "answer": evidence_a.text, "source_ids": ["a-source"],
-            "follow_up_questions": ["Bia Khiêm Cung Ký còn ghi lại điều gì?"],
-        }))
-        registry = {
-            ("khiem-lang", 31, 61): artifact_a,
-            ("khiem-lang", 31, 62): artifact_b,
-        }
-        with patch.dict(TOUR_ARTIFACTS, registry, clear=True):
-            answered = await answer_in_area(
-                request, repository, generate, lambda: SimpleNamespace(truncated=False),
-                reply_context=snapshot,
-            )
-            self.assertEqual(answered["answer_type"], "answered")
-            self.assertEqual([item["passage_id"] for item in answered["sources"]], ["a-source"])
-            self.assertNotIn("b-source", generate.call_args.kwargs["context"])
-            self.assertEqual(generate.call_args.kwargs["artifact_title"], artifact_a.title)
-            self.assertIn(f"Cổ vật đang chọn: {artifact_a.title}", repository.search_evidence.call_args.args[0])
-            self.assertTrue(all(artifact_a.title in item for item in answered["follow_up_questions"]))
-
-            generate.reset_mock()
-            generate.return_value = json.dumps({
-                "answer_type": "answered",
-                "answer": (
-                    "Chưa xác nhận được ai trực tiếp khắc chữ trên bia. "
-                    "Tư liệu chỉ xác nhận vua Tự Đức tự soạn nội dung."
-                ),
-                "source_ids": ["a-source"],
-            })
-            partial = await answer_in_area(
-                request.model_copy(update={"message": "Ai trực tiếp khắc chữ trên bia?"}),
-                repository, generate, lambda: SimpleNamespace(truncated=False),
-                reply_context=snapshot,
-            )
-            self.assertEqual(partial["answer_type"], "answered")
-            self.assertIn("Chưa xác nhận được ai trực tiếp khắc", partial["answer"])
-            self.assertIn("Tự Đức tự soạn nội dung", partial["answer"])
-            self.assertEqual([item["passage_id"] for item in partial["sources"]], ["a-source"])
-
-            repository.search_evidence.reset_mock()
-            generate.reset_mock()
-            generate.return_value = json.dumps({
-                "answer_type": "answered", "answer": evidence_b.text, "source_ids": ["b-source"],
-            })
-            other = await answer_in_area(
-                request.model_copy(update={"message": "Văn tự trên bia có gì?"}),
-                repository, generate, lambda: SimpleNamespace(truncated=False),
-                reply_context=snapshot,
-            )
-            self.assertEqual(other["answer_type"], "out_of_scope")
-            self.assertEqual(other["sources"], [])
-            self.assertNotIn(evidence_b.text, other["answer"])
-            repository.search_evidence.assert_not_awaited()
-            self.assertEqual(generate.call_count, 1)
-
-            TOUR_ARTIFACTS[("khiem-lang", 32, 63)] = artifact_b
-            generate.reset_mock()
-            duplicate = await answer_in_area(
-                request.model_copy(update={"message": "Văn tự trên bia có gì?"}),
-                repository, generate, lambda: SimpleNamespace(truncated=False),
-                reply_context=snapshot,
-            )
-            self.assertEqual(duplicate["answer_type"], "out_of_scope")
-            self.assertIn("nhiều điểm trùng tên", duplicate["answer"])
-            self.assertNotIn("cảnh", duplicate["answer"].casefold())
-            self.assertEqual(generate.call_count, 1)
-
-            repository.search_evidence.reset_mock()
-            generate.reset_mock()
-            generate.return_value = json.dumps({
-                "answer_type": "answered", "answer": evidence_b.text, "source_ids": ["b-source"],
-            })
-            deselected_request = request.model_copy(update={
-                "message": "Cổ vật B có thông tin gì?",
-                "tour_context": request.tour_context.model_copy(update={"highlight_id": None}),
-            })
-            deselected = await answer_in_area(
-                deselected_request, repository, generate, lambda: SimpleNamespace(truncated=False),
-                reply_context=snapshot.model_copy(update={"highlight_id": None, "highlight_title": None}),
-            )
-            self.assertEqual(deselected["answer_type"], "answered")
-            self.assertEqual([item["passage_id"] for item in deselected["sources"]], ["b-source"])
-
-    async def test_selected_unregistered_marker_stays_locked_until_classified_non_artifact(self):
-        from apps.backend.services import tour_guide
-        from apps.backend.services.tour_chat import answer_in_area
-        from apps.backend.services.tour_guide import TOUR_ARTIFACTS
-
-        evidence = SimpleNamespace(
-            id="area-source", text="Dữ kiện về một cổ vật khác trong Khiêm Lăng.",
-            active_area_id="khiem-lang",
-            to_source=lambda: {"passage_id": "area-source", "active_area_id": "khiem-lang"},
-        )
-        repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(
-            evidence=[evidence], graph_context=[],
-        )))
-        generate = Mock(return_value=json.dumps({
-            "answer_type": "answered", "answer": evidence.text, "source_ids": ["area-source"],
-        }))
-        request = ChatRequest(
-            message="Điểm này có gì?", active_area_id="khiem-lang", heritage_id=7,
-            tour_context={"scene_id": 31, "mode": "standard", "highlight_id": 99},
-        )
-        snapshot = TourReplyContext(
-            scene_id=31, scene_key="s3", scene_title="Cảnh thử nghiệm",
-            mode="standard", highlight_id=99, highlight_title="Nhãn chưa phân loại",
-        )
-        key = ("khiem-lang", 31, 99)
-        with patch.dict(TOUR_ARTIFACTS, {}, clear=True), patch.object(
-            tour_guide, "TOUR_NON_ARTIFACT_MARKERS", set(),
-        ):
-            locked = await answer_in_area(
-                request, repository, generate, lambda: SimpleNamespace(truncated=False),
-                reply_context=snapshot,
-            )
-            self.assertEqual(locked["answer_type"], "insufficient_evidence")
-            self.assertEqual(locked["sources"], [])
-            self.assertEqual(locked["follow_up_questions"], [])
-            self.assertNotIn(evidence.text, locked["answer"])
-            repository.search_evidence.assert_not_awaited()
-            self.assertEqual(generate.call_count, 1)
+            "answer_type": "answered", "source_ids": ["a-source"],
+            "answer": "Chưa xác nhận ai khắc chữ; nguồn chỉ nói Tự Đức soạn nội dung."}))
+        selected = await answer_in_area(request, repository, generate,
+                                        lambda: SimpleNamespace(truncated=False), reply_context=snapshot)
+        self.assertEqual([item["passage_id"] for item in selected["sources"]], ["a-source"])
+        self.assertNotIn("b-source", generate.call_args.kwargs["context"])
+        self.assertEqual(generate.call_args.kwargs["artifact_title"], "Bia Khiêm Cung Ký")
+        self.assertEqual(repository.search_evidence.call_args.kwargs["passage_links"], snapshot.passage_links)
 
         repository.search_evidence.reset_mock()
-        generate.reset_mock()
-        with patch.dict(TOUR_ARTIFACTS, {}, clear=True), patch.object(
-            tour_guide, "TOUR_NON_ARTIFACT_MARKERS", {key},
-        ):
-            area_scoped = await answer_in_area(
-                request, repository, generate, lambda: SimpleNamespace(truncated=False),
-                reply_context=snapshot,
-            )
-            self.assertEqual(area_scoped["answer_type"], "answered")
-            self.assertEqual(
-                [item["passage_id"] for item in area_scoped["sources"]],
-                ["area-source"],
-            )
-            repository.search_evidence.assert_awaited_once()
-            self.assertEqual(generate.call_count, 1)
+        generate.return_value = json.dumps({"answer_type": "answered", "answer": b.text,
+                                            "source_ids": ["b-source"]})
+        deselected = await answer_in_area(request.model_copy(update={
+            "tour_context": request.tour_context.model_copy(update={"highlight_id": None}),
+        }), repository, generate, lambda: SimpleNamespace(truncated=False),
+            reply_context=snapshot.model_copy(update={"highlight_id": None, "highlight_title": None,
+                                               "passage_links": {}}))
+        self.assertEqual([item["passage_id"] for item in deselected["sources"]], ["b-source"])
+        self.assertEqual(repository.search_evidence.call_args.kwargs, {"active_area_id": "lang-tu-duc"})
+
+    async def test_unlinked_marker_never_falls_back_even_for_a_plain_question(self):
+        from apps.backend.services.tour_chat import answer_in_area
+
+        repository = SimpleNamespace(search_evidence=AsyncMock())
+        generate = Mock()
+        request = ChatRequest(message="Ai soạn văn bia?", active_area_id="lang-tu-duc", heritage_id=7,
+                              tour_context={"scene_id": 31, "mode": "standard", "highlight_id": 99})
+        snapshot = TourReplyContext(scene_id=31, scene_key="s3", scene_title="Cảnh bia", mode="standard",
+                                    highlight_id=99, highlight_title="Điểm chưa liên kết")
+        locked = await answer_in_area(request, repository, generate,
+                                      lambda: SimpleNamespace(truncated=False), reply_context=snapshot)
+        self.assertEqual(locked["answer_type"], "insufficient_evidence")
+        self.assertEqual(locked["sources"], [])
+        self.assertEqual(locked["follow_up_questions"], [])
+        repository.search_evidence.assert_not_awaited()
+        generate.assert_not_called()
 
 
 
@@ -432,4 +317,3 @@ class FollowupRewriteTests(unittest.TestCase):
         )
         self.assertEqual(rewrite_followup("bia á?", history, lambda **kwargs: (_ for _ in ()).throw(RuntimeError())), "bia á?")
         self.assertEqual(rewrite_followup("bia á?", [], lambda **kwargs: (_ for _ in ()).throw(AssertionError())), "bia á?")
-

@@ -12,6 +12,9 @@ legacy and refactored router paths mount `api/conversations.py`.
 | `GET /api/chat/conversations?limit=50&offset=0` | Required access JWT | 200, own conversations ordered by latest update |
 | `GET /api/chat/conversations/{id}/messages?limit=100&offset=0` | Required access JWT | 200, chronological messages and `total_messages` |
 | `DELETE /api/chat/conversations/{id}` | Required access JWT | 204, messages and citations cascade |
+| `GET /api/admin/interactive-highlights/{id}/passages` | Admin JWT | 200, reviewed links |
+| `POST /api/admin/interactive-highlights/{id}/passages` | Admin JWT | 201, link one existing OpenSearch passage |
+| `DELETE /api/admin/interactive-highlights/{id}/passages?passage_id=...` | Admin JWT | 204, unlink one passage |
 
 List limits are 1–100; history limits are 1–500. Offset must be nonnegative.
 `POST /api/chat` remains available as the legacy transient contract; it does not
@@ -145,8 +148,9 @@ responses with no sources. The server permits the destination name only for
 navigation and falls back to safe wording if the model cites evidence, emits
 links/source labels, dates, or historical claims in that response.
 
-Every valid area-locked tour turn makes exactly one structured generation call,
-including greetings, missing evidence and explicit out-of-scope questions.
+An area-locked tour turn normally makes one structured generation call, including
+greetings and explicit out-of-scope questions. A selected badge with no reviewed
+links or no usable linked evidence abstains without invoking the model.
 The internal JSON contains `answer_type`, `answer`, `source_ids` and optional
 `follow_up_questions`. `answered` still requires citations belonging to the
 bounded active-area Passages. A partially supported answer remains `answered`:
@@ -162,14 +166,32 @@ For referential turns the retrieval query includes bounded prior user topics.
 There is no separate rewrite generation in a locked tour. Standalone chat keeps
 its existing rewrite behavior and may still use two model calls.
 
-P2 applies when the server-validated `(active_area_id, scene_id, highlight_id)`
-has an editorial artifact registry entry. Its allow-list filters evidence again
-after area retrieval. A selected marker without artifact mapping stays locked:
-the server supplies no area evidence and returns `insufficient_evidence`.
-Only markers explicitly classified in `TOUR_NON_ARTIFACT_MARKERS` may use P1
-while selected. Deselection always returns to P1. Duplicate artifact labels are
-not resolved to a scene. Both production registries remain empty until marker
-classification and reviewed Khiêm Lăng passage IDs exist.
+P2 applies to a server-validated `(active_area_id, scene_id, mode, highlight_id)`.
+PostgreSQL `interactive_highlight_passage` stores each reviewed pair of badge ID
+and OpenSearch `_id`, plus the SHA-256 content hash and source `object_key`/`bucket`
+at review time. One passage may be linked to multiple badges. An admin supplies
+the actual passage ID to the link endpoint; the backend reads the passage and
+checks its text hash and area before committing the link. It does not infer a
+link from popup labels. Duplicate labels therefore cannot grant access to a
+different badge's sources. Admin listing and unlinking do not modify the corpus.
+
+After badge selection, chat retrieves using the existing hybrid ranking but
+restricts both OpenSearch branches to the linked IDs and current area. It checks
+the returned `_id`, area, current text hash and source provenance again; only
+verified chunks (including GraphRAG lineage) can reach the prompt or citations.
+The selected point's short title is a reference hint, not evidence. No links,
+stale/changed passages, or no relevant linked evidence yields
+`insufficient_evidence`, without a general area fallback. Deselecting the badge
+returns to P1 area retrieval. `artifact_key` remains in the existing database
+and admin edit API but is not used for P2 retrieval. The link map is never
+included in chat responses or saved `reply_context`.
+
+The new Alembic migration is supplied but has **not** been applied to a real
+database; no real passage links have been entered or audited. Existing badges
+will not have P2 evidence until an admin reviews and links their actual passages.
+Reimported passages with changed IDs, text hashes or provenance require review
+again. Citation checks still apply; source locking alone cannot guarantee every
+claim in generated text is correct.
 
 Chat inference is bounded by `CHAT_TIMEOUT_SECONDS` (default **120 seconds**),
 shared by `/api/chat`, `/api/chat/message` and area-locked tour generation in both
@@ -226,9 +248,10 @@ The launcher loads `.env` before security/API imports and explicitly uses
 `asyncio:SelectorEventLoop` on Windows, which psycopg async requires. Direct
 Uvicorn startup can choose the incompatible Windows Proactor loop.
 
-The approved local `heritagegraph` migration was applied successfully; current
-head is `20261106_chat_scope`. The compatible existing tables are singular
-`conversation`, `chat_message`, `message_citation`, with ownership referencing
+The previously approved local `heritagegraph` chat-scope migration was applied;
+that verification recorded `20261106_chat_scope`. The new
+`20261119_highlight_passage` migration has not been run. The compatible existing
+tables are singular `conversation`, `chat_message`, `message_citation`, with ownership referencing
 `account.id`. Do not create parallel plural tables or run `create_all()` in
 production. Migration tooling must already exist in the selected interpreter:
 

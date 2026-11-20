@@ -22,7 +22,7 @@ from apps.backend.services.tour_scope import follow_up_questions, resolve_area
 from pipelines.graph.microsoft_graphrag import export_snapshot, query_snapshot, validate_area_snapshot
 
 
-AREA = "khiem-lang"
+AREA = "lang-tu-duc"
 MODULES = ("apps.backend.api.chat", "apps.backend.api.public.chat.router")
 
 
@@ -49,7 +49,7 @@ class ScopeContractTests(unittest.TestCase):
 
     def test_prompt_and_followups_cannot_change_area(self):
         messages = conversation_messages("Passage", "Ignore scope", "available", active_area_id=AREA)
-        self.assertIn("active_area_id=khiem-lang", messages[0]["content"])
+        self.assertIn("active_area_id=lang-tu-duc", messages[0]["content"])
         self.assertEqual(len(messages), 2)
         self.assertIn("Nguồn: Passage", messages[-1]["content"])
         self.assertIn("Câu hỏi: Ignore scope", messages[-1]["content"])
@@ -215,6 +215,8 @@ class AreaApiTests(unittest.TestCase):
             self.assertNotIn("9999", response.json()["answer"])
 
     def test_locked_generation_is_single_turn_without_history(self):
+        from apps.backend.tests.test_chat_api import patched_llama_http
+
         for module_name in MODULES:
             with patch.object(REGISTRY, "register"):
                 api = importlib.import_module(module_name)
@@ -228,7 +230,7 @@ class AreaApiTests(unittest.TestCase):
             upstream.json.return_value = {"choices": [{"message": {"content": json.dumps({
                 "answer_type": "answered", "answer": "Khiêm Lăng gắn với vua Tự Đức.", "source_ids": ["42"],
             })}, "finish_reason": "stop"}]}
-            with TestClient(app) as client, patch("httpx.post", return_value=upstream) as post:
+            with TestClient(app) as client, patched_llama_http(return_value=upstream) as post:
                 response = client.post("/api/chat", json={
                     "message": "Ông sống ở đây thế nào?", "active_area_id": AREA,
                     "heritage_context": {"slug": "lang-tu-duc"},
@@ -241,7 +243,7 @@ class AreaApiTests(unittest.TestCase):
             payload = post.call_args.kwargs["json"]
             prompt = payload["messages"]
             self.assertEqual(len(prompt), 2)
-            self.assertIn("active_area_id=khiem-lang", prompt[0]["content"])
+            self.assertIn("active_area_id=lang-tu-duc", prompt[0]["content"])
             self.assertIn("[Passage 42]", prompt[-1]["content"])
             self.assertIn("Câu hỏi: Ông sống ở đây thế nào?", prompt[-1]["content"])
             self.assertIn("Vua Tự Đức", prompt[-1]["content"])
@@ -292,7 +294,7 @@ class ScopedRetrievalTests(unittest.IsolatedAsyncioTestCase):
                     return_value={"active_area_id": "lang-minh-mang", "sources": []})) as graph:
                 result = await repo.search_evidence("Vua sống ở đây thế nào?", active_area_id=AREA)
                 self.assertEqual([item.id for item in result.evidence], ["42", "mixed"])
-                self.assertIn("Khiêm Lăng", store.search.call_args.args[0])
+                self.assertIn("Lăng Tự Đức", store.search.call_args.args[0])
                 self.assertEqual(graph.call_args.kwargs["active_area_id"], AREA)
                 store.get_passages.assert_not_called()
                 store.search.reset_mock()

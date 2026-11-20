@@ -151,7 +151,10 @@ class PassageStore:
             if result.get('errors'):
                 raise SearchError('Một số passage chưa được index; sửa lỗi và import lại để hoàn tất batch.')
 
-    async def search(self, question, vector, limit=20, *, active_area_id=None, artifact_key=None):
+    async def search(self, question, vector, limit=20, *, active_area_id=None, artifact_key=None,
+                     passage_ids=None):
+        if passage_ids is not None and not passage_ids:
+            return []
         threshold = float(os.environ.get('PASSAGE_MIN_SIMILARITY', '0.55'))
         if not math.isfinite(threshold) or not 0 <= threshold <= 1:
             raise ValueError('PASSAGE_MIN_SIMILARITY phải nằm trong [0, 1].')
@@ -161,6 +164,8 @@ class PassageStore:
             filters.append({'term': {'active_area_id': active_area_id}})
         if artifact_key is not None:
             filters.append({'term': {'artifact_keys': artifact_key}})
+        if passage_ids is not None:
+            filters.append({'ids': {'values': list(passage_ids)}})
         vector_filter = {'bool': {'filter': filters}} if len(filters) > 1 else model_filter
         result = await self._request('POST', f'/{self.index}/_search',
             params={'search_pipeline': f'{self.index}-hybrid'}, json={
@@ -187,6 +192,8 @@ class PassageStore:
             if active_area_id is not None and source.get('active_area_id') != active_area_id:
                 continue
             if artifact_key is not None and artifact_key not in source.get('artifact_keys', []):
+                continue
+            if passage_ids is not None and hit['_id'] not in passage_ids:
                 continue
             if not _keep_hit(question, vector, source, threshold):
                 continue
