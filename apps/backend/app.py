@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from apps.backend.api.catalog import router as catalog_router
 from apps.backend.api.admin_catalog import router as admin_catalog_router
+from apps.backend.api.knowledge_library import router as knowledge_library_router
 from fastapi.middleware.cors import CORSMiddleware
 from apps.backend.api import admin_highlights, auth, chat, health, heritage, profile
 from apps.backend.core import embedding
@@ -89,6 +90,7 @@ app.include_router(chat.router, prefix="/api")
 app.include_router(heritage.router, prefix="/api")
 app.include_router(catalog_router, prefix="/api")
 app.include_router(admin_catalog_router, prefix="/api")
+app.include_router(knowledge_library_router, prefix="/api")
 app.include_router(admin_highlights.router, prefix="/api")
 app.include_router(profile.router)
 
