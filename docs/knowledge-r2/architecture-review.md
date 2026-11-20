@@ -1,29 +1,29 @@
-# Knowledge library architecture review
+# Rà soát kiến trúc Knowledge Library
 
-The backend is Python 3.11, FastAPI, Pydantic 2, asynchronous SQLAlchemy 2 and PostgreSQL. Alembic owns reviewed schema changes. API routers are mounted in `apps/backend/app.py`; `/docs` and `/openapi.json` describe the public HTTP contract.
+Backend sử dụng Python 3.11, FastAPI, Pydantic 2, SQLAlchemy 2 bất đồng bộ và PostgreSQL. Alembic quản lý các thay đổi schema đã được rà soát. Router API được gắn trong `apps/backend/app.py`; `/docs` và `/openapi.json` mô tả giao diện HTTP mà API cung cấp.
 
-`core/r2.py:R2Storage` already owns boto3 construction, SigV4 signing, bounded connection timeouts and sanitized storage errors. The library extends that adapter, without another SDK client implementation. Existing media configuration and the legacy knowledge/RAG service remain unchanged. The old service restricts browsing to `curated/`, assigns UUID destination names and checks OpenSearch; those business rules cannot serve this library.
+`core/r2.py:R2Storage` đã đảm nhiệm khởi tạo boto3, ký SigV4, giới hạn thời gian kết nối và trả lỗi storage an toàn. Thư viện mở rộng adapter này, không triển khai thêm một client SDK khác. Giữ nguyên cấu hình media và dịch vụ knowledge/RAG cũ. Dịch vụ cũ chỉ cho duyệt `curated/`, đặt tên đích bằng UUID và kiểm tra OpenSearch; các quy tắc nghiệp vụ đó không phù hợp với thư viện này.
 
-The new `/api/admin/knowledge` router uses the existing JWT signing primitives plus a current database account/role check. Missing credentials return 401; non-admin accounts return 403. A missing or public fallback signing secret fails closed. All storage calls select the server-controlled `knowledge-heritage` bucket. No route accepts a bucket or arbitrary URL.
+Router mới `/api/admin/knowledge` dùng các hàm ký JWT hiện có, đồng thời kiểm tra tài khoản/quyền hiện tại trong database. Thiếu thông tin xác thực trả 401; tài khoản không phải Admin trả 403. Nếu thiếu khóa ký hoặc dùng khóa dự phòng công khai thì từ chối phục vụ. Mọi lệnh storage đều chọn bucket `knowledge-heritage` do server quyết định. Không API nào nhận tên bucket hoặc URL tùy ý từ client.
 
-## Implementation plan
+## Kế hoạch triển khai
 
-1. Centralize exact key/prefix, Unicode, type and size validation. Preserve existing keys; never normalize or rename stored objects.
-2. Map R2 delimiter listings and HEAD metadata into stable DTOs, including opaque pagination.
-3. Add one durable upload-session table through an additive Alembic migration. Reserve active destination keys across processes with a unique constraint.
-4. Sign a create-only PUT to a unique staging key. Bind content type, length and upload identity. Verify the entire bounded object before publishing with atomic `PutObject(IfNoneMatch='*')` to the requested destination. A preliminary HEAD is only an early conflict check.
-5. Serialize completion using a database row lock. Final upload metadata allows recovery after storage succeeds but the database commit fails. Repeated completion checks the real final object rather than trusting client claims.
-6. Add bounded UTF-8 preview, short download links, conditional folder markers and exact-file deletion. No recursive operations or RAG ingestion.
-7. Test with synthetic storage and disposable database resources; live R2 verification is read-only listing/HEAD only. Write API, CORS, rollout and manual integration documentation.
+1. Tập trung kiểm tra key/prefix chính xác, Unicode, loại và dung lượng file. Giữ nguyên key có sẵn; không tự chuẩn hóa hoặc đổi tên object đã lưu.
+2. Chuyển danh sách R2 theo dấu phân cách và metadata từ HEAD sang DTO ổn định, bao gồm token phân trang không cần client diễn giải.
+3. Thêm một bảng phiên upload lưu bền vững bằng migration Alembic chỉ bổ sung schema. Dùng ràng buộc duy nhất để giữ chỗ key đích giữa nhiều tiến trình.
+4. Ký PUT chỉ cho tạo mới đến staging key duy nhất. Ràng buộc loại nội dung, dung lượng và định danh upload. Kiểm tra toàn bộ object trong giới hạn cho phép trước khi ghi nguyên tử đến vị trí đích bằng `PutObject(IfNoneMatch='*')`. HEAD sơ bộ chỉ giúp phát hiện sớm xung đột.
+5. Dùng khóa bản ghi database để xử lý complete lần lượt. Metadata trên file đích hỗ trợ khôi phục khi storage đã ghi thành công nhưng database chưa commit được. Gọi complete nhiều lần phải kiểm tra object đích thật, không tin dữ liệu client tự khai báo.
+6. Bổ sung preview UTF-8 có giới hạn, URL tải xuống ngắn hạn, tạo marker thư mục có điều kiện và xóa chính xác một file. Không xử lý đệ quy hoặc nhập dữ liệu vào RAG.
+7. Kiểm thử với storage giả lập và database tạm dành riêng; kiểm tra R2 thật chỉ bằng lấy danh sách/HEAD. Viết tài liệu API, CORS, triển khai và tích hợp/test tay.
 
-## Configuration and boundaries
+## Cấu hình và giới hạn phạm vi
 
-Reuse `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `DATABASE_URL` and `JWT_SECRET_KEY`. Set `R2_KNOWLEDGE_BUCKET=knowledge-heritage` (default); another value is rejected. `R2_KNOWLEDGE_LIBRARY_PREFIX` optionally restricts the library, defaulting to the bucket root. The old `R2_KNOWLEDGE_PREFIX` and `R2_BUCKET` retain their existing meanings elsewhere.
+Tái sử dụng `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `DATABASE_URL` và `JWT_SECRET_KEY`. Đặt `R2_KNOWLEDGE_BUCKET=knowledge-heritage` (mặc định); giá trị khác sẽ bị từ chối. Có thể dùng `R2_KNOWLEDGE_LIBRARY_PREFIX` để giới hạn phạm vi thư viện, mặc định là gốc bucket. Các biến cũ `R2_KNOWLEDGE_PREFIX` và `R2_BUCKET` giữ nguyên ý nghĩa ở những module khác.
 
-New limits: `KNOWLEDGE_MAX_UPLOAD_BYTES` (default 10 MiB, maximum 32 MiB), `KNOWLEDGE_PREVIEW_MAX_BYTES` (default 128 KiB, maximum 1 MiB). Upload/download URLs last 300 seconds; upload sessions last 15 minutes. Supported uploads are UTF-8 `.md`, `.txt`, `.json`; HTML, executables, PDF/OCR and arbitrary binaries are excluded.
+Các giới hạn mới: `KNOWLEDGE_MAX_UPLOAD_BYTES` (mặc định 10 MiB, tối đa 32 MiB), `KNOWLEDGE_PREVIEW_MAX_BYTES` (mặc định 128 KiB, tối đa 1 MiB). URL upload/download có hiệu lực 300 giây; phiên upload có hiệu lực 15 phút. Hỗ trợ upload `.md`, `.txt`, `.json` mã hóa UTF-8; không hỗ trợ HTML, file thực thi, PDF/OCR hoặc file nhị phân tùy ý.
 
-No rate-limit/cache middleware exists in the inspected backend. Deployment must enforce authenticated per-admin request limits at its gateway; upload size, URL expiry and durable active-key reservations also bound this workflow. No production bucket CORS policy is changed by this implementation.
+Backend đã kiểm tra chưa có middleware giới hạn tần suất/cache. Môi trường triển khai cần giới hạn yêu cầu có xác thực theo từng Admin tại gateway; luồng này cũng được giới hạn bằng dung lượng upload, thời hạn URL và cơ chế giữ chỗ key lưu bền vững. Phần triển khai không thay đổi chính sách CORS bucket production.
 
-## Storage correctness references
+## Tài liệu tham khảo về tính đúng đắn của storage
 
-Cloudflare documents atomic create-only `PutObject` conditions in [conditional operations](https://developers.cloudflare.com/r2/api/s3/conditional-operations/) and [consistency guarantees](https://developers.cloudflare.com/r2/reference/consistency/). Source-only `CopySourceIfMatch` does not prevent overwriting the destination, so this implementation uses a bounded verified stream and conditional destination PUT. Staging is private and excluded from the library. Expired staging cleanup is an operator-owned, prefix-restricted lifecycle decision; no production cleanup is run automatically.
+Cloudflare mô tả điều kiện `PutObject` chỉ cho tạo mới theo cách nguyên tử trong [các thao tác có điều kiện](https://developers.cloudflare.com/r2/api/s3/conditional-operations/) và [bảo đảm tính nhất quán](https://developers.cloudflare.com/r2/reference/consistency/). `CopySourceIfMatch` chỉ áp dụng cho nguồn, không ngăn ghi đè đích; vì vậy phần triển khai dùng luồng nội dung đã kiểm tra có giới hạn và PUT đích có điều kiện. Staging là vùng riêng tư, không hiển thị trong thư viện. Dọn staging hết hạn là quyết định vòng đời dữ liệu của người vận hành, phải giới hạn đúng prefix; không tự chạy dọn dữ liệu production.
