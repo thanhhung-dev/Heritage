@@ -33,11 +33,14 @@ export function DocumentDetails() {
   const { root } = useKnowledge();
   const key = query.get("key") ?? "";
 
-  const [object, setObject] = useState<KnowledgeObject | null>(null);
+  const [objectData, setObject] = useState<KnowledgeObject | null>(null);
+  const object = objectData?.key === key ? objectData : null;
+  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
   const [objectLoading, setObjectLoading] = useState(true);
   const [objectError, setObjectError] = useState<unknown>();
 
-  const [preview, setPreview] = useState<KnowledgePreview | null>(null);
+  const [previewData, setPreview] = useState<KnowledgePreview | null>(null);
+  const preview = previewData?.key === key ? previewData : null;
   const [previewLoading, setPreviewLoading] = useState(true);
   const [previewError, setPreviewError] = useState<unknown>();
   const [previewPage, setPreviewPage] = useState(1);
@@ -46,10 +49,12 @@ export function DocumentDetails() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
+    setDeleting(false);
     setPreviewPage(1);
     if (!key) {
       setObject(null);
       setObjectLoading(false);
+      setResolvedKey(key);
       setObjectError(new ApiError("Select a document key to inspect details.", 422));
       setPreview(null);
       setPreviewLoading(false);
@@ -66,12 +71,14 @@ export function DocumentDetails() {
       .then(result => {
         if (!controller.signal.aborted) {
           setObject(result);
+          setResolvedKey(key);
           setObjectLoading(false);
         }
       })
       .catch(err => {
         if (!isAborted(err) && !controller.signal.aborted) {
           setObject(null);
+          setResolvedKey(key);
           setObjectError(err);
           setObjectLoading(false);
         }
@@ -176,7 +183,7 @@ export function DocumentDetails() {
         </span>
       </div>
 
-      {objectLoading ? (
+      {objectLoading || resolvedKey !== key ? (
         <KnowledgeFeedback loading />
       ) : objectError || !object ? (
         <KnowledgeFeedback error={objectError} retry={() => setAttempt(n => n + 1)} />

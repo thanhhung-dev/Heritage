@@ -33,7 +33,9 @@ export function EditDocumentMetadata() {
   const { user } = useAdminSession();
   const key = query.get("key") ?? "";
 
-  const [object, setObject] = useState<KnowledgeObject | null>(null);
+  const [objectData, setObject] = useState<KnowledgeObject | null>(null);
+  const object = objectData?.key === key ? objectData : null;
+  const [resolvedKey, setResolvedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>();
   const [attempt, setAttempt] = useState(0);
@@ -42,6 +44,7 @@ export function EditDocumentMetadata() {
     if (!key) {
       setObject(null);
       setLoading(false);
+      setResolvedKey(key);
       setError(new ApiError("Select a document key to inspect metadata.", 422));
       return;
     }
@@ -52,12 +55,14 @@ export function EditDocumentMetadata() {
       .then(result => {
         if (!controller.signal.aborted) {
           setObject(result);
+          setResolvedKey(key);
           setLoading(false);
         }
       })
       .catch(err => {
         if (!isAborted(err) && !controller.signal.aborted) {
           setObject(null);
+          setResolvedKey(key);
           setError(err);
           setLoading(false);
         }
@@ -116,7 +121,7 @@ export function EditDocumentMetadata() {
         </span>
       </div>
 
-      {loading ? (
+      {loading || resolvedKey !== key ? (
         <KnowledgeFeedback loading />
       ) : error || !object ? (
         <KnowledgeFeedback error={error} retry={() => setAttempt(n => n + 1)} />
