@@ -1,4 +1,4 @@
-.chrome {
+.chrome, .dialog {
   --knowledge-bg: #fbfbf8;
   --knowledge-sidebar: #f8f7f3;
   --knowledge-text: #201f1c;
@@ -67,11 +67,40 @@
 .navLabel { color: var(--knowledge-muted); padding: 16px 22px 8px; font-size: 12px; }
 .mainMenu { padding: 0 10px; }
 .mainMenu :global(.ant-menu-item-group-title) { padding-top: 26px; font-size: 12px; color: var(--knowledge-muted); }
+.crumbPart { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.folderTree { background: transparent; color: var(--knowledge-text); font-size: 14px; }
+.folderTree :global(.ant-tree-node-content-wrapper) { min-height: 32px; display: inline-flex; align-items: center; }
+.folderTree :global(.ant-tree-title) { overflow-wrap: anywhere; }
+.folderTree :global(.ant-tree-switcher_open) > span { transform: rotate(90deg); }
+.treeNote { color: var(--knowledge-muted); font-size: 12px; line-height: 17px; margin-top: 16px !important; overflow-wrap: anywhere; }
+.mainColumn { min-width: 0; }
+.toolbar { display: flex; align-items: center; gap: 8px; }
+.toolbar :global(.ant-input-affix-wrapper) { max-width: 360px; }
+.toolbar :global(.ant-select) { min-width: 158px; }
+.resultsNote { text-align: right; color: var(--knowledge-muted); font-size: 12px; margin: 12px 0 !important; }
+.fileIdentity { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.fileIdentity a { color: var(--knowledge-text); font-weight: 500; overflow-wrap: anywhere; }
+.fileIdentity p { font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+.rowActions { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.rowActions > a { color: var(--knowledge-text); font-size: 12px; }
+.rowActions :global(.ant-btn) { font-size: 12px; }
+.fileTable { border-top: 1px solid var(--knowledge-border); }
+.fileTable :global(.ant-table) { font-size: 14px; }
+.fileTable :global(.ant-table-thead > tr > th) { color: var(--knowledge-muted); font-size: 12px; font-weight: 400; background: #fbfbf8; }
+.fileTable :global(.ant-table-tbody > tr > td) { padding-top: 16px !important; padding-bottom: 16px !important; vertical-align: top; border-bottom-color: #f3f2ef; }
+.pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 20px 0; }
+.replacementHeader { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dialogDescription { margin: 16px 0; font-size: 14px; color: var(--knowledge-secondary); }
+.dialog label { display: block; margin: 12px 0 8px; }
+.dialogFooter { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+.exactKey { display: block; margin: 12px 0; padding: 12px; background: #f8f7f3; border-radius: 6px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.formError { color: #923927; margin-top: 12px; font-size: 13px; }
 .chrome :global(.ant-menu-item), .chrome :global(.ant-menu-submenu-title) { font-size: 14px; }
 .chrome :global(.ant-btn), .page :global(.ant-btn) { box-shadow: none; }
 .chrome :global(.ant-input), .chrome :global(.ant-select-selector) { box-shadow: none; }
 .page a:focus-visible, .page button:focus-visible, .chrome a:focus-visible, .chrome button:focus-visible { outline: 2px solid #615f57; outline-offset: 3px; }
 @media (max-width: 1100px) {
+  .toolbar { flex-wrap: wrap; }
   .workspace { grid-template-columns: 190px minmax(0, 1fr); gap: 16px; }
   .twoColumns { grid-template-columns: minmax(0, 1fr); }
 }

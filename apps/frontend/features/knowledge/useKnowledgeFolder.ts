@@ -44,5 +44,6 @@ export function useKnowledgeFolder(requestedPrefix?: string) {
       if (!isAborted(error) && id === generation.current && !controller.signal.aborted) setState(previous => ({ ...previous, error, more: false }));
     } finally { if (id === generation.current) moreLock.current = false; }
   }, [state.page, prefix, remember]);
-  return { ...state, prefix, loadMore, refresh: () => setAttempt(n => n + 1) };
+  const current = state.page && state.page.prefix !== prefix ? { page: null, loading: true, more: false } : state;
+  return { ...current, prefix, loadMore, refresh: () => setAttempt(n => n + 1) };
 }
