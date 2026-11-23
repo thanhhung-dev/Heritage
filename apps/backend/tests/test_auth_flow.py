@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 from fastapi import FastAPI
+from fastapi import HTTPException
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -171,3 +172,13 @@ class AuthFlowTests(unittest.IsolatedAsyncioTestCase):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=unbound), base_url="http://test") as client:
                 result = await client.post("/api/auth/login", json={"email": "khoa@example.com", "password": "x"})
         self.assertEqual(result.status_code, 503)
+
+    async def test_public_default_signing_key_is_never_used_to_issue_or_verify_tokens(self):
+        with patch.object(security, "SECRET_KEY", "your-secret-key-change-this-in-production"):
+            for operation in [lambda: security.create_access_token({"sub": "1"}),
+                              lambda: security.decode_access_token("synthetic-token"),
+                              lambda: security.create_password_reset_token("test@example.com"),
+                              lambda: security.verify_reset_password_token("synthetic-token")]:
+                with self.assertRaises(HTTPException) as caught:
+                    operation()
+                self.assertEqual(caught.exception.status_code, 503)

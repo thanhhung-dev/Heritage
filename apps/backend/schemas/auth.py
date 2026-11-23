@@ -50,7 +50,7 @@ class LoginRequest(EmailRequest):
 class UserResponse(BaseModel):
     """User information in responses."""
     
-    account_id: str = Field(..., description="Account UUID")
+    account_id: str = Field(..., description="Account ID")
     email: str = Field(..., description="Email address")
     username: str = Field(..., description="Username")
     role: str = Field(default="user", description="User role")
@@ -59,7 +59,7 @@ class UserResponse(BaseModel):
 class RegisterResponse(BaseModel):
     """Response schema for successful registration."""
     
-    account_id: str = Field(..., description="Account UUID")
+    account_id: str = Field(..., description="Account ID")
     email: str = Field(..., description="Email address")
     username: str = Field(..., description="Username")
     message: str = Field(default="Registration successful", description="Success message")

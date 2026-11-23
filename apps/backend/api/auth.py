@@ -60,8 +60,7 @@ async def get_db() -> AsyncSession:
 
 
 def require_signing_config() -> None:
-    if not auth_security.SECRET_KEY or auth_security.SECRET_KEY == "your-secret-key-change-this-in-production":
-        raise HTTPException(503, "Sign-in is temporarily unavailable. Please contact support.")
+    auth_security.configured_signing_key()
 
 async def role_name(db: AsyncSession, role_id: int | None) -> str:
     result = await db.execute(
@@ -77,6 +76,7 @@ async def role_name(db: AsyncSession, role_id: int | None) -> str:
     status_code=status.HTTP_201_CREATED,
     responses={
         400: {"model": ErrorResponse, "description": "Email or username already exists"},
+        503: {"model": ErrorResponse, "description": "Database or USER role configuration unavailable"},
     },
 )
 async def register(
@@ -112,6 +112,8 @@ async def register(
     response_model=LoginResponse,
     responses={
         401: {"model": ErrorResponse, "description": "Invalid login credentials"},
+        403: {"model": ErrorResponse, "description": "Account inactive or temporarily locked"},
+        503: {"model": ErrorResponse, "description": "Database or private JWT signing configuration unavailable"},
     },
 )
 async def login(
@@ -163,6 +165,8 @@ async def login(
     response_model=UserResponse,
     responses={
         401: {"model": ErrorResponse, "description": "Not signed in or invalid token"},
+        403: {"model": ErrorResponse, "description": "Current account inactive or locked"},
+        503: {"model": ErrorResponse, "description": "Authentication service unavailable"},
     },
 )
 async def get_me(
@@ -196,6 +200,8 @@ async def get_me(
     response_model=LoginResponse,
     responses={
         401: {"model": ErrorResponse, "description": "Invalid Google ID token"},
+        403: {"model": ErrorResponse, "description": "Account inactive or locked"},
+        503: {"model": ErrorResponse, "description": "Google, database or signing configuration unavailable"},
     },
 )
 async def google_auth(

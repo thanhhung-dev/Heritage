@@ -25,6 +25,12 @@ ph = PasswordHasher()
 bearer_scheme = HTTPBearer()
 
 
+def configured_signing_key() -> str:
+    if not SECRET_KEY or SECRET_KEY == "your-secret-key-change-this-in-production":
+        raise HTTPException(503, "Authentication is temporarily unavailable. Please contact support.")
+    return SECRET_KEY
+
+
 def hash_password(password: str) -> str:
     """Hash a password using argon2id.
     
@@ -71,7 +77,7 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
         expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, configured_signing_key(), algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -88,7 +94,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
         HTTPException: If token is invalid or expired
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, configured_signing_key(), algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -161,7 +167,7 @@ def create_password_reset_token(email: str) -> str:
         "type": "reset",
         "exp": expire,
     }
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, configured_signing_key(), algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -177,7 +183,7 @@ def verify_reset_password_token(token: str) -> str | None:
         wrong type, or expired.
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, configured_signing_key(), algorithms=[ALGORITHM])
 
         # Verify token type
         if payload.get("type") != "reset":
