@@ -1,231 +1,63 @@
-/** Authentication service for API calls. */
-
+﻿/** Auth API entry points and optional toast feedback for existing callers. */
 import { message } from 'antd';
-import { API_BASE_URL } from '@/config/api';
 import { decodeGoogleIdToken } from '@/lib/googleAuth';
 import { setAuthTokens, type User } from '@/lib/auth';
+import { createAuthApi, type RegisterData, type LoginData } from './auth-api';
+export type { RegisterData, LoginData, RegisterResponse, LoginResponse } from './auth-api';
 
-export interface RegisterData {
-  email: string;
-  username: string;
-  password: string;
-}
+const api = createAuthApi();
+export const registerUser = (data: RegisterData) => api.register(data);
+export const loginUser = (data: LoginData) => api.login(data);
+export const loginWithGoogle = (idToken: string) => api.google(idToken);
 
-export interface LoginData {
-  email: string;
-  password: string;
-}
-
-export interface RegisterResponse {
-  account_id: string;
-  email: string;
-  username: string;
-  message: string;
-}
-
-export interface LoginResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
-}
-
-export interface ErrorResponse {
-  detail: string;
-}
-
-/**
- * Register a new user account
- */
-export async function registerUser(data: RegisterData): Promise<RegisterResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-
-  const json = await response.json();
-
-  if (!response.ok) {
-    const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Registration failed.');
-  }
-
-  return json as RegisterResponse;
-}
-
-/**
- * Login with email and password
- */
-export async function loginUser(data: LoginData): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-
-  const json = await response.json();
-
-  if (!response.ok) {
-    const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Could not sign in.');
-  }
-
-  return json as LoginResponse;
-}
-
-/**
- * Handle registration with UI feedback
- */
-export async function handleRegister(
-  data: RegisterData,
-  onSuccess?: () => void,
-): Promise<void> {
+export async function handleRegister(data: RegisterData, onSuccess?: () => void): Promise<void> {
   try {
-    const response = await registerUser(data);
-    message.success(response.message || 'Registration successful.');
-    if (onSuccess) onSuccess();
+    await registerUser(data);
+    message.success('Registration successful. Please sign in.');
+    onSuccess?.();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Registration failed.';
-    message.error(errorMessage);
+    message.error(error instanceof Error ? error.message : 'Registration failed.');
     throw error;
   }
 }
 
-/**
- * Handle login with UI feedback and token storage
- */
-export async function handleLogin(
-  data: LoginData,
-  onSuccess?: () => void,
-): Promise<void> {
+export async function handleLogin(data: LoginData, onSuccess?: () => void): Promise<void> {
   try {
-    const response = await loginUser(data);
-    
-    // Store tokens and user info
-    setAuthTokens(response);
-    
+    setAuthTokens(await loginUser(data));
     message.success('Signed in successfully.');
-    if (onSuccess) onSuccess();
+    onSuccess?.();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Could not sign in.';
-    message.error(errorMessage);
+    message.error(error instanceof Error ? error.message : 'Could not sign in.');
     throw error;
   }
 }
 
-/**
- * Login with Google OAuth 2.0
- */
-export async function loginWithGoogle(idToken: string): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/google`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ id_token: idToken }),
-  });
-
-  const json = await response.json();
-
-  if (!response.ok) {
-    const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Google sign-in failed.');
-  }
-
-  return json as LoginResponse;
-}
-
-/** Only allow https URLs (Google profile photos always use https). */
 function getSafeAvatarUrl(value?: string): string | undefined {
   if (!value) return undefined;
-
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' ? url.toString() : undefined;
-  } catch {
-    return undefined;
-  }
+  try { const url = new URL(value); return url.protocol === 'https:' ? url.toString() : undefined; }
+  catch { return undefined; }
 }
 
-/**
- * Handle Google login with UI feedback and token storage
- */
-export async function handleGoogleLogin(
-  idToken: string,
-  onSuccess?: () => void,
-): Promise<void> {
+export async function handleGoogleLogin(idToken: string, onSuccess?: () => void): Promise<void> {
   try {
     const response = await loginWithGoogle(idToken);
     const claims = decodeGoogleIdToken(idToken);
-
-    // The auth API only returns account fields, so hydrate the display name
-    // and Google profile photo from the verified ID token claims.
-    const user: User = {
-      ...response.user,
-      display_name:
-        claims.name?.trim() || response.user.display_name || response.user.username,
-      avatar_url: getSafeAvatarUrl(claims.picture) ?? response.user.avatar_url,
-    };
-
-    // Store tokens and user info (including the Google avatar).
+    const user: User = { ...response.user,
+      display_name: claims.name?.trim() || response.user.display_name || response.user.username,
+      avatar_url: getSafeAvatarUrl(claims.picture) ?? response.user.avatar_url };
     setAuthTokens({ ...response, user });
-    
     message.success('Signed in with Google.');
-    if (onSuccess) onSuccess();
+    onSuccess?.();
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Google sign-in failed.';
-    message.error(errorMessage);
+    message.error(error instanceof Error ? error.message : 'Google sign-in failed.');
     throw error;
   }
 }
 
-/**
- * Request password reset link
- */
 export async function forgotPassword(email: string): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ email }),
-  });
-
-  const json = await response.json();
-
-  if (!response.ok) {
-    const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Could not send the request.');
-  }
-
-  return json as { message: string };
+  return api.forgot(email);
 }
 
-/**
- * Reset password with token
- */
-export async function resetPassword(
-  token: string,
-  newPassword: string,
-): Promise<{ message: string }> {
-  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ token, new_password: newPassword }),
-  });
-
-  const json = await response.json();
-
-  if (!response.ok) {
-    const error = json as ErrorResponse;
-    throw new Error(error.detail || 'Could not reset your password.');
-  }
-
-  return json as { message: string };
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  return api.reset(token, newPassword);
 }
