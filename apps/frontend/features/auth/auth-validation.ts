@@ -14,6 +14,7 @@ export function usernameError(value: string): string {
   if (!username) return "Enter a username.";
   if (length < 3 || length > 50) return "Username must be between 3 and 50 characters.";
   if (!/^[\p{L}\p{N}_-]+$/u.test(username)) return "Username can only contain letters, numbers, _ and -.";
+  if (!/[\p{L}\p{N}]/u.test(username)) return "Username must include a letter or number.";
   return "";
 }
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import secrets
 from typing import AsyncGenerator
 
@@ -12,6 +13,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPBearer
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from apps.backend.core.security import (
     create_access_token,
@@ -22,8 +24,10 @@ from apps.backend.core.security import (
     verify_reset_password_token,
 )
 from apps.backend.core.email import send_reset_password_email
+from apps.backend.core import security as auth_security
 from apps.backend.db.base import AsyncSessionLocal
 from apps.backend.models.admin import AdminAccount
+from apps.backend.services.auth_accounts import create_user, find_email, require_available
 from apps.backend.schemas.auth import (
     ErrorResponse,
     ForgotPasswordRequest,
@@ -44,8 +48,20 @@ security = HTTPBearer()
 
 async def get_db() -> AsyncSession:
     """Database session dependency."""
+    if AsyncSessionLocal.kw.get("bind") is None:
+        raise HTTPException(503, "Authentication is temporarily unavailable. Please try again later.")
     async with AsyncSessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except SQLAlchemyError:
+            await session.rollback()
+            log.warning("auth_database_unavailable")
+            raise HTTPException(503, "Authentication is temporarily unavailable. Please try again later.") from None
+
+
+def require_signing_config() -> None:
+    if not auth_security.SECRET_KEY or auth_security.SECRET_KEY == "your-secret-key-change-this-in-production":
+        raise HTTPException(503, "Sign-in is temporarily unavailable. Please contact support.")
 
 async def role_name(db: AsyncSession, role_id: int | None) -> str:
     result = await db.execute(
@@ -79,46 +95,9 @@ async def register(
     Raises:
         HTTPException 400: Nếu email hoặc username đã tồn tại
     """
-    # Check if email already exists
-    result = await db.execute(
-        select(AdminAccount).where(AdminAccount.email == request.email)
-    )
-    existing_email = result.scalar_one_or_none()
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This email is already in use.",
-        )
+    new_account = await create_user(db, email=str(request.email), username=request.username, password=request.password)
     
-    # Check if username already exists
-    result = await db.execute(
-        select(AdminAccount).where(AdminAccount.username == request.username)
-    )
-    existing_username = result.scalar_one_or_none()
-    if existing_username:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This username is already taken.",
-        )
-    password_hash = hash_password(request.password)
-    next_id = (
-        await db.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM account"))
-    ).scalar_one()
-
-    # New registrations are regular USER accounts.
-    new_account = AdminAccount(
-        id=int(next_id),
-        email=request.email,
-        username=request.username,
-        password_hash=password_hash,
-        role_id=1,
-    )
-    
-    db.add(new_account)
-    await db.commit()
-    await db.refresh(new_account)
-    
-    log.info(f"New account registered: {new_account.email} (username={new_account.username}, id={new_account.id})")
+    log.info("auth_account_registered", extra={"account_id": new_account.id})
     
     return RegisterResponse(
         account_id=str(new_account.id),
@@ -141,22 +120,16 @@ async def login(
 ) -> LoginResponse:
     """Đăng nhập bằng email và mật khẩu."""
     email = request.email.strip().lower()
-    result = await db.execute(
-        select(AdminAccount).where(AdminAccount.email == email)
-    )
-    account = result.scalar_one_or_none()
+    account = await find_email(db, email)
 
-    if not account or not verify_password(request.password, account.password_hash):
+    if not account or not await run_in_threadpool(verify_password, request.password, account.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password.",
         )
 
-    if not account.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This account is locked or not activated.",
-        )
+    require_available(account)
+    require_signing_config()
 
     await db.commit()
 
@@ -194,6 +167,7 @@ async def login(
 )
 async def get_me(
     current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> UserResponse:
     """Lấy thông tin người dùng hiện tại.
     
@@ -203,12 +177,18 @@ async def get_me(
     Returns:
         UserResponse: Thông tin người dùng
     """
-    return UserResponse(
-        account_id=current_user["sub"],
-        email=current_user.get("email", ""),
-        username=current_user.get("username", ""),
-        role=current_user.get("role", "user"),
-    )
+    try:
+        actor = int(current_user["sub"])
+        if actor <= 0 or actor >= 2**63 or current_user.get("type") not in {None, "access"}:
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(401, "Invalid sign-in session.") from None
+    account = await db.get(AdminAccount, actor)
+    if account is None:
+        raise HTTPException(401, "This sign-in session is no longer available.")
+    require_available(account)
+    return UserResponse(account_id=str(account.id), email=account.email, username=account.username,
+                        role=await role_name(db, account.role_id))
 
 
 @router.post(

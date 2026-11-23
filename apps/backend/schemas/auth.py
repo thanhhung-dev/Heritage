@@ -5,12 +5,32 @@ from __future__ import annotations
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
-class RegisterRequest(BaseModel):
+class EmailRequest(BaseModel):
+    email: EmailStr = Field(..., max_length=254, description="Email address")
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value):
+        return value.strip().lower() if isinstance(value, str) else value
+
+
+class RegisterRequest(EmailRequest):
     """Request schema for user registration."""
     
-    email: EmailStr = Field(..., description="Email address")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
-    password: str = Field(..., min_length=8, description="Password (minimum 8 characters)")
+    password: str = Field(..., min_length=8, max_length=1024, description="Password (8–1024 characters)")
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def trim_username(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Password cannot contain only spaces")
+        return value
     
     @field_validator("username")
     @classmethod
@@ -21,11 +41,10 @@ class RegisterRequest(BaseModel):
         return v
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(EmailRequest):
     """Request schema for email/password login."""
 
-    email: EmailStr = Field(..., description="Email address")
-    password: str = Field(..., description="Password")
+    password: str = Field(..., min_length=1, max_length=1024, description="Password")
 
 
 class UserResponse(BaseModel):
@@ -72,10 +91,9 @@ class ErrorResponse(BaseModel):
     detail: str = Field(..., description="Error message")
 
 
-class ForgotPasswordRequest(BaseModel):
+class ForgotPasswordRequest(EmailRequest):
     """Request schema for forgot password."""
     
-    email: EmailStr = Field(..., description="Email address")
 
 
 class ResetPasswordRequest(BaseModel):
