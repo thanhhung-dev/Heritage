@@ -1,83 +1,66 @@
 "use client";
 
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import authEye from "@/access/icons/auth-eye.svg";
-import { Alert, Button, Input, type InputRef } from "antd";
-import { handleLogin } from "@/services/authService";
+import { Button, Input, type InputRef } from "antd";
+import { loginUser } from "@/services/authService";
+import { AuthApiError, type AuthFieldErrors } from "@/services/auth-api";
+import { setAuthTokens } from "@/lib/auth";
+import { emailError, passwordError, safeAuthNext } from "./auth-validation";
 import styles from "./auth.module.css";
-
-function emailError(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return "Enter your email.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-    return "Enter a valid email address.";
-  }
-  return "";
-}
-
-function passwordError(value: string) {
-  if (!value) return "Enter your password.";
-  if (value.length < 6) return "Password must be at least 6 characters.";
-  return "";
-}
 
 export function SignInForm() {
   const id = useId();
   const router = useRouter();
   const emailRef = useRef<InputRef>(null);
   const passwordRef = useRef<InputRef>(null);
+  const pending = useRef(false);
+  const [registered, setRegistered] = useState(false);
+  useEffect(() => { setRegistered(new URLSearchParams(window.location.search).get("registered") === "1"); }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
-  const emailErr = touched.email ? emailError(email) : "";
-  const passwordErr = touched.password ? passwordError(password) : "";
+  const [apiFields, setApiFields] = useState<AuthFieldErrors>({});
+  const emailErr = (touched.email ? emailError(email) : "") || apiFields.email;
+  const passwordErr = (touched.password ? passwordError(password) : "") || apiFields.password;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending.current) return;
     setTouched({ email: true, password: true });
     setApiError("");
+    setApiFields({});
 
     if (emailError(email)) { emailRef.current?.focus(); return; }
     if (passwordError(password)) { passwordRef.current?.focus(); return; }
     
     setSubmitting(true);
+    pending.current = true;
+    let succeeded = false;
     try {
-      await handleLogin(
-        {
-          email: email.trim(),
-          password,
-        },
-        () => {
-          // Redirect to home page on success
-          router.push("/");
-        }
-      );
-    } catch (err: any) {
-      // Extract specific error message from API response
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || err.message || "Something went wrong. Please try again.";
-      setApiError(errorMessage);
-      console.error("Login failed:", err);
+      const response = await loginUser({ email, password });
+      try { setAuthTokens(response); }
+      catch { throw new Error("Your browser could not save the session. Allow site storage and try again."); }
+      router.push(safeAuthNext(new URLSearchParams(window.location.search).get("next")));
+      succeeded = true;
+    } catch (error: unknown) {
+      setApiError(error instanceof Error ? error.message : "Could not sign in. Please try again.");
+      if (error instanceof AuthApiError) setApiFields(error.fields);
     } finally {
-      setSubmitting(false);
+      if (!succeeded) { pending.current = false; setSubmitting(false); }
     }
   }
 
   return (
-    <form onSubmit={submit} noValidate className={styles.form}>
+    <form onSubmit={submit} noValidate className={styles.form} aria-busy={submitting}>
+      {registered && <div role="status" className={styles.success}>Account created successfully. Sign in with your email and password.</div>}
       {apiError && (
-        <Alert
-          showIcon
-          type="error"
-          message={apiError}
-          className={styles.alert}
-          closable
-          onClose={() => setApiError("")}
-        />
+        <div role="alert" className={styles.alert}>{apiError}</div>
       )}
       <div className={styles.field}>
         <label htmlFor={`${id}-email`}>Email</label>
@@ -90,11 +73,12 @@ export function SignInForm() {
           autoCapitalize="none"
           spellCheck={false}
           required
+          disabled={submitting}
           className={styles.input}
           value={email}
           aria-invalid={Boolean(emailErr)}
           aria-describedby={`${id}-email-error`}
-          onChange={event => setEmail(event.target.value)}
+          onChange={event => { setEmail(event.target.value); setApiError(""); setApiFields(previous => ({ ...previous, email: undefined })); }}
           onBlur={() => setTouched(previous => ({ ...previous, email: true }))}
         />
         <p className={styles.error} id={`${id}-email-error`} aria-live="polite">{emailErr}</p>
@@ -109,11 +93,12 @@ export function SignInForm() {
             type={visible ? "text" : "password"}
             autoComplete="current-password"
             required
+            disabled={submitting}
             className={styles.input}
             value={password}
             aria-invalid={Boolean(passwordErr)}
             aria-describedby={`${id}-password-error`}
-            onChange={event => setPassword(event.target.value)}
+            onChange={event => { setPassword(event.target.value); setApiError(""); setApiFields(previous => ({ ...previous, password: undefined })); }}
             onBlur={() => setTouched(previous => ({ ...previous, password: true }))}
           />
           <button
