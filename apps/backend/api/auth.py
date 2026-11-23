@@ -214,6 +214,10 @@ async def google_auth(
     Raises:
         HTTPException 401: Nếu Google ID token không hợp lệ
     """
+    require_signing_config()
+    client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+    if not client_id:
+        raise HTTPException(503, "Google sign-in is not available. Use email and password instead.")
     # Verify Google ID token
     try:
         async with httpx.AsyncClient() as client:
@@ -229,63 +233,47 @@ async def google_auth(
                 )
             
             token_info = response.json()
+            if not isinstance(token_info, dict) or token_info.get("aud") != client_id:
+                raise HTTPException(401, "Invalid Google ID token audience.")
             
             # Validate required fields
             email = token_info.get("email")
-            if not email:
+            if not isinstance(email, str) or not email.strip():
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not retrieve an email from Google.",
                 )
             
             # Check if email is verified
-            if not token_info.get("email_verified"):
+            if token_info.get("email_verified") not in (True, "true"):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Your Google email is not verified.",
                 )
             
-    except httpx.RequestError as e:
-        log.error(f"Failed to verify Google token: {e}")
+    except (httpx.RequestError, ValueError):
+        log.warning("google_verification_unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Could not connect to Google for verification.",
         )
     
     # Find or create account
-    result = await db.execute(
-        select(AdminAccount).where(AdminAccount.email == email)
-    )
-    account = result.scalar_one_or_none()
+    email = email.strip().lower()
+    account = await find_email(db, email)
     
     if not account:
-        # Create new account for Google user
-        # Generate a random password hash (user won't use it for Google login)
-        random_password = secrets.token_urlsafe(32)
-        password_hash = hash_password(random_password)
-        
-        account = AdminAccount(
-            email=email,
-            username=email.split('@')[0],  # Use email prefix as username
-            password_hash=password_hash,
-            is_active=True,
-            role_id=1,
-        )
-        
-        db.add(account)
-        await db.commit()
-        await db.refresh(account)
-        
-        log.info(f"New Google account created: {email} (id={account.id})")
-    else:
-        # Check if existing account is active
-        if not account.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="This account has been disabled.",
-            )
-        
-        log.info(f"Existing Google account logged in: {email} (id={account.id})")
+        # A random suffix avoids collisions between equal email local-parts.
+        username = "google_" + secrets.token_hex(12)
+        try:
+            account = await create_user(db, email=email, username=username, password=secrets.token_urlsafe(32))
+        except HTTPException as error:
+            if error.status_code != 400:
+                raise
+            account = await find_email(db, email)
+            if account is None:
+                raise
+    require_available(account)
     
     await db.commit()
 

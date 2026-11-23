@@ -1,7 +1,8 @@
 """Isolated auth HTTP regression tests: no application DB, SMTP or OAuth writes."""
 import unittest
+import os
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 from fastapi import FastAPI
@@ -138,3 +139,35 @@ class AuthFlowTests(unittest.IsolatedAsyncioTestCase):
             await db.execute(update(AdminAccount).values(is_active=False))
             await db.commit()
         self.assertEqual((await self.client.get("/api/auth/me", headers=headers)).status_code, 403)
+
+    async def google(self, claims):
+        provider = AsyncMock()
+        provider.__aenter__.return_value = provider
+        provider.get.return_value = httpx.Response(200, json=claims)
+        with patch.dict(os.environ, {"GOOGLE_CLIENT_ID": "synthetic-client"}), patch.object(auth.httpx, "AsyncClient", return_value=provider):
+            return await self.client.post("/api/auth/google", json={"id_token": "synthetic-test-token"})
+
+    async def test_google_rejects_wrong_audience_and_string_false_verified_email(self):
+        for claims in [{"aud": "other-client", "email_verified": "true"}, {"aud": "synthetic-client", "email_verified": "false"}]:
+            result = await self.google({"email": "khoa@example.com", **claims})
+            self.assertEqual(result.status_code, 401, result.text)
+
+    async def test_google_accounts_use_user_role_and_current_lock_checks(self):
+        claims = {"aud": "synthetic-client", "email_verified": "true", "email": "Khoa@Example.com"}
+        result = await self.google(claims)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(result.json()["user"]["role"], "user")
+        async with self.factory() as db:
+            await db.execute(update(AdminAccount).values(locked_until=datetime.now(timezone.utc) + timedelta(hours=1)))
+            await db.commit()
+        self.assertEqual((await self.google(claims)).status_code, 403)
+
+    async def test_unconfigured_google_and_database_have_actionable_service_errors(self):
+        with patch.dict(os.environ, {"GOOGLE_CLIENT_ID": ""}):
+            result = await self.client.post("/api/auth/google", json={"id_token": "unused-test-token"})
+        self.assertEqual(result.status_code, 503)
+        unbound = FastAPI(); unbound.include_router(auth.router)
+        with patch.object(auth, "AsyncSessionLocal", async_sessionmaker()):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=unbound), base_url="http://test") as client:
+                result = await client.post("/api/auth/login", json={"email": "khoa@example.com", "password": "x"})
+        self.assertEqual(result.status_code, 503)
