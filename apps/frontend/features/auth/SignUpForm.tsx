@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import authEye from "@/access/icons/auth-eye.svg";
@@ -26,6 +26,12 @@ export function SignUpForm() {
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
   const [apiFields, setApiFields] = useState<AuthFieldErrors>({});
+  useEffect(() => {
+    if (submitting) return;
+    if (apiFields.email) emailRef.current?.focus();
+    else if (apiFields.username) usernameRef.current?.focus();
+    else if (apiFields.password) passwordRef.current?.focus();
+  }, [apiFields, submitting]);
   
   const emailErr = (touched.email ? emailError(email) : "") || apiFields.email;
   const usernameErr = (touched.username ? usernameError(username) : "") || apiFields.username;
@@ -54,9 +60,6 @@ export function SignUpForm() {
       setApiError(error instanceof Error ? error.message : "Registration failed. Please try again.");
       if (error instanceof AuthApiError) {
         setApiFields(error.fields);
-        if (error.fields.email) emailRef.current?.focus();
-        else if (error.fields.username) usernameRef.current?.focus();
-        else if (error.fields.password) passwordRef.current?.focus();
       }
     } finally {
       if (!succeeded) { pending.current = false; setSubmitting(false); }

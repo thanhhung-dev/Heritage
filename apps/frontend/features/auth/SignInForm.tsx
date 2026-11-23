@@ -26,6 +26,11 @@ export function SignInForm() {
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
   const [apiFields, setApiFields] = useState<AuthFieldErrors>({});
+  useEffect(() => {
+    if (submitting) return;
+    if (apiFields.email) emailRef.current?.focus();
+    else if (apiFields.password) passwordRef.current?.focus();
+  }, [apiFields, submitting]);
   const emailErr = (touched.email ? emailError(email) : "") || apiFields.email;
   const passwordErr = (touched.password ? passwordError(password) : "") || apiFields.password;
 
