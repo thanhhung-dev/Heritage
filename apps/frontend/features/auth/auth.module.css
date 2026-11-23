@@ -254,12 +254,15 @@
 .helpLink:hover { color: #ffd9c4; text-decoration: underline; }
 .alert {
   margin: 0;
-  padding: 10px 12px;
-  border: 1px solid rgba(248, 113, 113, 0.35);
+  padding: 12px;
+  border: 1px solid #fda29b;
   border-radius: 8px;
-  background: rgba(248, 113, 113, 0.08);
+  background: #fff3f1;
+  color: #912018;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
 }
-.alert { padding: 12px; border: 1px solid #fda29b; background: #fff3f1; color: #912018; font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
 .success { padding: 12px; border: 1px solid #a6d4b0; border-radius: 8px; background: #f0faf3; color: #205b31; font-size: 13px; line-height: 20px; }
 .hint { margin: 0; font-size: 12px; line-height: 18px; color: var(--auth-text-secondary); }
 .alert :global(.ant-alert-message) { color: var(--auth-error); font-size: 13px; line-height: 20px; }

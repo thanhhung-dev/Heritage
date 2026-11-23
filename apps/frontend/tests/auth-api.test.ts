@@ -10,6 +10,7 @@ test("registration policy matches backend while login allows legacy passwords", 
   assert.match(passwordError("        ", true), /only spaces/);
   assert.match(usernameError("a".repeat(51)), /3 and 50/);
   assert.equal(usernameError("  khoa_đà-nẵng  "), "");
+  assert.match(usernameError("___"), /letter or number/);
 });
 
 test("FastAPI validation arrays and structured errors never stringify objects or expose inputs", () => {

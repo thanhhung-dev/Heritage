@@ -8,16 +8,18 @@ import { PUBLIC_AUTH_PROVIDERS } from "@/config/public-auth";
 import { loadGoogleScript, openGooglePopup } from "@/lib/googleAuth";
 import { handleGoogleLogin } from "@/services/authService";
 import styles from "./auth.module.css";
+import { safeAuthNext } from "./auth-validation";
 
 export function SocialAuthButtons() {
   const router = useRouter();
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [googleReady, setGoogleReady] = useState(false);
   const initRef = useRef(false);
+  const googleConfigured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
   // Load OAuth scripts on mount
   useEffect(() => {
-    if (initRef.current) return;
+    if (initRef.current || !googleConfigured) return;
     initRef.current = true;
 
     // Load Google script
@@ -26,7 +28,7 @@ export function SocialAuthButtons() {
       .catch((error) => {
         console.error("Failed to load Google script:", error);
       });
-  }, []);
+  }, [googleConfigured]);
 
   const handleGoogleClick = async () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -50,10 +52,13 @@ export function SocialAuthButtons() {
         clientId,
         async (credential) => {
           // Handle successful Google login
-          await handleGoogleLogin(credential, () => {
-            router.push("/");
-          });
-          setLoadingProvider(null);
+          setLoadingProvider("google");
+          try {
+            await handleGoogleLogin(credential, () => {
+              router.push(safeAuthNext(new URLSearchParams(window.location.search).get("next")));
+            });
+          } catch { /* The auth helper has already displayed an actionable error. */ }
+          finally { setLoadingProvider(null); }
         },
         (error) => {
           // Handle Google login error
@@ -61,14 +66,13 @@ export function SocialAuthButtons() {
           setLoadingProvider(null);
         }
       );
+      // One Tap returns after displaying its prompt, rather than after login.
+      // A dismissed prompt must not leave this button permanently loading.
+      setLoadingProvider(null);
     } catch (error) {
       console.error("Failed to open Google popup:", error);
       setLoadingProvider(null);
     }
-  };
-
-  const handleOtherProviderClick = (providerName: string) => {
-    antdMessage.info(`${providerName} login is coming soon.`);
   };
 
   return (
@@ -86,8 +90,7 @@ export function SocialAuthButtons() {
             disabled = !googleReady || loadingProvider !== null;
           } else {
             // These providers are not wired up yet.
-            onClick = () => handleOtherProviderClick(provider.label);
-            disabled = loadingProvider !== null;
+            disabled = true;
           }
           
           return (
@@ -97,6 +100,7 @@ export function SocialAuthButtons() {
               onClick={onClick}
               disabled={disabled}
               loading={isLoading}
+              title={!isGoogle ? `${provider.label} sign-in is not available yet.` : !googleConfigured ? "Google sign-in is unavailable. Use email and password." : undefined}
             >
               <Image
                 src={provider.icon}
@@ -111,6 +115,7 @@ export function SocialAuthButtons() {
           );
         })}
       </div>
+      {!googleConfigured && <p className={styles.hint}>Social sign-in is unavailable. Use your email and password.</p>}
     </div>
   );
 }
