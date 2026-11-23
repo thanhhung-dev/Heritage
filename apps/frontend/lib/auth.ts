@@ -35,8 +35,23 @@ function notifyAuthChange(): void {
 export function setAuthTokens(tokens: AuthTokens): void {
   if (typeof window === 'undefined') return;
   
-  localStorage.setItem(TOKEN_KEY, tokens.access_token);
-  localStorage.setItem(USER_KEY, JSON.stringify(tokens.user));
+  const storage = window.localStorage;
+  const previousToken = storage.getItem(TOKEN_KEY);
+  const previousUser = storage.getItem(USER_KEY);
+  try {
+    storage.setItem(USER_KEY, JSON.stringify(tokens.user));
+    storage.setItem(TOKEN_KEY, tokens.access_token);
+  } catch (error) {
+    // Quota/privacy failures must not leave half of a new session behind.
+    try {
+      if (previousUser === null) storage.removeItem(USER_KEY); else storage.setItem(USER_KEY, previousUser);
+      if (previousToken === null) storage.removeItem(TOKEN_KEY); else storage.setItem(TOKEN_KEY, previousToken);
+    } catch {
+      storage.removeItem(USER_KEY);
+      storage.removeItem(TOKEN_KEY);
+    }
+    throw error;
+  }
   notifyAuthChange();
 }
 
