@@ -7,6 +7,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+# Authentication reads JWT configuration when its module is imported.
+# Load the existing root env file before importing API/security modules.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
 from fastapi import FastAPI, Request
 from apps.backend.api.catalog import router as catalog_router
 from apps.backend.api.admin_catalog import router as admin_catalog_router
@@ -26,7 +31,6 @@ from apps.backend.core.observability import (
 )
 from apps.backend.db.base import configure_database, dispose_database
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 log = logging.getLogger(__name__)
 
 
