@@ -64,7 +64,7 @@ export function SignUpForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className={styles.form} aria-busy={submitting}>
+    <form method="post" onSubmit={submit} noValidate className={styles.form} aria-busy={submitting}>
       {apiError && (
         <div role="alert" className={styles.alert}>{apiError}</div>
       )}

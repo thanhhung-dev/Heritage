@@ -57,7 +57,7 @@ export function SignInForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className={styles.form} aria-busy={submitting}>
+    <form method="post" onSubmit={submit} noValidate className={styles.form} aria-busy={submitting}>
       {registered && <div role="status" className={styles.success}>Account created successfully. Sign in with your email and password.</div>}
       {apiError && (
         <div role="alert" className={styles.alert}>{apiError}</div>

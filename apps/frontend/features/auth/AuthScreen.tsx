@@ -29,6 +29,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
               {signIn ? "Log in to your account" : "Create your Heritage account"}
             </h1>
             <div className={styles.cardBody}>
+              <noscript>Enable JavaScript to sign in or create an account.</noscript>
               {signIn ? <SignInForm /> : <SignUpForm />}
               <SocialAuthButtons />
               <div className={styles.footer}>
