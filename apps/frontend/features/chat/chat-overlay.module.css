@@ -683,6 +683,33 @@
 
 .quickSuggestions { margin: 0 0 12px; }
 
+.inlineFollowUp {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.inlineFollowUpLink {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong, #fff);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 173, 66, 0.55);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.inlineFollowUpLink:hover:not(:disabled) {
+  color: #ffad42;
+  text-decoration-color: #ffad42;
+}
+
 .citations {
   margin-top: 12px;
   border-top: 1px solid var(--tl-10);

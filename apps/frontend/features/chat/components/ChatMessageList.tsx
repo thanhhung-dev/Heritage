@@ -50,6 +50,24 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
                 </li>;
               })}</ol>
             </details>}
+            {message.role === "assistant" && message.suggestions?.length ? (
+              <p className={styles.inlineFollowUp}>
+                Bạn có muốn tìm hiểu thêm:{" "}
+                {message.suggestions.slice(0, 2).map((item, idx, arr) => (
+                  <span key={item.value}>
+                    <button
+                      type="button"
+                      className={styles.inlineFollowUpLink}
+                      disabled={sending}
+                      onClick={() => onSend(item.value)}
+                    >
+                      {item.label}
+                    </button>
+                    {idx < arr.length - 1 ? " hay " : ""}
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </div>
         </article>
       ))}
