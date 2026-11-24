@@ -379,3 +379,18 @@
     pointer-events: auto;
     transform: translateY(0);
 }
+
+/* Allow library titles to determine the card's minimum height. */
+.library_card {
+    min-height: max-content;
+}
+
+.library_card .hp_portrait_card_content {
+    min-height: max-content;
+}
+
+.library_card .hp_portrait_card_title {
+    display: block;
+    overflow: visible;
+    overflow-wrap: anywhere;
+}

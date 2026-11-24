@@ -528,7 +528,7 @@ export function LibraryPageContent() {
               <PortraitCard
                 key={item.slug}
                 className={styles.libraryCard}
-                variant="default"
+                variant="library"
                 item={cardData}
                 onInfo={(slug) => {
                   router.push(`/content/${encodeURIComponent(slug)}`);
