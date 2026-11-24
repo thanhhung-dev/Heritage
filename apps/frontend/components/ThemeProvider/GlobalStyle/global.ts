@@ -93,6 +93,13 @@ const globalStyle = (token: Theme) => css`
     --auth-focus-ring: rgba(236, 78, 2, 0.2);
     --auth-navigation-text: #ffb366;
 
+    --admin-login-background: #ffffff;
+    --admin-login-text: #121212;
+    --admin-login-secondary: #414042;
+    --admin-login-placeholder: #777777;
+    --admin-login-border: #dedede;
+    --admin-login-gradient: linear-gradient(160.61deg, #ff9b2d 0%, #fa500f 100%);
+
     --public-footer-border: rgba(255, 155, 45, 0.18);
     --public-footer-background:
       radial-gradient(ellipse 50.82% 50.82% at 49.18% 0%, rgba(255, 155, 45, 0.1) 0%, rgba(255, 130, 50, 0.04) 40%, rgba(255, 130, 50, 0) 65%),

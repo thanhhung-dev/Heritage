@@ -1,9 +1,10 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ConfigProvider, App as AntApp } from 'antd';
+import { adminToken, clearAdminSession, signOutAdmin, verifyAdmin } from '@/features/admin-auth/admin-session';
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -82,6 +83,51 @@ export default function AdminLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const [access, setAccess] = useState<{ path: string; state: 'checking' | 'allowed' | 'unavailable' | 'forbidden' }>({ path: '', state: 'checking' });
+
+  useEffect(() => {
+    if (pathname === '/admin/login') { setAccess({ path: '', state: 'checking' }); return; }
+    let controller: AbortController | undefined;
+    function revalidate() {
+      controller?.abort();
+      const current = new AbortController();
+      controller = current;
+      setAccess({ path: pathname, state: 'checking' });
+      const token = adminToken();
+      if (!token) { router.replace('/admin/login'); return; }
+      void verifyAdmin(token, current.signal).then(result => {
+        if (current.signal.aborted) return;
+        if (result === 'unauthorized') { clearAdminSession(); router.replace('/admin/login'); }
+        else setAccess({ path: pathname, state: result });
+      });
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') revalidate();
+    }
+    revalidate();
+    window.addEventListener('storage', revalidate);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      controller?.abort();
+      window.removeEventListener('storage', revalidate);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [pathname, router]);
+
+  async function handleSignOut() {
+    const confirmed = await signOutAdmin();
+    router.replace(confirmed ? '/admin/login' : '/admin/login?logout=unconfirmed');
+  }
+
+  if (pathname === '/admin/login') return <>{children}</>;
+
+  if (access.path !== pathname || access.state !== 'allowed') {
+    return <main role="status" style={{ padding: 32, color: 'var(--auth-text)', background: 'var(--auth-panel)', minHeight: '100vh' }}>
+      {access.path === pathname && access.state === 'forbidden' ? 'This account does not have administrator access.' : access.path === pathname && access.state === 'unavailable' ? 'Unable to verify your session. Please try again.' : 'Checking admin session…'}
+      {access.path === pathname && (access.state === 'forbidden' || access.state === 'unavailable') && <p><Link href="/admin/login">Back to admin sign in</Link></p>}
+    </main>;
+  }
 
   return (
     <ConfigProvider
@@ -334,6 +380,7 @@ export default function AdminLayout({
                 </Link>
                 <button
                   type="button"
+                  onClick={handleSignOut}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
