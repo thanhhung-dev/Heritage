@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { PublicNavigation } from "./PublicNavigation";
 import { PublicFooter } from "./PublicFooter";
 import { PublicFooterSlot } from "./PublicFooterSlot";
+import { MobileNavigation } from "./MobileNavigation";
 import { HeaderAccountActions } from "./HeaderAccountActions";
 import styles from "./public-shell.module.css";
 import { LogoText } from "../LogoText";
@@ -46,6 +47,7 @@ export function PublicShell({ children }: PublicShellProps) {
           </div>
           <PublicNavigation />
           <HeaderAccountActions />
+          <MobileNavigation />
         </div>
       </header>
 
