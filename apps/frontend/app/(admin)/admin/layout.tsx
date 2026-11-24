@@ -1,9 +1,10 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ConfigProvider, App as AntApp } from 'antd';
+import { adminToken, clearAdminSession, signOutAdmin, verifyAdmin } from '@/features/admin-auth/admin-session';
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -82,6 +83,36 @@ export default function AdminLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const [access, setAccess] = useState<'checking' | 'allowed' | 'unavailable' | 'forbidden'>('checking');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (pathname === '/admin/login') { setAccess('checking'); return () => controller.abort(); }
+    const token = adminToken();
+    if (!token) { router.replace('/admin/login'); return () => controller.abort(); }
+    setAccess('checking');
+    void verifyAdmin(token, controller.signal).then(result => {
+      if (controller.signal.aborted) return;
+      if (result === 'unauthorized') { clearAdminSession(); router.replace('/admin/login'); }
+      else setAccess(result);
+    });
+    return () => controller.abort();
+  }, [pathname, router]);
+
+  async function handleSignOut() {
+    const confirmed = await signOutAdmin();
+    router.replace(confirmed ? '/admin/login' : '/admin/login?logout=unconfirmed');
+  }
+
+  if (pathname === '/admin/login') return <>{children}</>;
+
+  if (access !== 'allowed') {
+    return <main role="status" style={{ padding: 32, color: 'var(--auth-text)', background: 'var(--auth-panel)', minHeight: '100vh' }}>
+      {access === 'forbidden' ? 'This account does not have administrator access.' : access === 'unavailable' ? 'Unable to verify your session. Please try again.' : 'Checking admin session…'}
+      {(access === 'forbidden' || access === 'unavailable') && <p><Link href="/admin/login">Back to admin sign in</Link></p>}
+    </main>;
+  }
 
   return (
     <ConfigProvider
@@ -334,6 +365,7 @@ export default function AdminLayout({
                 </Link>
                 <button
                   type="button"
+                  onClick={handleSignOut}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
