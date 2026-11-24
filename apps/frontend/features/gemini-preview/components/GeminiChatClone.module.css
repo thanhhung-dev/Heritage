@@ -1,0 +1,664 @@
+@property --mask-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 180deg;
+}
+
+.stage {
+  min-height: 100vh;
+  width: 100%;
+  background: #141517;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: 'Google Sans', 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #e6e6e6;
+  position: relative;
+}
+
+.stageControls {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 20;
+}
+
+.replayBtn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6e6e6;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.replayBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+/* ===== Gemini in Chrome Side Panel Shell ===== */
+.sidePanel {
+  --lumi-surface-bg: #000000;
+  --lumi-surface: #0f0f0f;
+  --lumi-surface-dim: #171717;
+  --lumi-surface-bright: #1f1f1f;
+  --lumi-on-surface: #e6e6e6;
+  --lumi-on-surface-variant: rgba(255, 255, 255, 0.55);
+  --lumi-on-surface-low: rgba(255, 255, 255, 0.12);
+  --lumi-hover: rgba(230, 230, 230, 0.08);
+  --lumi-pressed: rgba(230, 230, 230, 0.12);
+  --lumi-accent: #1f3b9b;
+  --lumi-accent-container: #192967;
+  --lumi-accent-fixed: #3186ff;
+
+  width: 420px;
+  max-width: 100%;
+  height: min(860px, calc(100vh - 40px));
+  background-color: var(--lumi-surface-bg);
+  font-family: 'Google Sans Flex', 'Google Sans', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+}
+
+/* ===== Luminous Gradient Aura (1:1 from gemini.html) ===== */
+.luminousGradientContainer {
+  container-type: size;
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  z-index: 0;
+  pointer-events: none;
+  --mask-angle: 180deg;
+  --outer-ring-border-width: clamp(160px, 120px + 10cqw, 240px);
+  --inner-ring-border-width: clamp(140px, 110px + 8cqw, 200px);
+  --outer-ring-blur: clamp(40px, 30px + 2.6cqw, 60px);
+  --inner-ring-blur: clamp(90px, 75px + 4cqw, 120px);
+  --mask-start: clamp(40%, calc(66.6% - 133px), 50%);
+  -webkit-mask-image: linear-gradient(var(--mask-angle), transparent var(--mask-start), #000 95%);
+  mask-image: linear-gradient(var(--mask-angle), transparent var(--mask-start), #000 95%);
+  transition: opacity 0.35s ease;
+}
+
+.gradientHidden {
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+.coldStart {
+  animation: luminousGradientOpen 1.5s cubic-bezier(0.2, 0, 0, 1) 0.25s both;
+}
+
+.warmStart {
+  opacity: 1;
+  --mask-angle: 180deg;
+}
+
+.energyWrapper {
+  position: absolute;
+  inset: 0;
+  width: max(100cqw, 500px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.energyRing {
+  position: absolute;
+  box-sizing: border-box;
+  border-style: solid;
+  border-radius: 7.5rem;
+}
+
+.outerRing {
+  width: 100%;
+  height: 100cqh;
+  top: 0;
+  border-color: var(--lumi-accent-container);
+  filter: blur(var(--outer-ring-blur));
+  border-width: var(--outer-ring-border-width);
+  border-top-width: 0;
+}
+
+.coldStart .outerRing {
+  animation: outerRingOpen 1.5s cubic-bezier(0.2, 0, 0, 1) 0.25s both;
+}
+
+.warmStart .outerRing {
+  animation:
+    outerRingExpandWarm 333ms cubic-bezier(0.667, 1, 0.333, 0) 0s both,
+    outerRingColorWarm 667ms cubic-bezier(0.833, 0.833, 0.167, 0.167) 0s both;
+}
+
+.innerRing {
+  width: 93.75%;
+  left: 3.125%;
+  height: 79cqh;
+  top: 9.2cqh;
+  border-color: var(--lumi-accent);
+  filter: blur(var(--inner-ring-blur));
+  border-width: var(--inner-ring-border-width);
+  border-top-width: 0;
+}
+
+.coldStart .innerRing {
+  animation: innerRingOpen 1.5s cubic-bezier(0.2, 0, 0, 1) 0.25s both;
+}
+
+.warmStart .innerRing {
+  animation:
+    innerRingExpandWarm 333ms cubic-bezier(0.667, 1, 0.333, 0) 0s both,
+    innerRingColorWarm 667ms cubic-bezier(0.833, 0.833, 0.167, 0.167) 0s both;
+}
+
+@keyframes luminousGradientOpen {
+  0% {
+    opacity: 0;
+    --mask-angle: 405deg;
+  }
+  11% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    --mask-angle: 180deg;
+  }
+}
+
+@keyframes outerRingOpen {
+  0% {
+    border-width: 80px;
+    border-top-width: 0;
+    filter: blur(20px);
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    border-width: var(--outer-ring-border-width);
+    border-top-width: 0;
+    filter: blur(var(--outer-ring-blur));
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes innerRingOpen {
+  0% {
+    border-width: 70px;
+    border-top-width: 0;
+    filter: blur(45px);
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    border-width: var(--inner-ring-border-width);
+    border-top-width: 0;
+    filter: blur(var(--inner-ring-blur));
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes outerRingExpandWarm {
+  0% {
+    border-width: 2.5rem;
+    border-top-width: 0;
+  }
+  100% {
+    border-width: var(--outer-ring-border-width);
+    border-top-width: 0;
+  }
+}
+
+@keyframes outerRingColorWarm {
+  0% {
+    border-color: #d0eaff;
+  }
+  37.5% {
+    border-color: var(--lumi-accent-fixed);
+  }
+  100% {
+    border-color: var(--lumi-accent-container);
+  }
+}
+
+@keyframes innerRingExpandWarm {
+  0% {
+    border-width: 1.5rem;
+    border-top-width: 0;
+  }
+  100% {
+    border-width: var(--inner-ring-border-width);
+    border-top-width: 0;
+  }
+}
+
+@keyframes innerRingColorWarm {
+  0% {
+    border-color: var(--lumi-accent-container);
+  }
+  37.5% {
+    border-color: var(--lumi-accent-fixed);
+  }
+  100% {
+    border-color: var(--lumi-accent);
+  }
+}
+
+/* ===== Topbar ===== */
+.topbarContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 8px 24px;
+  min-height: 48px;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.conversationTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lumi-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  opacity: 0.9;
+}
+
+.actionsContainer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.profileButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 6px 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lumi-on-surface);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.profileButton:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.enterpriseChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lumi-on-surface-variant);
+}
+
+.enterpriseLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lumi-on-surface);
+  letter-spacing: 0.01em;
+}
+
+.avatarCircle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4285f4, #1a73e8);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--lumi-on-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.82;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.iconBtn:hover {
+  background: var(--lumi-hover);
+  opacity: 1;
+}
+
+/* ===== Main Content Area ===== */
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 0 20px;
+  position: relative;
+}
+
+/* ===== Zero State ===== */
+.zeroState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 20px;
+  z-index: 1;
+}
+
+.sparkleLogo {
+  width: 36px;
+  height: 36px;
+  margin-top: auto;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: sparkRevealRotate 0.75s cubic-bezier(0.2, 0, 0, 1) 0.1s both;
+}
+
+@keyframes sparkRevealRotate {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) rotate(180deg) scale(0.7);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+.greetingsContainer {
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--lumi-on-surface);
+  margin: 0 0 auto;
+  padding: 0 12px 24px;
+  animation:
+    entranceOpacityReveal 0.55s cubic-bezier(0.2, 0, 0, 1) 0.18s both,
+    entranceBlurReveal 0.55s cubic-bezier(0.2, 0, 0, 1) 0.18s both;
+}
+
+@keyframes entranceOpacityReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes entranceBlurReveal {
+  0% {
+    filter: blur(5px);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+.promptContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.promptButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 10px 18px;
+  border-radius: 24px;
+  border: none;
+  background: var(--lumi-surface-bright);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  color: var(--lumi-on-surface);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.15s ease;
+  animation:
+    entranceOpacityReveal 0.45s cubic-bezier(0.2, 0, 0, 1) both,
+    entranceBlurReveal 0.45s cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.promptButton:nth-child(1) {
+  animation-delay: 0.28s;
+}
+.promptButton:nth-child(2) {
+  animation-delay: 0.36s;
+}
+.promptButton:nth-child(3) {
+  animation-delay: 0.44s;
+}
+
+.promptButton:hover {
+  background-color: color-mix(in srgb, #ffffff 8%, var(--lumi-surface-bright));
+  transform: translateY(-1px);
+}
+
+.promptButton:active {
+  transform: translateY(0);
+  background-color: color-mix(in srgb, #ffffff 12%, var(--lumi-surface-bright));
+}
+
+@keyframes chatFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ===== Chat Messages View ===== */
+.messagesList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 0 20px;
+  animation: chatFadeIn 0.3s ease both;
+}
+
+.userBubble {
+  align-self: flex-end;
+  max-width: 84%;
+  background: var(--lumi-surface-bright);
+  color: var(--lumi-on-surface);
+  padding: 10px 14px;
+  border-radius: 18px 18px 4px 18px;
+  font-size: 14px;
+  line-height: 1.45;
+  animation: chatFadeIn 0.25s ease both;
+}
+
+.modelRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  animation: chatFadeIn 0.4s ease 0.08s both;
+}
+
+.modelText {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--lumi-on-surface);
+}
+
+/* ===== Input Area (Bottom) ===== */
+.inputAreaWrapper {
+  padding: 8px 14px 14px;
+  flex-shrink: 0;
+  z-index: 2;
+  animation: entranceOpacityReveal 0.5s cubic-bezier(0.2, 0, 0, 1) 0.22s both;
+}
+
+.inputCard {
+  background: var(--lumi-surface-bright);
+  border: none;
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.36);
+  border-radius: 24px;
+  padding: 14px 14px 10px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.2s ease;
+}
+
+.inputCard:focus-within {
+  border-color: rgba(49, 134, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(49, 134, 255, 0.2);
+}
+
+.textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--lumi-on-surface);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  min-height: 24px;
+  max-height: 120px;
+}
+
+.textarea::placeholder {
+  color: var(--lumi-on-surface-variant);
+}
+
+.inputFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inputLeftActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inputRightActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.attachBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--lumi-on-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.attachBtn:hover {
+  background: var(--lumi-hover);
+  opacity: 1;
+}
+
+.modelPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--lumi-on-surface-variant);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modelPill:hover {
+  background: var(--lumi-hover);
+  color: var(--lumi-on-surface);
+}
+
+.sendBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--lumi-accent-fixed);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.sendBtn:hover {
+  transform: scale(1.05);
+}
+
+.micBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--lumi-on-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.micBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}

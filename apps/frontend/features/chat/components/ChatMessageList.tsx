@@ -31,10 +31,6 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
               {new Date(message.createdAt).toLocaleTimeString("vi", { hour: "2-digit", minute: "2-digit" })}
             </time>}
             {message.answerType === "development_mock" && <span className={styles.answerStatus}>Sample answer</span>}
-            {message.replyContext && <span className={styles.answerStatus} data-reply-context>
-              Về {message.replyContext.scene_key} · {message.replyContext.scene_title}
-              {message.replyContext.highlight_title ? ` · ${message.replyContext.highlight_title}` : ""}
-            </span>}
             {message.needsUserChoice && <span className={styles.answerStatus}>Cần làm rõ đối tượng</span>}
             {message.abstained && <span className={styles.answerStatus}>Chưa có câu trả lời được xác minh</span>}
             <div className={styles.messageText}>
@@ -54,15 +50,6 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
                 </li>;
               })}</ol>
             </details>}
-            {message.suggestions?.length ? (
-              <div className={styles.suggestions}>
-                {message.suggestions.map((item) => (
-                  <button key={item.value} type="button" disabled={sending} onClick={() => onSend(item.value)}>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
         </article>
       ))}

@@ -11,19 +11,7 @@ import type { ChatOverlayMessage } from "@/features/chat/types/chatOverlay";
 import { getConversationAccountId, useConversationSession } from "@/hooks/useConversationSession";
 import type { Message } from "./types";
 
-const WELCOME_MESSAGE_ID = "mila-welcome";
-const WELCOME_MESSAGE = "Bạn muốn khám phá điều gì về di sản này?";
-
-function createWelcomeMessage(): Message {
-  return {
-    id: WELCOME_MESSAGE_ID,
-    role: "assistant",
-    content: WELCOME_MESSAGE,
-    createdAt: new Date().toISOString(),
-  };
-}
-
-function initialTourMessages(): Message[] { return [createWelcomeMessage()]; }
+function initialTourMessages(): Message[] { return []; }
 
 export function TourChatWidget() {
   const { payload, heritageSlug } = useHeritageTour();
