@@ -36,7 +36,7 @@ export async function signOutAdmin(): Promise<boolean> {
   const token = adminToken();
   try {
     if (!token) return true;
-    const response = await fetch(`${API_BASE_URL}/admin/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`${API_BASE_URL}/admin/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) });
     return response.ok;
   } catch { return false; }
   finally { clearAdminSession(); }

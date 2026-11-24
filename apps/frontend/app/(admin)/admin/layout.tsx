@@ -84,20 +84,35 @@ export default function AdminLayout({
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [access, setAccess] = useState<'checking' | 'allowed' | 'unavailable' | 'forbidden'>('checking');
+  const [access, setAccess] = useState<{ path: string; state: 'checking' | 'allowed' | 'unavailable' | 'forbidden' }>({ path: '', state: 'checking' });
 
   useEffect(() => {
-    const controller = new AbortController();
-    if (pathname === '/admin/login') { setAccess('checking'); return () => controller.abort(); }
-    const token = adminToken();
-    if (!token) { router.replace('/admin/login'); return () => controller.abort(); }
-    setAccess('checking');
-    void verifyAdmin(token, controller.signal).then(result => {
-      if (controller.signal.aborted) return;
-      if (result === 'unauthorized') { clearAdminSession(); router.replace('/admin/login'); }
-      else setAccess(result);
-    });
-    return () => controller.abort();
+    if (pathname === '/admin/login') { setAccess({ path: '', state: 'checking' }); return; }
+    let controller: AbortController | undefined;
+    function revalidate() {
+      controller?.abort();
+      const current = new AbortController();
+      controller = current;
+      setAccess({ path: pathname, state: 'checking' });
+      const token = adminToken();
+      if (!token) { router.replace('/admin/login'); return; }
+      void verifyAdmin(token, current.signal).then(result => {
+        if (current.signal.aborted) return;
+        if (result === 'unauthorized') { clearAdminSession(); router.replace('/admin/login'); }
+        else setAccess({ path: pathname, state: result });
+      });
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') revalidate();
+    }
+    revalidate();
+    window.addEventListener('storage', revalidate);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      controller?.abort();
+      window.removeEventListener('storage', revalidate);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [pathname, router]);
 
   async function handleSignOut() {
@@ -107,10 +122,10 @@ export default function AdminLayout({
 
   if (pathname === '/admin/login') return <>{children}</>;
 
-  if (access !== 'allowed') {
+  if (access.path !== pathname || access.state !== 'allowed') {
     return <main role="status" style={{ padding: 32, color: 'var(--auth-text)', background: 'var(--auth-panel)', minHeight: '100vh' }}>
-      {access === 'forbidden' ? 'This account does not have administrator access.' : access === 'unavailable' ? 'Unable to verify your session. Please try again.' : 'Checking admin session…'}
-      {(access === 'forbidden' || access === 'unavailable') && <p><Link href="/admin/login">Back to admin sign in</Link></p>}
+      {access.path === pathname && access.state === 'forbidden' ? 'This account does not have administrator access.' : access.path === pathname && access.state === 'unavailable' ? 'Unable to verify your session. Please try again.' : 'Checking admin session…'}
+      {access.path === pathname && (access.state === 'forbidden' || access.state === 'unavailable') && <p><Link href="/admin/login">Back to admin sign in</Link></p>}
     </main>;
   }
 
