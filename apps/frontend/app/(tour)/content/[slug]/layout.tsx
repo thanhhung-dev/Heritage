@@ -13,7 +13,7 @@ import HeritageCanvas from "@/features/tour/three/HeritageCanvas";
 import type { TourEngine } from "@/features/tour/three/tour-engine";
 import { TEST_TOUR } from "@/features/tour/tour-data";
 import { ApiError } from "@/config/api";
-import { fetchTourContent, sceneKeys, type TourPlayback } from "@/lib/heritage";
+import { fetchTourContent, resolveSceneByKey, sceneKeys, type TourPlayback } from "@/lib/heritage";
 import { isInteractivePath } from "@/lib/tour-routes";
 import type { HeritagePayload } from "@/types/heritage";
 import editorStyles from "@/features/tour/dev/scene-editor.module.css";
@@ -83,6 +83,40 @@ function HeritageContentWorkspace({ children }: { children: ReactNode }) {
     !params.sceneKey ||
     !payload ||
     sceneKeys(payload).includes(params.sceneKey);
+
+  useEffect(() => {
+    if (!payload) return;
+    const heritage = payload.heritage;
+    const activeScene = params.sceneKey
+      ? resolveSceneByKey(payload, params.sceneKey)
+      : null;
+    const heritageLabel = heritage.title || slug;
+    const nextTitle = activeScene?.title
+      ? `${activeScene.title} · ${heritageLabel} · Heritage`
+      : heritage.tagline
+        ? `${heritageLabel} — ${heritage.tagline} · Heritage`
+        : `${heritageLabel} · Heritage`;
+    const nextDescription =
+      activeScene?.description || heritage.tagline || heritage.description || "";
+
+    const prevTitle = document.title;
+    document.title = nextTitle;
+
+    const meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="description"]',
+    );
+    const prevDescription = meta?.getAttribute("content") ?? null;
+    if (meta && nextDescription) {
+      meta.setAttribute("content", nextDescription);
+    }
+
+    return () => {
+      document.title = prevTitle;
+      if (meta && prevDescription !== null) {
+        meta.setAttribute("content", prevDescription);
+      }
+    };
+  }, [payload, params.sceneKey, slug]);
 
   useEffect(() => {
     if (params.sceneKey && !sceneKeyValid) {

@@ -1,41 +1,24 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import {
-  ConfigProvider,
-  Layout,
-  Menu,
-  Input,
-  Button,
-  Avatar,
-  Space,
-  Typography,
-  Breadcrumb,
-  App as AntApp,
-} from 'antd';
+import { usePathname, useRouter } from 'next/navigation';
+import { ConfigProvider, App as AntApp } from 'antd';
+import { adminToken, clearAdminSession, signOutAdmin, verifyAdmin } from '@/features/admin-auth/admin-session';
 import {
   DashboardOutlined,
   FileTextOutlined,
-  EnvironmentOutlined,
-  CalendarOutlined,
-  GoldOutlined,
-  InboxOutlined,
-  ApartmentOutlined,
   AuditOutlined,
-  BellOutlined,
-  PlusOutlined,
+  NumberOutlined,
+  TeamOutlined,
+  EyeOutlined,
+  ArrowLeftOutlined,
+  UserOutlined,
   SearchOutlined,
-  FolderOpenOutlined,
-  DoubleLeftOutlined,
+  LayoutOutlined,
 } from '@ant-design/icons';
 
-import styles from './heritage.module.css';
-import { tapestryColors } from '@/styles/theme/heritageTheme';
-
-// 1. HeritageLogo (Logo dải màu sọc đa sắc chuẩn Figma)
-function HeritageLogo({ size = 32 }: { size?: number }) {
+function HeritageLogo({ size = 24 }: { size?: number }) {
   const height = Math.round((size * 70) / 63);
   return (
     <svg
@@ -81,20 +64,17 @@ function HeritageLogo({ size = 32 }: { size?: number }) {
   );
 }
 
-// 2. HeritageLogoMini (dùng khi thu nhỏ sidebar)
-function HeritageLogoMini({ size = 32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 149 149" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="149" height="149" rx={8} fill="#FA500F" />
-      <path d="M44 60C44 50 52 40 63 40H74V79H63C52 79 44 70 44 60Z" fill="white" />
-      <rect x="64" y="40" width="41" height="25" fill="white" />
-      <rect x="44" y="91" width="25" height="19" fill="white" />
-      <rect x="51" y="75" width="28" height="48" transform="rotate(-47 51 75)" fill="white" />
-    </svg>
-  );
-}
+const ADMIN_NAV = [
+  { key: '/admin', label: 'Dashboard', icon: <DashboardOutlined /> },
+  { key: '/admin/documents', label: 'Document library', icon: <FileTextOutlined /> },
+  { key: '/admin/review-queue', label: 'Pending review', icon: <AuditOutlined /> },
+  { key: '/admin/ingestion', label: 'Ingestion', icon: <NumberOutlined /> },
+];
 
-const { Header, Sider, Content } = Layout;
+const ADMINISTRATION_NAV = [
+  { key: '/admin/members', label: 'Members', icon: <TeamOutlined /> },
+  { key: '/admin/audit-log', label: 'Activity log', icon: <EyeOutlined /> },
+];
 
 export default function AdminLayout({
   children,
@@ -103,272 +83,411 @@ export default function AdminLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const [access, setAccess] = useState<{ path: string; state: 'checking' | 'allowed' | 'unavailable' | 'forbidden' }>({ path: '', state: 'checking' });
 
-  const menuItems = [
-    {
-      key: '/admin',
-      icon: <DashboardOutlined />,
-      label: <Link href="/admin">Overview</Link>,
-    },
-    {
-      key: '/admin/documents',
-      icon: <FileTextOutlined />,
-      label: <Link href="/admin/documents">Knowledge Documents</Link>,
-    },
-    {
-      key: 'structured',
-      icon: <FolderOpenOutlined />,
-      label: 'Structured Data',
-      children: [
-        {
-          key: '/admin/places',
-          icon: <EnvironmentOutlined />,
-          label: <Link href="/admin/places">Places</Link>,
-        },
-        {
-          key: '/admin/events',
-          icon: <CalendarOutlined />,
-          label: <Link href="/admin/events">Events</Link>,
-        },
-        {
-          key: '/admin/artifacts',
-          icon: <GoldOutlined />,
-          label: <Link href="/admin/artifacts">Artifacts</Link>,
-        },
-      ],
-    },
-    {
-      key: '/admin/review-queue',
-      icon: <InboxOutlined />,
-      label: <Link href="/admin/review-queue">Review Queue</Link>,
-    },
-    {
-      key: '/admin/graph-evaluation',
-      icon: <ApartmentOutlined />,
-      label: <Link href="/admin/graph-evaluation">Graph & Evaluation</Link>,
-    },
-    {
-      key: '/admin/audit-log',
-      icon: <AuditOutlined />,
-      label: <Link href="/admin/audit-log">Audit Log</Link>,
-    },
-  ];
+  useEffect(() => {
+    if (pathname === '/admin/login') { setAccess({ path: '', state: 'checking' }); return; }
+    let controller: AbortController | undefined;
+    function revalidate() {
+      controller?.abort();
+      const current = new AbortController();
+      controller = current;
+      setAccess({ path: pathname, state: 'checking' });
+      const token = adminToken();
+      if (!token) { router.replace('/admin/login'); return; }
+      void verifyAdmin(token, current.signal).then(result => {
+        if (current.signal.aborted) return;
+        if (result === 'unauthorized') { clearAdminSession(); router.replace('/admin/login'); }
+        else setAccess({ path: pathname, state: result });
+      });
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') revalidate();
+    }
+    revalidate();
+    window.addEventListener('storage', revalidate);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      controller?.abort();
+      window.removeEventListener('storage', revalidate);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [pathname, router]);
+
+  async function handleSignOut() {
+    const confirmed = await signOutAdmin();
+    router.replace(confirmed ? '/admin/login' : '/admin/login?logout=unconfirmed');
+  }
+
+  if (pathname === '/admin/login') return <>{children}</>;
+
+  if (access.path !== pathname || access.state !== 'allowed') {
+    return <main role="status" style={{ padding: 32, color: 'var(--auth-text)', background: 'var(--auth-panel)', minHeight: '100vh' }}>
+      {access.path === pathname && access.state === 'forbidden' ? 'This account does not have administrator access.' : access.path === pathname && access.state === 'unavailable' ? 'Unable to verify your session. Please try again.' : 'Checking admin session…'}
+      {access.path === pathname && (access.state === 'forbidden' || access.state === 'unavailable') && <p><Link href="/admin/login">Back to admin sign in</Link></p>}
+    </main>;
+  }
 
   return (
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: tapestryColors.primary,
-          colorInfo: tapestryColors.primary,
-          colorSuccess: '#16a34a',
-          colorWarning: '#b07d1a',
-          colorError: '#c0492c',
-          colorText: 'rgba(240, 232, 221, 0.85)',
-          colorTextSecondary: 'rgba(240, 232, 221, 0.5)',
-          colorBorder: tapestryColors.border,
-          colorBgLayout: tapestryColors.background,
+          colorPrimary: '#FA500F',
           borderRadius: 8,
-          fontFamily: "'Poppins', sans-serif",
-        },
-        components: {
-          Menu: {
-            itemSelectedBg: 'rgba(255, 155, 45, 0.15)',
-            itemSelectedColor: tapestryColors.primary,
-            itemBorderRadius: 8,
-          },
-          Button: {
-            fontWeight: 600,
-          },
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         },
       }}
     >
       <AntApp>
-        <Layout style={{ minHeight: '100vh', background: tapestryColors.background, fontFamily: "'Poppins', sans-serif" }}>
-          {/* Sidebar cố định 100vh */}
-          <Sider
-            width={264}
-            collapsedWidth={76}
-            collapsed={collapsed}
-            trigger={null}
-            theme="dark"
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        />
+        <div
+          style={{
+            display: 'flex',
+            minHeight: '100vh',
+            backgroundColor: '#F8F7F3',
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+            color: '#111827',
+          }}
+        >
+          {/* Sidebar sáng BoardUI / Figma (#F8F7F3) */}
+         <aside
             style={{
-              height: '100vh',
-              position: 'sticky',
-              top: 0,
-              left: 0,
-              borderRight: `1px solid ${tapestryColors.border}`,
-              background: tapestryColors.surface,
-              zIndex: 100,
+              width: collapsed ? 68 : 260,
+              flexShrink: 0,
+              backgroundColor: '#F8F7F3',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              transition: 'width 0.2s ease',
+              userSelect: 'none',
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {/* Header Sidebar có Logo chuẩn và nút toggle */}
-              <div
+            {/* App switcher / Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'space-between',
+                padding: collapsed ? '18px 0' : '18px 16px 14px 18px',
+              }}
+            >
+              <Link
+                href="/admin"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: collapsed ? 'center' : 'space-between',
-                  padding: collapsed ? '16px 0' : '16px 18px',
-                  borderBottom: `1px solid ${tapestryColors.border}`,
-                  minHeight: 70,
-                  flexShrink: 0,
+                  gap: 10,
+                  textDecoration: 'none',
                 }}
               >
-                {collapsed ? (
-                  <div onClick={() => setCollapsed(false)} style={{ cursor: 'pointer' }}>
-                    <HeritageLogoMini size={32} />
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <HeritageLogo size={32} />
-                      <div>
-                        <div
-                          style={{
-                            fontWeight: 700,
-                            fontSize: 16,
-                            color: 'rgba(240, 232, 221, 0.85)',
-                            lineHeight: 1.2,
-                            letterSpacing: '-0.02em',
-                          }}
-                        >
-                          Heritage
-                        </div>
-                        <div style={{ fontSize: 11, color: 'rgba(240, 232, 221, 0.3)', marginTop: 1 }}>
-                          Knowledge Administr...
-                        </div>
-                      </div>
-                    </div>
+                <HeritageLogo size={23} />
+                {!collapsed && (
+                  <span
+                    style={{
+                      fontWeight: 800,
+                      fontSize: 16,
+                      letterSpacing: '0.03em',
+                      color: '#000000',
+                    }}
+                  >
+                    HERITAGE
+                  </span>
+                )}
+              </Link>
 
-                    <button
-                      type="button"
-                      onClick={() => setCollapsed(!collapsed)}
+              {!collapsed && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#6B7280' }}>
+                  <button
+                    type="button"
+                    aria-label="Search"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 4,
+                      cursor: 'pointer',
+                      color: '#6B7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <SearchOutlined style={{ fontSize: 14 }} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Toggle sidebar"
+                    onClick={() => setCollapsed(true)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 4,
+                      cursor: 'pointer',
+                      color: '#6B7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <LayoutOutlined style={{ fontSize: 14 }} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {collapsed && (
+              <button
+                type="button"
+                aria-label="Expand sidebar"
+                onClick={() => setCollapsed(false)}
+                style={{
+                  margin: '0 auto 8px',
+                  background: 'transparent',
+                  border: 'none',
+                  padding: 6,
+                  cursor: 'pointer',
+                  color: '#6B7280',
+                }}
+              >
+                <LayoutOutlined style={{ fontSize: 15 }} />
+              </button>
+            )}
+
+            {/* Navigation */}
+            <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 14px' }}>
+              {!collapsed && (
+                <div
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 500,
+                    color: '#9CA3AF',
+                    letterSpacing: '0.04em',
+                    padding: '6px 8px 6px',
+                  }}
+                >
+                  HERITAGE ADMIN
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {ADMIN_NAV.map((item) => {
+                  const active = pathname === item.key;
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.key}
                       style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 6,
-                        border: `1px solid ${tapestryColors.borderStrong}`,
-                        background: tapestryColors.surfaceHover,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        color: 'rgba(240, 232, 221, 0.5)',
-                        outline: 'none',
+                        justifyContent: collapsed ? 'center' : 'flex-start',
+                        gap: 10,
+                        padding: '8px 10px',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        fontWeight: active ? 500 : 400,
+                        color: active ? '#111827' : '#374151',
+                        backgroundColor: active ? '#ECEAE4' : 'transparent',
+                        textDecoration: 'none',
+                        transition: 'background-color 0.15s ease',
                       }}
                     >
-                      <DoubleLeftOutlined style={{ fontSize: 11 }} />
-                    </button>
-                  </>
-                )}
+                      <span style={{ fontSize: 14, color: active ? '#111827' : '#4B5563', display: 'flex' }}>
+                        {item.icon}
+                      </span>
+                      {!collapsed && <span>{item.label}</span>}
+                    </Link>
+                  );
+                })}
               </div>
 
-              {/* Menu cuộn */}
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <Menu
-                  mode="inline"
-                  selectedKeys={[pathname]}
-                  defaultOpenKeys={['structured']}
-                  items={menuItems}
-                  className={styles['main-menu']}
-                  style={{ fontFamily: "'Poppins', sans-serif", borderRight: 0 }}
-                />
-              </div>
-
-              {/* KHỐI ACCOUNT BẮT BUỘC DÍNH CHẶT DƯỚI GÓC ĐÁY MÀN HÌNH */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderTop: `1px solid ${tapestryColors.border}`,
-                  background: tapestryColors.surface,
-                  marginTop: 'auto',
-                  flexShrink: 0,
-                }}
-              >
+              {!collapsed && (
                 <div
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: 500,
+                    color: '#9CA3AF',
+                    letterSpacing: '0.04em',
+                    padding: '18px 8px 6px',
+                  }}
+                >
+                  ADMINISTRATION
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: collapsed ? 16 : 0 }}>
+                {ADMINISTRATION_NAV.map((item) => {
+                  const active = pathname === item.key;
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: collapsed ? 'center' : 'flex-start',
+                        gap: 10,
+                        padding: '8px 10px',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        fontWeight: active ? 500 : 400,
+                        color: active ? '#111827' : '#374151',
+                        backgroundColor: active ? '#ECEAE4' : 'transparent',
+                        textDecoration: 'none',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                    >
+                      <span style={{ fontSize: 14, color: active ? '#111827' : '#4B5563', display: 'flex' }}>
+                        {item.icon}
+                      </span>
+                      {!collapsed && <span>{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
+
+            {/* Support & Account ở đáy */}
+            <div style={{ padding: '12px 14px 18px' }}>
+              {!collapsed && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: '#9CA3AF',
+                    padding: '0 8px 6px',
+                  }}
+                >
+                  Support
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
+                <Link
+                  href="/"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
                     gap: 10,
-                    padding: '8px 10px',
-                    borderRadius: 10,
-                    border: `1px solid ${tapestryColors.border}`,
+                    padding: '7px 10px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 400,
+                    color: '#374151',
+                    textDecoration: 'none',
                   }}
                 >
-                  <Avatar style={{ backgroundColor: 'rgba(255, 155, 45, 0.15)', color: tapestryColors.primary, fontWeight: 600, flexShrink: 0 }}>
-                    VQ
-                  </Avatar>
+                  <ArrowLeftOutlined style={{ fontSize: 13, color: '#4B5563' }} />
+                  {!collapsed && <span>Back to Chat</span>}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    gap: 10,
+                    padding: '7px 10px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 400,
+                    color: '#374151',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <UserOutlined style={{ fontSize: 13, color: '#4B5563' }} />
+                  {!collapsed && <span>Account / Sign out</span>}
+                </button>
+              </div>
+
+              <div
+                style={{
+                  paddingTop: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'space-between',
+                  paddingLeft: collapsed ? 0 : 8,
+                  paddingRight: collapsed ? 0 : 8,
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      backgroundColor: '#EAE8E1',
+                      color: '#4B5563',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    HT
+                  </div>
                   {!collapsed && (
-                    <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ minWidth: 0 }}>
                       <div
                         style={{
-                          fontWeight: 600,
                           fontSize: 13,
-                          color: 'rgba(240, 232, 221, 0.85)',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden',
+                          fontWeight: 500,
+                          color: '#111827',
+                          lineHeight: 1.25,
                         }}
                       >
-                        Dang Quoc Viet
+                        Hung
                       </div>
                       <div
                         style={{
                           fontSize: 11,
-                          color: 'rgba(240, 232, 221, 0.3)',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden',
+                          fontWeight: 400,
+                          color: '#9CA3AF',
+                          lineHeight: 1.25,
                         }}
                       >
-                        Knowledge Admin...
+                        Default Workspace
                       </div>
                     </div>
                   )}
                 </div>
+
+                {!collapsed && (
+                  <span style={{ fontSize: 12, color: '#6B7280' }}>⌄</span>
+                )}
               </div>
             </div>
-          </Sider>
+          </aside>
 
-          {/* Nội dung bên phải */}
-          <Layout style={{ minWidth: 0 }}>
-            <Header className={styles['app-header']}>
-              <div className={styles['page-heading']}>
-                <Breadcrumb
-                  items={[
-                    { title: 'HeritageGraph' },
-                    { title: 'Overview' },
-                  ]}
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
-                />
-                <Typography.Title level={3} style={{ margin: 0, fontFamily: "'Poppins', sans-serif" }}>
-                  Knowledge Base Overview
-                </Typography.Title>
-              </div>
-
-              <Space size={12}>
-<Input
-                  className={styles['global-search']}
-                  prefix={<SearchOutlined style={{ color: 'rgba(240, 232, 221, 0.5)' }} />}
-                  placeholder="Search everywhere..."
-                  style={{ fontFamily: "'Poppins', sans-serif" }}
-                />
-                <Button aria-label="Notifications" icon={<BellOutlined />} />
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ backgroundColor: tapestryColors.primary, borderColor: tapestryColors.primary, color: '#0a0e14', fontFamily: "'Poppins', sans-serif" }}
-                >
-                  Add Document
-                </Button>
-              </Space>
-            </Header>
-
-            <Content className={styles['app-content']} style={{ fontFamily: "'Poppins', sans-serif" }}>
+          {/* Workspace Surround */}
+          <main
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: '10px 10px 10px 0',
+              display: 'flex',
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                backgroundColor: '#FFFFFF',
+                borderRadius: 12,
+                border: '1px solid #EBE9E2',
+                overflow: 'hidden',
+              }}
+            >
               {children}
-            </Content>
-          </Layout>
-        </Layout>
+            </div>
+          </main>
+        </div>
       </AntApp>
     </ConfigProvider>
   );
