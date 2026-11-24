@@ -79,6 +79,8 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
   const wasPlayingBeforePopupRef = useRef(false);
   const [isSecondaryLoading, setIsSecondaryLoading] = useState(false);
   const [isGraphicsLost, setIsGraphicsLost] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
+  const [frameLoading, setFrameLoading] = useState(false);
   const isWebGLError = modelError === "WEBGL_UNSUPPORTED";
 
   // Timeline scrubbing state
@@ -121,13 +123,19 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
     if (!engine) {
       setIsSecondaryLoading(false);
       setIsGraphicsLost(false);
+      setIsRefining(false);
+      setFrameLoading(false);
       return;
     }
     const offLoad = engine.onLoadingChange(setIsSecondaryLoading);
     const offLost = engine.onContextLostChange(setIsGraphicsLost);
+    const offRefine = engine.onRefiningChange(setIsRefining);
+    const offFrame = engine.onWorldLoadingChange(setFrameLoading);
     return () => {
       offLoad();
       offLost();
+      offRefine();
+      offFrame();
     };
   }, [engine]);
 
@@ -392,16 +400,33 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
         <p>{payload.heritage.region}</p>
       </footer>
 
-      {/* Top thin loading progress bar */}
       <div
         id="topLoadingBar"
         className={styles.top_loading_bar}
         style={{
           display:
-            isSecondaryLoading || player.isSceneTransitioning ? "block" : "none",
+            !frameLoading && (isRefining || isSecondaryLoading || player.isSceneTransitioning) ? "block" : "none",
         }}
-        aria-hidden="true"
+        role="progressbar"
+        aria-label="Loading texture"
+        aria-hidden={frameLoading || (!isRefining && !isSecondaryLoading && !player.isSceneTransitioning)}
       />
+      {frameLoading ? (
+        <div className={styles.worldLoadOverlay} role="status" aria-live="polite" aria-label="Loading">
+          {payload.heritage.splash_image_url ? (
+            <div
+              className={styles.worldLoadBg}
+              style={{ backgroundImage: `url("${payload.heritage.splash_image_url.replace(/["\\\n\r]/g, "")}")` }}
+            />
+          ) : null}
+          <div className={styles.worldLoadGroup}>
+            <div className={styles.worldLoadTitle}>Loading</div>
+            <div className={styles.worldLoadTrack} aria-hidden="true">
+              <div className={`${styles.worldLoadFill} ${styles.worldLoadFillIndeterminate}`} />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Bottom media strip */}
       <div

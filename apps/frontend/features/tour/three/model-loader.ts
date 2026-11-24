@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
-import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
+import { ProgressiveKTX2Loader, scheduleTextureSharpen } from "./progressive-ktx2";
+import { loadPreviewGlb } from "./preview-loader";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 
 function disposeModels(roots: Iterable<THREE.Object3D>) {
@@ -85,22 +86,69 @@ async function readWithProgress(
 /** Cache theo URL trong một engine; loader sở hữu tài nguyên của mọi bản clone. */
 export function createModelLoader(renderer: THREE.WebGLRenderer) {
   const controller = new AbortController();
-  const decoder = new KTX2Loader().setTranscoderPath("/three/basis/").setWorkerLimit(2);
+  const decoder = new ProgressiveKTX2Loader().setTranscoderPath("/three/basis/").setWorkerLimit(2);
   decoder.detectSupport(renderer);
   const draco = new DRACOLoader().setDecoderPath("/three/draco/").setWorkerLimit(2);
   const loader = new GLTFLoader().setKTX2Loader(decoder).setDRACOLoader(draco);
   const cache = new Map<string, Promise<GLTF>>();
+  const settledUrls = new Set<string>();
+  const settleListeners = new Map<string, Set<() => void>>();
   const models = new Set<THREE.Object3D>();
+  const progressListeners = new Set<(url: string, progress: ModelProgress) => void>();
   let disposed = false;
+
+  function publishProgress(
+    url: string,
+    progress: ModelProgress,
+    onProgress?: (progress: ModelProgress) => void,
+  ) {
+    onProgress?.(progress);
+    for (const listener of progressListeners) listener(url, progress);
+  }
 
   async function fetchModel(
     url: string,
     onDecode?: () => void,
     onProgress?: (progress: ModelProgress) => void,
+    coarseFirst = false,
   ) {
+    const report = (loaded: number, total: number) => {
+      publishProgress(url, {
+        loaded,
+        total,
+        ratio: total > 0 ? Math.min(loaded / total, 0.99) : 0,
+      }, onProgress);
+    };
+    if (coarseFirst) {
+      try {
+        const preview = await loadPreviewGlb(
+          url,
+          controller.signal,
+          (bytes) => loader.parseAsync(bytes, url.slice(0, url.lastIndexOf("/") + 1)),
+          (bytes) => {
+            const { promise, resolve, reject } = Promise.withResolvers<THREE.CompressedTexture>();
+            decoder.parse(bytes, resolve, reject);
+            return promise;
+          },
+          (texture) => scheduleTextureSharpen(renderer, texture),
+          report,
+        );
+        if (preview) {
+          if (disposed) {
+            disposeModels([preview.gltf.scene]);
+            throw new DOMException("Loader đã đóng", "AbortError");
+          }
+          models.add(preview.gltf.scene);
+          void preview.settled.then(() => markSettled(url));
+          return preview.gltf;
+        }
+      } catch (error) {
+        if (disposed || (error instanceof DOMException && error.name === "AbortError")) throw error;
+      }
+    }
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) throw new Error(`Không tải được model (HTTP ${response.status}).`);
-    const bytes = await readWithProgress(response, onProgress);
+    const bytes = await readWithProgress(response, (progress) => publishProgress(url, progress, onProgress));
     if (disposed) throw new DOMException("Loader đã đóng", "AbortError");
     onDecode?.();
     const gltf = await loader.parseAsync(bytes, url.slice(0, url.lastIndexOf("/") + 1));
@@ -109,7 +157,16 @@ export function createModelLoader(renderer: THREE.WebGLRenderer) {
       throw new DOMException("Loader đã đóng", "AbortError");
     }
     models.add(gltf.scene);
+    markSettled(url);
     return gltf;
+  }
+
+  function markSettled(url: string) {
+    settledUrls.add(url);
+    const listeners = settleListeners.get(url);
+    settleListeners.delete(url);
+    if (!listeners) return;
+    for (const listener of listeners) listener();
   }
 
   return {
@@ -117,17 +174,35 @@ export function createModelLoader(renderer: THREE.WebGLRenderer) {
       url: string,
       onDecode?: () => void,
       onProgress?: (progress: ModelProgress) => void,
+      onSettled?: () => void,
+      coarseFirst = false,
     ) {
       if (disposed) return Promise.reject(new DOMException("Loader đã đóng", "AbortError"));
+      if (onSettled) {
+        if (settledUrls.has(url)) onSettled();
+        else {
+          const listeners = settleListeners.get(url) ?? new Set<() => void>();
+          listeners.add(onSettled);
+          settleListeners.set(url, listeners);
+        }
+      }
       let pending = cache.get(url);
       if (!pending) {
-        pending = fetchModel(url, onDecode, onProgress).catch((error) => {
+        pending = fetchModel(url, onDecode, onProgress, coarseFirst).catch((error) => {
           cache.delete(url);
+          markSettled(url);
           throw error;
         });
         cache.set(url, pending);
       }
       return pending;
+    },
+    /** Báo tiến độ của mọi lượt tải đang chạy, kể cả lượt đã bắt đầu trước khi đăng ký. */
+    onProgress(listener: (url: string, progress: ModelProgress) => void) {
+      progressListeners.add(listener);
+      return () => {
+        progressListeners.delete(listener);
+      };
     },
     dispose() {
       disposed = true;
@@ -135,6 +210,7 @@ export function createModelLoader(renderer: THREE.WebGLRenderer) {
       disposeModels(models);
       models.clear();
       cache.clear();
+      progressListeners.clear();
       decoder.dispose();
       draco.dispose();
     },

@@ -8,6 +8,7 @@ import type {
 } from "@/types/heritage";
 import { createEnvironment } from "./environment";
 import { createModelLoader, type ModelProgress } from "./model-loader";
+import { tickTextureSharpen, textureSharpenActive } from "./progressive-ktx2";
 import { createCameraController } from "./camera-controller";
 import { createCameraPath, type CameraPath } from "./camera-path";
 import { createExploreBoundary } from "./explore-area";
@@ -319,26 +320,27 @@ export function createTourEngine(
   }
 
   async function load() {
+    // Splash chỉ chờ khung mesh. Texture tiếp tục sau, thanh trên cùng báo.
+    notifyRefining(true);
     try {
       const gltf = await loader.load(
         modelUrl,
-        () => onStatus("Đang giải mã model và texture…"),
+        () => onStatus("Đang giải mã khung model…"),
         onProgress,
+        () => notifyRefining(false),
+        true,
       );
       if (disposed) return;
       showWorld(modelUrl, rememberWorld(modelUrl, gltf), true);
       onStatus(null);
-      // Biên dịch shader của model song song (KHR_parallel_shader_compile) thay vì
-      // để frame đầu tiên vừa vẽ vừa compile — cú khựng đó rơi đúng lúc người dùng
-      // vừa vào cảnh và dễ bị hiểu là "cảnh này lag".
       void renderer.compileAsync(scene, camera).catch(() => undefined);
     } catch (error) {
+      notifyRefining(false);
       if (!disposed) onError(error);
     }
   }
 
 
-  void load();
 
   const clock = new THREE.Clock();
   let lastDebugAt = 0;
@@ -411,9 +413,11 @@ export function createTourEngine(
     // `walkMoved` phải có mặt ở đây: khi đi bộ ta đã BỎ `controls.update()` nên
     // `cameraChanged` luôn false, và bước đi không tự sinh frame nào khác — thiếu
     // nó thì người dùng bấm W mà hình đứng im.
-    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating || cloudsMoved) {
+    const sharpening = textureSharpenActive();
+    if (cameraDriven || cameraChanged || walkMoved || highlightsChanged || needsRender || badgesAnimating || cloudsMoved || sharpening) {
       renderer.render(scene, camera);
-      needsRender = false;
+      tickTextureSharpen(renderer);
+      needsRender = textureSharpenActive();
       trackFrame(delta);
     }
   });
@@ -495,6 +499,25 @@ export function createTourEngine(
 
   let pendingSubLoads = 0;
   const loadingListeners = new Set<(loading: boolean) => void>();
+  let worldLoading = false;
+  let refining = false;
+  const refiningListeners = new Set<(loading: boolean) => void>();
+  const notifyRefining = (loading: boolean) => {
+    if (refining === loading) return;
+    refining = loading;
+    for (const listener of refiningListeners) listener(loading);
+  };
+  void load();
+  const worldLoadingListeners = new Set<(loading: boolean) => void>();
+  const worldProgressListeners = new Set<(ratio: number) => void>();
+  const notifyWorldLoading = (loading: boolean) => {
+    if (worldLoading === loading) return;
+    worldLoading = loading;
+    for (const listener of worldLoadingListeners) listener(loading);
+  };
+  const notifyWorldProgress = (ratio: number) => {
+    for (const listener of worldProgressListeners) listener(ratio);
+  };
   const trackSubLoad = async <T>(promise: Promise<T>): Promise<T> => {
     pendingSubLoads += 1;
     if (pendingSubLoads === 1 && !disposed) {
@@ -685,34 +708,48 @@ export function createTourEngine(
     },
     /**
      * Hiện file thế giới của cảnh. Cùng URL thì không làm gì.
-     * Đổi URL thì ẩn file đang xem ngay, rồi hiện file mới khi đã có trong cache
-     * hoặc tải xong. Lỗi thì trả lại file trước; không báo lỗi model của cả tour.
+     * `coarseFirst` chỉ dùng khi vào nội thất: hiện mesh và texture mờ trước,
+     * mip lớn tải nền, thanh trên cùng báo đến khi nét.
      */
-    setWorldModel(url: string | null) {
+    setWorldModel(url: string | null, options?: { coarseFirst?: boolean }) {
       const next = url?.trim() ? url : modelUrl;
       if (next === activeWorldUrl && worlds.has(next)) return Promise.resolve(true);
       const token = ++worldToken;
       const previousUrl = activeWorldUrl;
-      if (glbRoot && next !== activeWorldUrl) {
-        glbRoot.visible = false;
-        invalidate();
+      const coarseFirst = options?.coarseFirst === true;
+      if (coarseFirst) {
+        notifyWorldLoading(true);
+        notifyRefining(true);
       }
       const run = async () => {
         try {
-          const gltf = await loader.load(next);
+          const gltf = await loader.load(
+            next,
+            undefined,
+            undefined,
+            coarseFirst ? () => {
+              if (!disposed && token === worldToken) notifyRefining(false);
+            } : undefined,
+            coarseFirst,
+          );
           if (disposed || token !== worldToken) return false;
           showWorld(next, rememberWorld(next, gltf), false);
+          if (coarseFirst) notifyWorldLoading(false);
           void renderer.compileAsync(scene, camera).catch(() => undefined);
           return true;
         } catch {
           if (!disposed && token === worldToken) {
+            if (coarseFirst) {
+              notifyWorldLoading(false);
+              notifyRefining(false);
+            }
             const previous = previousUrl ? worlds.get(previousUrl) : undefined;
             if (previous && previousUrl) showWorld(previousUrl, previous, false);
           }
           return false;
         }
       };
-      return next === modelUrl ? run() : trackSubLoad(run());
+      return run();
     },
     /**
      * Cần gạt ảo trên mobile. Không gọi `invalidate()`: `updateWalk()` trả về
@@ -915,6 +952,26 @@ export function createTourEngine(
         loadingListeners.delete(listener);
       };
     },
+    onWorldLoadingChange(listener: (loading: boolean) => void) {
+      worldLoadingListeners.add(listener);
+      if (worldLoading) listener(true);
+      return () => {
+        worldLoadingListeners.delete(listener);
+      };
+    },
+    onRefiningChange(listener: (loading: boolean) => void) {
+      refiningListeners.add(listener);
+      if (refining) listener(true);
+      return () => {
+        refiningListeners.delete(listener);
+      };
+    },
+    onWorldProgress(listener: (ratio: number) => void) {
+      worldProgressListeners.add(listener);
+      return () => {
+        worldProgressListeners.delete(listener);
+      };
+    },
     setPlaybackTime: (seconds: number, playing = false) => {
       playbackTime = seconds;
       playbackClock = seconds;
@@ -925,6 +982,9 @@ export function createTourEngine(
       disposed = true;
       contextListeners.clear();
       loadingListeners.clear();
+      worldLoadingListeners.clear();
+      refiningListeners.clear();
+      worldProgressListeners.clear();
       releaseCameraPath();
       observer.disconnect();
       renderer.setAnimationLoop(null);

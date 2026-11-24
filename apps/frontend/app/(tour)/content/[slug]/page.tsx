@@ -88,7 +88,7 @@ export default function ContentLoadingPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<PageLocale | null>(
     null,
   );
-  // Chờ ảnh splash + logo nhà tài trợ để hiển thị giao diện đồng thời; nút Start chờ thêm model 3D.
+  // Nút Start chờ model ngoài. Bản mờ rồi nét dần chỉ dùng khi tải nội thất.
   const splashReady = !splashImageUrl || loadedSplashUrl === splashImageUrl;
   const presentedByReady =
     !presentedByLogoUrl || loadedPresentedByUrl === presentedByLogoUrl;

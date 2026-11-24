@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { parseExploreArea } from "../three/explore-area";
-import { resolveWorldUrl } from "../three/world-model";
+import { resolveWorldFiles } from "../three/world-model";
 import type { ExploreMode } from "../three/explore-controller";
 import type { TourEngine } from "../three/tour-engine";
 import { useNarration } from "./useNarration";
@@ -77,8 +77,16 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     const interior = payload.heritage.interior_model_url;
     const scenes = payload.overview ? [payload.overview, ...payload.scenes] : payload.scenes;
     for (const scene of scenes) {
-      const url = resolveWorldUrl(scene, fallback, interior);
-      if (url && url !== fallback) void engine.preloadWorld(url);
+      if (scene.use_interior_model) continue;
+      const files = resolveWorldFiles(scene, fallback, interior);
+      const urls = [files.preview, files.full].filter(
+        (url, index, all) => url && url !== fallback && all.indexOf(url) === index,
+      );
+      let chain = Promise.resolve();
+      for (const url of urls) {
+        chain = chain.then(() => engine.preloadWorld(url));
+      }
+      void chain;
     }
   }, [engine, payload]);
 
@@ -134,22 +142,22 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
         const moved = usedGLB || engine?.flyCameraPreset(camera, false, duration);
         waitForArrival(moved ? duration : 0, !!moved && changingScene && duration > 0);
       };
-      // File thế giới (ngoài/trong) phải hiện trước khi đọc camera nướng trong GLB đó.
-      const worldUrl = engine
-        ? resolveWorldUrl(currentScene, engine.defaultWorldUrl(), payload.heritage.interior_model_url)
-        : "";
-      const worldReady = engine && worldUrl && worldUrl !== engine.worldUrl()
-        ? engine.setWorldModel(worldUrl)
-        : Promise.resolve(true);
-      void worldReady.then((shown) => {
-        if (cancelled) return;
-        if (!shown) setSceneError("Không tải được môi trường của cảnh này.");
-        // Thứ tự ưu tiên góc mở đầu:
-        //  1. quỹ đạo camera trong GLB riêng (`camera.path_url`) — clip lo TOÀN BỘ
-        //     chuyển động của cảnh, khung đầu clip chính là góc mở đầu;
-        //  2. toạ độ tác giả ghi trong DB (`cam_start_pos/cam_start_target`);
-        //  3. camera nướng sẵn trong model (`camera_node_name`);
-        //  4. không có gì ⇒ giữ nguyên góc `fit()` đang thấy.
+      // Bản thô (LOD cao) hiện trước. File đầy đủ thay sau, không che màn hình.
+      const files = engine
+        ? resolveWorldFiles(currentScene, engine.defaultWorldUrl(), payload.heritage.interior_model_url)
+        : null;
+      const showing = engine?.worldUrl() ?? "";
+      const hasPreview = !!files && files.preview !== files.full;
+      const alreadyUsable = !files || files.full === showing || (hasPreview && files.preview === showing);
+      const coarseFirst = currentScene.use_interior_model === true;
+      const worldReady = !engine || !files || alreadyUsable
+        ? Promise.resolve(true)
+        : engine.setWorldModel(hasPreview ? files.preview : files.full, { coarseFirst });
+      const upgradeFull = () => {
+        if (!engine || !files || files.preview === files.full || engine.worldUrl() === files.full) return;
+        void engine.setWorldModel(files.full, { coarseFirst });
+      };
+      const startArrival = () => {
         // Path nạp bất đồng bộ (file chỉ vài chục KB): xong thì bay tới khung đầu,
         // lỗi/không có clip thì lùi về preset — không để cảnh đứng hình chờ.
         if (camera.path_url && engine) {
@@ -165,6 +173,20 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
           engine?.stopCameraPath();
           startWithPreset();
         }
+      };
+      void worldReady.then((shown) => {
+        if (cancelled || !engine || !files) return;
+        if (!shown && hasPreview) {
+          void engine.setWorldModel(files.full).then((fullShown) => {
+            if (cancelled) return;
+            if (!fullShown) setSceneError("Không tải được môi trường của cảnh này.");
+            else startArrival();
+          });
+          return;
+        }
+        if (!shown) setSceneError("Không tải được môi trường của cảnh này.");
+        startArrival();
+        if (shown) upgradeFull();
       });
     } else {
       engine?.stopCameraTimeline();

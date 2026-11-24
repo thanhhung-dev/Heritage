@@ -37,8 +37,9 @@ Tapestry đổi set theo cảnh. Với GLB, cùng ý đó nằm trên di sản:
 
 - `heritage.exterior_model_url` là file mặc định. Tour trả nó ở `modelUrl`. Thiếu thì vẫn lấy `model_asset` của overview hoặc scene đầu.
 - `heritage.interior_model_url` là file trong. Scene có `use_interior_model: true` mới dùng file này. Không có URL thì cảnh đó ở lại file mặc định, không mượn file kia.
-- `scene.models` nếu có GLB thì thắng cả hai URL trên.
-- Đổi cảnh sang URL khác thì ẩn file đang xem, hiện file kia (cache trong phiên engine, không tải lại). Lỗi file kia không hạ model của cả tour.
+- `scene.models` nếu có GLB thì thắng cả hai URL trên. Nhiều GLB thì `lod_level` nhỏ nhất là file đầy đủ, mức cao nhất là bản thô: hiện bản thô trước, file đầy đủ thay khi tải xong và không che màn hình. Chỉ một GLB, hoặc chỉ `interior_model_url`, thì không có bản thô.
+- Đổi cảnh sang URL khác thì ẩn file đang xem, hiện file kia (cache trong phiên engine, không tải lại). Nâng từ bản thô lên file đầy đủ thì giữ bản thô cho tới khi file kia sẵn sàng. Lỗi file kia không hạ model của cả tour.
+- Chỉ cảnh `use_interior_model`: màn Loading giữa chờ khung mesh, rồi tắt. Thanh trên cùng tải texture và tắt khi texture đã gắn. Model ngoài vẫn chờ file đầy đủ ở splash.
 - Không dùng `use_ambient_audio_alt` để chọn file.
 
 

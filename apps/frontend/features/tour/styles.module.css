@@ -3399,6 +3399,77 @@ html:not(.no-hover) .stripControls .navIconBg:hover .navToolTip {
   display: none;
 }
 
+.worldLoadOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  pointer-events: auto;
+}
+
+.worldLoadOverlayLeave {
+  animation: worldLoadFadeOut 0.5s forwards;
+}
+
+@keyframes worldLoadFadeOut {
+  to { opacity: 0; }
+}
+
+.worldLoadBg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.5) blur(4px);
+  transform: scale(1.02);
+}
+
+.worldLoadGroup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(340px, calc(100% - 48px));
+  color: #f0e8dd;
+}
+
+.worldLoadTitle {
+  padding-bottom: 9px;
+  font-size: var(--font-size-14);
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #f0e8dd;
+}
+
+.worldLoadTrack {
+  position: relative;
+  height: 4px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 90px;
+  background: rgba(240, 232, 221, 0.2);
+}
+
+.worldLoadFill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-radius: inherit;
+  background: #f0e8dd;
+  box-shadow: 0 0 6px rgba(240, 232, 221, 0.4);
+}
+
+.worldLoadFillIndeterminate {
+  width: 40%;
+  animation: loading-indeterminate 2s infinite;
+}
+
 /* ─────────────────────────────────────────────────────────────
    Scene Transition Overlay
    ───────────────────────────────────────────────────────────── */
