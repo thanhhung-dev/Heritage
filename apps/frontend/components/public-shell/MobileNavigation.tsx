@@ -17,7 +17,7 @@ export function MobileNavigation() {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
       if (event.key !== "Tab") return;
-      const dialog = document.querySelector<HTMLElement>("[role=dialog]");
+      const dialog = document.querySelector<HTMLElement>(`.${styles.drawerRoot} [role="dialog"]`);
       const items = dialog?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex="0"]');
       if (!items?.length) return;
       const first = items[0], last = items[items.length - 1];
@@ -35,7 +35,7 @@ export function MobileNavigation() {
   }, []);
   return <div className={styles.mobile}>
     <Button ref={trigger} className={styles.menuTrigger} type="text" icon={<MenuOutlined />} aria-label="Mở menu điều hướng" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} />
-    <Drawer focusable={{ focusTriggerAfterClose: false }} open={open} onClose={() => setOpen(false)} title="Khám phá Heritage" placement="right" size="min(340px, calc(100vw - 20px))" closable={{ "aria-label": "Đóng menu điều hướng" }} afterOpenChange={(visible) => { if (!visible && window.matchMedia("(max-width: 767px)").matches) trigger.current?.focus(); }} classNames={{ section: styles.drawerContainer, header: styles.drawerHeader, body: styles.drawerBody }}>
+    <Drawer focusable={{ focusTriggerAfterClose: false }} open={open} onClose={() => setOpen(false)} title="Khám phá Heritage" placement="right" size="min(340px, calc(100vw - 20px))" closable={{ "aria-label": "Đóng menu điều hướng" }} afterOpenChange={(visible) => { if (!visible && window.matchMedia("(max-width: 767px)").matches) trigger.current?.focus(); }} classNames={{ root: styles.drawerRoot, section: styles.drawerContainer, header: styles.drawerHeader, body: styles.drawerBody }}>
       <PublicNavigation className={styles.mobileNavigation} onNavigate={() => setOpen(false)} />
     </Drawer>
   </div>;
