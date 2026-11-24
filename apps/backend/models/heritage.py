@@ -99,6 +99,9 @@ class Heritage(Base):
     ambient_audio_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     ambient_audio_alt_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     transition_sfx_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    exterior_model_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    interior_model_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
 
     language1_id: Mapped[int | None] = mapped_column(
         BigInteger,

@@ -206,6 +206,11 @@ export function createTourEngine(
   let glbCameras: THREE.Camera[] = [];
   /** Gốc model đã nạp — cần để tìm node đích và bắn tia khi đọc camera từ GLB. */
   let glbRoot: THREE.Object3D | null = null;
+  /** Mỗi URL một gốc. Đổi cảnh cùng file thì không tải lại — giống đổi set Tapestry. */
+  const worlds = new Map<string, { root: THREE.Object3D; cameras: THREE.Camera[] }>();
+  let activeWorldUrl: string | null = null;
+  let worldToken = 0;
+
   let disposed = false;
 
   /**
@@ -282,6 +287,37 @@ export function createTourEngine(
   const observer = new ResizeObserver(resize);
   observer.observe(host);
 
+  function rememberWorld(url: string, gltf: { scene: THREE.Object3D; cameras: THREE.Camera[] }) {
+    let entry = worlds.get(url);
+    if (!entry) {
+      gltf.scene.visible = false;
+      entry = { root: gltf.scene, cameras: gltf.cameras };
+      worlds.set(url, entry);
+    }
+    return entry;
+  }
+
+  function showWorld(
+    url: string,
+    entry: { root: THREE.Object3D; cameras: THREE.Camera[] },
+    placeCamera: boolean,
+  ) {
+    if (glbRoot && glbRoot !== entry.root) glbRoot.visible = false;
+    if (!entry.root.parent) scene.add(entry.root);
+    entry.root.visible = true;
+    glbRoot = entry.root;
+    glbCameras = entry.cameras;
+    activeWorldUrl = url;
+    if (placeCamera) {
+      cameraController.fit(entry.root);
+      cameraPathTime = Number.NaN;
+      cameraPathNeedsSync = false;
+    } else {
+      cameraController.adoptBounds(entry.root);
+    }
+    invalidate();
+  }
+
   async function load() {
     try {
       const gltf = await loader.load(
@@ -290,17 +326,7 @@ export function createTourEngine(
         onProgress,
       );
       if (disposed) return;
-      scene.add(gltf.scene);
-      glbRoot = gltf.scene;
-      glbCameras = gltf.cameras;
-      cameraController.fit(gltf.scene);
-      // `fit()` vừa ghi đè camera. Nếu quỹ đạo path đã áp pose trước đó (path nạp
-      // xong trước model) thì `cameraPathTime` vẫn bằng `playbackClock` và vòng
-      // lặp sẽ bỏ qua — camera kẹt ở góc `fit()` cho tới khi audio đổi thời điểm.
-      // Hạ mốc thời gian để frame sau áp lại pose của path.
-      cameraPathTime = Number.NaN;
-    cameraPathNeedsSync = false;
-      invalidate();
+      showWorld(modelUrl, rememberWorld(modelUrl, gltf), true);
       onStatus(null);
       // Biên dịch shader của model song song (KHR_parallel_shader_compile) thay vì
       // để frame đầu tiên vừa vẽ vừa compile — cú khựng đó rơi đúng lúc người dùng
@@ -310,6 +336,7 @@ export function createTourEngine(
       if (!disposed) onError(error);
     }
   }
+
 
   void load();
 
@@ -638,6 +665,54 @@ export function createTourEngine(
     setSky(preset: HeritageSkyPreset | null) {
       environment.apply(preset);
       invalidate();
+    },
+    /**
+     * File thế giới mặc định của tour (set gốc, thường là bên ngoài).
+     * Cảnh không có `models` riêng thì ở lại file này.
+     */
+    defaultWorldUrl() {
+      return modelUrl;
+    },
+    worldUrl() {
+      return activeWorldUrl ?? modelUrl;
+    },
+    /** Tải trước file kia sau khi set gốc đã hiện, để lần vào trong không chờ. */
+    preloadWorld(url: string) {
+      if (!url || worlds.has(url)) return Promise.resolve();
+      return loader.load(url).then((gltf) => {
+        if (!disposed) rememberWorld(url, gltf);
+      }).catch(() => undefined);
+    },
+    /**
+     * Hiện file thế giới của cảnh. Cùng URL thì không làm gì.
+     * Đổi URL thì ẩn file đang xem ngay, rồi hiện file mới khi đã có trong cache
+     * hoặc tải xong. Lỗi thì trả lại file trước; không báo lỗi model của cả tour.
+     */
+    setWorldModel(url: string | null) {
+      const next = url?.trim() ? url : modelUrl;
+      if (next === activeWorldUrl && worlds.has(next)) return Promise.resolve(true);
+      const token = ++worldToken;
+      const previousUrl = activeWorldUrl;
+      if (glbRoot && next !== activeWorldUrl) {
+        glbRoot.visible = false;
+        invalidate();
+      }
+      const run = async () => {
+        try {
+          const gltf = await loader.load(next);
+          if (disposed || token !== worldToken) return false;
+          showWorld(next, rememberWorld(next, gltf), false);
+          void renderer.compileAsync(scene, camera).catch(() => undefined);
+          return true;
+        } catch {
+          if (!disposed && token === worldToken) {
+            const previous = previousUrl ? worlds.get(previousUrl) : undefined;
+            if (previous && previousUrl) showWorld(previousUrl, previous, false);
+          }
+          return false;
+        }
+      };
+      return next === modelUrl ? run() : trackSubLoad(run());
     },
     /**
      * Cần gạt ảo trên mobile. Không gọi `invalidate()`: `updateWalk()` trả về

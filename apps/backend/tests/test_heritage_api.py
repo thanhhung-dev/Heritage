@@ -70,6 +70,8 @@ def make_heritage(**overrides: Any) -> SimpleNamespace:
         "display_map": True,
         "splash_image_url": None,
         "card_image_url": None,
+        "exterior_model_url": None,
+        "interior_model_url": None,
         "language1": SimpleNamespace(code="vi", name="Vietnamese"),
         "language2": None,
     }
@@ -688,6 +690,29 @@ class TourContentTests(HeritageApiTestBase):
         self.assertIn("s2", body["playback"])
         self.assertIsNone(body["playback"]["s2"]["narrationUrl"])
         self.assertEqual(body["playback"]["s2"]["timedHighlights"], [])
+
+    def test_exterior_model_url_is_the_default_world(self) -> None:
+        configure_asset_policy(base_url="https://assets.heritage.vn")
+        heritage = make_heritage(
+            exterior_model_url="models/outside.glb",
+            interior_model_url="models/inside.glb",
+        )
+        overview = make_scene(id=99, sequence=-1, use_interior_model=False)
+        inside = make_scene(id=11, sequence=1, title="Trong", use_interior_model=True)
+        self._install_service([make_row(heritage, [inside], overview=overview)])
+
+        response = self.client.get("/api/heritages/chua-thien-mu/tour")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["modelUrl"], "https://assets.heritage.vn/models/outside.glb")
+        self.assertEqual(
+            body["payload"]["heritage"]["interior_model_url"],
+            "https://assets.heritage.vn/models/inside.glb",
+        )
+        self.assertFalse(body["payload"]["overview"]["use_interior_model"])
+        self.assertTrue(body["payload"]["scenes"][0]["use_interior_model"])
+
 
     def test_tour_playback_preserves_scene_slugs_when_sequences_have_gaps(self) -> None:
         scenes = [

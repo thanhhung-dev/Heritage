@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { parseExploreArea } from "../three/explore-area";
+import { resolveWorldUrl } from "../three/world-model";
 import type { ExploreMode } from "../three/explore-controller";
 import type { TourEngine } from "../three/tour-engine";
 import { useNarration } from "./useNarration";
@@ -70,6 +71,17 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
     () => parseExploreArea(interactive?.explore_area) ?? scenePlayback?.exploreArea ?? null,
     [interactive, scenePlayback],
   );
+  useEffect(() => {
+    if (!engine) return;
+    const fallback = engine.defaultWorldUrl();
+    const interior = payload.heritage.interior_model_url;
+    const scenes = payload.overview ? [payload.overview, ...payload.scenes] : payload.scenes;
+    for (const scene of scenes) {
+      const url = resolveWorldUrl(scene, fallback, interior);
+      if (url && url !== fallback) void engine.preloadWorld(url);
+    }
+  }, [engine, payload]);
+
 
   useEffect(() => {
     pause();
@@ -122,27 +134,38 @@ export function useTourPlayer({ narrationUrl = null, captionsUrl = null, interac
         const moved = usedGLB || engine?.flyCameraPreset(camera, false, duration);
         waitForArrival(moved ? duration : 0, !!moved && changingScene && duration > 0);
       };
-      // Thứ tự ưu tiên góc mở đầu:
-      //  1. quỹ đạo camera trong GLB riêng (`camera.path_url`) — clip lo TOÀN BỘ
-      //     chuyển động của cảnh, khung đầu clip chính là góc mở đầu;
-      //  2. toạ độ tác giả ghi trong DB (`cam_start_pos/cam_start_target`);
-      //  3. camera nướng sẵn trong model (`camera_node_name`);
-      //  4. không có gì ⇒ giữ nguyên góc `fit()` đang thấy.
-      // Path nạp bất đồng bộ (file chỉ vài chục KB): xong thì bay tới khung đầu,
-      // lỗi/không có clip thì lùi về preset — không để cảnh đứng hình chờ.
-      if (camera.path_url && engine) {
-        const url = camera.path_url;
-        void engine.setCameraPath(url).then((ready) => {
-          if (cancelled) return;
-          if (ready) {
-            engine.applyCameraPathStart(0);
-            waitForArrival(0, changingScene && duration > 0);
-          } else startWithPreset();
-        });
-      } else {
-        engine?.stopCameraPath();
-        startWithPreset();
-      }
+      // File thế giới (ngoài/trong) phải hiện trước khi đọc camera nướng trong GLB đó.
+      const worldUrl = engine
+        ? resolveWorldUrl(currentScene, engine.defaultWorldUrl(), payload.heritage.interior_model_url)
+        : "";
+      const worldReady = engine && worldUrl && worldUrl !== engine.worldUrl()
+        ? engine.setWorldModel(worldUrl)
+        : Promise.resolve(true);
+      void worldReady.then((shown) => {
+        if (cancelled) return;
+        if (!shown) setSceneError("Không tải được môi trường của cảnh này.");
+        // Thứ tự ưu tiên góc mở đầu:
+        //  1. quỹ đạo camera trong GLB riêng (`camera.path_url`) — clip lo TOÀN BỘ
+        //     chuyển động của cảnh, khung đầu clip chính là góc mở đầu;
+        //  2. toạ độ tác giả ghi trong DB (`cam_start_pos/cam_start_target`);
+        //  3. camera nướng sẵn trong model (`camera_node_name`);
+        //  4. không có gì ⇒ giữ nguyên góc `fit()` đang thấy.
+        // Path nạp bất đồng bộ (file chỉ vài chục KB): xong thì bay tới khung đầu,
+        // lỗi/không có clip thì lùi về preset — không để cảnh đứng hình chờ.
+        if (camera.path_url && engine) {
+          const url = camera.path_url;
+          void engine.setCameraPath(url).then((ready) => {
+            if (cancelled) return;
+            if (ready) {
+              engine.applyCameraPathStart(0);
+              waitForArrival(0, changingScene && duration > 0);
+            } else startWithPreset();
+          });
+        } else {
+          engine?.stopCameraPath();
+          startWithPreset();
+        }
+      });
     } else {
       engine?.stopCameraTimeline();
       engine?.stopCameraPath();

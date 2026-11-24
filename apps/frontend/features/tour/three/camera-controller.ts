@@ -283,6 +283,42 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
     );
     return true;
   };
+  const measureModel = (model: THREE.Object3D) => {
+    model.updateWorldMatrix(true, true);
+    const fullSphere = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere());
+    const focusBox = new THREE.Box3();
+    model.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      let ignored = false;
+      for (let current: THREE.Object3D | null = object; current; current = current.parent) {
+        if (current.userData.ignoreFit === true) {
+          ignored = true;
+          break;
+        }
+      }
+      if (!ignored) focusBox.expandByObject(object);
+    });
+    const sphere = focusBox.isEmpty()
+      ? fullSphere
+      : focusBox.getBoundingSphere(new THREE.Sphere());
+    const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+    const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+    const distance = sphere.radius / Math.sin(Math.min(verticalFov, horizontalFov) / 2) * 1.15;
+    return { fullSphere, sphere, distance };
+  };
+  const applyClip = (fullSphere: THREE.Sphere, sphere: THREE.Sphere, distance: number) => {
+    camera.near = Math.max(fullSphere.radius / 20000, 0.01);
+    camera.far = Math.max(
+      distance + sphere.radius * 2,
+      camera.position.distanceTo(fullSphere.center) + fullSphere.radius * 1.25,
+    );
+    controls.minDistance = sphere.radius * 0.05;
+    controls.maxDistance = distance * 5;
+    camera.updateProjectionMatrix();
+    controls.maxPolarAngle = polarCeiling;
+    fitMinDistance = controls.minDistance;
+  };
+
   return {
     snapshot,
     restore,
@@ -526,52 +562,27 @@ export function createCameraController(camera: THREE.PerspectiveCamera, controls
       return restore(snapshot());
     },
     fit(model: THREE.Object3D) {
-      model.updateWorldMatrix(true, true);
-      const fullSphere = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere());
-
-      // Terrain/backdrop có thể rộng hàng chục km. Nếu đưa nó vào khung ngắm,
-      // camera lùi rất xa và công trình chỉ còn vài pixel. Chỉ đo các mesh không
-      // được đánh dấu `ignoreFit`, nhưng vẫn dùng full bounds cho mặt phẳng cắt xa.
-      const focusBox = new THREE.Box3();
-      model.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
-        let ignored = false;
-        for (let current: THREE.Object3D | null = object; current; current = current.parent) {
-          if (current.userData.ignoreFit === true) {
-            ignored = true;
-            break;
-          }
-        }
-        if (!ignored) focusBox.expandByObject(object);
-      });
-      const sphere = focusBox.isEmpty()
-        ? fullSphere
-        : focusBox.getBoundingSphere(new THREE.Sphere());
-
-      const verticalFov = THREE.MathUtils.degToRad(camera.fov);
-      const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
-      const distance = sphere.radius / Math.sin(Math.min(verticalFov, horizontalFov) / 2) * 1.15;
+      const { fullSphere, sphere, distance } = measureModel(model);
       controls.target.copy(sphere.center);
       camera.position.copy(sphere.center).addScaledVector(new THREE.Vector3(1, 0.8, 1).normalize(), distance);
-      // `near` vẫn neo vào full bounds để giữ độ chính xác depth như trước; `far`
-      // phải phủ cả backdrop dù camera đang ngắm riêng công trình.
-      camera.near = Math.max(fullSphere.radius / 20000, 0.01);
-      camera.far = Math.max(
-        distance + sphere.radius * 2,
-        camera.position.distanceTo(fullSphere.center) + fullSphere.radius * 1.25,
-      );
-      controls.minDistance = sphere.radius * 0.05;
-      controls.maxDistance = distance * 5;
-      camera.updateProjectionMatrix();
-      controls.maxPolarAngle = polarCeiling;
+      applyClip(fullSphere, sphere, distance);
       controls.update();
-      // Trần minDistance mới của model; chuyến dí gần chỉ được nới trong lúc bay.
-      fitMinDistance = controls.minDistance;
       camLog(
         "fit",
         `bán kính focus=${sphere.radius.toFixed(2)} full=${fullSphere.radius.toFixed(2)} · near=${camera.near.toFixed(3)} · far=${camera.far.toFixed(0)} · minDistance=${controls.minDistance.toFixed(2)} · maxDistance=${controls.maxDistance.toFixed(2)} · cameraDist=${camera.position.distanceTo(controls.target).toFixed(2)}`,
       );
       home = snapshot();
+    },
+    /**
+     * Đổi file thế giới (ngoài ↔ trong) nhưng giữ pose cảnh đang bay.
+     * `controls.update()` bị bỏ: nó sẽ kẹp camera về min/max và phá chuyến bay.
+     */
+    adoptBounds(model: THREE.Object3D) {
+      const { fullSphere, sphere, distance } = measureModel(model);
+      applyClip(fullSphere, sphere, distance);
+      const current = camera.position.distanceTo(controls.target);
+      controls.minDistance = Math.min(controls.minDistance, Math.max(current, 0.05));
+      controls.maxDistance = Math.max(controls.maxDistance, current);
     },
     resize(width: number, height: number) {
       setLookAround(false);

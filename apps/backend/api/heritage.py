@@ -73,6 +73,8 @@ def _heritage_out(heritage, voices, voice_length) -> HeritageOut:
         "ambient_audio_url",
         "ambient_audio_alt_url",
         "transition_sfx_url",
+        "exterior_model_url",
+        "interior_model_url",
     )
     for voice in out.voices:
         _resolve_urls(voice, policy, "headshot_url", "intro_video_url")
@@ -172,6 +174,7 @@ def _scene_detail_out(sc, policy: AssetUrlPolicy) -> SceneDetailOut:
         description=sc.description,
         sequence=sc.sequence,
         use_ambient_audio_alt=getattr(sc, "use_ambient_audio_alt", False),
+        use_interior_model=getattr(sc, "use_interior_model", False),
         sky=sky_out,
         camera=camera_out,
         voice_clips=voices_out,
@@ -270,7 +273,14 @@ def _playback_map(content: HeritageContentOut) -> dict[str, ScenePlaybackOut]:
 
 
 def _model_url(content: HeritageContentOut) -> str | None:
-    """Tour-wide GLB: first model asset of the overview, else of the first scene."""
+    """Default world GLB: authored exterior URL, else overview/first scene asset.
+
+    Scenes with `use_interior_model` use `heritage.interior_model_url` instead.
+    A scene `models` entry still overrides that choice in the viewer.
+    """
+    exterior = (content.heritage.exterior_model_url or "").strip()
+    if exterior:
+        return exterior
     candidates = ([content.overview] if content.overview is not None else []) + list(
         content.scenes
     )

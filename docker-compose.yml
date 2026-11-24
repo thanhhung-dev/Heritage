@@ -99,12 +99,14 @@ services:
     - "0.5"
     networks:
       - heritage-network
+    # Listen chỉ mở sau khi model load xong. GET /health bị xếp hàng sau generate
+    # (1 slot, >5s) nên probe HTTP làm container unhealthy dù server đã sẵn sàng.
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf \"GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && grep -q \" 200\" <&3'"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 120s
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 40s
 
 
   redis:

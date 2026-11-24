@@ -153,6 +153,8 @@ export interface HeritageScene {
   sequence: number;
   /** Track phụ (ví dụ nội thất/ban đêm); thiếu URL thì im lặng. */
   use_ambient_audio_alt?: boolean;
+  /** Chọn `heritage.interior_model_url` thay cho file thế giới mặc định. */
+  use_interior_model?: boolean;
   sky: HeritageSkyPreset | null;
   camera: HeritageCamera;
   voice_clips: HeritageVoiceClip[];
@@ -182,6 +184,8 @@ export interface HeritageSummary {
   ambient_audio_url?: string | null;
   ambient_audio_alt_url?: string | null;
   transition_sfx_url?: string | null;
+  exterior_model_url?: string | null;
+  interior_model_url?: string | null;
   community_made: boolean;
   presented_by_logo_url: string | null;
   display_map: boolean;

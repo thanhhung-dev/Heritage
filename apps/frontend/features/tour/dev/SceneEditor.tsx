@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { useHeritageTour } from "@/context/heritage-tour";
 import { resolveSceneByKey, sceneKeys } from "@/lib/heritage";
 import { createSceneDraft, parseSceneDraft, sampleSceneDraft, type EditorPose } from "./scene-draft";
+import { resolveWorldUrl } from "../three/world-model";
 import styles from "./scene-editor.module.css";
 
 const timeLabel = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${Math.floor(seconds % 60).toString().padStart(2, "0")}`;
@@ -95,17 +96,20 @@ export default function SceneEditor() {
     const initial = engine.getCameraPose();
     // Clear any flight left by the normal viewer before taking editor ownership.
     engine.restoreCameraPose(initial);
-    if (scene.camera.path_url && !draftRef.current.useAB) {
-      void engine.setCameraPath(scene.camera.path_url).then((ready) => {
-        if (!cancelled && ready) engine.applyCameraPathStart(0);
-      });
-    } else {
-      const start = draftRef.current.start;
-      if (start) engine.restoreCameraPose({
-        position: new THREE.Vector3(...start.position), target: new THREE.Vector3(...start.target),
-        up: new THREE.Vector3(...start.up), fov: start.fov,
-      });
-    }
+    void engine.setWorldModel(resolveWorldUrl(scene, engine.defaultWorldUrl(), payload.heritage.interior_model_url)).then(() => {
+      if (cancelled) return;
+      if (scene.camera.path_url && !draftRef.current.useAB) {
+        void engine.setCameraPath(scene.camera.path_url).then((ready) => {
+          if (!cancelled && ready) engine.applyCameraPathStart(0);
+        });
+      } else {
+        const start = draftRef.current.start;
+        if (start) engine.restoreCameraPose({
+          position: new THREE.Vector3(...start.position), target: new THREE.Vector3(...start.target),
+          up: new THREE.Vector3(...start.up), fov: start.fov,
+        });
+      }
+    });
     const restoreControls = engine.enableCameraEditing();
     const audio = audioRef.current;
     return () => {

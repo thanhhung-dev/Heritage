@@ -165,6 +165,7 @@ class SceneDetailOut(BaseModel):
     sequence: int
     guide_stories: list[GuideStory] = Field(default_factory=list)
     use_ambient_audio_alt: bool = False
+    use_interior_model: bool = False
     sky: SkyPresetOut | None = None
     camera: CameraOut
     voice_clips: list[VoiceClipOut] = Field(default_factory=list)
@@ -202,6 +203,8 @@ class HeritageOut(BaseModel):
     ambient_audio_url: str | None = None
     ambient_audio_alt_url: str | None = None
     transition_sfx_url: str | None = None
+    exterior_model_url: str | None = None
+    interior_model_url: str | None = None
 
     language1: LanguageOut | None = None
     language2: LanguageOut | None = None

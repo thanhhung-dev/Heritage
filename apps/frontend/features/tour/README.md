@@ -31,6 +31,17 @@ URL ambience/highlight chưa có vẫn giữ `null`: không tải audio nội du
 
 Migration mới: `apps/backend/migrations/2026-11-07_tour_audio.sql` (chưa chạy). Cần áp dụng migration sau khi được duyệt **trước khi chạy backend với models mới trên DB cũ**: initializer hiện có khả năng tự thêm cột nhưng không giữ default/nullability của ORM. Migration không điền URL hay sửa liên kết audio hiện có.
 
+## Hai file thế giới (ngoài / trong)
+
+Tapestry đổi set theo cảnh. Với GLB, cùng ý đó nằm trên di sản:
+
+- `heritage.exterior_model_url` là file mặc định. Tour trả nó ở `modelUrl`. Thiếu thì vẫn lấy `model_asset` của overview hoặc scene đầu.
+- `heritage.interior_model_url` là file trong. Scene có `use_interior_model: true` mới dùng file này. Không có URL thì cảnh đó ở lại file mặc định, không mượn file kia.
+- `scene.models` nếu có GLB thì thắng cả hai URL trên.
+- Đổi cảnh sang URL khác thì ẩn file đang xem, hiện file kia (cache trong phiên engine, không tải lại). Lỗi file kia không hạ model của cả tour.
+- Không dùng `use_ambient_audio_alt` để chọn file.
+
+
 ## Mây động
 
 Mây trong tour dùng `scene.sky.cloudCoverage` và `cloudDensity` hiện có; một trong hai bằng 0 hoặc thiếu thì giữ trời quang. `three/clouds.ts` dựng lớp mây trôi chậm, đổi sắc theo độ cao mặt trời, nằm sau model và không dịch chuyển theo vị trí camera. Mây vẫn trôi khi Pause narration.
