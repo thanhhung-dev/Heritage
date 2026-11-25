@@ -41,6 +41,9 @@ AREAS = (
     TourArea("chua-thien-mu", "Chùa Thiên Mụ",
              ("chua-thien-mu", "thien-mu-pagoda"),
              ("Chùa Thiên Mụ", "Chùa Linh Mụ", "Thien Mu Pagoda")),
+    TourArea("cung-an-dinh", "Cung An Định",
+             ("cung-an-dinh",),
+             ("Cung An Định", "An Định")),
 )
 
 def resolve_area(value: str) -> TourArea:

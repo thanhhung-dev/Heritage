@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveTourArea, tourQuestions, validateTourReply } from "../lib/tour-chat-scope";
+import { mentionsOtherTourArea, resolveTourArea, tourQuestions, validateTourReply } from "../lib/tour-chat-scope";
 import { requestSceneChat } from "../lib/scene-chat-request";
 
 test("tour identity resolves explicit aliases and never guesses unsupported titles", () => {
   for (const slug of ["khiem-lang", "lang-tu-duc", "tu-duc-tomb"]) {
-    assert.equal(resolveTourArea(slug)?.id, "khiem-lang");
+    assert.equal(resolveTourArea(slug)?.id, "lang-tu-duc");
   }
   assert.equal(resolveTourArea("tapestry-test"), null);
   assert.equal(resolveTourArea("random-khiem-lang-tour"), null);
@@ -13,15 +13,31 @@ test("tour identity resolves explicit aliases and never guesses unsupported titl
   assert.ok(area && tourQuestions(area).every((question) => question.includes(area.title)));
 });
 
+test("An Dinh tour is explicitly scoped without admitting unrelated tours", () => {
+  const area = resolveTourArea("cung-an-dinh");
+  assert.equal(area?.id, "cung-an-dinh");
+  assert.equal(area?.title, "Cung An Định");
+  assert.equal(resolveTourArea("random-cung-an-dinh-tour"), null);
+  assert.equal(mentionsOtherTourArea("Cung An Định ở đâu?", "lang-tu-duc"), true);
+  assert.equal(mentionsOtherTourArea("An Định ở đâu?", "lang-tu-duc"), true);
+  assert.equal(mentionsOtherTourArea("Cung An Định ở đâu?", "cung-an-dinh"), false);
+  assert.deepEqual(validateTourReply({
+    active_area_id: "cung-an-dinh", answer_type: "conversation", sources: [], follow_up_questions: [],
+  }, "cung-an-dinh"), []);
+  assert.throws(() => validateTourReply({
+    active_area_id: "lang-khai-dinh", answer_type: "conversation", sources: [], follow_up_questions: [],
+  }, "cung-an-dinh"));
+});
+
 test("replies require matching area, source provenance and bounded followups", () => {
   const reply = {
-    active_area_id: "khiem-lang",
+    active_area_id: "lang-tu-duc",
     answer_type: "answered",
     answer: "Verified answer",
-    sources: [{ passage_id: "42", active_area_id: "khiem-lang" }],
+    sources: [{ passage_id: "42", active_area_id: "lang-tu-duc" }],
     follow_up_questions: ["Kiến trúc của Khiêm Lăng có gì đặc sắc?"],
   };
-  assert.deepEqual(validateTourReply(reply, "khiem-lang"), reply.follow_up_questions);
+  assert.deepEqual(validateTourReply(reply, "lang-tu-duc"), reply.follow_up_questions);
   for (const change of [
     { active_area_id: undefined },
     { active_area_id: "lang-minh-mang" },
@@ -32,10 +48,10 @@ test("replies require matching area, source provenance and bounded followups", (
     { follow_up_questions: Array(4).fill("Question") },
     { answer_type: "conversation" },
   ]) {
-    assert.throws(() => validateTourReply({ ...reply, ...change }, "khiem-lang"));
+    assert.throws(() => validateTourReply({ ...reply, ...change }, "lang-tu-duc"));
   }
   assert.deepEqual(
-    validateTourReply({ ...reply, sources: [], answer_type: "out_of_scope" }, "khiem-lang"),
+    validateTourReply({ ...reply, sources: [], answer_type: "out_of_scope" }, "lang-tu-duc"),
     reply.follow_up_questions,
   );
 });

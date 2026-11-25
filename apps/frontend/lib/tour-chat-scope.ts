@@ -12,6 +12,7 @@ const AREAS: TourArea[] = [
   { id: "dai-noi-hue", title: "Đại Nội Huế", slugs: ["dai-noi-hue", "forbidden-city", "imperial-city"] },
   { id: "lang-khai-dinh", title: "Lăng Khải Định", slugs: ["lang-khai-dinh", "khai-dinh-tomb"] },
   { id: "chua-thien-mu", title: "Chùa Thiên Mụ", slugs: ["chua-thien-mu", "thien-mu-pagoda"] },
+  { id: "cung-an-dinh", title: "Cung An Định", slugs: ["cung-an-dinh"] },
 ];
 
 // Extra display-name aliases supplement the route identities above. The backend
@@ -23,6 +24,7 @@ const PLACE_ALIASES: Record<string, string[]> = {
   "dai-noi-hue": ["Đại Nội", "Hoàng thành Huế", "Hoàng thành Nhà Nguyễn", "Hue Imperial City"],
   "lang-khai-dinh": ["Ứng Lăng"],
   "chua-thien-mu": ["Chùa Linh Mụ"],
+  "cung-an-dinh": ["An Định"],
 };
 
 function normalizedPlace(value: string): string {

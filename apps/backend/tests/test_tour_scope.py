@@ -18,7 +18,7 @@ from pydantic import ValidationError
 
 from apps.backend.ai.answering.conversation import conversation_messages
 from apps.backend.api.public.chat.schemas import ChatRequest
-from apps.backend.services.tour_scope import follow_up_questions, resolve_area
+from apps.backend.services.tour_scope import follow_up_questions, question_outside_area, resolve_area
 from pipelines.graph.microsoft_graphrag import export_snapshot, query_snapshot, validate_area_snapshot
 
 
@@ -36,6 +36,20 @@ class ScopeContractTests(unittest.TestCase):
         self.assertEqual(area.id, AREA)
         for name in ("khiem-lang", "lang-tu-duc", "Tu Duc Tomb"):
             self.assertEqual(resolve_area(name), area)
+
+    def test_an_dinh_tour_has_its_own_scope(self):
+        area = resolve_area("cung-an-dinh")
+        self.assertEqual(area.id, "cung-an-dinh")
+        self.assertEqual(area.title, "Cung An Định")
+        self.assertEqual(resolve_area("Cung An Định"), area)
+        self.assertEqual(resolve_area("An Định"), area)
+        request = ChatRequest(message="Xin chào", active_area_id=area.id,
+                              heritage_context={"slug": "cung-an-dinh"})
+        self.assertEqual(request.active_area_id, area.id)
+        with self.assertRaises(ValidationError):
+            ChatRequest(message="Xin chào", active_area_id="lang-khai-dinh",
+                        heritage_context={"slug": "cung-an-dinh"})
+        self.assertEqual(question_outside_area("Cung An Định ở đâu?", resolve_area(AREA)), area)
 
     def test_rejects_unknown_mismatched_and_unbounded_context(self):
         cases = [dict(active_area_id="unknown"), dict(heritage_context={}),
