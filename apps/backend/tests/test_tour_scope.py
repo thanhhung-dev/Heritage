@@ -95,12 +95,14 @@ class AreaApiTests(unittest.TestCase):
             active_area_id=AREA, to_source=lambda: {"passage_id": "42", "active_area_id": AREA},
         )
 
-    def exercise(self, question="Vua Tự Đức sống ở đây thế nào?", *, evidence=None, raw=None, error=None, extra=None):
+    def exercise(self, question="Vua Tự Đức sống ở đây thế nào?", *, evidence=None, raw=None, error=None,
+                 extra=None, graph_context=None):
         for module_name in MODULES:
             with self.subTest(module=module_name), patch.object(REGISTRY, "register"):
                 api = importlib.import_module(module_name)
                 repository = SimpleNamespace(search_evidence=AsyncMock(side_effect=error, return_value=SimpleNamespace(
-                    evidence=[self.evidence] if evidence is None else evidence, graph_context=[],
+                    evidence=[self.evidence] if evidence is None else evidence,
+                    graph_context=list(graph_context or []),
                 )))
                 app = FastAPI()
                 app.include_router(api.router, prefix="/api")
@@ -119,9 +121,84 @@ class AreaApiTests(unittest.TestCase):
             self.assertEqual(data["sources"][0]["passage_id"], "42")
             self.assertGreaterEqual(len(data["follow_up_questions"]), 1)
             self.assertLessEqual(len(data["follow_up_questions"]), 3)
-            self.assertTrue(any("Khiêm Lăng" in item for item in data["follow_up_questions"]))
+            self.assertEqual(data["follow_up_questions"][0], "Lịch sử của Lăng Tự Đức có gì đáng chú ý?")
             repository.search_evidence.assert_awaited_once_with("Vua Tự Đức sống ở đây thế nào?", active_area_id=AREA)
             self.assertEqual(generate.call_args.kwargs["active_area_id"], AREA)
+
+    def test_tour_first_follow_up_stays_with_the_asked_entity(self):
+        question = "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        raw = {"answer_type": "answered", "answer": "Bi Đình thuộc Lăng Tự Đức.",
+               "source_ids": ["42"], "follow_up_questions": ["Điện Hòa Khiêm có gì đặc biệt?"]}
+        for response, _, _ in self.exercise(question, raw=raw):
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.json()["follow_up_questions"][:2], [
+                "Lịch sử của Bi Đình trong Lăng Tự Đức có gì đáng chú ý?",
+                "Điện Hòa Khiêm trong Lăng Tự Đức có gì đặc biệt?",
+            ])
+
+    def test_missing_artifact_data_does_not_name_an_artifact_inside_the_tour(self):
+        question = "Lăng Tự Đức làm bằng gì?"
+        raw = {"answer_type": "answered", "answer": "Khiêm Lăng gắn với vua Tự Đức.",
+               "source_ids": ["42"], "follow_up_questions": [
+                   "Bia Khiêm Cung Ký trong Lăng Tự Đức được khắc năm nào?",
+                   "Chuông đồng ở Lăng Tự Đức có gì?",
+               ]}
+        for response, _, _ in self.exercise(question, raw=raw):
+            follow = response.json()["follow_up_questions"]
+            self.assertEqual(follow, [
+                "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+                "Bi Đình trong Lăng Tự Đức có gì đặc biệt?",
+            ])
+            self.assertNotIn(question, follow)
+            self.assertNotIn("Bia Khiêm Cung Ký", " ".join(follow))
+            self.assertNotIn("Chuông", " ".join(follow))
+
+    def test_identified_artifact_then_graph_neighbor_stay_in_tour_scope(self):
+        question = "Lăng Tự Đức làm bằng gì?"
+        raw = {"answer_type": "answered", "answer": "Khiêm Lăng gắn với vua Tự Đức.",
+               "source_ids": ["42"], "follow_up_questions": ["Đại Nội có gì đặc biệt?"]}
+        graph = [{"kind": "entity", "type": "artifact", "title": "Bia Khiêm Cung Ký",
+                  "source_passage_ids": ["42"]}]
+        for response, _, _ in self.exercise(question, raw=raw, graph_context=graph):
+            follow = response.json()["follow_up_questions"]
+            self.assertEqual(follow, [
+                "Lịch sử của Bia Khiêm Cung Ký trong Lăng Tự Đức có gì đáng chú ý?",
+                "Bi Đình trong Lăng Tự Đức có gì đặc biệt?",
+            ])
+            self.assertTrue(all("Lăng Tự Đức" in item for item in follow))
+            self.assertNotIn("Đại Nội", " ".join(follow))
+
+    def test_clicked_suggestion_retrieves_sources_and_checks_citations(self):
+        asked = "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        opened = {"answer_type": "answered", "answer": "Bi Đình thuộc Lăng Tự Đức.",
+                  "source_ids": ["42"], "follow_up_questions": ["Bia Khiêm Cung Ký được khắc năm nào?"]}
+        for module_name in MODULES:
+            with self.subTest(module=module_name), patch.object(REGISTRY, "register"):
+                api = importlib.import_module(module_name)
+                repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(
+                    evidence=[self.evidence], graph_context=[],
+                )))
+                app = FastAPI()
+                app.include_router(api.router, prefix="/api")
+                app.dependency_overrides[api.get_repository] = lambda: repository
+                with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(opened)):
+                    first = client.post("/api/chat", json={"message": asked, "active_area_id": AREA})
+                suggestion = first.json()["follow_up_questions"][0]
+                self.assertEqual(suggestion, "Lịch sử của Bi Đình trong Lăng Tự Đức có gì đáng chú ý?")
+                uncited = {"answer_type": "answered", "answer": "Khắc năm 9999.", "source_ids": ["missing"]}
+                with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(uncited)):
+                    rejected = client.post("/api/chat", json={"message": suggestion, "active_area_id": AREA})
+                self.assertEqual(repository.search_evidence.await_args.args[0], suggestion)
+                self.assertEqual(rejected.json()["answer_type"], "insufficient_evidence")
+                self.assertEqual(rejected.json()["sources"], [])
+                self.assertNotIn("9999", rejected.json()["answer"])
+                cited = {"answer_type": "answered", "answer": "Bi Đình thuộc Lăng Tự Đức.", "source_ids": ["42"]}
+                with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(cited)):
+                    accepted = client.post("/api/chat", json={"message": suggestion, "active_area_id": AREA})
+                self.assertEqual(repository.search_evidence.await_args.args[0], suggestion)
+                self.assertEqual(accepted.json()["answer_type"], "answered")
+                self.assertEqual(accepted.json()["sources"][0]["passage_id"], "42")
+
 
     def test_social_turn_calls_model_once_without_retrieval(self):
         raw = {"answer_type": "conversation", "answer": "Chào bạn tại Khiêm Lăng! 你好", "source_ids": []}

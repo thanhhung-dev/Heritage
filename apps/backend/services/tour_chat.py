@@ -6,11 +6,11 @@ import json
 import re
 
 from apps.backend.ai.answering.conversation import (
-    ConversationAnswer, append_graph_follow_up_hint, related_follow_ups, grounded_source_ids,
+    ConversationAnswer, append_graph_follow_up_hint, grounded_source_ids,
     dialogue_turns, is_social_turn, prior_user_questions,
 )
 from apps.backend.common.config import chat_timeout_seconds
-from apps.backend.services.tour_guide import GUIDE_STORIES, TourFocus, guide_stories
+from apps.backend.services.heritage_graph import artifact_title_from_data, ordered_entity_follow_ups
 from apps.backend.services.tour_scope import (
     allowed_output, allowed_tour_output, follow_up_questions, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
@@ -52,22 +52,29 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     social = is_social_turn(question)
 
     def response(text, kind, sources=(), questions=(), graph_context=None, evidence=()):
+        del questions
         snapshot = reply_context.model_copy(update={
             "story_id": reply_context.story_id if kind == "answered" else None,
         }).model_dump() if reply_context else None
-        related = [] if unmapped_marker else related_follow_ups(
-            list(questions), question, graph_context=graph_context,
-            evidence=evidence, area_title=area.title,
+        artifact = None if unmapped_marker else artifact_title_from_data(
+            focus_title=focus.title if focus else None,
+            graph_context=graph_context, evidence=evidence,
         )
-        focus_names = (focus.title,) if focus else ()
+        related = [] if unmapped_marker else ordered_entity_follow_ups(
+            question, area_title=area.title, artifact_title=artifact,
+        )
+        asked_norm = normalized(question)
+        scoped = [
+            item for item in follow_up_questions(
+                related, area, fallback=not selected_marker or kind == "answered",
+                fallback_questions=focus.questions() if focus else None,
+            ) if normalized(item) != asked_norm
+        ]
         return {
             "answer": text, "answer_type": kind, "sources": list(sources),
             "active_area_id": area.id,
             "reply_context": snapshot,
-            "follow_up_questions": follow_up_questions(
-                related, area, fallback=not selected_marker or kind == "answered",
-                focus_names=focus_names, fallback_questions=focus.questions() if focus else None,
-            ),
+            "follow_up_questions": scoped[:2],
             "resolution_status": "not_found" if kind == "insufficient_evidence" else "resolved",
         }
 

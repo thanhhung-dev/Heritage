@@ -163,6 +163,22 @@ class ChatApiTests(unittest.TestCase):
         self.assertTrue(any("Bi Đình" in item for item in follow))
         self.assertTrue(any("Hòa Khiêm" in item for item in follow))
 
+    def test_first_follow_up_stays_on_the_asked_entity_before_graph_neighbors(self):
+        self.evidence.text = "Bi Đình là công trình trong Lăng Tự Đức."
+        with patch.object(chat_api, "generate_response", return_value=model_answer(
+            self.evidence.text, follow_up_questions=["Điện Hòa Khiêm trong Lăng Tự Đức có gì đặc biệt?"],
+        )):
+            response = self.client.post("/api/chat", json={
+                "message": "Bi Đình trong Lăng Tự Đức có gì đặc biệt?",
+            })
+        self.assertEqual(response.status_code, 200, response.text)
+        follow = response.json()["follow_up_questions"]
+        self.assertEqual(follow[:2], [
+            "Lịch sử của Bi Đình có gì đáng chú ý?",
+            "Điện Hòa Khiêm trong Lăng Tự Đức có gì đặc biệt?",
+        ])
+        self.assertEqual(response.json()["sources"][0]["passage_id"], 42)
+
     def test_graph_topics_steer_follow_ups_without_requiring_citations(self):
         self.search.return_value.graph_context = [
             {"kind": "entity", "title": "Bi Đình", "source_passage_ids": ["42"]},

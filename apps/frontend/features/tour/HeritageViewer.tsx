@@ -357,7 +357,7 @@ export default function HeritageViewer({ interactiveRoute = false }: { interacti
             const isFirst = idx === 0;
             const isLast = keys.length > 1 && idx === keys.length - 1;
             const hasIcon = isFirst || isLast;
-            const displayNo = key.replace(/^s/i, "");
+            const displayNo = String(idx);
             return (
               <div
                 key={key}

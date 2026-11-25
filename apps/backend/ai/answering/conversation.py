@@ -7,7 +7,7 @@ from typing import Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from apps.backend.ai.answering.prompt import user_msg
-from apps.backend.services.heritage_graph import neighbor_follow_ups
+from apps.backend.services.heritage_graph import in_entity_follow_up, neighbor_follow_ups
 from apps.backend.services.tour_scope import area_system_policy, allowed_output, normalized, resolve_area
 
 _SOCIAL = frozenset({"hi", "hello", "xin chao", "chao", "cam on", "ban la ai"})
@@ -215,11 +215,12 @@ _FOLLOW_UP_PATTERNS = (
 
 def related_follow_ups(
     values: list[str], asked: str, *, graph_context: list[dict] | None = None,
-    evidence=(), area_title: str | None = None,
+    evidence=(), area_title: str | None = None, focus_title: str | None = None,
 ) -> list[str]:
-    """Always try for 2–3 related questions; complex neighbors first, then GraphRAG."""
+    """Start with the current entity, then related entities and GraphRAG topics."""
+    first = in_entity_follow_up(asked, area_title=area_title, focus_title=focus_title)
     accepted = clean_follow_ups(
-        list(neighbor_follow_ups(asked, area_title=area_title)) + list(values), asked,
+        ([first] if first else []) + neighbor_follow_ups(asked, area_title=area_title) + list(values), asked,
     )
     if len(accepted) >= 2:
         return accepted[:3]
@@ -315,4 +316,3 @@ def conversation_messages(
         *turns,
         {"role": "user", "content": body},
     ]
-
