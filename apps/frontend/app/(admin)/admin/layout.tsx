@@ -7,6 +7,7 @@ import { ConfigProvider, App as AntApp } from 'antd';
 import { adminToken, clearAdminSession, signOutAdmin, verifyAdmin } from '@/features/admin-auth/admin-session';
 import {
   DashboardOutlined,
+  SoundOutlined,
   FileTextOutlined,
   AuditOutlined,
   NumberOutlined,
@@ -69,6 +70,7 @@ const ADMIN_NAV = [
   { key: '/admin/documents', label: 'Document library', icon: <FileTextOutlined /> },
   { key: '/admin/review-queue', label: 'Pending review', icon: <AuditOutlined /> },
   { key: '/admin/ingestion', label: 'Ingestion', icon: <NumberOutlined /> },
+  { key: '/admin/audio-transcript', label: 'Audio & Transcript', icon: <SoundOutlined /> },
 ];
 
 const ADMINISTRATION_NAV = [
@@ -147,17 +149,19 @@ export default function AdminLayout({
         <div
           style={{
             display: 'flex',
-            minHeight: '100vh',
+            height: '100vh',
+            overflow: 'hidden',
             backgroundColor: '#F8F7F3',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             color: '#111827',
           }}
         >
           {/* Sidebar sáng BoardUI / Figma (#F8F7F3) */}
-         <aside
+          <aside
             style={{
               width: collapsed ? 68 : 260,
               flexShrink: 0,
+              height: '100vh',
               backgroundColor: '#F8F7F3',
               display: 'flex',
               flexDirection: 'column',
@@ -470,6 +474,7 @@ export default function AdminLayout({
             style={{
               flex: 1,
               minWidth: 0,
+              height: '100vh',
               padding: '10px 10px 10px 0',
               display: 'flex',
             }}
@@ -481,7 +486,7 @@ export default function AdminLayout({
                 backgroundColor: '#FFFFFF',
                 borderRadius: 12,
                 border: '1px solid #EBE9E2',
-                overflow: 'hidden',
+                overflowY: 'auto',
               }}
             >
               {children}
