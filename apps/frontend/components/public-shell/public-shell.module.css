@@ -705,3 +705,8 @@
     font-size: 0.625rem;
   }
 }
+
+@media (max-width: 767px) {
+  .controls > .navigation { display: none; }
+  .authAction, .iconButton, .avatarTrigger { min-width: 44px; min-height: 44px; }
+}

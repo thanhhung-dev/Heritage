@@ -114,7 +114,9 @@ export function useConversationSession({
           setError("AI phản hồi quá thời gian chờ. Bạn có thể gửi lại; yêu cầu trước có thể đã được máy chủ xử lý.");
         } else if (isCurrent()) {
           setError(
-            failure instanceof Error ? failure.message : "Không thể gửi câu hỏi. Vui lòng thử lại.",
+            failure instanceof TypeError
+              ? "Không thể kết nối đến dịch vụ chat. Vui lòng kiểm tra kết nối và thử lại."
+              : failure instanceof Error ? failure.message : "Không thể gửi câu hỏi. Vui lòng thử lại.",
           );
         }
       } finally {
