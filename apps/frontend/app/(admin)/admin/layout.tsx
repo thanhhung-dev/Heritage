@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ConfigProvider, App as AntApp } from 'antd';
 import { adminToken, clearAdminSession, signOutAdmin, verifyAdmin } from '@/features/admin-auth/admin-session';
+import { resetDocuments } from '@/features/admin-documents/mock-documents';
 import {
   DashboardOutlined,
   FileTextOutlined,
@@ -117,6 +118,7 @@ export default function AdminLayout({
 
   async function handleSignOut() {
     const confirmed = await signOutAdmin();
+    resetDocuments();
     router.replace(confirmed ? '/admin/login' : '/admin/login?logout=unconfirmed');
   }
 
