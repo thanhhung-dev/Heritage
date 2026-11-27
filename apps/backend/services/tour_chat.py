@@ -13,7 +13,7 @@ from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.services.heritage_graph import artifact_title_from_data, ordered_entity_follow_ups
 from apps.backend.services.tour_guide import GUIDE_STORIES, TourFocus, guide_stories
 from apps.backend.services.tour_scope import (
-    allowed_output, allowed_tour_output, follow_up_questions, normalized,
+    TourArea, allowed_output, allowed_tour_output, follow_up_questions, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
 )
 from apps.backend.services.web_research import WEB_LABEL, research_heritage
@@ -24,6 +24,41 @@ class TourChatError(RuntimeError):
         super().__init__(detail)
         self.status = status
         self.detail = detail
+
+
+def _readable_excerpt(text: str, area: TourArea, title: str = "") -> str:
+    """Format a source excerpt without rewriting its historical claims."""
+    # Remove the standard import note without dropping surrounding source prose.
+    note = re.search(
+        r"Bản trích tư liệu đã lọc định dạng, chưa phải nội dung đã kiểm chứng toàn bộ\."
+        r"\s*Các nhận định, lời kể và công thức bên dưới thuộc nguồn được ghi\.",
+        text,
+    )
+    if note:
+        text = text[:note.start()] + "\n" + text[note.end():]
+
+    lines = []
+    titles = {normalized(value) for value in (*area.names, area.title, title) if value}
+    for line in text.splitlines():
+        line = re.sub(r"^\s*(?:#{1,6}\s+|>\s*)", "", line).strip()
+        if not line or normalized(line) in titles:
+            continue
+        if re.match(r"^(?:Đối tượng\s*:|Nguồn\s*\[S\d+\]\s*:)", line):
+            continue
+        lines.append(line)
+
+    sentences = []
+    seen = set()
+    for sentence in re.split(r"(?<=[.!?])\s+|[\r\n]+", "\n".join(lines)):
+        sentence = visible_answer(sentence.strip())
+        key = normalized(sentence)
+        if not key or key in seen or not allowed_tour_output(sentence, "answered", area):
+            continue
+        seen.add(key)
+        sentences.append(sentence)
+    return "\n\n".join(
+        " ".join(sentences[index:index + 2]) for index in range(0, len(sentences), 2)
+    )
 
 
 async def answer_in_area(request, repository, generate, generation_details, *, reply_context=None) -> dict:
@@ -139,16 +174,13 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         ]
         graph_context = result.graph_context
 
-    # Keep an independent, bounded KB set for the fallback path. The mixed model
-    # context reserves room for web evidence, but must not discard useful KB text.
-    kb_fallback_evidence = []
-    kb_fallback_size = 0
+    kb_evidence = []
+    kb_size = 0
     for item in evidence:
-        block = f"[Passage {item.id}]\n{item.text}"
-        if kb_fallback_size + len(block) + 2 <= 4800:
-            kb_fallback_evidence.append(item)
-            kb_fallback_size += len(block) + 2
-
+        block_size = len(f"[Passage {item.id}]\n{item.text}") + 2
+        if kb_size + block_size <= 4800:
+            kb_evidence.append(item)
+            kb_size += block_size
     web_evidence = ()
     if not social and destination is None and not is_dialogue_question(question):
         research = await research_heritage(
@@ -209,24 +241,19 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     def related_or_missing():
         if destination is not None:
             return response(scoped_refusal(area, destination), "out_of_scope")
-        # Retrieval already enforces the area and reviewed highlight links. Even
-        # a partial KB match is useful; preserve it if the mixed context reserved
-        # space for web evidence and the model could not produce a cited answer.
-        for item in (*kb_fallback_evidence, *web_evidence):
-            excerpts = [
-                part.strip() for part in re.split(r"(?<=[.!?])\s+|[\r\n]+", item.text)
-                if part.strip() and allowed_tour_output(part.strip(), "answered", area)
-            ]
-            if not excerpts:
-                continue
-            text = (
-                "Tư liệu hiện có chưa trả lời trực tiếp đầy đủ câu hỏi này. "
-                "Mình tìm được thông tin liên quan:\n\n" + " ".join(excerpts)
+        for item in (*kb_evidence, *web_evidence):
+            excerpt = _readable_excerpt(
+                item.text, area, getattr(item, "location_note", ""),
             )
-            return response(
-                text, "answered", [item.to_source()], evidence=[item], story_complete=False,
-            )
-        return response(scoped_missing(area), "insufficient_evidence")
+            if excerpt:
+                return response(
+                    "Mình tìm được thông tin liên quan trong tư liệu:\n\n" + excerpt,
+                    "answered", [item.to_source()], evidence=[item], story_complete=False,
+                )
+        return response(
+            "Mình chưa tổng hợp được câu trả lời có căn cứ cho câu hỏi này. Bạn thử lại nhé.",
+            "insufficient_evidence", story_complete=False,
+        )
 
     def parse(raw, details):
         if details.truncated is True:
