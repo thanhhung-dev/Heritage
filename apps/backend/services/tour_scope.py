@@ -147,6 +147,13 @@ def area_system_policy(area: TourArea, *, artifact_title: str | None = None) -> 
         "và chỉ nhắc tên nơi đó, không kể dữ kiện. "
         "Chủ đề không thuộc di sản này cũng là out_of_scope, dù nguồn có Passage của khu này. "
         "Thiếu Passage không phải out_of_scope."
+        "\nChính sách trả lời trong tour, ưu tiên hơn quy tắc thiếu bằng chứng ở trên: "
+        "còn Passage hợp lệ liên quan dù chỉ một phần thì trả answered và trích source_ids. "
+        "Ưu tiên trả lời trực tiếp; nếu chưa đủ, nói phần tư liệu có và phần chưa xác nhận. "
+        "Nếu chỉ có thông tin liên quan, nói rõ đây là thông tin liên quan rồi kể từ Passage, "
+        "không giả vờ đã giải đáp đúng chi tiết đang hỏi. "
+        "Chỉ dùng insufficient_evidence khi không còn nội dung liên quan dùng được. "
+        "Không tự bổ sung dữ kiện ngoài Passage."
     )
     if artifact_title:
         policy += (
