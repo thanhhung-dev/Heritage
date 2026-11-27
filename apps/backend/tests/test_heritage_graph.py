@@ -39,6 +39,7 @@ class HeritageGraphTests(unittest.TestCase):
         )
         self.assertIsNone(in_entity_follow_up("Chào bạn"))
 
+
     def test_follow_up_pair_orders_entity_then_neighbor_and_skips_the_asked_question(self):
         asked = "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
         self.assertEqual(ordered_entity_follow_ups(asked, area_title="Lăng Tự Đức"), [

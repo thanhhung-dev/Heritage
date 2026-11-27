@@ -167,8 +167,9 @@ The internal JSON contains `answer_type`, `answer`, `source_ids` and optional
 bounded active-area Passages. A partially supported answer remains `answered`:
 it states that the requested detail is unverified, then may present only the
 related fact supported by its citation. Other outcomes cannot attach citations.
-Invalid JSON, invalid citations and unsafe scope output are discarded in favor
-of a safe scoped response. Retrieval/context service failures retain their HTTP
+Invalid JSON, invalid citations and unsafe scope output are discarded. A factual
+turn without a citation that belongs to the retrieved passages abstains; raw passage text is not returned as the answer.
+Retrieval/context service failures retain their HTTP
 errors; the total request deadline remains unchanged.
 
 Bounded prior user questions are included in the same generation prompt only

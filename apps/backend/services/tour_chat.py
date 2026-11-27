@@ -11,6 +11,7 @@ from apps.backend.ai.answering.conversation import (
 )
 from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.services.heritage_graph import artifact_title_from_data, ordered_entity_follow_ups
+from apps.backend.services.tour_guide import GUIDE_STORIES, TourFocus, guide_stories
 from apps.backend.services.tour_scope import (
     allowed_output, allowed_tour_output, follow_up_questions, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
@@ -171,13 +172,24 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         )
         return raw, generation_details()
 
+    def abstain():
+        return response(scoped_missing(area), "insufficient_evidence")
+
     try:
         raw, details = await asyncio.to_thread(infer)
         if details.truncated is True:
             raise ValueError("Truncated answer")
+        payload = json.loads(raw)
+        if (
+            isinstance(payload, dict)
+            and payload.get("answer_type") == "insufficient_evidence"
+            and payload.get("source_ids")
+        ):
+            payload["answer_type"] = "answered"
+            raw = json.dumps(payload, ensure_ascii=False)
         answer = ConversationAnswer.model_validate_json(raw)
     except Exception:
-        return response(scoped_missing(area), "insufficient_evidence")
+        return abstain()
 
     if social:
         if answer.answer_type == "conversation" and allowed_tour_output(answer.answer, "conversation", area):
@@ -196,20 +208,19 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     if story_evidence_missing and answer.answer_type != "conversation":
         return response(scoped_missing(area), "insufficient_evidence")
 
-    if answer.answer_type == "answered":
+    if answer.answer_type in {"answered", "insufficient_evidence"}:
         cited = grounded_source_ids(answer.source_ids, ids)
-        if not cited or (story and not set(story.source_ids) <= set(cited)):
-            return response(scoped_missing(area), "insufficient_evidence")
-        if not allowed_tour_output(answer.answer, "answered", area):
+        spoken = re.sub(r"\b[Pp]assage\b", "Tư liệu", answer.answer)
+        story_uncited = bool(story and not set(story.source_ids) <= set(cited))
+        if cited and not story_uncited and allowed_tour_output(spoken, "answered", area):
+            sources = [item.to_source() for item in evidence if str(item.id) in cited]
+            return response(
+                spoken, "answered", sources, questions=answer.follow_up_questions,
+                graph_context=accepted_graph, evidence=evidence,
+            )
+        if answer.answer_type == "answered" and cited and not allowed_tour_output(spoken, "answered", area):
             return response(scoped_refusal(area), "out_of_scope")
-        sources = [item.to_source() for item in evidence if str(item.id) in cited]
-        return response(
-            answer.answer, "answered", sources, questions=answer.follow_up_questions,
-            graph_context=accepted_graph, evidence=evidence,
-        )
-
-    if answer.answer_type == "insufficient_evidence":
-        return response(scoped_missing(area), "insufficient_evidence")
+        return abstain()
     if answer.answer_type == "conversation":
         if allowed_tour_output(answer.answer, "conversation", area):
             return response(answer.answer, "conversation", questions=answer.follow_up_questions)
