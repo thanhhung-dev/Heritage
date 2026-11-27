@@ -76,6 +76,8 @@ function sourcesFrom(value: unknown): Source[] {
       text: typeof source.text === "string" ? source.text : undefined,
       url: safeSourceUrl(typeof source.url === "string" ? source.url : null) ?? undefined,
       chunk_id: typeof id === "string" || typeof id === "number" ? String(id) : undefined,
+      source_type: source.source_type === "web" ? "web" : source.source_type === "kb" ? "kb" : undefined,
+      verification_status: source.verification_status === "unreviewed" ? "unreviewed" : undefined,
     }];
   });
 }

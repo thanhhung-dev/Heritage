@@ -50,6 +50,7 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
                 return <li key={`${source.chunk_id ?? "source"}-${index}`}>
                   {url ? <a href={url} target="_blank" rel="noopener noreferrer">{source.doc ?? source.heading ?? `Nguồn ${index + 1}`}</a>
                     : source.doc ?? source.heading ?? `Đoạn nguồn ${source.chunk_id ?? index + 1}`}
+                  {source.source_type === "web" && <span> — Nguồn web, chưa được HeritageGraph thẩm định</span>}
                 </li>;
               })}</ol>
             </details>}

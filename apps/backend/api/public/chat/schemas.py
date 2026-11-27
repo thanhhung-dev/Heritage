@@ -144,7 +144,10 @@ class ChatOutcome(BaseModel):
 
 class ChatResponse(ChatOutcome):
     answer: str
-    sources: list[dict] = Field(default_factory=list)
+    sources: list[dict] = Field(default_factory=list, description=(
+        "Nguồn đã dùng trong câu trả lời. Nguồn web bổ sung có source_type=web, "
+        "verification_status=unreviewed; không phải passage KB đã thẩm định."
+    ))
 
 
 class MessageCitationResponse(BaseModel):

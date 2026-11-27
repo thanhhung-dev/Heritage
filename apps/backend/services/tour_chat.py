@@ -16,12 +16,7 @@ from apps.backend.services.tour_scope import (
     allowed_output, allowed_tour_output, follow_up_questions, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
 )
-from apps.backend.services.web_research import answer_from_page, research_heritage
-def _wiki_source(found, area_id: str) -> dict:
-    return {
-        "passage_id": "wiki", "chunk_id": "wiki", "doc": found.title,
-        "url": found.url, "active_area_id": area_id,
-    }
+from apps.backend.services.web_research import WEB_LABEL, research_heritage
 
 
 class TourChatError(RuntimeError):
@@ -53,13 +48,16 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     dialogue = dialogue_turns(history)
     selected_marker = bool(reply_context and reply_context.highlight_id is not None)
     links = reply_context.passage_links if selected_marker else None
-    focus = TourFocus(title=reply_context.highlight_title or "Điểm đang chọn") if links else None
+    focus = TourFocus(title=reply_context.highlight_title or "Điểm đang chọn") if selected_marker else None
     unmapped_marker = selected_marker and not links
     destination = question_outside_area(question, area)
     social = is_social_turn(question)
 
     def response(text, kind, sources=(), questions=(), graph_context=None, evidence=(), *, story_complete=True):
         del questions
+        if any(source.get("source_type") == "web" for source in sources):
+            text = f"{WEB_LABEL}\n\n{text}"
+            story_complete = False
         snapshot = reply_context.model_copy(update={
             "story_id": reply_context.story_id if kind == "answered" and story_complete else None,
         }).model_dump() if reply_context else None
@@ -87,9 +85,6 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             "follow_up_questions": scoped[:2],
             "resolution_status": "not_found" if kind == "insufficient_evidence" else "resolved",
         }
-
-    if unmapped_marker:
-        return response(scoped_missing(area), "insufficient_evidence")
 
     scene_hint = request.scene_context
     if reply_context:
@@ -144,22 +139,36 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         ]
         graph_context = result.graph_context
 
-    if (
-        not evidence and not social and destination is None and not unmapped_marker
-        and not is_dialogue_question(question)
-    ):
-        found = await research_heritage(question, area.title, area.names)
-        if found is not None:
-            spoken = answer_from_page(question, found, generate)
-            if spoken:
-                return response(spoken, "answered", [_wiki_source(found, area.id)])
+    # Keep an independent, bounded KB set for the fallback path. The mixed model
+    # context reserves room for web evidence, but must not discard useful KB text.
+    kb_fallback_evidence = []
+    kb_fallback_size = 0
+    for item in evidence:
+        block = f"[Passage {item.id}]\n{item.text}"
+        if kb_fallback_size + len(block) + 2 <= 4800:
+            kb_fallback_evidence.append(item)
+            kb_fallback_size += len(block) + 2
 
-    if selected_marker and not evidence and not social and destination is None and not dialogue:
+    web_evidence = ()
+    if not social and destination is None and not is_dialogue_question(question):
+        research = await research_heritage(
+            question, area.title, area.names, area_id=area.id,
+            context="\n\n".join(item.text for item in evidence)[:4800],
+            focus=focus.title if focus else "", generate=generate, generation_details=generation_details,
+        )
+        web_evidence = research.evidence
+    if unmapped_marker and not web_evidence:
         return response(scoped_missing(area), "insufficient_evidence")
+
     # Bound whole evidence chunks; never accidentally send unbounded adapter output.
     selected = []
     context = ""
     for item in evidence:
+        block = f"[Passage {item.id}]\n{item.text}"
+        if len(context) + len(block) + 2 <= (2000 if web_evidence else 4800):
+            selected.append(item)
+            context += ("\n\n" if context else "") + block
+    for item in web_evidence:
         block = f"[Passage {item.id}]\n{item.text}"
         if len(context) + len(block) + 2 <= 4800:
             selected.append(item)
@@ -201,8 +210,9 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         if destination is not None:
             return response(scoped_refusal(area, destination), "out_of_scope")
         # Retrieval already enforces the area and reviewed highlight links. Even
-        # a partial match is useful; never reuse an ungrounded model answer here.
-        for item in evidence:
+        # a partial KB match is useful; preserve it if the mixed context reserved
+        # space for web evidence and the model could not produce a cited answer.
+        for item in (*kb_fallback_evidence, *web_evidence):
             excerpts = [
                 part.strip() for part in re.split(r"(?<=[.!?])\s+|[\r\n]+", item.text)
                 if part.strip() and allowed_tour_output(part.strip(), "answered", area)
@@ -265,9 +275,9 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
                 "answer_type phải là answered hoặc insufficient_evidence. Không chép câu trả lời trước."
             )))
         except Exception:
-            return await abstain()
+            return related_or_missing()
         if answer.answer_type == "conversation" or repeats_other_turn(answer.answer):
-            return await abstain()
+            return related_or_missing()
 
 
     if answer.answer_type in {"answered", "insufficient_evidence"}:
@@ -275,7 +285,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         spoken = visible_answer(answer.answer)
         story_uncited = bool(story and not set(story.source_ids) <= set(cited))
         if not spoken:
-            return await abstain()
+            return related_or_missing()
         if cited and not story_uncited and allowed_tour_output(spoken, "answered", area):
             sources = [item.to_source() for item in evidence if str(item.id) in cited]
             return response(
@@ -285,7 +295,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         return related_or_missing()
     if answer.answer_type == "conversation":
         if not is_dialogue_question(question):
-            return await abstain()
+            return related_or_missing()
         if allowed_tour_output(answer.answer, "conversation", area):
             return response(answer.answer, "conversation", questions=answer.follow_up_questions)
         return response("Mình không nhớ lượt trước để nhắc lại.", "conversation")

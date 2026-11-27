@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from apps.backend.ai.answering.conversation import conversation_messages
 from apps.backend.api.public.chat.schemas import ChatRequest
 from apps.backend.services.tour_scope import follow_up_questions, question_outside_area, resolve_area
+from apps.backend.services.web_research import ResearchResult, WebEvidence
 from pipelines.graph.microsoft_graphrag import export_snapshot, query_snapshot, validate_area_snapshot
 
 
@@ -112,7 +113,7 @@ class AreaApiTests(unittest.TestCase):
                 effect = list(side_effect) if side_effect is not None else None
                 patch_kwargs = {"side_effect": effect} if effect is not None else {"return_value": json.dumps(raw)}
                 with TestClient(app) as client, patch.object(api, "generate_response", **patch_kwargs) as generate, patch(
-                    "apps.backend.services.tour_chat.research_heritage", AsyncMock(return_value=None),
+                    "apps.backend.services.tour_chat.research_heritage", AsyncMock(return_value=ResearchResult()),
                 ):
                     response = client.post("/api/chat", json={"message": question, "active_area_id": AREA, **(extra or {})})
                 yield response, repository, generate
@@ -337,12 +338,12 @@ class AreaApiTests(unittest.TestCase):
 
 
     def test_missing_local_evidence_names_a_public_reference(self):
-        from apps.backend.services.web_research import PublicReference
-        hit = PublicReference(
+        hit = ResearchResult(evidence=(WebEvidence(
+            id="WEB-123", text="Khiêm Lăng là lăng của vua Tự Đức.",
             title="Lăng Tự Đức",
             url="https://vi.wikipedia.org/wiki/L%C4%83ng_T%E1%BB%B1_%C4%90%E1%BB%A9c",
-            extract="Khiêm Lăng là lăng của vua Tự Đức.",
-        )
+            active_area_id=AREA,
+        ),))
         for module_name in MODULES:
             with self.subTest(module=module_name), patch.object(REGISTRY, "register"):
                 api = importlib.import_module(module_name)
@@ -363,10 +364,11 @@ class AreaApiTests(unittest.TestCase):
                     })
                 self.assertEqual(response.status_code, 200, response.text)
                 answer = response.json()["answer"]
-                self.assertIn("Đây là nguồn tham khảo: Lăng Tự Đức — https://vi.wikipedia.org/wiki/", answer)
+                self.assertIn("chưa được HeritageGraph thẩm định", answer)
                 self.assertEqual(response.json()["answer_type"], "answered")
                 self.assertEqual(response.json()["sources"][0]["doc"], "Lăng Tự Đức")
                 self.assertEqual(response.json()["sources"][0]["active_area_id"], AREA)
+                self.assertEqual(response.json()["sources"][0]["source_type"], "web")
 
 
     def test_explicit_other_area_calls_model_once_and_fails_closed(self):

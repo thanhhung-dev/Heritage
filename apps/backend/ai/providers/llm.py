@@ -150,10 +150,18 @@ def generate_response_with_details(
     active_area_id: str | None = None, rewrite: bool = False,
     user_history: list[str] | None = None, dialogue: list[dict] | None = None,
     artifact_title: str | None = None,
+    research_grade: bool = False,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    if rewrite:
+    if research_grade:
+        from apps.backend.services.web_research import GRADE_SCHEMA, GRADE_SYSTEM
+
+        messages = [{"role": "system", "content": GRADE_SYSTEM},
+                    {"role": "user", "content": f"Yêu cầu: {question}\nNguồn: {context}"}]
+        schema = GRADE_SCHEMA
+        max_tokens = min(max_tokens, 256)
+    elif rewrite:
         messages = rewrite_messages(question, user_history or [])
         schema = None
         max_tokens = min(max_tokens, 256)
@@ -201,9 +209,10 @@ def generate_response(
     active_area_id: str | None = None, rewrite: bool = False,
     user_history: list[str] | None = None, dialogue: list[dict] | None = None,
     artifact_title: str | None = None,
+    research_grade: bool = False,
 ) -> str:
     return generate_response_with_details(
         question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
         active_area_id=active_area_id, rewrite=rewrite, user_history=user_history, dialogue=dialogue,
-        artifact_title=artifact_title,
+        artifact_title=artifact_title, research_grade=research_grade,
     ).answer

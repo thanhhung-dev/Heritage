@@ -21,6 +21,8 @@ export interface TourReplyContext {
 }
 
 export interface Source {
+  source_type?: "kb" | "web";
+  verification_status?: "unreviewed";
   text?: string;
   doc?: string;
   url?: string;
