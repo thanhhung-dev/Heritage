@@ -32,7 +32,10 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
             </time>}
             {message.answerType === "development_mock" && <span className={styles.answerStatus}>Sample answer</span>}
             {message.needsUserChoice && <span className={styles.answerStatus}>Cần làm rõ đối tượng</span>}
-            {message.abstained && <span className={styles.answerStatus}>Chưa có câu trả lời được xác minh</span>}
+            {message.abstained && message.answerType !== "out_of_scope"
+              && message.answerType !== "insufficient_evidence" && (
+              <span className={styles.answerStatus}>Chưa có câu trả lời được xác minh</span>
+            )}
             <div className={styles.messageText}>
               {message.role === "assistant" ? (
                 <ChatMarkdown content={message.content} animate={message.id !== "mila-welcome"} />
@@ -52,9 +55,9 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
             </details>}
             {message.role === "assistant" && message.suggestions?.length ? (
               <p className={styles.inlineFollowUp}>
-                Bạn có muốn tìm hiểu thêm:{" "}
-                {message.suggestions.slice(0, 2).map((item, idx, arr) => (
+                {message.suggestions.slice(0, 2).map((item, idx) => (
                   <span key={item.value}>
+                    {idx > 0 ? <span aria-hidden="true"> · </span> : null}
                     <button
                       type="button"
                       className={styles.inlineFollowUpLink}
@@ -63,7 +66,6 @@ export function ChatMessageList({ messages, sending, onSend, hideWelcome }: Chat
                     >
                       {item.label}
                     </button>
-                    {idx < arr.length - 1 ? " hay " : ""}
                   </span>
                 ))}
               </p>

@@ -57,16 +57,19 @@ def resolve_area(value: str) -> TourArea:
 
 
 def scoped_refusal(area: TourArea, destination: TourArea | None = None) -> str:
-    route = (
-        f"Nếu muốn tìm hiểu {destination.title}, bạn có thể mở tour của nơi đó nhé. "
-        if destination else ""
+    if destination:
+        return (
+            f"Mình đang ở {area.title} với bạn, chưa kể được {destination.title}. "
+            "Muốn xem nơi đó thì mở tour của nó."
+        )
+    return (
+        f"Câu này mình không có tư liệu để trả lời. "
+        f"Mình đang ở {area.title} với bạn. Hỏi một chi tiết của nơi này thì mình kể được."
     )
-    return (f"Mình đang đồng hành cùng bạn tại {area.title}. {route}"
-            "Ở đây, bạn muốn tìm hiểu lịch sử hay kiến trúc?")
 
 
 def scoped_missing(area: TourArea) -> str:
-    return f"Mình chưa có bằng chứng phù hợp về {area.title} để trả lời chi tiết này."
+    return f"Mình chưa có tư liệu đủ về {area.title} cho chi tiết này."
 
 
 def allowed_output(text: str) -> bool:
@@ -106,17 +109,18 @@ def allowed_tour_output(
         return False
     if answer_type != "out_of_scope":
         return True
-    if re.search(r"\b(?:1[0-9]{3}|20[0-9]{2})\b", text):
+    value = normalized(text)
+    if re.search(r"\b(?:1[0-9]{3}|20[0-9]{2})\b", text) or re.search(r"\d{3,}", value):
         return False
     mentioned = referenced_areas(text, exclude=area.id)
     if any(destination is None or item.id != destination.id for item in mentioned):
         return False
-    value = normalized(text)
-    active_named = any(
-        f" {normalized(name)} " in f" {value} " for name in (area.id, *area.slugs, *area.names)
-    )
-    factual = r"\b(xay|thanh lap|kien truc|lich su|tri vi|lang vua|nam sinh|nam mat)\b"
-    return active_named and not re.search(factual, value)
+    if re.search(r"\b(xay|thanh lap|tri vi|lang vua|nam sinh|nam mat)\b", value):
+        return False
+    # "lịch sử/kiến trúc" trong lời mời thì giữ; gắn với nơi khác thì là dữ kiện.
+    if mentioned and re.search(r"\b(kien truc|lich su)\b", value):
+        return False
+    return True
 
 
 def follow_up_questions(
@@ -140,7 +144,9 @@ def area_system_policy(area: TourArea, *, artifact_title: str | None = None) -> 
     policy = (
         f"\n\nPhạm vi do máy chủ ấn định: {area.title} (active_area_id={area.id}). "
         "Tập trung vào địa điểm này. Hỏi rõ sang địa điểm khác thì out_of_scope "
-        "và chỉ nhắc tên nơi đó, không kể dữ kiện. Thiếu Passage không phải out_of_scope."
+        "và chỉ nhắc tên nơi đó, không kể dữ kiện. "
+        "Chủ đề không thuộc di sản này cũng là out_of_scope, dù nguồn có Passage của khu này. "
+        "Thiếu Passage không phải out_of_scope."
     )
     if artifact_title:
         policy += (

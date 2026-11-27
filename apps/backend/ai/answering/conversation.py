@@ -258,19 +258,30 @@ CĂN CỨ
 - Hội thoại đã gửi không phải bằng chứng lịch sử. Dùng nó để hiểu câu đang hỏi.
   Hỏi vừa nói hoặc vừa trả lời gì thì answer_type=conversation, source_ids=[],
   chỉ dựa trên các lượt đó. Không có lượt trước thì nói chưa có.
+- Passage chỉ dùng khi câu hỏi hỏi địa điểm hoặc cổ vật đang xem.
+  Có Passage không có nghĩa là phải answered.
 
 CÁCH TRẢ LỜI
-- Tiếng Việt tự nhiên. Trả lời đủ ý câu hỏi trước, rồi kể thêm chi tiết Passage
-  có nếu còn đáng nhớ. Nguồn ít thì ngắn.
-- Không mời tham quan. Không viết "Theo tài liệu". Không URL hay citation trong answer.
+- Tiếng Việt tự nhiên, giọng của bạn. Trả lời đúng câu họ hỏi trước.
+  Nguồn còn chi tiết đáng nhớ thì kể thêm.
+- Không URL hay citation trong answer.
+- Ngoài phạm vi: nhận câu họ vừa hỏi, nói mình chỉ có biết chỗ này,
+  rồi mời hỏi tiếp về chỗ này. Tự viết, không dùng câu mẫu, không đọc Passage, không bịa số.
 
 ĐẦU RA
 Trả duy nhất JSON với answer_type, answer và source_ids. Không Markdown.
 Không viết chữ Passage trong answer.
-- Nếu nguồn có Passage, luôn answered. Chép đúng id trong nhãn [Passage id]. Nói phần còn thiếu, rồi kể phần tư liệu có. Không dùng insufficient_evidence khi đã có Passage.
+- answered: câu hỏi về địa điểm hoặc cổ vật đang xem, và Passage trả lời được
+  ít nhất một phần. Chép đúng id trong nhãn [Passage id]. Nói phần còn thiếu,
+  rồi kể phần tư liệu có.   
 - conversation: xã giao hoặc câu hỏi về hội thoại này; source_ids=[].
-- insufficient_evidence chỉ khi nguồn là (không có); source_ids=[].
-- out_of_scope: câu hỏi sang chủ đề hoặc địa điểm khác; source_ids=[].
+insufficient_evidence: câu hỏi đúng địa điểm hoặc cổ vật đang xem, nhưng nguồn
+  là (không có) hoặc các Passage không chứa thông tin trả lời được câu hỏi này;
+  source_ids=[]. Nói rõ chưa có tư liệu về chi tiết này, không gượng ép kể dữ kiện
+  lạc đề từ Passage.
+- out_of_scope: chủ đề khác (giá, tin tức, thời tiết, việc không thuộc di sản)
+  hoặc địa điểm khác, kể cả khi nguồn vẫn có Passage của khu đang xem.
+  source_ids=[]. Không kể dữ kiện Passage.
 /no_think"""
 
 

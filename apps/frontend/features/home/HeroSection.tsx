@@ -19,7 +19,7 @@ export function HeroTile({
   eyebrow,
   title,
   description = "Explore real places in 3D and discover the people and stories that bring them to life.",
-  subDescription = "From ancient wonders to national parks and historic homes, step into a new kind of virtual experience with Tapestry.",
+  subDescription = "From ancient wonders to national parks and historic homes, step into a new kind of virtual experience with Heritages.",
   className,
 }: HeroTileProps) {
   const renderedTitle = title ?? (
@@ -72,11 +72,6 @@ export interface HeroSectionProps {
 }
 
 const LOCAL_FALLBACK_IMAGE = "/images/cung-an-dinh.jpg";
-
-/**
- * Ba di sản được ưu tiên lên hero, theo thứ tự. Chỉ là *thứ tự chọn* trong danh
- * sách lấy từ API — không kèm dữ liệu nào, để hero luôn phản ánh DB.
- */
 export const FEATURED_HERO_SLUGS = [
   ["lang-tu-duc", "tu-duc-tomb"],
   ["cung-an-dinh", "an-dinh-palace"],
@@ -165,7 +160,6 @@ export function HeroSection({
         .join(" ")}
       aria-label="Heritage Hero"
     >
-      {/* 1. Các lớp ảnh nền mờ (.hp_hero_bg_layer) chuyển mượt bằng opacity */}
       {displayItems.map((item, idx) => {
         const bgUrl = getCardImageUrl(item);
         const isCurrentBg = activeBgIndex === idx;
@@ -187,10 +181,8 @@ export function HeroSection({
         );
       })}
 
-      {/* 2. Lớp gradient phủ tối để làm nổi bật chữ */}
       <div className={styles.heroOverlayGradient} aria-hidden="true" />
 
-      {/* Container nội dung (.hp_hero_content) */}
       <div
         className={[
           styles.heroLayout,

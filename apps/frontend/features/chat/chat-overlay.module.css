@@ -245,7 +245,7 @@
   width: 100%;
   height: 100cqh;
   top: 0;
-  border-color: rgba(200, 90, 23, 0.72);
+  border-color: rgba(200, 90, 23, 0.4);
   filter: blur(var(--outer-ring-blur));
   border-width: var(--outer-ring-border-width);
   border-top-width: 0;
@@ -262,7 +262,7 @@
   left: 3.125%;
   height: 79cqh;
   top: 9.2cqh;
-  border-color: rgba(255, 173, 66, 0.62);
+  border-color: rgba(255, 173, 66, 0.34);
   filter: blur(var(--inner-ring-blur));
   border-width: var(--inner-ring-border-width);
   border-top-width: 0;
@@ -287,13 +287,13 @@
 
 @keyframes heritageOuterRingColorWarm {
   0% {
-    border-color: #ffe6b8;
+    border-color: rgba(255, 230, 184, 0.55);
   }
   37.5% {
-    border-color: #fa500f;
+    border-color: rgba(250, 80, 15, 0.48);
   }
   100% {
-    border-color: rgba(200, 90, 23, 0.72);
+    border-color: rgba(200, 90, 23, 0.4);
   }
 }
 
@@ -310,13 +310,13 @@
 
 @keyframes heritageInnerRingColorWarm {
   0% {
-    border-color: rgba(200, 90, 23, 0.72);
+    border-color: rgba(200, 90, 23, 0.4);
   }
   37.5% {
-    border-color: #ffad42;
+    border-color: rgba(255, 173, 66, 0.42);
   }
   100% {
-    border-color: rgba(255, 173, 66, 0.62);
+    border-color: rgba(255, 173, 66, 0.34);
   }
 }
 
@@ -881,11 +881,6 @@
   );
   border-color: rgba(255, 255, 255, 0.38);
   transform: translateY(-1px);
-}
-
-.inputRow:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
 .sendButton:hover:not(:disabled) {

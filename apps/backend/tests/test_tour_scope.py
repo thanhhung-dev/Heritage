@@ -145,13 +145,44 @@ class AreaApiTests(unittest.TestCase):
                ]}
         for response, _, _ in self.exercise(question, raw=raw):
             follow = response.json()["follow_up_questions"]
-            self.assertEqual(follow, [
-                "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
-                "Bi Đình trong Lăng Tự Đức có gì đặc biệt?",
-            ])
+            self.assertEqual(follow, [])
             self.assertNotIn(question, follow)
             self.assertNotIn("Bia Khiêm Cung Ký", " ".join(follow))
             self.assertNotIn("Chuông", " ".join(follow))
+
+    def test_networkx_followups_need_a_cited_and_answered_neighbor(self):
+        self.evidence.text = "Bi Đình là một công trình tại Lăng Tự Đức."
+        raw = {"answer_type": "answered", "answer": "Lăng Tự Đức có Bi Đình.", "source_ids": ["42"]}
+        for response, _, _ in self.exercise("Lăng Tự Đức có gì?", raw=raw):
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.json()["follow_up_questions"], [
+                "Bi Đình trong Lăng Tự Đức có gì đặc biệt?",
+            ])
+
+        raw["answer"] = "Lăng Tự Đức có nhiều công trình."
+        for response, _, _ in self.exercise("Lăng Tự Đức có gì?", raw=raw):
+            self.assertEqual(response.json()["follow_up_questions"], [])
+
+    def test_no_followups_when_answer_is_not_grounded(self):
+        for response, _, _ in self.exercise(evidence=[], raw={
+            "answer_type": "insufficient_evidence", "answer": "Chưa có tư liệu.", "source_ids": [],
+        }):
+            self.assertEqual(response.json()["follow_up_questions"], [])
+
+    def test_inline_citation_is_not_shown_as_a_source(self):
+        raw = {"answer_type": "answered", "answer": "Khiêm Lăng gắn với vua Tự Đức. [1]",
+               "source_ids": ["42"]}
+        for response, _, _ in self.exercise(raw=raw):
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.json()["answer"], "Khiêm Lăng gắn với vua Tự Đức.")
+            self.assertEqual(len(response.json()["sources"]), 1)
+
+    def test_long_answer_ending_mid_sentence_is_not_published(self):
+        raw = {"answer_type": "answered", "answer": "Lăng Tự Đức gắn với triều Nguyễn. " * 16 + "Bài cũng kể việc bà không chấp lỗi",
+               "source_ids": ["42"]}
+        for response, _, _ in self.exercise(raw=raw):
+            self.assertEqual(response.json()["answer_type"], "insufficient_evidence")
+            self.assertNotIn("Bài cũng kể", response.json()["answer"])
 
     def test_identified_artifact_then_graph_neighbor_stay_in_tour_scope(self):
         question = "Lăng Tự Đức làm bằng gì?"
@@ -305,6 +336,27 @@ class AreaApiTests(unittest.TestCase):
                     self.assertIn("Khiêm Lăng", data["answer"])
                     self.assertEqual(generate.call_count, 1)
 
+
+    def test_natural_off_topic_refusal_is_kept_without_a_script(self):
+        spoken = "Giá bitcoin mình không có. Hỏi về nơi này thì mình kể."
+        raw = {"answer_type": "out_of_scope", "answer": spoken, "source_ids": []}
+        for response, _, _ in self.exercise("giá bitcoin hôm nay là gì", evidence=[self.evidence], raw=raw):
+            data = response.json()
+            self.assertEqual(data["answer"], spoken)
+            self.assertEqual(data["answer_type"], "out_of_scope")
+            self.assertEqual(data["sources"], [])
+            self.assertEqual(data["follow_up_questions"], [])
+
+    def test_off_topic_price_is_replaced_without_the_old_menu(self):
+        raw = {"answer_type": "out_of_scope", "answer": "Bitcoin hôm nay khoảng 97000.", "source_ids": []}
+        for response, _, _ in self.exercise("giá bitcoin hôm nay là gì", raw=raw):
+            data = response.json()
+            self.assertEqual(data["answer_type"], "out_of_scope")
+            self.assertNotIn("97000", data["answer"])
+            self.assertNotIn("lịch sử hay kiến trúc", data["answer"])
+            self.assertIn("Lăng Tự Đức", data["answer"])
+            self.assertEqual(data["follow_up_questions"], [])
+
     def test_missing_wrong_and_untagged_evidence_cannot_support_factual_answers(self):
         for area in (None, "lang-minh-mang"):
             self.evidence.active_area_id = area
@@ -376,6 +428,8 @@ class AreaApiTests(unittest.TestCase):
             payload = post.call_args.kwargs["json"]
             prompt = payload["messages"]
             self.assertEqual(len(prompt), 2)
+            self.assertIn("Có Passage không có nghĩa là phải answered", prompt[0]["content"])
+            self.assertNotIn("luôn answered", prompt[0]["content"])
             self.assertIn("active_area_id=lang-tu-duc", prompt[0]["content"])
             self.assertIn("[Passage 42]", prompt[-1]["content"])
             self.assertIn("Câu hỏi: Ông sống ở đây thế nào?", prompt[-1]["content"])

@@ -61,16 +61,19 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             focus_title=focus.title if focus else None,
             graph_context=graph_context, evidence=evidence,
         )
-        related = [] if unmapped_marker else ordered_entity_follow_ups(
-            question, area_title=area.title, artifact_title=artifact,
-        )
-        asked_norm = normalized(question)
-        scoped = [
-            item for item in follow_up_questions(
-                related, area, fallback=not selected_marker or kind == "answered",
-                fallback_questions=focus.questions() if focus else None,
-            ) if normalized(item) != asked_norm
-        ]
+        if kind in {"out_of_scope", "insufficient_evidence"}:
+            scoped = []
+        else:
+            related = [] if unmapped_marker else ordered_entity_follow_ups(
+                question, area_title=area.title, artifact_title=artifact,
+            )
+            asked_norm = normalized(question)
+            scoped = [
+                item for item in follow_up_questions(
+                    related, area, fallback=not selected_marker or kind == "answered",
+                    fallback_questions=focus.questions() if focus else None,
+                ) if normalized(item) != asked_norm
+            ]
         return {
             "answer": text, "answer_type": kind, "sources": list(sources),
             "active_area_id": area.id,
@@ -195,8 +198,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         if answer.answer_type == "conversation" and allowed_tour_output(answer.answer, "conversation", area):
             return response(answer.answer, "conversation", questions=answer.follow_up_questions)
         return response(
-            f"Mình là trợ lý AI HeritageGraph, đồng hành cùng bạn tại {area.title}. "
-            "Bạn muốn tìm hiểu điều gì trong khu vực đang tham quan?",
+            f"Mình ở {area.title} với bạn. Bạn muốn hỏi gì ở đây?",
             "conversation",
         )
 
@@ -224,7 +226,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     if answer.answer_type == "conversation":
         if allowed_tour_output(answer.answer, "conversation", area):
             return response(answer.answer, "conversation", questions=answer.follow_up_questions)
-        return response("Mình chỉ nhắc lại được nội dung đã có trong hội thoại này.", "conversation")
+        return response("Mình không nhớ lượt trước để nhắc lại.", "conversation")
     if not allowed_tour_output(answer.answer, "out_of_scope", area):
         return response(scoped_refusal(area), "out_of_scope")
     return response(answer.answer, "out_of_scope", questions=answer.follow_up_questions)
