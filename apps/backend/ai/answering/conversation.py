@@ -16,6 +16,42 @@ _SOCIAL = frozenset({"hi", "hello", "xin chao", "chao", "cam on", "ban la ai"})
 def is_social_turn(question: str) -> bool:
     return normalized(question) in _SOCIAL
 
+_DIALOGUE_QUESTION = re.compile(
+    r"(?:^| )(?:nay h|nai |luc nay|vua noi|vua hoi|vua tra loi|nhac lai|lap lai|"
+    r"toi noi gi|ban noi gi|minh noi gi|noi gi ay|tra loi gi|cau tra loi)(?: |$)"
+)
+
+
+def is_dialogue_question(question: str) -> bool:
+    """True only when the user asks what was just said in this chat."""
+    return bool(_DIALOGUE_QUESTION.search(f" {normalized(question)} "))
+
+
+_SOURCE_LABEL = re.compile(
+    r"\[\s*(?:tư liệu|tu lieu|passage)?\s*(?:id\s*[:：])?\s*(?:PSG-)?[A-Za-z0-9_-]{6,}\s*\]"
+    r"|\[\s*\d+\s*\]"
+    r"|\b(?:tư liệu|tu lieu|passage)\s+id\s*[:：]\s*PSG-[a-fA-F0-9]+\b"
+    r"|\bPSG-[a-fA-F0-9]{16,}\b",
+    re.I,
+)
+
+
+def visible_answer(text: str) -> str:
+    """Drop source labels. Citations belong in sources, not in the spoken answer."""
+    cleaned = _SOURCE_LABEL.sub("", text or "")
+    cleaned = re.sub(r"\b[Pp]assage\b", "", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\s+([,.;:!?])", r"\1", cleaned)
+    cleaned = re.sub(r"([,.;:]){2,}", r"\1", cleaned)
+    return cleaned.strip(" \t,;")
+
+
+def unlabeled_source(source: str) -> str:
+    """Ids stay in source_ids. The model must not see a label it can copy into the answer."""
+    return re.sub(r"(?m)^\[Passage [^\]]+\]\n?", "", source or "").strip()
+
+
+
 
 REWRITE_SYSTEM = """Bạn viết lại câu hỏi cuối thành một câu tiếng Việt đủ nghĩa để tìm tài liệu.
 Chỉ dùng các câu hỏi trước của người dùng để nối đối tượng hoặc thuộc tính còn thiếu.
@@ -255,25 +291,28 @@ CĂN CỨ
 - Chỉ kể điều Passage nói. Thiếu thì nói thiếu, không bịa năm, danh hiệu,
   địa chỉ, sự kiện hay quan hệ.
 - Nguồn không nhắc một chi tiết không chứng minh chi tiết đó không có.
-- Hội thoại đã gửi không phải bằng chứng lịch sử. Dùng nó để hiểu câu đang hỏi.
-  Hỏi vừa nói hoặc vừa trả lời gì thì answer_type=conversation, source_ids=[],
-  chỉ dựa trên các lượt đó. Không có lượt trước thì nói chưa có.
+- Hội thoại đã gửi không phải bằng chứng lịch sử. Chỉ khi người dùng xin nhắc lại
+  vừa nói hoặc vừa trả lời gì thì answer_type=conversation, source_ids=[],
+  chỉ dựa trên các lượt đó. Không có lượt trước thì nói chưa có. Câu hỏi về
+  lịch sử, nhân vật, sự kiện hoặc kiến trúc của địa điểm đang xem không phải conversation.
 - Passage chỉ dùng khi câu hỏi hỏi địa điểm hoặc cổ vật đang xem.
-  Có Passage không có nghĩa là phải answered.
+  Có Passage không có nghĩa là phải answered. Không chép câu trả lời trước
+  cho một câu hỏi mới.
 
 CÁCH TRẢ LỜI
 - Tiếng Việt tự nhiên, giọng của bạn. Trả lời đúng câu họ hỏi trước.
   Nguồn còn chi tiết đáng nhớ thì kể thêm.
-- Không URL hay citation trong answer.
+- Không URL, id, chữ Passage hay nhãn Tư liệu id trong answer. Id chỉ nằm trong source_ids.
 - Ngoài phạm vi: nhận câu họ vừa hỏi, nói mình chỉ có biết chỗ này,
   rồi mời hỏi tiếp về chỗ này. Tự viết, không dùng câu mẫu, không đọc Passage, không bịa số.
 
 ĐẦU RA
 Trả duy nhất JSON với answer_type, answer và source_ids. Không Markdown.
-Không viết chữ Passage trong answer.
+Nhãn [Passage id] chỉ để điền source_ids. Không viết nhãn đó, id, chữ Passage
+hay Tư liệu id vào answer.
 - answered: câu hỏi về địa điểm hoặc cổ vật đang xem, và Passage trả lời được
-  ít nhất một phần. Chép đúng id trong nhãn [Passage id]. Nói phần còn thiếu,
-  rồi kể phần tư liệu có.   
+  ít nhất một phần. Điền id vào source_ids. Nói phần còn thiếu,
+  rồi kể phần tư liệu có.
 - conversation: xã giao hoặc câu hỏi về hội thoại này; source_ids=[].
 insufficient_evidence: câu hỏi đúng địa điểm hoặc cổ vật đang xem, nhưng nguồn
   là (không có) hoặc các Passage không chứa thông tin trả lời được câu hỏi này;
@@ -293,10 +332,35 @@ def conversation_messages(
     system = CONVERSATION_SYSTEM
     if active_area_id:
         system += area_system_policy(resolve_area(active_area_id), artifact_title=artifact_title)
-    body = user_msg(source, question)
-    turns = dialogue_turns(dialogue if dialogue is not None else user_history)
-    if turns:
-        body = "Nếu câu này hỏi về hội thoại bên trên, chỉ dùng các lượt đó.\n\n" + body
+    body = user_msg(unlabeled_source(source), question)
+    recall = is_dialogue_question(question)
+    if dialogue is not None and recall:
+        turns = dialogue_turns(dialogue)
+        if turns:
+            body = (
+                "Câu này hỏi về hội thoại bên trên. Chỉ dùng các lượt đó, không dùng Passage.\n\n"
+                + body
+            )
+    elif dialogue is not None:
+        turns = []
+        prior = [item["content"] for item in dialogue_turns(dialogue) if item["role"] == "user"]
+        last_reply = next(
+            (item["content"] for item in reversed(dialogue_turns(dialogue)) if item["role"] == "assistant"),
+            "",
+        )
+        notes = []
+        if prior:
+            notes.append("Câu hỏi trước của người dùng: " + " | ".join(prior[-3:]))
+        if last_reply:
+            notes.append("Đã nói, không chép lại nguyên văn: " + " ".join(last_reply.split())[:240])
+        if notes:
+            body = (
+                "Hội thoại trước chỉ để nối mạch, không phải bằng chứng. "
+                "Trả lời câu hiện tại từ Passage. Nếu ý đã nói rồi thì kể chi tiết mới, đừng mở lại như câu đầu.\n"
+                + "\n".join(notes) + "\n\n" + body
+            )
+    else:
+        turns = dialogue_turns(user_history)
     if retrieval_status != "available":
         body = f"retrieval_status: {retrieval_status}\n\n{body}"
     return [

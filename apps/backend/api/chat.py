@@ -12,10 +12,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from apps.backend.ai.answering.conversation import (
     ConversationAnswer, append_graph_follow_up_hint, evidence_cite_id, grounded_source_ids,
     dialogue_turns, is_social_turn, prior_user_questions, related_follow_ups, rewrite_followup,
+    visible_answer,
 )
 from apps.backend.api.public.chat.schemas import ChatRequest, ChatResponse
 from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.core.llm import generate_response, get_generation_details
+from apps.backend.services.web_research import reference_answer, research_heritage
 from apps.backend.core.observability import correlation_id, observe_grounded_qa, rag_observation
 from apps.backend.core.search import PassageStore, SearchError
 from apps.backend.services.passages import EmbeddingError, PassageRepository, PassageSearch, RetrievalQuery
@@ -124,9 +126,10 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         )
     missing = "Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có."
     if not result.evidence:
+        found = await research_heritage(req.message, "")
+        spoken = reference_answer(found, req.message) if found is not None else None
         return ChatResponse(
-            answer=missing, sources=[], resolution_status="not_found",
-            answer_type="insufficient_evidence",
+            answer=spoken or missing, sources=[], resolution_status="not_found", answer_type="insufficient_evidence",
         )
     with rag_observation('context.assembly') as observation:
         context = '\n\n'.join(f'[Passage {evidence_cite_id(item)}]\n{item.text}' for item in result.evidence)
@@ -188,7 +191,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
     )
     correction = query.corrections[0] if query.corrections and selected else {}
     return ChatResponse(
-        answer=parsed.answer, sources=[item.to_source() for item in selected],
+        answer=visible_answer(parsed.answer), sources=[item.to_source() for item in selected],
         corrected_from=correction.get("original", ""),
         corrected_to=correction.get("suggested", ""),
         intent=",".join(sorted(query.intent)) if selected else "",

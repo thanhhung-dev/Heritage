@@ -96,7 +96,7 @@ class AreaApiTests(unittest.TestCase):
         )
 
     def exercise(self, question="Vua Tự Đức sống ở đây thế nào?", *, evidence=None, raw=None, error=None,
-                 extra=None, graph_context=None):
+                 extra=None, graph_context=None, side_effect=None):
         for module_name in MODULES:
             with self.subTest(module=module_name), patch.object(REGISTRY, "register"):
                 api = importlib.import_module(module_name)
@@ -109,7 +109,11 @@ class AreaApiTests(unittest.TestCase):
                 app.dependency_overrides[api.get_repository] = lambda: repository
                 raw = raw or {"answer_type": "answered", "answer": "Khiêm Lăng gắn với vua Tự Đức.",
                               "source_ids": ["42"]}
-                with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(raw)) as generate:
+                effect = list(side_effect) if side_effect is not None else None
+                patch_kwargs = {"side_effect": effect} if effect is not None else {"return_value": json.dumps(raw)}
+                with TestClient(app) as client, patch.object(api, "generate_response", **patch_kwargs) as generate, patch(
+                    "apps.backend.services.tour_chat.research_heritage", AsyncMock(return_value=None),
+                ):
                     response = client.post("/api/chat", json={"message": question, "active_area_id": AREA, **(extra or {})})
                 yield response, repository, generate
 
@@ -170,11 +174,15 @@ class AreaApiTests(unittest.TestCase):
             self.assertEqual(response.json()["follow_up_questions"], [])
 
     def test_inline_citation_is_not_shown_as_a_source(self):
-        raw = {"answer_type": "answered", "answer": "Khiêm Lăng gắn với vua Tự Đức. [1]",
-               "source_ids": ["42"]}
+        leaked = (
+            "Khiêm Lăng gắn với vua Tự Đức. [1] "
+            "[Tư liệu id: PSG-367b7f1c3a49b7e234c5eff93f7dd8812ff23b74579a40b6b6bc464bde0e09d7]"
+        )
+        raw = {"answer_type": "answered", "answer": leaked, "source_ids": ["42"]}
         for response, _, _ in self.exercise(raw=raw):
             self.assertEqual(response.status_code, 200, response.text)
             self.assertEqual(response.json()["answer"], "Khiêm Lăng gắn với vua Tự Đức.")
+            self.assertNotIn("PSG-", response.json()["answer"])
             self.assertEqual(len(response.json()["sources"]), 1)
 
     def test_long_answer_ending_mid_sentence_is_not_published(self):
@@ -258,6 +266,107 @@ class AreaApiTests(unittest.TestCase):
             self.assertEqual(generate.call_args.kwargs["dialogue"][0]["content"], asked)
             self.assertEqual(generate.call_args.kwargs["dialogue"][1]["role"], "assistant")
             repository.search_evidence.assert_awaited()
+
+
+    def test_factual_question_is_not_replaced_by_a_memory_line(self):
+        prior = "Lăng Tự Đức gắn với hoàng đế Tự Đức."
+        raw = {"answer_type": "conversation", "answer": prior, "source_ids": []}
+        for response, _, generate in self.exercise("Lịch sử của Lăng Tự Đức có gì đáng chú ý?", raw=raw, extra={
+            "conversation_context": [
+                {"role": "user", "content": "Lăng Tự Đức gắn với nhân vật hoặc sự kiện nào?"},
+                {"role": "assistant", "content": prior},
+            ],
+        }):
+            data = response.json()
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(data["answer_type"], "insufficient_evidence")
+            self.assertNotIn("không nhớ lượt trước", data["answer"])
+            self.assertNotEqual(data["answer"], prior)
+            self.assertEqual(data["sources"], [])
+            self.assertEqual(generate.call_args.kwargs["dialogue"][1]["content"], prior)
+            from apps.backend.ai.answering.conversation import conversation_messages
+            prompt = conversation_messages(
+                "Passage", "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+                dialogue=generate.call_args.kwargs["dialogue"], active_area_id=AREA,
+            )
+            self.assertEqual([item["role"] for item in prompt], ["system", "user"])
+            self.assertIn("Đã nói, không chép lại nguyên văn: " + prior, prompt[-1]["content"])
+            self.assertIn("nối mạch", prompt[-1]["content"])
+            self.assertNotIn("hội thoại bên trên", prompt[-1]["content"])
+
+    def test_factual_mislabeled_conversation_retries_from_evidence(self):
+        prior = "Lăng Tự Đức gắn với hoàng đế Tự Đức."
+        recovered = "Khiêm Lăng xây từ năm 1864."
+        history = {
+            "conversation_context": [
+                {"role": "user", "content": "Lăng Tự Đức gắn với nhân vật hoặc sự kiện nào?"},
+                {"role": "assistant", "content": prior},
+            ],
+        }
+        for response, _, generate in self.exercise(
+            "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+            extra=history,
+            side_effect=[
+                json.dumps({"answer_type": "conversation", "answer": prior, "source_ids": []}),
+                json.dumps({"answer_type": "answered", "answer": recovered, "source_ids": ["42"]}),
+            ],
+        ):
+            data = response.json()
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(data["answer_type"], "answered")
+            self.assertEqual(data["answer"], recovered)
+            self.assertEqual(data["sources"][0]["passage_id"], "42")
+            self.assertEqual(generate.call_count, 2)
+            self.assertIn("không hỏi lại hội thoại", generate.call_args.kwargs["question"])
+
+    def test_copied_answered_reply_is_not_published(self):
+        prior = "Lăng Tự Đức gắn với hoàng đế Tự Đức."
+        for response, _, generate in self.exercise(
+            "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+            raw={"answer_type": "answered", "answer": prior, "source_ids": ["42"]},
+            extra={"conversation_context": [
+                {"role": "user", "content": "Lăng Tự Đức gắn với nhân vật hoặc sự kiện nào?"},
+                {"role": "assistant", "content": prior},
+            ]},
+        ):
+            data = response.json()
+            self.assertEqual(data["answer_type"], "insufficient_evidence")
+            self.assertNotEqual(data["answer"], prior)
+            self.assertEqual(generate.call_count, 2)
+
+
+    def test_missing_local_evidence_names_a_public_reference(self):
+        from apps.backend.services.web_research import PublicReference
+        hit = PublicReference(
+            title="Lăng Tự Đức",
+            url="https://vi.wikipedia.org/wiki/L%C4%83ng_T%E1%BB%B1_%C4%90%E1%BB%A9c",
+            extract="Khiêm Lăng là lăng của vua Tự Đức.",
+        )
+        for module_name in MODULES:
+            with self.subTest(module=module_name), patch.object(REGISTRY, "register"):
+                api = importlib.import_module(module_name)
+                repository = SimpleNamespace(search_evidence=AsyncMock(return_value=SimpleNamespace(
+                    evidence=[], graph_context=[],
+                )))
+                app = FastAPI()
+                app.include_router(api.router, prefix="/api")
+                app.dependency_overrides[api.get_repository] = lambda: repository
+                with TestClient(app) as client, patch.object(
+                    api, "generate_response", return_value=json.dumps({
+                        "answer_type": "insufficient_evidence", "answer": "Chưa có.", "source_ids": [],
+                    }),
+                ), patch("apps.backend.services.tour_chat.research_heritage", AsyncMock(return_value=hit)):
+                    response = client.post("/api/chat", json={
+                        "message": "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+                        "active_area_id": AREA,
+                    })
+                self.assertEqual(response.status_code, 200, response.text)
+                answer = response.json()["answer"]
+                self.assertIn("Đây là nguồn tham khảo: Lăng Tự Đức — https://vi.wikipedia.org/wiki/", answer)
+                self.assertEqual(response.json()["answer_type"], "answered")
+                self.assertEqual(response.json()["sources"][0]["doc"], "Lăng Tự Đức")
+                self.assertEqual(response.json()["sources"][0]["active_area_id"], AREA)
+
 
     def test_explicit_other_area_calls_model_once_and_fails_closed(self):
         raw = {
@@ -431,10 +540,13 @@ class AreaApiTests(unittest.TestCase):
             self.assertIn("Có Passage không có nghĩa là phải answered", prompt[0]["content"])
             self.assertNotIn("luôn answered", prompt[0]["content"])
             self.assertIn("active_area_id=lang-tu-duc", prompt[0]["content"])
-            self.assertIn("[Passage 42]", prompt[-1]["content"])
+            self.assertNotIn("[Passage", prompt[-1]["content"])
+            self.assertNotIn("PSG-", prompt[-1]["content"])
+            self.assertIn("Khiêm Lăng gắn với vua Tự Đức.", prompt[-1]["content"])
             self.assertIn("Câu hỏi: Ông sống ở đây thế nào?", prompt[-1]["content"])
             self.assertIn("Vua Tự Đức", prompt[-1]["content"])
-            self.assertNotIn("Đại Nội ở Huế", prompt[-1]["content"])
+            self.assertIn("Đã nói, không chép lại nguyên văn: Đại Nội ở Huế", prompt[-1]["content"])
+            self.assertIn("nối mạch", prompt[-1]["content"])
             self.assertNotIn("not evidence", prompt[-1]["content"])
             self.assertEqual(set(payload["response_format"]["schema"]["required"]),
                              {"answer_type", "answer", "source_ids"})

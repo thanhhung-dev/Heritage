@@ -7,7 +7,7 @@ import re
 
 from apps.backend.ai.answering.conversation import (
     ConversationAnswer, append_graph_follow_up_hint, grounded_source_ids,
-    dialogue_turns, is_social_turn, prior_user_questions,
+    dialogue_turns, is_dialogue_question, is_social_turn, prior_user_questions, visible_answer,
 )
 from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.services.heritage_graph import artifact_title_from_data, ordered_entity_follow_ups
@@ -16,6 +16,12 @@ from apps.backend.services.tour_scope import (
     allowed_output, allowed_tour_output, follow_up_questions, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
 )
+from apps.backend.services.web_research import answer_from_page, research_heritage
+def _wiki_source(found, area_id: str) -> dict:
+    return {
+        "passage_id": "wiki", "chunk_id": "wiki", "doc": found.title,
+        "url": found.url, "active_area_id": area_id,
+    }
 
 
 class TourChatError(RuntimeError):
@@ -138,9 +144,18 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         ]
         graph_context = result.graph_context
 
+    if (
+        not evidence and not social and destination is None and not unmapped_marker
+        and not is_dialogue_question(question)
+    ):
+        found = await research_heritage(question, area.title, area.names)
+        if found is not None:
+            spoken = answer_from_page(question, found, generate)
+            if spoken:
+                return response(spoken, "answered", [_wiki_source(found, area.id)])
+
     if selected_marker and not evidence and not social and destination is None and not dialogue:
         return response(scoped_missing(area), "insufficient_evidence")
-
     # Bound whole evidence chunks; never accidentally send unbounded adapter output.
     selected = []
     context = ""
@@ -165,21 +180,35 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             context += "\n\n" + block
             accepted_graph.append(item)
     context = append_graph_follow_up_hint(context, accepted_graph)
+    def repeats_other_turn(text: str) -> bool:
+        last_user = next((item["content"] for item in reversed(dialogue) if item["role"] == "user"), "")
+        last_assistant = next((item["content"] for item in reversed(dialogue) if item["role"] == "assistant"), "")
+        if not last_assistant or normalized(question) == normalized(last_user):
+            return False
+        return normalized(text) == normalized(last_assistant)
 
-    def infer():
+    def infer(suffix: str = ""):
+        asked = question if not suffix else f"{question}\n\n{suffix}"
         raw = generate(
-            question=question, context=context, conversation=True,
+            question=asked, context=context, conversation=True,
             retrieval_status="available" if evidence else "not_found",
             active_area_id=area.id, user_history=user_history, dialogue=dialogue,
             artifact_title=focus.title if focus else None,
         )
         return raw, generation_details()
 
-    def abstain():
+    async def abstain():
+        if social or destination is not None or is_dialogue_question(question) or unmapped_marker:
+            return response(scoped_missing(area), "insufficient_evidence")
+        found = await research_heritage(question, area.title, area.names)
+        if found is None:
+            return response(scoped_missing(area), "insufficient_evidence")
+        spoken = answer_from_page(question, found, generate)
+        if spoken:
+            return response(spoken, "answered", [_wiki_source(found, area.id)])
         return response(scoped_missing(area), "insufficient_evidence")
 
-    try:
-        raw, details = await asyncio.to_thread(infer)
+    def parse(raw, details):
         if details.truncated is True:
             raise ValueError("Truncated answer")
         payload = json.loads(raw)
@@ -190,9 +219,12 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         ):
             payload["answer_type"] = "answered"
             raw = json.dumps(payload, ensure_ascii=False)
-        answer = ConversationAnswer.model_validate_json(raw)
+        return ConversationAnswer.model_validate_json(raw)
+
+    try:
+        answer = parse(*await asyncio.to_thread(infer))
     except Exception:
-        return abstain()
+        return await abstain()
 
     if social:
         if answer.answer_type == "conversation" and allowed_tour_output(answer.answer, "conversation", area):
@@ -210,10 +242,30 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     if story_evidence_missing and answer.answer_type != "conversation":
         return response(scoped_missing(area), "insufficient_evidence")
 
+    if (
+        not is_dialogue_question(question)
+        and (
+            answer.answer_type == "conversation"
+            or repeats_other_turn(answer.answer)
+        )
+    ):
+        try:
+            answer = parse(*await asyncio.to_thread(lambda: infer(
+                "Câu này hỏi tư liệu của địa điểm đang xem, không hỏi lại hội thoại. "
+                "answer_type phải là answered hoặc insufficient_evidence. Không chép câu trả lời trước."
+            )))
+        except Exception:
+            return await abstain()
+        if answer.answer_type == "conversation" or repeats_other_turn(answer.answer):
+            return await abstain()
+
+
     if answer.answer_type in {"answered", "insufficient_evidence"}:
         cited = grounded_source_ids(answer.source_ids, ids)
-        spoken = re.sub(r"\b[Pp]assage\b", "Tư liệu", answer.answer)
+        spoken = visible_answer(answer.answer)
         story_uncited = bool(story and not set(story.source_ids) <= set(cited))
+        if not spoken:
+            return await abstain()
         if cited and not story_uncited and allowed_tour_output(spoken, "answered", area):
             sources = [item.to_source() for item in evidence if str(item.id) in cited]
             return response(
@@ -222,8 +274,10 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             )
         if answer.answer_type == "answered" and cited and not allowed_tour_output(spoken, "answered", area):
             return response(scoped_refusal(area), "out_of_scope")
-        return abstain()
+        return await abstain()
     if answer.answer_type == "conversation":
+        if not is_dialogue_question(question):
+            return await abstain()
         if allowed_tour_output(answer.answer, "conversation", area):
             return response(answer.answer, "conversation", questions=answer.follow_up_questions)
         return response("Mình không nhớ lượt trước để nhắc lại.", "conversation")
