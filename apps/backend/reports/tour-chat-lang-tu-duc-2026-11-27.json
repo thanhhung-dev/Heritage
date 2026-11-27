@@ -1,0 +1,1658 @@
+{
+  "date": "2026-11-27",
+  "endpoint": "https://dev-api.worldheritagea.tech/api/chat",
+  "method": "POST",
+  "area": "lang-tu-duc",
+  "case_origin": "Constructed visitor-style diagnostic questions; not sampled from historical user conversations.",
+  "execution": "Sequential; no source code, deployment, database or retrieval settings modified. DNS-over-HTTPS used to work around local DNS resolution failure.",
+  "latest_outcomes": {
+    "answered": 12,
+    "insufficient_evidence": 3,
+    "HTTP 502": 10
+  },
+  "tour_snapshot": [
+    {
+      "id": 1,
+      "slug": "s0",
+      "title": "Khiêm Lăng – Dấu ấn một đế vương",
+      "sequence": -1,
+      "highlights": []
+    },
+    {
+      "id": 3,
+      "slug": "s2",
+      "title": "Giấc mộng Khiêm Lăng",
+      "sequence": 1,
+      "highlights": []
+    },
+    {
+      "id": 506,
+      "slug": "s3",
+      "title": "Khiêm Cung Ký – Lời tự thuật của nhà vua",
+      "sequence": 2,
+      "highlights": [
+        {
+          "id": 6,
+          "mode": "standard",
+          "title": "Nhà bia (Bi Đình) – nơi đặt tấm bia lớn nhất lăng Nguyễn",
+          "text": "Phía cuối sân chầu là Bi Đình, nhà bia che chở tấm bia đá cao 4 mét. Ở các lăng khác, nơi này thường đặt bia ghi công đức vua cha do người kế vị soạn. Tự Đức không có con nối dõi nên tự viết bài văn bia, trở thành tự truyện của chính ông. Nhà bia vì thế không chỉ là nơi che chở một tấm bia, mà còn mang dấu ấn riêng của một vị vua tự kể về cuộc đời mình."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "slug": "s4",
+      "title": "Bia đá và những nỗi niềm",
+      "sequence": 3,
+      "highlights": [
+        {
+          "id": 5,
+          "mode": "standard",
+          "title": "Bia Đá Và Những nỗi niềm khắc trên đá",
+          "text": "Khiêm Cung Ký là bài văn bia dài 4.935 chữ Hán do chính vua Tự Đức soạn năm 1871. Khác với văn bia cung đình thường ca ngợi công đức, ông dùng tấm bia để kể về cuộc đời, vương nghiệp, bệnh tật và những rủi ro của mình, vừa kể công, vừa nhận tội trước hậu thế. Ông không có con nối dõi nên tự viết bài văn này thay cho bia ghi công đức vua cha ở các lăng khác. Tấm bia vì thế mang giọng của một người đang tự soi lại chính mình."
+        }
+      ]
+    },
+    {
+      "id": 508,
+      "slug": "s5",
+      "title": "Lăng mộ – Bí ẩn nơi an nghỉ",
+      "sequence": 4,
+      "highlights": [
+        {
+          "id": 7,
+          "mode": "standard",
+          "title": "Khiêm Lăng – Bí ẩn nơi an nghỉ cuối cùng",
+          "text": "Khiêm Lăng vừa là nơi vua Tự Đức nghỉ ngơi, làm thơ khi còn sống, vừa là nơi ông chuẩn bị cho ngày băng hà. Nhưng ngôi mộ thật của vua nằm ở đâu thì đến nay vẫn là một câu hỏi. Dân gian kể rằng ông được chôn ở một nơi bí mật, và hàng trăm người khiêng linh cữu đã bị chém đầu để giữ kín vị trí. Câu chuyện này chưa từng được kiểm chứng, nhưng chính nó đã làm khu lăng mộ thêm huyền bí."
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": 1,
+      "group": "overview",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Giới thiệu tổng quan về mẩu chuyện “Khiêm Lăng – Dấu ấn một đế vương” tại Lăng Tự Đức.",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 15.42063,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+          "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Lăng Tự Đức, còn được gọi là Khiêm Lăng, là một trong những công trình lăng tẩm tiêu biểu của Triều Nguyễn tại Cố Đô Huế. Công trình được xây dựng vào năm 1864 dưới triều vua Tự Đức, vị hoàng đế thứ tư của nhà Nguyễn. Ban đầu, lăng được đặt tên là Vạn Niên Cơ, dự kiến là nơi nghỉ ngơi và an dưỡng của nhà vua khi còn sống. Tuy nhiên, quá trình xây dựng đã gây ra nhiều bất mãn do việc huy động nhân lực và điều kiện lao động nặng nhọc, góp phần dẫn đến cuộc nổi dậy chày vôi vào năm 1866. Sau biến cố này, công trình được đổi tên thành Khiêm Cung, mang ý nghĩa khiêm nhường và tự nhìn nhận lại bản thân. Đến năm 1883, sau khi vua Tự Đức qua đời, nơi đây được gọi là Khiêm Lăng. Không chỉ là một công trình kiến trúc hoàng gia, Khiêm Lăng còn phản ánh tâm hồn yêu văn chương, thiên nhiên và những suy tư của một vị vua sống trong giai đoạn đầy biến động của lịch sử Việt Nam.",
+        "sources": [
+          {
+            "passage_id": "PSG-70d731e05dc4a3d11a6120b85ef2cdaeb5c4affeaa375324e4496f34cee93e4f",
+            "chunk_id": "PSG-70d731e05dc4a3d11a6120b85ef2cdaeb5c4affeaa375324e4496f34cee93e4f",
+            "doc": "Ee7918B9205729F6401C2B264Aadd807Aeeef0B07Bff807B602629730Bb33C4C",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khiem-cung-mon/ee7918b9205729f6401c2b264aadd807aeeef0b07bff807b602629730bb33c4c.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khiem-cung-mon/ee7918b9205729f6401c2b264aadd807aeeef0b07bff807b602629730bb33c4c.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.5334093,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Lăng Tự Đức được xây dựng từ năm nào đến năm nào?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 29.957,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "not_found",
+        "answer_type": "insufficient_evidence",
+        "abstained": true,
+        "abstention_reason": "insufficient_evidence",
+        "answer": "Sau khi Tự Đức băng hà, lăng được đổi tên thành Khiêm Lăng (謙陵). Vốn là một người giỏi thi phú, ông đã chọn cho mình một nơi yên nghỉ xứng đáng với ngôi vị của mình, địa điểm được chọn để xây lăng trong một thung lũng hẹp thuộc làng Dương Xuân Thượng, tổng Cư Chánh (Chú ý rằng \"vạn niên cơ\" là danh từ chung chỉ các lăng tẩm vua chứ không phải như nhiều sách vở cho là vua Tự Đức lấy tên Vạn Niên Cơ đặt tên cho công trình, với mong muốn được trường tồn).\n\nĐây là nguồn tham khảo: Lăng Tự Đức — https://vi.wikipedia.org/wiki/L%C4%83ng_T%E1%BB%B1_%C4%90%E1%BB%A9c",
+        "sources": []
+      }
+    },
+    {
+      "id": 3,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Vì sao lăng ban đầu được gọi là Vạn Niên Cơ?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 23.49,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+          "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Lăng ban đầu được gọi là Vạn Niên Cơ vì đây là tên gọi ban đầu được đặt theo ý muốn của vua Tự Đức khi xây dựng công trình. Tên này phản ánh ý định của nhà vua khi xây dựng khu lăng tẩm như một hành cung thứ hai để tiêu sầu và phòng khi 'ra đi bất chợt'. Sau đó, do các biến động lịch sử như cuộc khởi nghĩa vào năm 1866, công trình đã được đổi tên thành Khiêm Cung. Khi vua Tự Đức qua đời và được an táng năm 1883, tên gọi chính thức của lăng trở thành Khiêm Lăng.",
+        "sources": [
+          {
+            "passage_id": "PSG-159306f11c96ce0eba4d24fd7336490cab3e6baedd7157f48b611c993032423c",
+            "chunk_id": "PSG-159306f11c96ce0eba4d24fd7336490cab3e6baedd7157f48b611c993032423c",
+            "doc": "F6C65Df8Fdf7639B8A1825113Cb4518B551923748710A57A11A33C2B64E90Bfa",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/tong-quan/gioi-thieu/f6c65df8fdf7639b8a1825113cb4518b551923748710a57a11a33c2b64e90bfa.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/tong-quan/gioi-thieu/f6c65df8fdf7639b8a1825113cb4518b551923748710a57a11a33c2b64e90bfa.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.18513818,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Cuộc nổi dậy chày vôi liên quan thế nào đến việc xây lăng?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 12.983,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "not_found",
+        "answer_type": "insufficient_evidence",
+        "abstained": true,
+        "abstention_reason": "insufficient_evidence",
+        "answer": "Tuy nhiên, do công việc sưu dịch xây lăng quá cực khổ, lại bị quan lại đốc thúc đánh đập tàn nhẫn, dân phu xây lăng đã nổi dậy, dẫn đến sự kiện loạn Chày Vôi. == Quá trình xây lăng == Tự Đức đã sớm nghĩ đến việc xây lăng mộ cho mình ngay khi còn sống.\n\nĐây là nguồn tham khảo: Lăng Tự Đức — https://vi.wikipedia.org/wiki/L%C4%83ng_T%E1%BB%B1_%C4%90%E1%BB%A9c",
+        "sources": []
+      }
+    },
+    {
+      "id": 5,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Vì sao Vạn Niên Cơ được đổi tên thành Khiêm Cung?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 20.613,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+          "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Vạn Niên Cơ được đổi tên thành Khiêm Cung vì hoàn cảnh đất nước khó khăn, thực dân Pháp đe dọa và tấn công, nội bộ anh em lục đục giành nhau ngôi báu, nhà vua đau yếu, không có con. Để trốn tránh cuộc đời khắc nghiệt, Tự Đức cho xây dựng khu lăng tẩm này như một hành cung thứ hai để tiêu sầu và phòng lúc \"ra đi bất chợt\".",
+        "sources": [
+          {
+            "passage_id": "PSG-1a06a5b307638c7a0b541a3d35292764a92c296cfa831af8863629a414f6ee94",
+            "chunk_id": "PSG-1a06a5b307638c7a0b541a3d35292764a92c296cfa831af8863629a414f6ee94",
+            "doc": "27B3C9A7561B8F400C74Eb18468459Fbf327E8Ebd8Ecfd87F6F36077Fd63E99D",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/nhan-vat/vua-tu-duc/di-tich-va-tuong-niem/s03-01-lang-tu-duc/27b3c9a7561b8f400c74eb18468459fbf327e8ebd8ecfd87f6f36077fd63e99d.md",
+            "object_key": "curated/vi/hue/nhan-vat/vua-tu-duc/di-tich-va-tuong-niem/s03-01-lang-tu-duc/27b3c9a7561b8f400c74eb18468459fbf327e8ebd8ecfd87f6f36077fd63e99d.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.6404034,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Khiêm Cung và Khiêm Lăng khác nhau như thế nào?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 21.275,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+          "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Khiêm Cung và Khiêm Lăng là hai tên gọi khác nhau của cùng một địa điểm, nhưng chúng mang ý nghĩa khác nhau về công năng. Khiêm Cung là tên gọi khi vua còn sống, dùng để chỉ nơi ở và sinh phần của vua. Sau khi vua mất và được an táng năm 1883, tên gọi chuyển thành Khiêm Lăng, phản ánh công năng của địa điểm sau khi vua qua đời. Tên 'Khiêm' xuất hiện trong nhiều công trình khác nhau, nhưng không có nghĩa là các tên này thay thế cho toàn bộ lăng. Khiêm Cung và Khiêm Lăng thể hiện hai giai đoạn khác nhau của công năng địa điểm này.",
+        "sources": [
+          {
+            "passage_id": "PSG-2237dd0c7b77911bc12848c77245b5be9dd4112f9d12b56f97a7cecd8c70f23f",
+            "chunk_id": "PSG-2237dd0c7b77911bc12848c77245b5be9dd4112f9d12b56f97a7cecd8c70f23f",
+            "doc": "5036529Ce56D02D0D84370E26436Bc7C6545Bf49830E8F232113E1586E86Ef65",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/kien-truc/khu-tam-dien/5036529ce56d02d0d84370e26436bc7c6545bf49830e8f232113e1586e86ef65.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/kien-truc/khu-tam-dien/5036529ce56d02d0d84370e26436bc7c6545bf49830e8f232113e1586e86ef65.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.113162376,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Ai là người viết Khiêm Cung Ký?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 18.448,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+          "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Khiêm Cung Ký là văn bia do Tự Đức tự soạn năm 1871 và khắc trên hai mặt bia. Nội dung bia kể về việc dựng lăng, mô tả núi, hồ, công trình và bày tỏ tâm sự, trách nhiệm của nhà vua.",
+        "sources": [
+          {
+            "passage_id": "PSG-77684c0f9621d0c24f4a3831b444dba8eed812d5caac6c2c518f23cb5882f241",
+            "chunk_id": "PSG-77684c0f9621d0c24f4a3831b444dba8eed812d5caac6c2c518f23cb5882f241",
+            "doc": "962C3A0Ee238D19Eee1306491D761109Ad4Cb8068E802D6Be5F3B090529C4F85",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bia-khiem-cung-ky/962c3a0ee238d19eee1306491d761109ad4cb8068e802d6be5f3b090529c4f85.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bia-khiem-cung-ky/962c3a0ee238d19eee1306491d761109ad4cb8068e802d6be5f3b090529c4f85.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.5444884,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Khiêm Cung Ký được soạn vào năm nào và có bao nhiêu chữ?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 31.302,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+          "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Khiêm Cung Ký được soạn vào năm 1871 và có 1.168 chữ.",
+        "sources": [
+          {
+            "passage_id": "PSG-41587dbe1e655f34d9b9a3b413969505d9b2d7a4fd0ccdfd59bc56f86065b0a2",
+            "chunk_id": "PSG-41587dbe1e655f34d9b9a3b413969505d9b2d7a4fd0ccdfd59bc56f86065b0a2",
+            "doc": "5Fa1301Ae3915A4E6Daddd0159D6Bcfd2E14256F335C9Bb9D2D8Edba0C96De83",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khu-mo/5fa1301ae3915a4e6daddd0159d6bcfd2e14256f335c9bb9d2d8edba0c96de83.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khu-mo/5fa1301ae3915a4e6daddd0159d6bcfd2e14256f335c9bb9d2d8edba0c96de83.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.7731881,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Nội dung chính của bài văn bia Khiêm Cung Ký là gì?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 23.956,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+          "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Nội dung chính của bài văn bia Khiêm Cung Ký là việc xây dựng Khiêm Lăng, mô tả cảnh quan và tự thuật về đời mình của Tự Đức. Nội dung này được đặt trong nhà bia Bi Đình, là lời tự thuật của chính chủ nhân di tích.",
+        "sources": [
+          {
+            "passage_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+            "chunk_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+            "doc": "107F2202E59E64A8215425653994C5D9501Db526422315C3A91751460C87289C",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.91059446,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Bi Đình trong Lăng Tự Đức có gì đặc biệt?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 29.33,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Bi Đình trong Lăng Tự Đức có gì đáng chú ý?",
+          "Điện Hòa Khiêm trong Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Bi Đình trong Lăng Tự Đức là nhà bia thuộc khu lăng mộ, nằm sau Bái Đình với hai hàng tượng quan viên. Công trình này che chở và tạo không gian nghi lễ cho bia Khiêm Cung Ký. Bi Đình là kiến trúc nhà bia, còn bia Khiêm Cung Ký là hiện vật đá và văn bản được đặt bên trong. Nội dung của bia là Khiêm Cung Ký do Tự Đức tự soạn năm 1871, khác với loại văn bia do vua kế nghiệp soạn để ca ngợi vị vua đã mất. Nhà bia có cột lớn, vách dày, phù hợp với việc bảo vệ tấm bia kích thước đồ sộ. Tổng thể này làm nổi bật vị trí văn bia trước phần mộ, đồng thời kết hợp bảo vệ hiện vật với tổ chức nghi lễ.",
+        "sources": [
+          {
+            "passage_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+            "chunk_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+            "doc": "107F2202E59E64A8215425653994C5D9501Db526422315C3A91751460C87289C",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.7170633,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Hồ Lưu Khiêm có vai trò gì trong cảnh quan của lăng?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 18.21,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Lăng Tự Đức có gì đáng chú ý?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Hồ Lưu Khiêm có vai trò liên kết không gian vườn cảnh và các nhóm công trình trong lăng Tự Đức. Nó tạo bước chuyển từ cảnh quan hồ, đường dạo sang không gian điện bên trong. Quan hệ giữa địa hình, hồ, cây xanh và kiến trúc là một phần giá trị cần bảo vệ.",
+        "sources": [
+          {
+            "passage_id": "PSG-70d731e05dc4a3d11a6120b85ef2cdaeb5c4affeaa375324e4496f34cee93e4f",
+            "chunk_id": "PSG-70d731e05dc4a3d11a6120b85ef2cdaeb5c4affeaa375324e4496f34cee93e4f",
+            "doc": "Ee7918B9205729F6401C2B264Aadd807Aeeef0B07Bff807B602629730Bb33C4C",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khiem-cung-mon/ee7918b9205729f6401c2b264aadd807aeeef0b07bff807b602629730bb33c4c.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khiem-cung-mon/ee7918b9205729f6401c2b264aadd807aeeef0b07bff807b602629730bb33c4c.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.84983623,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Điện Hòa Khiêm được dùng để làm gì?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 21.657,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [
+          "Lịch sử của Điện Hòa Khiêm trong Lăng Tự Đức có gì đáng chú ý?",
+          "Lăng Tự Đức có gì đặc biệt?"
+        ],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "resolved",
+        "answer_type": "answered",
+        "abstained": false,
+        "abstention_reason": null,
+        "answer": "Điện Hòa Khiêm là nơi nhà vua làm việc mỗi khi đến Khiêm Cung khi Tự Đức còn sống. Về sau, điện trở thành nơi thờ bài vị vua và hoàng hậu. Ngoài ra, Hòa Khiêm là một trong ba công trình dùng gỗ mới khi xây dựng Khiêm Cung, thuộc nhóm công trình chính được đầu tư vật liệu riêng trong giai đoạn xây Khiêm Cung.",
+        "sources": [
+          {
+            "passage_id": "PSG-5146366c8a0c6b970404cda8867cb3ef20116b989d9229b4e43cef2c7e7d731c",
+            "chunk_id": "PSG-5146366c8a0c6b970404cda8867cb3ef20116b989d9229b4e43cef2c7e7d731c",
+            "doc": "45Ddb4Ad3D3D0713Dd40B90Ed6Af5888209Cd6F72F5Ed7D1C35697A8B3567C1D",
+            "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/dien-hoa-khiem/45ddb4ad3d3d0713dd40b90ed6af5888209cd6f72f5ed7d1c35697a8b3567c1d.md",
+            "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/dien-hoa-khiem/45ddb4ad3d3d0713dd40b90ed6af5888209cd6f72f5ed7d1c35697a8b3567c1d.md",
+            "retrieval_methods": [
+              "opensearch_hybrid"
+            ],
+            "score": 0.90230405,
+            "active_area_id": "lang-tu-duc"
+          }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "group": "in_area",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Vua Tự Đức có thực sự được chôn trong ngôi mộ đang thấy không?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 200,
+      "seconds": 11.905,
+      "curl_exit": 0,
+      "response": {
+        "active_area_id": "lang-tu-duc",
+        "reply_context": {
+          "scene_id": 1,
+          "scene_key": "s0",
+          "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "mode": "scene",
+          "highlight_id": null,
+          "highlight_title": null,
+          "story_id": null
+        },
+        "follow_up_questions": [],
+        "corrected_from": "",
+        "corrected_to": "",
+        "needs_user_choice": false,
+        "clarification_question": null,
+        "suggestions": [],
+        "entity_id": null,
+        "intent": null,
+        "resolution_status": "not_found",
+        "answer_type": "insufficient_evidence",
+        "abstained": true,
+        "abstention_reason": "insufficient_evidence",
+        "answer": "Vốn là một người giỏi thi phú, ông đã chọn cho mình một nơi yên nghỉ xứng đáng với ngôi vị của mình, địa điểm được chọn để xây lăng trong một thung lũng hẹp thuộc làng Dương Xuân Thượng, tổng Cư Chánh (Chú ý rằng \"vạn niên cơ\" là danh từ chung chỉ các lăng tẩm vua chứ không phải như nhiều sách vở cho là vua Tự Đức lấy tên Vạn Niên Cơ đặt tên cho công trình, với mong muốn được trường tồn). Lăng Tự Đức (chữ Hán: 嗣德陵) là một quần thể Di tích công trình kiến trúc, trong đó có nơi chôn cất Tự Đức, tọa lạc trong một thung lũng hẹp thuộc làng Dương Xuân Thượng, tổng Cư Chánh, nay là tổ dân phố Thượng Ba, phường Thủy Xuân, thành phố Huế.\n\nĐây là nguồn tham khảo: Lăng Tự Đức — https://vi.wikipedia.org/wiki/L%C4%83ng_T%E1%BB%B1_%C4%90%E1%BB%A9c",
+        "sources": []
+      }
+    },
+    {
+      "id": 14,
+      "group": "paired_scene",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Nhà bia Bi Đình có gì đặc biệt?",
+        "scene_context": {
+          "id": 506,
+          "slug": "s3",
+          "title": "Khiêm Cung Ký – Lời tự thuật của nhà vua",
+          "description": "Khám phá tấm bia Khiêm Cung Ký và lời tự thuật của vua Tự Đức.",
+          "sequence": 2,
+          "key": "s3"
+        },
+        "tour_context": {
+          "scene_id": 506,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 1.992,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n",
+      "retries": [
+        {
+          "http_status": 200,
+          "seconds": 22.049,
+          "curl_exit": 0,
+          "response": {
+            "active_area_id": "lang-tu-duc",
+            "reply_context": {
+              "scene_id": 506,
+              "scene_key": "s3",
+              "scene_title": "Khiêm Cung Ký – Lời tự thuật của nhà vua",
+              "mode": "scene",
+              "highlight_id": null,
+              "highlight_title": null,
+              "story_id": null
+            },
+            "follow_up_questions": [
+              "Lịch sử của Bi Đình trong Lăng Tự Đức có gì đáng chú ý?",
+              "Lăng Tự Đức có gì đặc biệt?"
+            ],
+            "corrected_from": "",
+            "corrected_to": "",
+            "needs_user_choice": false,
+            "clarification_question": null,
+            "suggestions": [],
+            "entity_id": null,
+            "intent": null,
+            "resolution_status": "resolved",
+            "answer_type": "answered",
+            "abstained": false,
+            "abstention_reason": null,
+            "answer": "Nhà bia Bi Đình là một công trình kiến trúc đặc biệt trong khu lăng mộ Tự Đức, được xây dựng để che chở và tạo không gian nghi lễ cho bia Khiêm Cung Ký. Nhà bia có cột lớn, vách dày, phù hợp với việc bảo vệ tấm bia kích thước đồ sộ. Nó nằm sau Bái Đình với hai hàng tượng quan viên, và là nơi đặt nội dung Khiêm Cung Ký do Tự Đức tự soạn năm 1871. Tổng thể này làm nổi bật vị trí văn bia trước phần mộ, đồng thời kết hợp bảo vệ hiện vật với tổ chức nghi lễ.",
+            "sources": [
+              {
+                "passage_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+                "chunk_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+                "doc": "107F2202E59E64A8215425653994C5D9501Db526422315C3A91751460C87289C",
+                "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+                "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+                "retrieval_methods": [
+                  "opensearch_hybrid"
+                ],
+                "score": 1.0,
+                "active_area_id": "lang-tu-duc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "group": "paired_highlight",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Nhà bia Bi Đình có gì đặc biệt?",
+        "scene_context": {
+          "id": 506,
+          "slug": "s3",
+          "title": "Khiêm Cung Ký – Lời tự thuật của nhà vua",
+          "description": "Khám phá tấm bia Khiêm Cung Ký và lời tự thuật của vua Tự Đức.",
+          "sequence": 2,
+          "key": "s3"
+        },
+        "tour_context": {
+          "scene_id": 506,
+          "mode": "standard",
+          "highlight_id": 6,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 2.566,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n",
+      "retries": [
+        {
+          "http_status": 200,
+          "seconds": 27.174,
+          "curl_exit": 0,
+          "response": {
+            "active_area_id": "lang-tu-duc",
+            "reply_context": {
+              "scene_id": 506,
+              "scene_key": "s3",
+              "scene_title": "Khiêm Cung Ký – Lời tự thuật của nhà vua",
+              "mode": "standard",
+              "highlight_id": 6,
+              "highlight_title": "Nhà bia (Bi Đình) – nơi đặt tấm bia lớn nhất lăng Nguyễn",
+              "story_id": null
+            },
+            "follow_up_questions": [
+              "Lịch sử của Bi Đình trong Lăng Tự Đức có gì đáng chú ý?",
+              "Lăng Tự Đức có gì đặc biệt?"
+            ],
+            "corrected_from": "",
+            "corrected_to": "",
+            "needs_user_choice": false,
+            "clarification_question": null,
+            "suggestions": [],
+            "entity_id": null,
+            "intent": null,
+            "resolution_status": "resolved",
+            "answer_type": "answered",
+            "abstained": false,
+            "abstention_reason": null,
+            "answer": "Nhà bia Bi Đình là một công trình kiến trúc đặc biệt trong khu lăng mộ Tự Đức, được xây dựng để che chở và tạo không gian nghi lễ cho bia Khiêm Cung Ký. Nhà bia có cột lớn, vách dày, phù hợp với việc bảo vệ tấm bia kích thước đồ sộ. Nó là nơi đặt bản Khiêm Cung Ký do Tự Đức tự soạn năm 1871, là lời tự thuật của chính chủ nhân di tích. Tổng thể này làm nổi bật vị trí văn bia trước phần mộ, đồng thời kết hợp bảo vệ hiện vật với tổ chức nghi lễ.",
+            "sources": [
+              {
+                "passage_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+                "chunk_id": "PSG-19d0f3738f10c51f7d1d93a3c7a6f5aa3f91e819f16dc513640dac8508ef315a",
+                "doc": "107F2202E59E64A8215425653994C5D9501Db526422315C3A91751460C87289C",
+                "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+                "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/bi-dinh/107f2202e59e64a8215425653994c5d9501db526422315c3a91751460c87289c.md",
+                "retrieval_methods": [
+                  "opensearch_hybrid"
+                ],
+                "score": 1.0,
+                "active_area_id": "lang-tu-duc"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "group": "paired_scene",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Khiêm Cung Ký do ai viết và có bao nhiêu chữ?",
+        "scene_context": {
+          "id": 5,
+          "slug": "s4",
+          "title": "Bia đá và những nỗi niềm",
+          "description": "Tìm hiểu những suy tư và giá trị lịch sử của văn bia.",
+          "sequence": 3,
+          "key": "s4"
+        },
+        "tour_context": {
+          "scene_id": 5,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 3.533,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n",
+      "retries": [
+        {
+          "http_status": 502,
+          "seconds": 1.718,
+          "curl_exit": 22,
+          "response": {
+            "unparsed_body": "error code: 502\n"
+          },
+          "transport_error": "curl: (22) The requested URL returned error: 502\n"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "group": "paired_highlight",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Khiêm Cung Ký do ai viết và có bao nhiêu chữ?",
+        "scene_context": {
+          "id": 5,
+          "slug": "s4",
+          "title": "Bia đá và những nỗi niềm",
+          "description": "Tìm hiểu những suy tư và giá trị lịch sử của văn bia.",
+          "sequence": 3,
+          "key": "s4"
+        },
+        "tour_context": {
+          "scene_id": 5,
+          "mode": "standard",
+          "highlight_id": 5,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 2.684,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n",
+      "retries": [
+        {
+          "http_status": 502,
+          "seconds": 2.084,
+          "curl_exit": 22,
+          "response": {
+            "unparsed_body": "error code: 502\n"
+          },
+          "transport_error": "curl: (22) The requested URL returned error: 502\n"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "group": "paired_scene",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Vì sao nơi an nghỉ thật của vua Tự Đức vẫn là điều bí ẩn?",
+        "scene_context": {
+          "id": 508,
+          "slug": "s5",
+          "title": "Lăng mộ – Bí ẩn nơi an nghỉ",
+          "description": "Khám phá khu lăng mộ và câu chuyện về nơi an nghỉ của vua Tự Đức.",
+          "sequence": 4,
+          "key": "s5"
+        },
+        "tour_context": {
+          "scene_id": 508,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 1.491,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    },
+    {
+      "id": 19,
+      "group": "paired_highlight",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Vì sao nơi an nghỉ thật của vua Tự Đức vẫn là điều bí ẩn?",
+        "scene_context": {
+          "id": 508,
+          "slug": "s5",
+          "title": "Lăng mộ – Bí ẩn nơi an nghỉ",
+          "description": "Khám phá khu lăng mộ và câu chuyện về nơi an nghỉ của vua Tự Đức.",
+          "sequence": 4,
+          "key": "s5"
+        },
+        "tour_context": {
+          "scene_id": 508,
+          "mode": "standard",
+          "highlight_id": 7,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 2.092,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    },
+    {
+      "id": 20,
+      "group": "coverage_probe",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Giá vé tham quan Lăng Tự Đức hôm nay là bao nhiêu?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 1.497,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    },
+    {
+      "id": 21,
+      "group": "coverage_probe",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Lăng Tự Đức mở cửa lúc mấy giờ hôm nay?",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 1.676,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    },
+    {
+      "id": 22,
+      "group": "coverage_probe",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Cho tôi tọa độ chính xác của nơi bí mật chôn vua Tự Đức.",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 1.655,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    },
+    {
+      "id": 23,
+      "group": "control",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Xin chào!",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 7.135,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    },
+    {
+      "id": 24,
+      "group": "control",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Hãy giới thiệu về Lăng Minh Mạng.",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 1.622,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    },
+    {
+      "id": 25,
+      "group": "control",
+      "request": {
+        "active_area_id": "lang-tu-duc",
+        "heritage_id": 1,
+        "conversation_context": [],
+        "heritage_context": {
+          "id": 1,
+          "slug": "lang-tu-duc",
+          "title": "Lăng Tự Đức",
+          "region": "Huế"
+        },
+        "message": "Viết giúp tôi một chương trình Python tính số Fibonacci.",
+        "scene_context": {
+          "id": 1,
+          "slug": "s0",
+          "title": "Khiêm Lăng – Dấu ấn một đế vương",
+          "description": "Giới thiệu tổng quan Khiêm Lăng, Bia Đình và khu lăng mộ.",
+          "sequence": -1,
+          "key": "s0"
+        },
+        "tour_context": {
+          "scene_id": 1,
+          "mode": "scene",
+          "highlight_id": null,
+          "narration": "partial",
+          "story_id": null,
+          "completed_story_ids": []
+        }
+      },
+      "http_status": 502,
+      "seconds": 1.667,
+      "curl_exit": 56,
+      "response": {
+        "unparsed_body": ""
+      },
+      "transport_error": "curl: (56) The requested URL returned error: 502\n"
+    }
+  ],
+  "recovery_probe": {
+    "http_status": 200,
+    "seconds": 37.392032,
+    "response": {
+      "active_area_id": "lang-tu-duc",
+      "reply_context": {
+        "scene_id": 1,
+        "scene_key": "s0",
+        "scene_title": "Khiêm Lăng – Dấu ấn một đế vương",
+        "mode": "scene",
+        "highlight_id": null,
+        "highlight_title": null,
+        "story_id": null
+      },
+      "follow_up_questions": [
+        "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+        "Bi Đình trong Lăng Tự Đức có gì đặc biệt?"
+      ],
+      "corrected_from": "",
+      "corrected_to": "",
+      "needs_user_choice": false,
+      "clarification_question": null,
+      "suggestions": [],
+      "entity_id": null,
+      "intent": null,
+      "resolution_status": "resolved",
+      "answer_type": "answered",
+      "abstained": false,
+      "abstention_reason": null,
+      "answer": "Lăng Tự Đức, còn được gọi là Khiêm Lăng, là một trong những công trình lăng tẩm tiêu biểu của Triều Nguyễn tại Cố Đô Huế. Công trình được xây dựng vào năm 1864 dưới triều vua Tự Đức, vị hoàng đế thứ tư của nhà Nguyễn. Ban đầu, lăng được đặt tên là Vạn Niên Cơ, dự kiến là nơi nghỉ ngơi và an dưỡng của nhà vua khi còn sống. Tuy nhiên, quá trình xây dựng đã gây ra nhiều bất mãn do việc huy động nhân lực và điều kiện lao động nặng nhọc, góp phần dẫn đến cuộc nổi dậy chày vôi vào năm 1866. Sau biến cố này, công trình được đổi tên thành Khiêm Cung, mang ý nghĩa khiêm nhường và tự nhìn nhận lại bản thân. Đến năm 1883, sau khi vua Tự Đức qua đời, nơi đây được gọi là Khiêm Lăng. Không chỉ là một công trình kiến trúc hoàng gia, Khiêm Lăng còn phản ánh tâm hồn yêu văn chương, thiên nhiên và những suy tư của một vị vua sống trong giai đoạn đầy biến động của lịch sử Việt Nam.",
+      "sources": [
+        {
+          "passage_id": "PSG-70d731e05dc4a3d11a6120b85ef2cdaeb5c4affeaa375324e4496f34cee93e4f",
+          "chunk_id": "PSG-70d731e05dc4a3d11a6120b85ef2cdaeb5c4affeaa375324e4496f34cee93e4f",
+          "doc": "Ee7918B9205729F6401C2B264Aadd807Aeeef0B07Bff807B602629730Bb33C4C",
+          "url": "https://r2.heritagegraph.local/curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khiem-cung-mon/ee7918b9205729f6401c2b264aadd807aeeef0b07bff807b602629730bb33c4c.md",
+          "object_key": "curated/vi/hue/dia-diem/khiem-cung-va-khiem-lang/cong-trinh/khiem-cung-mon/ee7918b9205729f6401c2b264aadd807aeeef0b07bff807b602629730bb33c4c.md",
+          "retrieval_methods": [
+            "opensearch_hybrid"
+          ],
+          "score": 0.5334093,
+          "active_area_id": "lang-tu-duc"
+        }
+      ]
+    }
+  }
+}

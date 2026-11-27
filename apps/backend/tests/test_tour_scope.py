@@ -228,9 +228,10 @@ class AreaApiTests(unittest.TestCase):
                 with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(uncited)):
                     rejected = client.post("/api/chat", json={"message": suggestion, "active_area_id": AREA})
                 self.assertEqual(repository.search_evidence.await_args.args[0], suggestion)
-                self.assertEqual(rejected.json()["answer_type"], "insufficient_evidence")
-                self.assertEqual(rejected.json()["sources"], [])
-                self.assertNotIn("vua Tự Đức", rejected.json()["answer"])
+                self.assertEqual(rejected.json()["answer_type"], "answered")
+                self.assertEqual(rejected.json()["sources"][0]["passage_id"], "42")
+                self.assertIn(self.evidence.text, rejected.json()["answer"])
+                self.assertNotIn("9999", rejected.json()["answer"])
                 cited = {"answer_type": "answered", "answer": "Bi Đình thuộc Lăng Tự Đức.", "source_ids": ["42"]}
                 with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(cited)):
                     accepted = client.post("/api/chat", json={"message": suggestion, "active_area_id": AREA})
@@ -383,15 +384,15 @@ class AreaApiTests(unittest.TestCase):
             repository.search_evidence.assert_not_awaited()
             self.assertEqual(generate.call_count, 1)
 
-    def test_invalid_model_contract_abstains_instead_of_pasting_evidence(self):
+    def test_invalid_model_contract_returns_related_evidence(self):
         raw = {"answer": "Khiêm Lăng xây năm 9999.", "source_ids": []}
         for response, _, generate in self.exercise(raw=raw):
             self.assertEqual(response.status_code, 200, response.text)
             data = response.json()
-            self.assertEqual(data["answer_type"], "insufficient_evidence")
-            self.assertEqual(data["sources"], [])
+            self.assertEqual(data["answer_type"], "answered")
+            self.assertEqual(data["sources"][0]["passage_id"], "42")
             self.assertNotIn("9999", data["answer"])
-            self.assertNotIn("vua Tự Đức", data["answer"])
+            self.assertIn(self.evidence.text, data["answer"])
             self.assertEqual(generate.call_count, 1)
 
     def test_insufficient_evidence_drops_uncited_model_claims(self):
@@ -474,13 +475,13 @@ class AreaApiTests(unittest.TestCase):
                 self.assertEqual(response.json()["sources"], [])
                 self.assertEqual(generate.call_count, 1)
 
-    def test_invalid_citations_abstain_instead_of_pasting_evidence(self):
+    def test_invalid_citations_return_related_evidence(self):
         for response, _, _ in self.exercise(raw={"answer_type": "answered", "answer": "Khiêm Lăng", "source_ids": ["foreign"]}):
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertEqual(data["answer_type"], "insufficient_evidence")
-            self.assertEqual(data["sources"], [])
-            self.assertNotIn("vua Tự Đức", data["answer"])
+            self.assertEqual(data["answer_type"], "answered")
+            self.assertEqual(data["sources"][0]["passage_id"], "42")
+            self.assertIn(self.evidence.text, data["answer"])
 
     def test_outage_and_unknown_area_never_fall_back_to_global(self):
         for response, _, generate in self.exercise(error=RuntimeError("secret-url")):
@@ -500,13 +501,13 @@ class AreaApiTests(unittest.TestCase):
             for response, _, _ in self.exercise():
                 self.assertEqual(response.status_code, 504)
 
-    def test_uncited_claim_abstains_instead_of_pasting_evidence(self):
+    def test_uncited_claim_is_replaced_by_related_evidence(self):
         for response, _, _ in self.exercise(raw={"answer_type": "answered", "answer": "Khiêm Lăng xây năm 9999.", "source_ids": []}):
             data = response.json()
-            self.assertEqual(data["answer_type"], "insufficient_evidence")
-            self.assertEqual(data["sources"], [])
+            self.assertEqual(data["answer_type"], "answered")
+            self.assertEqual(data["sources"][0]["passage_id"], "42")
             self.assertNotIn("9999", data["answer"])
-            self.assertNotIn("vua Tự Đức", data["answer"])
+            self.assertIn(self.evidence.text, data["answer"])
 
     def test_locked_generation_is_single_turn_without_history(self):
         from apps.backend.tests.test_chat_api import patched_llama_http

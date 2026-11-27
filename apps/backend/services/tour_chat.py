@@ -58,10 +58,10 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     destination = question_outside_area(question, area)
     social = is_social_turn(question)
 
-    def response(text, kind, sources=(), questions=(), graph_context=None, evidence=()):
+    def response(text, kind, sources=(), questions=(), graph_context=None, evidence=(), *, story_complete=True):
         del questions
         snapshot = reply_context.model_copy(update={
-            "story_id": reply_context.story_id if kind == "answered" else None,
+            "story_id": reply_context.story_id if kind == "answered" and story_complete else None,
         }).model_dump() if reply_context else None
         artifact = None if unmapped_marker else artifact_title_from_data(
             focus_title=focus.title if focus else None,
@@ -197,15 +197,25 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         )
         return raw, generation_details()
 
-    async def abstain():
-        if social or destination is not None or is_dialogue_question(question) or unmapped_marker:
-            return response(scoped_missing(area), "insufficient_evidence")
-        found = await research_heritage(question, area.title, area.names)
-        if found is None:
-            return response(scoped_missing(area), "insufficient_evidence")
-        spoken = answer_from_page(question, found, generate)
-        if spoken:
-            return response(spoken, "answered", [_wiki_source(found, area.id)])
+    def related_or_missing():
+        if destination is not None:
+            return response(scoped_refusal(area, destination), "out_of_scope")
+        # Retrieval already enforces the area and reviewed highlight links. Even
+        # a partial match is useful; never reuse an ungrounded model answer here.
+        for item in evidence:
+            excerpts = [
+                part.strip() for part in re.split(r"(?<=[.!?])\s+|[\r\n]+", item.text)
+                if part.strip() and allowed_tour_output(part.strip(), "answered", area)
+            ]
+            if not excerpts:
+                continue
+            text = (
+                "Tư liệu hiện có chưa trả lời trực tiếp đầy đủ câu hỏi này. "
+                "Mình tìm được thông tin liên quan:\n\n" + " ".join(excerpts)
+            )
+            return response(
+                text, "answered", [item.to_source()], evidence=[item], story_complete=False,
+            )
         return response(scoped_missing(area), "insufficient_evidence")
 
     def parse(raw, details):
@@ -224,7 +234,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     try:
         answer = parse(*await asyncio.to_thread(infer))
     except Exception:
-        return await abstain()
+        return related_or_missing()
 
     if social:
         if answer.answer_type == "conversation" and allowed_tour_output(answer.answer, "conversation", area):
@@ -240,7 +250,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             return response(answer.answer, "out_of_scope", questions=answer.follow_up_questions)
         return response(scoped_refusal(area, destination), "out_of_scope")
     if story_evidence_missing and answer.answer_type != "conversation":
-        return response(scoped_missing(area), "insufficient_evidence")
+        return related_or_missing()
 
     if (
         not is_dialogue_question(question)
@@ -272,9 +282,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
                 spoken, "answered", sources, questions=answer.follow_up_questions,
                 graph_context=accepted_graph, evidence=evidence,
             )
-        if answer.answer_type == "answered" and cited and not allowed_tour_output(spoken, "answered", area):
-            return response(scoped_refusal(area), "out_of_scope")
-        return await abstain()
+        return related_or_missing()
     if answer.answer_type == "conversation":
         if not is_dialogue_question(question):
             return await abstain()

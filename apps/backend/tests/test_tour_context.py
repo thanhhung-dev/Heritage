@@ -210,7 +210,10 @@ class GuideAnswerTests(unittest.IsolatedAsyncioTestCase):
             evidence.id = "42"
             generate.return_value = json.dumps({"answer_type": "answered", "answer": evidence.text, "source_ids": ["invented"]})
             invented = await answer_in_area(request, repository, generate, lambda: SimpleNamespace(truncated=False), reply_context=snapshot)
-            self.assertEqual(invented["answer_type"], "insufficient_evidence")
+            self.assertEqual(invented["answer_type"], "answered")
+            self.assertIn(evidence.text, invented["answer"])
+            self.assertEqual(invented["sources"][0]["passage_id"], "42")
+            self.assertIsNone(invented["reply_context"]["story_id"])
 
     async def test_followup_uses_history_without_a_second_model_call(self):
         from apps.backend.services.tour_chat import answer_in_area
