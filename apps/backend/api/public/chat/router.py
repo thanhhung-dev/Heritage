@@ -16,7 +16,6 @@ from apps.backend.ai.answering.conversation import (
 from apps.backend.api.public.chat.schemas import ChatRequest, ChatResponse
 from apps.backend.common.config import chat_timeout_seconds
 from apps.backend.ai.providers.llm import generate_response, get_generation_details
-from apps.backend.services.web_research import reference_answer, research_heritage
 from apps.backend.common.observability import correlation_id, observe_grounded_qa, rag_observation
 from apps.backend.common.search.opensearch import PassageStore, SearchError
 from apps.backend.ai.retrieval.passages import EmbeddingError, PassageRepository, PassageSearch, RetrievalQuery
@@ -125,10 +124,9 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
         )
     missing = "Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có."
     if not result.evidence:
-        found = await research_heritage(req.message, "")
-        spoken = reference_answer(found, req.message) if found is not None else None
         return ChatResponse(
-            answer=spoken or missing, sources=[], resolution_status="not_found", answer_type="insufficient_evidence",
+            answer=missing, sources=[], resolution_status="not_found",
+            answer_type="insufficient_evidence",
         )
     with rag_observation('context.assembly') as observation:
         context = '\n\n'.join(f'[Passage {evidence_cite_id(item)}]\n{item.text}' for item in result.evidence)

@@ -300,11 +300,11 @@ CĂN CỨ
   cho một câu hỏi mới.
 
 CÁCH TRẢ LỜI
-- Tiếng Việt tự nhiên, giọng của bạn. Trả lời đúng câu họ hỏi trước.
-  Nguồn còn chi tiết đáng nhớ thì kể thêm.
+- Trả Lời Bằng Tiếng Việt Tự Nhiên Theo điều người dùng thật sự muốn biết
 - Không URL, id, chữ Passage hay nhãn Tư liệu id trong answer. Id chỉ nằm trong source_ids.
 - Ngoài phạm vi: nhận câu họ vừa hỏi, nói mình chỉ có biết chỗ này,
   rồi mời hỏi tiếp về chỗ này. Tự viết, không dùng câu mẫu, không đọc Passage, không bịa số.
+- Ví Dụ Như : hiện tại tôi chưa biết chính xác chỗ này xong đưa câu mà chưa biết chính xác đó ra 
 
 ĐẦU RA
 Trả duy nhất JSON với answer_type, answer và source_ids. Không Markdown.
