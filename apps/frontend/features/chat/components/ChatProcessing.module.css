@@ -1,0 +1,109 @@
+.root {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text-secondary, #a3a3a3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 2px;
+  border-radius: 6px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.trigger::-webkit-details-marker {
+  display: none;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--accent, #ffffff);
+  outline-offset: 3px;
+}
+
+.chevron {
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+  transition: transform 180ms ease;
+}
+
+.root[open] .chevron {
+  transform: rotate(0);
+}
+
+.label {
+  flex-shrink: 0;
+  background: linear-gradient(100deg, rgba(255, 255, 255, .55) 18%, rgba(255, 255, 255, .72) 38%, #fff 50%, rgba(255, 255, 255, .72) 62%, rgba(255, 255, 255, .55) 82%);
+  background-size: 300% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shimmer 1.25s ease-in-out infinite;
+}
+
+.query {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  padding: 2px 7px;
+  border: 1px solid var(--border, rgba(255, 255, 255, .18));
+  border-radius: 6px;
+  background: var(--accent-glow, rgba(255, 173, 66, .08));
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spinner {
+  flex-shrink: 0;
+  animation: spin 1.2s linear infinite;
+}
+
+.panel {
+  margin: 6px 0 0 6px;
+  padding: 10px 14px;
+  border-left: 1px solid var(--border, rgba(255, 255, 255, .18));
+}
+
+.caption {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-strong, #fff);
+}
+
+.question {
+  margin: 6px 0 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+@keyframes shimmer {
+  from { background-position: 100% 50%; }
+  to { background-position: -100% 50%; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .label, .spinner { animation: none; }
+  .label { background: none; color: inherit; }
+  .chevron { transition: none; }
+}
+
+@media (max-width: 380px) {
+  .trigger { gap: 6px; }
+  .query { max-width: 80px; }
+}

@@ -554,6 +554,7 @@
 .userMessage .messageBody { max-width: calc(100% - 48px); }
 
 .messageText {
+  position: relative;
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -684,58 +685,139 @@
 .quickSuggestions { margin: 0 0 12px; }
 
 .inlineFollowUp {
-  margin: 10px 0 0;
-  font-size: 13.5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 0;
+  font-size: 12px;
   line-height: 1.55;
   color: var(--text-secondary);
 }
 
 .inlineFollowUpLink {
-  display: inline;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--tl-15);
+  border-radius: 14px;
+  background: var(--accent-glow);
   color: var(--text-strong, #fff);
   font-weight: 500;
   text-align: left;
-  text-decoration: underline;
-  text-decoration-color: rgba(255, 173, 66, 0.55);
-  text-underline-offset: 3px;
+  font: inherit;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
   cursor: pointer;
-  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .inlineFollowUpLink:hover:not(:disabled) {
   color: #ffad42;
-  text-decoration-color: #ffad42;
+  border-color: var(--accent);
 }
 
-.citations {
-  margin-top: 12px;
-  border-top: 1px solid var(--tl-10);
-  padding-top: 8px;
-  font-size: 10px;
+.inlineFollowUpLink:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.sourceLinks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
+  margin-left: 6px;
+  vertical-align: middle;
+  white-space: normal;
+}
+
+.sourceLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  max-width: min(190px, 100%);
+  min-width: 0;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--tl-15);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 75%, transparent);
   color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
 }
 
-.citations summary {
-  cursor: pointer;
+.messageText .sourceLink { color: var(--text-secondary); text-decoration: none; }
+
+.sourceLink:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
 }
 
-.citations ol {
-  margin: 8px 0 0;
-  padding-left: 16px;
+.sourceLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
-.citations li {
-  padding: 3px 0;
+.sourceIcon {
+  display: inline-grid;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--bg);
+}
+
+.sourceInitial {
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sourceFavicon {
+  grid-area: 1 / 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  object-fit: contain;
+  background: var(--bg);
+}
+
+.sourceTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourcePreview {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  width: min(240px, 100%);
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--tl-15);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
   overflow-wrap: anywhere;
+  text-align: left;
 }
 
-.citations a {
-  color: var(--accent);
-  text-underline-offset: 3px;
-}
+.sourcePreview strong { color: var(--text-strong); font-weight: 600; }
 
 .citationBadges { display: flex; flex-wrap: wrap; gap: 5px; }
 .citationBadges button { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 999px; padding: 4px 7px; background: var(--accent-glow); color: var(--accent); text-align: left; font-size: 10px; overflow-wrap: anywhere; }

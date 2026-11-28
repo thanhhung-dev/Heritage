@@ -126,8 +126,7 @@ async def _chat(req: ChatRequest, repository: PassageRepository):
     missing = "Tôi không tìm thấy bằng chứng phù hợp trong dữ liệu hiện có."
     if not result.evidence:
         return ChatResponse(
-            answer=missing, sources=[], resolution_status="not_found",
-            answer_type="insufficient_evidence",
+            answer=missing, sources=[], resolution_status="not_found", answer_type="insufficient_evidence",
         )
     with rag_observation('context.assembly') as observation:
         context = '\n\n'.join(f'[Passage {evidence_cite_id(item)}]\n{item.text}' for item in result.evidence)
