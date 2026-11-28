@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 
 from apps.backend.ai.answering.conversation import (
@@ -10,10 +11,10 @@ from apps.backend.ai.answering.conversation import (
     dialogue_turns, is_dialogue_question, is_social_turn, prior_user_questions, visible_answer,
 )
 from apps.backend.common.config import chat_timeout_seconds
-from apps.backend.services.heritage_graph import artifact_title_from_data, ordered_entity_follow_ups
+from apps.backend.services.tour_follow_ups import propose_follow_ups
 from apps.backend.services.tour_guide import GUIDE_STORIES, TourFocus, guide_stories
 from apps.backend.services.tour_scope import (
-    TourArea, allowed_output, allowed_tour_output, follow_up_questions, normalized,
+    allowed_output, allowed_tour_output, normalized,
     question_outside_area, resolve_area, scoped_missing, scoped_refusal,
 )
 from apps.backend.services.web_research import WEB_LABEL, research_heritage
@@ -26,39 +27,7 @@ class TourChatError(RuntimeError):
         self.detail = detail
 
 
-def _readable_excerpt(text: str, area: TourArea, title: str = "") -> str:
-    """Format a source excerpt without rewriting its historical claims."""
-    # Remove the standard import note without dropping surrounding source prose.
-    note = re.search(
-        r"Bản trích tư liệu đã lọc định dạng, chưa phải nội dung đã kiểm chứng toàn bộ\."
-        r"\s*Các nhận định, lời kể và công thức bên dưới thuộc nguồn được ghi\.",
-        text,
-    )
-    if note:
-        text = text[:note.start()] + "\n" + text[note.end():]
-
-    lines = []
-    titles = {normalized(value) for value in (*area.names, area.title, title) if value}
-    for line in text.splitlines():
-        line = re.sub(r"^\s*(?:#{1,6}\s+|>\s*)", "", line).strip()
-        if not line or normalized(line) in titles:
-            continue
-        if re.match(r"^(?:Đối tượng\s*:|Nguồn\s*\[S\d+\]\s*:)", line):
-            continue
-        lines.append(line)
-
-    sentences = []
-    seen = set()
-    for sentence in re.split(r"(?<=[.!?])\s+|[\r\n]+", "\n".join(lines)):
-        sentence = visible_answer(sentence.strip())
-        key = normalized(sentence)
-        if not key or key in seen or not allowed_tour_output(sentence, "answered", area):
-            continue
-        seen.add(key)
-        sentences.append(sentence)
-    return "\n\n".join(
-        " ".join(sentences[index:index + 2]) for index in range(0, len(sentences), 2)
-    )
+log = logging.getLogger(__name__)
 
 
 async def answer_in_area(request, repository, generate, generation_details, *, reply_context=None) -> dict:
@@ -73,6 +42,7 @@ async def answer_in_area(request, repository, generate, generation_details, *, r
 
 
 async def _answer_in_area(request, repository, generate, generation_details, *, reply_context=None) -> dict:
+    suggestion_deadline = asyncio.get_running_loop().time() + chat_timeout_seconds() - 2
     area = resolve_area(request.active_area_id)
     question = request.message.strip()
     if not question:
@@ -89,35 +59,17 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     social = is_social_turn(question)
 
     def response(text, kind, sources=(), questions=(), graph_context=None, evidence=(), *, story_complete=True):
-        del questions
         if any(source.get("source_type") == "web" for source in sources):
             text = f"{WEB_LABEL}\n\n{text}"
             story_complete = False
         snapshot = reply_context.model_copy(update={
             "story_id": reply_context.story_id if kind == "answered" and story_complete else None,
         }).model_dump() if reply_context else None
-        artifact = None if unmapped_marker else artifact_title_from_data(
-            focus_title=focus.title if focus else None,
-            graph_context=graph_context, evidence=evidence,
-        )
-        if kind in {"out_of_scope", "insufficient_evidence"}:
-            scoped = []
-        else:
-            related = [] if unmapped_marker else ordered_entity_follow_ups(
-                question, area_title=area.title, artifact_title=artifact,
-            )
-            asked_norm = normalized(question)
-            scoped = [
-                item for item in follow_up_questions(
-                    related, area, fallback=not selected_marker or kind == "answered",
-                    fallback_questions=focus.questions() if focus else None,
-                ) if normalized(item) != asked_norm
-            ]
         return {
             "answer": text, "answer_type": kind, "sources": list(sources),
             "active_area_id": area.id,
             "reply_context": snapshot,
-            "follow_up_questions": scoped[:2],
+            "follow_up_questions": list(questions)[:2] if kind == "answered" else [],
             "resolution_status": "not_found" if kind == "insufficient_evidence" else "resolved",
         }
 
@@ -174,13 +126,6 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
         ]
         graph_context = result.graph_context
 
-    kb_evidence = []
-    kb_size = 0
-    for item in evidence:
-        block_size = len(f"[Passage {item.id}]\n{item.text}") + 2
-        if kb_size + block_size <= 4800:
-            kb_evidence.append(item)
-            kb_size += block_size
     web_evidence = ()
     if not social and destination is None and not is_dialogue_question(question):
         research = await research_heritage(
@@ -221,12 +166,12 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             context += "\n\n" + block
             accepted_graph.append(item)
     context = append_graph_follow_up_hint(context, accepted_graph)
-    def repeats_other_turn(text: str) -> bool:
-        last_user = next((item["content"] for item in reversed(dialogue) if item["role"] == "user"), "")
-        last_assistant = next((item["content"] for item in reversed(dialogue) if item["role"] == "assistant"), "")
-        if not last_assistant or normalized(question) == normalized(last_user):
-            return False
-        return normalized(text) == normalized(last_assistant)
+    viewing_context = None
+    if reply_context:
+        viewing_context = json.dumps({
+            "scene_title": reply_context.scene_title,
+            "highlight_title": reply_context.highlight_title,
+        }, ensure_ascii=False)
 
     def infer(suffix: str = ""):
         asked = question if not suffix else f"{question}\n\n{suffix}"
@@ -234,24 +179,17 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             question=asked, context=context, conversation=True,
             retrieval_status="available" if evidence else "not_found",
             active_area_id=area.id, user_history=user_history, dialogue=dialogue,
-            artifact_title=focus.title if focus else None,
+            artifact_title=focus.title if focus else None, viewing_context=viewing_context,
         )
         return raw, generation_details()
 
-    def related_or_missing():
+    def abstain(reason: str):
+        # Log the failure category, never user text, evidence or private model output.
+        log.warning("tour_answer_rejected reason=%s area=%s", reason, area.id)
         if destination is not None:
             return response(scoped_refusal(area, destination), "out_of_scope")
-        for item in (*kb_evidence, *web_evidence):
-            excerpt = _readable_excerpt(
-                item.text, area, getattr(item, "location_note", ""),
-            )
-            if excerpt:
-                return response(
-                    "Mình tìm được thông tin liên quan trong tư liệu:\n\n" + excerpt,
-                    "answered", [item.to_source()], evidence=[item], story_complete=False,
-                )
         return response(
-            "Mình chưa tổng hợp được câu trả lời có căn cứ cho câu hỏi này. Bạn thử lại nhé.",
+            "Mình chưa xác nhận được câu trả lời có căn cứ cho câu hỏi này. Bạn thử hỏi rõ hơn nhé.",
             "insufficient_evidence", story_complete=False,
         )
 
@@ -271,7 +209,7 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
     try:
         answer = parse(*await asyncio.to_thread(infer))
     except Exception:
-        return related_or_missing()
+        return abstain("generation_or_contract_failed")
 
     if social:
         if answer.answer_type == "conversation" and allowed_tour_output(answer.answer, "conversation", area):
@@ -287,42 +225,45 @@ async def _answer_in_area(request, repository, generate, generation_details, *, 
             return response(answer.answer, "out_of_scope", questions=answer.follow_up_questions)
         return response(scoped_refusal(area, destination), "out_of_scope")
     if story_evidence_missing and answer.answer_type != "conversation":
-        return related_or_missing()
+        return abstain("story_evidence_missing")
 
-    if (
-        not is_dialogue_question(question)
-        and (
-            answer.answer_type == "conversation"
-            or repeats_other_turn(answer.answer)
-        )
-    ):
+    if not is_dialogue_question(question) and answer.answer_type == "conversation":
         try:
             answer = parse(*await asyncio.to_thread(lambda: infer(
                 "Câu này hỏi tư liệu của địa điểm đang xem, không hỏi lại hội thoại. "
                 "answer_type phải là answered hoặc insufficient_evidence. Không chép câu trả lời trước."
             )))
         except Exception:
-            return related_or_missing()
-        if answer.answer_type == "conversation" or repeats_other_turn(answer.answer):
-            return related_or_missing()
+            return abstain("retry_generation_or_contract_failed")
+        if answer.answer_type == "conversation":
+            return abstain("nonresponsive_answer")
 
 
-    if answer.answer_type in {"answered", "insufficient_evidence"}:
+    if answer.answer_type == "insufficient_evidence":
+        return abstain("insufficient_evidence")
+
+    if answer.answer_type == "answered":
         cited = grounded_source_ids(answer.source_ids, ids)
         spoken = visible_answer(answer.answer)
         story_uncited = bool(story and not set(story.source_ids) <= set(cited))
         if not spoken:
-            return related_or_missing()
+            return abstain("empty_answer")
         if cited and not story_uncited and allowed_tour_output(spoken, "answered", area):
             sources = [item.to_source() for item in evidence if str(item.id) in cited]
+            questions = await propose_follow_ups(
+                question=question, answer=spoken, area=area, focus=focus.title if focus else "",
+                dialogue=dialogue, recent_suggestions=request.recent_suggestions,
+                evidence=evidence, generate=generate, generation_details=generation_details,
+                timeout=min(12.0, suggestion_deadline - asyncio.get_running_loop().time()),
+            )
             return response(
-                spoken, "answered", sources, questions=answer.follow_up_questions,
+                spoken, "answered", sources, questions=questions,
                 graph_context=accepted_graph, evidence=evidence,
             )
-        return related_or_missing()
+        return abstain("citation_or_scope_failed")
     if answer.answer_type == "conversation":
         if not is_dialogue_question(question):
-            return related_or_missing()
+            return abstain("unexpected_conversation_outcome")
         if allowed_tour_output(answer.answer, "conversation", area):
             return response(answer.answer, "conversation", questions=answer.follow_up_questions)
         return response("Mình không nhớ lượt trước để nhắc lại.", "conversation")

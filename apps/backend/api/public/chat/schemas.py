@@ -68,6 +68,10 @@ class ChatRequest(BaseModel):
     scene_context: str | dict[str, JsonValue] | None = None
     tour_context: TourContext | None = None
     conversation_context: list[ContextMessage] = Field(default_factory=list, max_length=6)
+    recent_suggestions: list[Annotated[str, Field(min_length=1, max_length=200)]] = Field(
+        default_factory=list, max_length=6,
+        description="Gợi ý gần đây đã hiển thị; chỉ dùng tránh lặp, không phải bằng chứng lịch sử.",
+    )
 
     @field_validator("active_area_id")
     @classmethod
@@ -110,7 +114,8 @@ class ChatOutcome(BaseModel):
     active_area_id: str | None = None
     reply_context: TourReplyContext | None = None
     follow_up_questions: list[str] = Field(default_factory=list, max_length=3, description=(
-        "Câu hỏi gợi ý đã kiểm tra phạm vi active_area_id, tách biệt suggestions dùng để disambiguation."
+        "Trong tour: 0–2 câu hỏi theo ngữ cảnh, kiểm tra phạm vi và nguồn; có thể rỗng. "
+        "Tách biệt suggestions dùng để disambiguation."
     ))
     corrected_from: str = ""
     corrected_to: str = ""

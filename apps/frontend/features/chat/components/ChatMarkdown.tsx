@@ -53,41 +53,45 @@ function inline(tokens: Token[], counter?: WordCounter): ReactNode {
   });
 }
 
-function blocks(tokens: Token[], counter?: WordCounter): ReactNode {
-  return tokens.map((token, index) => {
+function blocks(tokens: Token[], counter?: WordCounter, trailing?: ReactNode): ReactNode {
+  const visibleTokens = tokens.filter((token) => token.type !== "space" && token.type !== "def");
+  return visibleTokens.map((token, index) => {
+    const suffix = index === visibleTokens.length - 1 ? trailing : undefined;
     let content: ReactNode;
     switch (token.type) {
       case "space": case "def": return null;
       case "heading": {
         const heading = token as Tokens.Heading;
         const Tag = heading.depth <= 2 ? "h3" : "h4";
-        content = <Tag>{inline(heading.tokens, counter)}</Tag>;
+        content = <Tag>{inline(heading.tokens, counter)}{suffix}</Tag>;
         break;
       }
-      case "paragraph": content = <p>{inline((token as Tokens.Paragraph).tokens, counter)}</p>; break;
+      case "paragraph": content = <p>{inline((token as Tokens.Paragraph).tokens, counter)}{suffix}</p>; break;
       case "list": {
         const list = token as Tokens.List;
-        const items = list.items.map((item, itemIndex) => <li key={itemIndex}>{blocks(item.tokens, counter)}</li>);
+        const items = list.items.map((item, itemIndex) => <li key={itemIndex}>
+          {blocks(item.tokens, counter, itemIndex === list.items.length - 1 ? suffix : undefined)}
+        </li>);
         content = list.ordered ? <ol start={typeof list.start === "number" ? list.start : undefined}>{items}</ol> : <ul>{items}</ul>;
         break;
       }
-      case "blockquote": content = <blockquote>{blocks((token as Tokens.Blockquote).tokens, counter)}</blockquote>; break;
-      case "code": content = <pre><code>{renderTextWithBlur((token as Tokens.Code).text, counter)}</code></pre>; break;
-      case "hr": content = <hr />; break;
+      case "blockquote": content = <blockquote>{blocks((token as Tokens.Blockquote).tokens, counter, suffix)}</blockquote>; break;
+      case "code": content = <><pre><code>{renderTextWithBlur((token as Tokens.Code).text, counter)}</code></pre>{suffix}</>; break;
+      case "hr": content = <><hr />{suffix}</>; break;
       case "table": {
         const table = token as Tokens.Table;
-        content = <div className="markdown-table"><table>
+        content = <><div className="markdown-table"><table>
           <thead><tr>{table.header.map((cell, cellIndex) => <th key={cellIndex}>{inline(cell.tokens, counter)}</th>)}</tr></thead>
           <tbody>{table.rows.map((row, rowIndex) => <tr key={rowIndex}>
             {row.map((cell, cellIndex) => <td key={cellIndex}>{inline(cell.tokens, counter)}</td>)}
           </tr>)}</tbody>
-        </table></div>;
+        </table></div>{suffix}</>;
         break;
       }
-      case "html": content = <p>{renderTextWithBlur((token as Tokens.HTML).text, counter)}</p>; break;
+      case "html": content = <p>{renderTextWithBlur((token as Tokens.HTML).text, counter)}{suffix}</p>; break;
       default: {
         const text = token as Tokens.Text;
-        content = text.tokens ? inline(text.tokens, counter) : inline(Lexer.lexInline(text.text ?? token.raw), counter);
+        content = <>{text.tokens ? inline(text.tokens, counter) : inline(Lexer.lexInline(text.text ?? token.raw), counter)}{suffix}</>;
       }
     }
     return <Fragment key={index}>{content}</Fragment>;
@@ -95,7 +99,9 @@ function blocks(tokens: Token[], counter?: WordCounter): ReactNode {
 }
 
 /** Render a token tree through React; raw model HTML is always escaped. */
-export function ChatMarkdown({ content, animate = false }: { content: string; animate?: boolean }) {
+export function ChatMarkdown({ content, animate = false, trailing }: {
+  content: string; animate?: boolean; trailing?: ReactNode;
+}) {
   const counter: WordCounter | undefined = animate ? { current: 0 } : undefined;
-  return <>{blocks(Lexer.lex(content), counter)}</>;
+  return <>{blocks(Lexer.lex(content), counter, trailing)}</>;
 }

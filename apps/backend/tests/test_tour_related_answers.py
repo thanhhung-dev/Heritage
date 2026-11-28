@@ -1,4 +1,4 @@
-"""Tour answers keep useful retrieved evidence when generation cannot use it."""
+"""Rejected tour generations abstain without presenting raw evidence as answers."""
 import json
 import unittest
 from types import SimpleNamespace
@@ -31,19 +31,19 @@ class RelatedTourAnswerTests(unittest.IsolatedAsyncioTestCase):
         )
         return result, repository, generate
 
-    async def test_related_evidence_is_returned_even_when_model_cannot_answer(self):
+    async def test_related_evidence_does_not_override_model_abstention(self):
         result, _, generate = await self.answer({
             "answer_type": "insufficient_evidence", "answer": "Không biết năm hoàn thành.",
             "source_ids": [],
         })
-        self.assertEqual(result["answer_type"], "answered")
-        self.assertIn("thông tin liên quan", result["answer"])
-        self.assertIn(self.evidence.text, result["answer"])
-        self.assertEqual(result["sources"], [self.evidence.to_source()])
-        self.assertEqual(result["resolution_status"], "resolved")
+        self.assertEqual(result["answer_type"], "insufficient_evidence")
+        self.assertNotIn("thông tin liên quan", result["answer"])
+        self.assertNotIn(self.evidence.text, result["answer"])
+        self.assertEqual(result["sources"], [])
+        self.assertEqual(result["resolution_status"], "not_found")
         self.assertEqual(generate.call_count, 1)
 
-    async def test_invalid_or_failed_generation_uses_source_not_model_claims(self):
+    async def test_invalid_or_failed_generation_does_not_publish_claims_or_passages(self):
         for raw, truncated in [
             ("not JSON", False),
             (RuntimeError("private model error"), False),
@@ -53,9 +53,9 @@ class RelatedTourAnswerTests(unittest.IsolatedAsyncioTestCase):
         ]:
             with self.subTest(raw=raw, truncated=truncated):
                 result, _, _ = await self.answer(raw, truncated=truncated)
-                self.assertEqual(result["answer_type"], "answered")
-                self.assertIn(self.evidence.text, result["answer"])
-                self.assertEqual(result["sources"], [self.evidence.to_source()])
+                self.assertEqual(result["answer_type"], "insufficient_evidence")
+                self.assertNotIn(self.evidence.text, result["answer"])
+                self.assertEqual(result["sources"], [])
                 self.assertNotIn("9999", result["answer"])
                 self.assertNotIn("private model error", result["answer"])
 
@@ -68,11 +68,11 @@ class RelatedTourAnswerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result["answer_type"], "insufficient_evidence")
                 self.assertEqual(result["sources"], [])
 
-    async def test_excerpt_skips_navigation_and_keeps_safe_source_sentences(self):
+    async def test_rejection_does_not_leak_source_text_or_navigation(self):
         self.evidence.text += "\nNguồn: https://example.test\nĐi tiếp [tour khác](/content/other)."
         result, _, _ = await self.answer("invalid JSON")
-        self.assertEqual(result["answer_type"], "answered")
-        self.assertIn("1864", result["answer"])
+        self.assertEqual(result["answer_type"], "insufficient_evidence")
+        self.assertNotIn("1864", result["answer"])
         self.assertNotIn("https://", result["answer"])
         self.assertNotIn("/content/", result["answer"])
 
@@ -99,7 +99,7 @@ class RelatedTourAnswerTests(unittest.IsolatedAsyncioTestCase):
             "tour_context": TourContext(scene_id=1, narration="partial"),
         })
         result, _, _ = await self.answer("invalid JSON", reply_context=snapshot)
-        self.assertEqual(result["answer_type"], "answered")
+        self.assertEqual(result["answer_type"], "insufficient_evidence")
         self.assertIsNone(result["reply_context"]["story_id"])
 
     async def test_other_area_is_still_out_of_scope(self):

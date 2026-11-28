@@ -58,7 +58,7 @@ function AreaTourChat() {
     hasIdentity, chatMode, selectedHighlight?.id, narrationStatus,
   ]);
   const chat = useConversationSession({
-    scope: `tour:${payload.heritage.id}:${area?.id ?? heritageSlug}`,
+    scope: `tour:${payload.heritage.id}:${area?.id ?? heritageSlug}:scene:${currentSceneKey}:${currentScene?.id ?? "pending"}`,
     initialMessages: initialTourMessages,
     disabled: !area || !hasIdentity,
     context: chatContext,

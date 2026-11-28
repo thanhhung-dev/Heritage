@@ -39,6 +39,25 @@ Structured heritage/scene context requires a registered `active_area_id`; a
 heritage-context slug must match it. Bounded strings are accepted as legacy hints.
 Hints and history are user data, never historical evidence or system instructions.
 
+Tour requests may include `recent_suggestions`, an optional list of up to six
+previously displayed questions (1–200 characters each). Older clients may omit
+it. This hint only reduces repeated suggestions; it is not evidence or a signal
+of a lasting user preference. The existing `follow_up_questions` response field
+contains zero to two suggestions for tour answers. A separate model pass considers
+the current question, answer, bounded dialogue, recent suggestions and retrieved
+evidence. It suppresses suggestions for correction/closing intent, filters
+unsupported, already answered or repeated candidates, then ranks relevance,
+novelty and diversity. Semantic judgments are model estimates, not independent
+proof of answerability. Invalid or timed-out planning returns an empty list and
+preserves the answer; raw-source fallback, social, recall and out-of-scope replies
+do not launch this pass. No schema migration or additional retrieval is involved.
+The UI displays suggestions only for the latest assistant reply. The client does
+not currently distinguish a suggestion click from an identical typed question.
+Optional planning uses the cancellable `llama_server` backend, at most three
+candidates and a 12-second budget within the chat deadline. The in-process
+`llama_cpp` backend skips this optional pass. Legacy unscoped chat with no evidence
+returns `insufficient_evidence`; scoped Tavily research remains in the tour service.
+
 Messages must contain 1–8,000 characters after trimming. Client context contains
 at most six user/assistant messages, 2,000 characters each, 6,000 total. Each
 heritage/scene context is limited to 2,000 serialized characters. Invalid request
@@ -172,8 +191,13 @@ turn without a citation that belongs to the retrieved passages abstains; raw pas
 Retrieval/context service failures retain their HTTP
 errors; the total request deadline remains unchanged.
 
-Bounded prior user questions are included in the same generation prompt only
-to resolve pronouns and omitted subjects; they are explicitly not evidence.
+Bounded user/assistant turns are retained in the generation prompt to resolve
+pronouns, omitted subjects and confirmation questions; they are not historical
+evidence. Server-validated scene/highlight titles identify what the visitor is
+viewing. Passage labels remain attached to their text so the model can assign
+source IDs correctly. Rejected tour answers log a reason category without user
+text or model output; they return `insufficient_evidence` with no sources instead
+of a raw passage dump. The response contract remains unchanged.
 For referential turns the retrieval query includes bounded prior user topics.
 There is no separate rewrite generation in a locked tour. Standalone chat keeps
 its existing rewrite behavior and may still use two model calls.

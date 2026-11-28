@@ -99,9 +99,10 @@ def llama_http_post(url: str, *, json: dict, timeout: float) -> httpx.Response:
 
 def _llama_server_generate(
     messages: list[dict], max_tokens: int, *, response_format: dict | None = None,
+    request_timeout: float | None = None,
 ) -> str:
     base_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8080").rstrip("/")
-    timeout = float(os.environ.get("LLAMA_SERVER_TIMEOUT", "300"))
+    timeout = request_timeout if request_timeout is not None else float(os.environ.get("LLAMA_SERVER_TIMEOUT", "300"))
     with trace.get_tracer(__name__).start_as_current_span(
         "llama.generate",
         record_exception=False,
@@ -205,10 +206,28 @@ def generate_response_with_details(
     active_area_id: str | None = None, rewrite: bool = False,
     user_history: list[str] | None = None, dialogue: list[dict] | None = None,
     artifact_title: str | None = None,
+    viewing_context: str | None = None,
+    research_grade: bool = False,
+    follow_up_schema: dict | None = None,
+    generation_timeout: float | None = None,
 ) -> GenerationResult:
     generation_details.set(GenerationDetails())
     model, _tokenizer, backend = get_model()
-    if rewrite:
+    if follow_up_schema is not None:
+        from apps.backend.services.tour_follow_ups import FOLLOW_UP_SYSTEM
+
+        messages = [{"role": "system", "content": FOLLOW_UP_SYSTEM},
+                    {"role": "user", "content": question}]
+        schema = follow_up_schema
+        max_tokens = min(max_tokens, 896)
+    elif research_grade:
+        from apps.backend.services.web_research import GRADE_SCHEMA, GRADE_SYSTEM
+
+        messages = [{"role": "system", "content": GRADE_SYSTEM},
+                    {"role": "user", "content": f"Yêu cầu: {question}\nNguồn: {context}"}]
+        schema = GRADE_SCHEMA
+        max_tokens = min(max_tokens, 256)
+    elif rewrite:
         messages = rewrite_messages(question, user_history or [])
         schema = None
         max_tokens = min(max_tokens, 256)
@@ -216,6 +235,7 @@ def generate_response_with_details(
         messages = conversation_messages(
             context, question, retrieval_status, active_area_id=active_area_id,
             user_history=user_history, dialogue=dialogue, artifact_title=artifact_title,
+            viewing_context=viewing_context,
         )
         schema = conversation_json_schema(context)
     else:
@@ -229,8 +249,12 @@ def generate_response_with_details(
             model_parameters={'temperature': 0.0, 'max_tokens': max_tokens},
         )
         if backend == "llama_server":
-            answer = _llama_server_generate(messages, max_tokens=max_tokens, **options)
+            answer = _llama_server_generate(
+                messages, max_tokens=max_tokens, request_timeout=generation_timeout, **options,
+            )
         else:
+            if follow_up_schema is not None:
+                raise ValueError("Optional follow-up planning requires cancellable llama_server inference")
             answer = _llama_cpp_generate(model, messages, max_tokens=max_tokens, **options)
 
         details = get_generation_details()
@@ -256,9 +280,14 @@ def generate_response(
     active_area_id: str | None = None, rewrite: bool = False,
     user_history: list[str] | None = None, dialogue: list[dict] | None = None,
     artifact_title: str | None = None,
+    viewing_context: str | None = None,
+    research_grade: bool = False,
+    follow_up_schema: dict | None = None,
+    generation_timeout: float | None = None,
 ) -> str:
     return generate_response_with_details(
         question, context, max_tokens, conversation=conversation, retrieval_status=retrieval_status,
         active_area_id=active_area_id, rewrite=rewrite, user_history=user_history, dialogue=dialogue,
-        artifact_title=artifact_title,
+        artifact_title=artifact_title, viewing_context=viewing_context, research_grade=research_grade,
+        follow_up_schema=follow_up_schema, generation_timeout=generation_timeout,
     ).answer

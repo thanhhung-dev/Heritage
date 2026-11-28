@@ -1,0 +1,107 @@
+.root {
+  margin-top: 8px;
+  color: var(--text-secondary, #a3a3a3);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.button:hover,
+.more[open] > .button {
+  background: var(--accent-glow, rgba(255, 173, 66, .12));
+  color: var(--text-strong, #fff);
+}
+
+.button:focus-visible,
+.download:focus-visible {
+  outline: 2px solid var(--accent, #ffad42);
+  outline-offset: 2px;
+}
+
+.button[aria-pressed="true"] {
+  color: var(--accent, #ffad42);
+}
+
+.button[data-active="true"] {
+  color: #34d399;
+}
+
+.button:disabled {
+  cursor: default;
+}
+
+.more {
+  position: relative;
+}
+
+.more > summary {
+  list-style: none;
+}
+
+.more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.popup {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  padding: 4px;
+  border: 1px solid var(--border, rgba(255, 255, 255, .24));
+  border-radius: 10px;
+  background: var(--bg, #171717);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+}
+
+.download {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text-strong, #fff);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.download:hover {
+  background: var(--accent-glow, rgba(255, 173, 66, .12));
+}
+
+.status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.error {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f87171;
+}

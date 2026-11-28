@@ -6,6 +6,7 @@ import type { BubbleListProps } from "@ant-design/x";
 import type { Message } from "@/features/chat/types";
 import ChatInput from "./ChatInput";
 import { ChatActions } from "./ChatActions";
+import { ChatProcessing } from "@/features/chat/components/ChatProcessing";
 import { MilaAvatar } from "@/features/chat/components/ChatToggleButton";
 import styles from "../chat.module.css";
 
@@ -36,7 +37,7 @@ export function ChatView({
   }, [messages, loading]);
 
   const items: BubbleListProps["items"] = [
-    ...messages.map((msg) => ({
+    ...messages.map((msg, messageIndex) => ({
       key: msg.id,
       role: msg.role === "user" ? "user" : "ai",
       content: msg.content,
@@ -44,9 +45,9 @@ export function ChatView({
         msg.role === "assistant" ? (
           <div className={styles.assistantFooter}>
             <ChatActions content={msg.content} />
-            {!!msg.followUpQuestions?.length && (
+            {messageIndex === messages.length - 1 && !loading && !!msg.followUpQuestions?.length && (
               <div className={styles.followUps} aria-label="Câu hỏi gợi ý">
-                {msg.followUpQuestions.map((question) => (
+                {msg.followUpQuestions.slice(0, 2).map((question) => (
                   <button key={question} type="button" disabled={loading} onClick={() => onSend(question)}>
                     {question}
                   </button>
@@ -63,14 +64,7 @@ export function ChatView({
             role: "ai",
             avatar: null,
             content: (
-              <div className={styles.thinkingSpin}>
-                <div className={styles.thinkingSpinRing}>
-                  <div className={styles.thinkingLogo}>
-                    <MilaAvatar />
-                  </div>
-                </div>
-                <span className={styles.thinkingSpinText}>Đang suy nghĩ…</span>
-              </div>
+              <ChatProcessing question={[...messages].reverse().find((message) => message.role === "user")?.content ?? ""} />
             ),
           },
         ]

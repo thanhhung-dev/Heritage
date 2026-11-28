@@ -229,9 +229,9 @@ class AreaApiTests(unittest.TestCase):
                 with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(uncited)):
                     rejected = client.post("/api/chat", json={"message": suggestion, "active_area_id": AREA})
                 self.assertEqual(repository.search_evidence.await_args.args[0], suggestion)
-                self.assertEqual(rejected.json()["answer_type"], "answered")
-                self.assertEqual(rejected.json()["sources"][0]["passage_id"], "42")
-                self.assertIn(self.evidence.text, rejected.json()["answer"])
+                self.assertEqual(rejected.json()["answer_type"], "insufficient_evidence")
+                self.assertEqual(rejected.json()["sources"], [])
+                self.assertNotIn(self.evidence.text, rejected.json()["answer"])
                 self.assertNotIn("9999", rejected.json()["answer"])
                 cited = {"answer_type": "answered", "answer": "Bi Đình thuộc Lăng Tự Đức.", "source_ids": ["42"]}
                 with TestClient(app) as client, patch.object(api, "generate_response", return_value=json.dumps(cited)):
@@ -291,8 +291,8 @@ class AreaApiTests(unittest.TestCase):
                 "Passage", "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
                 dialogue=generate.call_args.kwargs["dialogue"], active_area_id=AREA,
             )
-            self.assertEqual([item["role"] for item in prompt], ["system", "user"])
-            self.assertIn("Đã nói, không chép lại nguyên văn: " + prior, prompt[-1]["content"])
+            self.assertEqual([item["role"] for item in prompt], ["system", "user", "assistant", "user"])
+            self.assertEqual(prompt[-2]["content"], prior)
             self.assertIn("nối mạch", prompt[-1]["content"])
             self.assertNotIn("hội thoại bên trên", prompt[-1]["content"])
 
@@ -321,10 +321,10 @@ class AreaApiTests(unittest.TestCase):
             self.assertEqual(generate.call_count, 2)
             self.assertIn("không hỏi lại hội thoại", generate.call_args.kwargs["question"])
 
-    def test_copied_answered_reply_is_not_published(self):
+    def test_grounded_confirmation_can_repeat_a_previous_fact(self):
         prior = "Lăng Tự Đức gắn với hoàng đế Tự Đức."
         for response, _, generate in self.exercise(
-            "Lịch sử của Lăng Tự Đức có gì đáng chú ý?",
+            "Lăng này gắn với vua Tự Đức đúng không?",
             raw={"answer_type": "answered", "answer": prior, "source_ids": ["42"]},
             extra={"conversation_context": [
                 {"role": "user", "content": "Lăng Tự Đức gắn với nhân vật hoặc sự kiện nào?"},
@@ -332,9 +332,10 @@ class AreaApiTests(unittest.TestCase):
             ]},
         ):
             data = response.json()
-            self.assertEqual(data["answer_type"], "insufficient_evidence")
-            self.assertNotEqual(data["answer"], prior)
-            self.assertEqual(generate.call_count, 2)
+            self.assertEqual(data["answer_type"], "answered")
+            self.assertEqual(data["answer"], prior)
+            self.assertEqual(data["sources"][0]["passage_id"], "42")
+            self.assertEqual(generate.call_count, 1)
 
 
     def test_missing_local_evidence_names_a_public_reference(self):
@@ -391,10 +392,10 @@ class AreaApiTests(unittest.TestCase):
         for response, _, generate in self.exercise(raw=raw):
             self.assertEqual(response.status_code, 200, response.text)
             data = response.json()
-            self.assertEqual(data["answer_type"], "answered")
-            self.assertEqual(data["sources"][0]["passage_id"], "42")
+            self.assertEqual(data["answer_type"], "insufficient_evidence")
+            self.assertEqual(data["sources"], [])
             self.assertNotIn("9999", data["answer"])
-            self.assertIn(self.evidence.text, data["answer"])
+            self.assertNotIn(self.evidence.text, data["answer"])
             self.assertEqual(generate.call_count, 1)
 
     def test_insufficient_evidence_drops_uncited_model_claims(self):
@@ -481,9 +482,9 @@ class AreaApiTests(unittest.TestCase):
         for response, _, _ in self.exercise(raw={"answer_type": "answered", "answer": "Khiêm Lăng", "source_ids": ["foreign"]}):
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertEqual(data["answer_type"], "answered")
-            self.assertEqual(data["sources"][0]["passage_id"], "42")
-            self.assertIn(self.evidence.text, data["answer"])
+            self.assertEqual(data["answer_type"], "insufficient_evidence")
+            self.assertEqual(data["sources"], [])
+            self.assertNotIn(self.evidence.text, data["answer"])
 
     def test_outage_and_unknown_area_never_fall_back_to_global(self):
         for response, _, generate in self.exercise(error=RuntimeError("secret-url")):
@@ -506,10 +507,10 @@ class AreaApiTests(unittest.TestCase):
     def test_uncited_claim_is_replaced_by_related_evidence(self):
         for response, _, _ in self.exercise(raw={"answer_type": "answered", "answer": "Khiêm Lăng xây năm 9999.", "source_ids": []}):
             data = response.json()
-            self.assertEqual(data["answer_type"], "answered")
-            self.assertEqual(data["sources"][0]["passage_id"], "42")
+            self.assertEqual(data["answer_type"], "insufficient_evidence")
+            self.assertEqual(data["sources"], [])
             self.assertNotIn("9999", data["answer"])
-            self.assertIn(self.evidence.text, data["answer"])
+            self.assertNotIn(self.evidence.text, data["answer"])
 
     def test_locked_generation_is_single_turn_without_history(self):
         from apps.backend.tests.test_chat_api import patched_llama_http
@@ -539,16 +540,16 @@ class AreaApiTests(unittest.TestCase):
             self.assertEqual(post.call_count, 1)
             payload = post.call_args.kwargs["json"]
             prompt = payload["messages"]
-            self.assertEqual(len(prompt), 2)
+            self.assertEqual(len(prompt), 4)
             self.assertIn("Có Passage không có nghĩa là phải answered", prompt[0]["content"])
             self.assertNotIn("luôn answered", prompt[0]["content"])
             self.assertIn("active_area_id=lang-tu-duc", prompt[0]["content"])
-            self.assertNotIn("[Passage", prompt[-1]["content"])
+            self.assertIn("[Passage 42]", prompt[-1]["content"])
             self.assertNotIn("PSG-", prompt[-1]["content"])
             self.assertIn("Khiêm Lăng gắn với vua Tự Đức.", prompt[-1]["content"])
             self.assertIn("Câu hỏi: Ông sống ở đây thế nào?", prompt[-1]["content"])
-            self.assertIn("Vua Tự Đức", prompt[-1]["content"])
-            self.assertIn("Đã nói, không chép lại nguyên văn: Đại Nội ở Huế", prompt[-1]["content"])
+            self.assertIn("Vua Tự Đức", prompt[1]["content"])
+            self.assertEqual(prompt[-2]["content"], "Đại Nội ở Huế")
             self.assertIn("nối mạch", prompt[-1]["content"])
             self.assertNotIn("not evidence", prompt[-1]["content"])
             self.assertEqual(set(payload["response_format"]["schema"]["required"]),

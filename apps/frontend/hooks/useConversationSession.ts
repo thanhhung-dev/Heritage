@@ -82,6 +82,11 @@ export function useConversationSession({
               ...context.tour_context, story_id: storyId ?? null, completed_story_ids: [...completedStoryIds],
             } } : {}),
             message: content,
+            recent_suggestions: messages
+              .filter((message) => message.role === "assistant")
+              .flatMap((message) => message.followUpQuestions ?? [])
+              .slice(-6)
+              .map((question) => question.slice(0, 200)),
             conversation_context: createConversationContext(
               messages.filter((message) => message.id !== "mila-welcome"),
             ),

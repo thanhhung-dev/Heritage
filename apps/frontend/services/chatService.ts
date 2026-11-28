@@ -15,6 +15,7 @@ export interface ChatContextMessage {
 export interface ChatMessageRequest {
   message: string;
   conversation_context?: ChatContextMessage[];
+  recent_suggestions?: string[];
   active_area_id?: string;
   heritage_id?: number;
   heritage_context?: string | Record<string, unknown>;
